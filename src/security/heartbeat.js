@@ -117,7 +117,7 @@
 
         const token = await user.getIdToken();
         const res = await fetch(
-          `${window.location.origin}/functions/v1/heartbeat`,
+          'https://kzsrerxhhrtsxnpnmqgl.supabase.co/functions/v1/heartbeat',
           {
             method: 'POST',
             headers: {
