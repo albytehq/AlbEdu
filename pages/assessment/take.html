@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="../../styles/loading.css" />
   <link rel="stylesheet" href="../../styles/albedu-v1.css" />
   <link rel="stylesheet" href="../../styles/identity-form.css" />
+  <link rel="stylesheet" href="../../styles/peserta-floating-profile.css" />
 
   <!-- QNotify UI -->
   <link rel="stylesheet" href="../../public/QNotify/ui/notify.css" />
@@ -95,7 +96,7 @@
     });
   </script>
 
-  <!-- Security modules (v0.742.6 Phase 5 — Anti-Cheat Hardening) -->
+  <!-- Security modules (v0.742.7 Phase 5 — Anti-Cheat Hardening) -->
   <script src="../../src/security/consent.js" defer></script>
   <script src="../../src/exam/guardian.js" defer></script>
   <script src="../../src/security/devtools-detector.js" defer></script>
@@ -109,6 +110,9 @@
 
   <!-- Math renderer + language class helpers (KaTeX + RTL/CJK detection) -->
   <script src="../../src/utils/math-renderer.js" defer></script>
+
+  <!-- v0.742.7: Floating profile button (triggers OptionProfile — gives peserta logout) -->
+  <script src="../../src/profile/peserta-profile-fab.js" defer></script>
 
   <!-- Page controller -->
   <script src="../../src/pages/take-assessment.js" defer></script>
@@ -139,7 +143,7 @@
     <h1 class="status-title" id="closed-title">Asesmen Tidak Tersedia</h1>
     <p class="status-message" id="closed-message">Asesmen belum dibuka atau sudah berakhir.</p>
     <div class="status-actions">
-      <button class="albedu-btn albedu-btn-secondary" type="button" onclick="window.location.href='../login.html'">
+      <button class="albedu-btn albedu-btn-secondary" type="button" onclick="window.location.href=(window.Auth?.getBasePath?.()||'/')+'pages/login.html'">
         <i class="material-symbols-outlined">logout</i>
         <span>Kembali ke Login</span>
       </button>

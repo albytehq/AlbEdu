@@ -2,43 +2,197 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diblokir - AlbEdu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Diblokir — AlbEdu</title>
+    <meta name="description" content="Sesi Anda telah diblokir oleh admin.">
     <meta name="theme-color" content="#ef4444">
+    <meta name="robots" content="noindex, nofollow">
     <link rel="icon" type="image/x-icon" href="../../public/images/favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="../../public/images/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="96x96" href="../../public/images/favicon/favicon-96x96.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../public/images/favicon/apple-touch-icon.png">
+
     <link rel="stylesheet" href="../../styles/tokens.css">
     <link rel="stylesheet" href="../../styles/albedu-v1.css">
+    <link rel="stylesheet" href="../../styles/peserta-floating-profile.css">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+
+    <style>
+      body {
+        background:
+          radial-gradient(ellipse at top, rgba(239, 68, 68, 0.08) 0%, transparent 60%),
+          linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        padding-top: max(24px, env(safe-area-inset-top, 24px));
+        padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Plus Jakarta Sans', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .blocked-card {
+        max-width: 440px;
+        width: 100%;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.72);
+        -webkit-backdrop-filter: saturate(180%) blur(20px);
+        backdrop-filter: saturate(180%) blur(20px);
+        border-radius: 24px;
+        padding: 48px 32px 32px;
+        box-shadow:
+          0 1px 2px rgba(15, 23, 42, 0.04),
+          0 8px 24px rgba(15, 23, 42, 0.06),
+          0 0 0 0.5px rgba(15, 23, 42, 0.06);
+      }
+      .blocked-icon {
+        width: 88px;
+        height: 88px;
+        margin: 0 auto 24px;
+        background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow:
+          0 8px 24px rgba(239, 68, 68, 0.25),
+          0 0 0 0.5px rgba(239, 68, 68, 0.1);
+        animation: ios-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .blocked-icon .material-symbols-outlined {
+        font-size: 44px;
+        color: #fff;
+        font-variation-settings: 'FILL' 1, 'wght' 500;
+      }
+      @keyframes ios-pop {
+        0% { transform: scale(0); opacity: 0; }
+        60% { transform: scale(1.1); }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      .blocked-title {
+        font-size: 26px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0 0 8px;
+        letter-spacing: -0.025em;
+      }
+      .blocked-subtitle {
+        font-size: 15px;
+        color: #64748b;
+        margin: 0 0 20px;
+        line-height: 1.5;
+      }
+      .blocked-reason {
+        background: rgba(239, 68, 68, 0.06);
+        border: 1px solid rgba(239, 68, 68, 0.15);
+        border-radius: 13px;
+        padding: 14px 16px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        color: #475569;
+        line-height: 1.5;
+        display: none;
+      }
+      .blocked-reason strong { color: #b91c1c; }
+      .blocked-reason.show { display: block; }
+      .blocked-hint {
+        font-size: 13px;
+        color: #94a3b8;
+        margin: 0 0 24px;
+      }
+      .blocked-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 13px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+        color: #fff;
+        border: none;
+        border-radius: 13px;
+        cursor: pointer;
+        font-family: inherit;
+        letter-spacing: -0.01em;
+        text-decoration: none;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease;
+      }
+      .blocked-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+      }
+      .blocked-btn:active {
+        transform: translateY(0) scale(0.98);
+      }
+      .blocked-btn .material-symbols-outlined { font-size: 18px; }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background:
+            radial-gradient(ellipse at top, rgba(239, 68, 68, 0.12) 0%, transparent 60%),
+            linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+        }
+        .blocked-card {
+          background: rgba(30, 41, 59, 0.72);
+          box-shadow: 0 1px 2px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.3), 0 0 0 0.5px rgba(255,255,255,0.06);
+        }
+        .blocked-title { color: #f1f5f9; }
+        .blocked-subtitle { color: #94a3b8; }
+        .blocked-reason {
+          background: rgba(239, 68, 68, 0.08);
+          border-color: rgba(239, 68, 68, 0.2);
+          color: #cbd5e1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .blocked-icon { animation: none; }
+        .blocked-btn:hover, .blocked-btn:active { transform: none; }
+      }
+    </style>
 </head>
-<body style="background: linear-gradient(135deg, #fef2f2 0%, #fff 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;">
-    <div style="max-width: 480px; width: 100%; text-align: center;">
-        <div style="width: 96px; height: 96px; margin: 0 auto 24px; background: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 32px rgba(239, 68, 68, 0.2);">
-            <i class="material-symbols-outlined" style="font-size: 48px; color: #fff;">block</i>
+<body>
+    <div class="blocked-card">
+        <div class="blocked-icon">
+            <i class="material-symbols-outlined">block</i>
         </div>
-        <h1 style="font-size: 28px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">Akses Diblokir</h1>
-        <p style="font-size: 15px; color: #475569; margin: 0 0 24px; line-height: 1.6;">
+        <h1 class="blocked-title">Akses Diblokir</h1>
+        <p class="blocked-subtitle">
             Sesi Anda telah diblokir oleh admin.
         </p>
-        <div id="reason-box" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 32px; display: none;">
-            <p style="font-size: 14px; color: #475569; margin: 0;">
-                <strong>Alasan:</strong> <span id="reason-text"></span>
-            </p>
+        <div id="reason-box" class="blocked-reason">
+            <strong>Alasan:</strong> <span id="reason-text"></span>
         </div>
-        <p style="font-size: 13px; color: #94a3b8; margin: 0 0 24px;">
+        <p class="blocked-hint">
             Hubungi admin jika Anda merasa ini adalah kesalahan.
         </p>
-        <button class="albedu-btn albedu-btn-secondary" onclick="window.location.href='../login.html';" type="button">
-            <i class="material-symbols-outlined">logout</i>
-            Kembali ke Login
-        </button>
+        <a href="#" class="blocked-btn" id="back-btn">
+            <i class="material-symbols-outlined">arrow_back</i>
+            Kembali ke Beranda
+        </a>
     </div>
+
+    <!-- v0.742.7: Floating profile button (logout via OptionProfile) -->
+    <script src="../../src/profile/peserta-profile-fab.js" defer></script>
     <script>
+      // Show reason if provided in query string
       const reason = new URLSearchParams(window.location.search).get('reason');
       if (reason) {
-        document.getElementById('reason-box').style.display = 'block';
+        document.getElementById('reason-box').classList.add('show');
         document.getElementById('reason-text').textContent = decodeURIComponent(reason);
       }
+      // v0.742.7: Use BASE_PATH-aware landing URL (was ../login.html — 404)
+      document.getElementById('back-btn').addEventListener('click', function (e) {
+        e.preventDefault();
+        const basePath = window.Auth?.getBasePath?.() || '/';
+        window.location.href = basePath; // landing page
+      });
     </script>
     <script>
       if ('serviceWorker' in navigator) {

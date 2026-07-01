@@ -82,8 +82,10 @@
             setTimeout(check, 100);
           } else if (attempts >= 100) {
             // No auth after 10s — redirect to login
+            // v0.742.7: login page is at pages/login.html (not ../login.html)
             console.warn('[assessment-entry] Auth timeout, redirecting to login');
-            window.location.href = '../login.html';
+            const basePath = window.Auth?.getBasePath?.() || '/';
+            window.location.href = basePath + 'pages/login.html';
             resolve();
           } else {
             setTimeout(check, 100);
@@ -171,7 +173,15 @@
     },
 
     _renderTurnstile() {
-      // Wait for Turnstile script to load
+      // v0.742.7: Turnstile is rendered INVISIBLE on participant-side pages
+      // (matching login.html behavior). The widget container is visually
+      // hidden via CSS (.turnstile-wrap — see assessment-entry.css) but still
+      // occupies layout space for the widget to function. The widget itself
+      // uses size:'normal' (Turnstile does NOT accept 'invisible' as a size
+      // value — see src/auth/turnstile.js header comment).
+      //
+      // The token is still captured and sent to the rate-limit Edge Function;
+      // the user just doesn't see a visible challenge widget.
       const tryRender = () => {
         if (window.turnstile) {
           this._turnstileWidget = window.turnstile.render('#turnstile-container', {

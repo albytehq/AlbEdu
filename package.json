@@ -1,6 +1,6 @@
 {
   "name": "albedu",
-  "version": "0.742.6",
+  "version": "0.742.7",
   "description": "AlbEdu — Production-grade exam platform with AI-maintainable by-feature structure.",
   "private": true,
   "type": "module",
