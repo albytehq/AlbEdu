@@ -1,0 +1,929 @@
+/* ==========================================================================
+   notification-panel.css — AlbEdu Admin Notification Center v0.5.1 (Light)
+   ==========================================================================
+   v0.5.1 — Full LIGHT theme conversion per user requirement.
+   Header converted from dark glass-morphism gradient to clean white with
+   subtle slate border. All text/buttons/tabs now light-themed.
+   Severity tints (red/orange/green) preserved for notification items.
+   ========================================================================== */
+
+/* ── Custom properties (enterprise tokens) ────────────────────────────────── */
+:root {
+  /* Panel sizing */
+  --anc-panel-width:    440px;
+  --anc-radius:         14px;
+  --anc-radius-sm:      10px;
+  --anc-radius-xs:      8px;
+  --anc-shadow:         0 0 0 1px rgba(15,23,42,.04), 0 20px 50px -10px rgba(15,23,42,.18), 0 8px 24px -8px rgba(15,23,42,.10);
+  --anc-z-overlay:      9998;
+  --anc-z-panel:        9999;
+  --anc-header-h:       108px;
+  --anc-tabs-h:         52px;
+  --anc-footer-h:       48px;
+  --anc-easing:         cubic-bezier(.32,.72,0,1);
+  --anc-spring:         cubic-bezier(.34,1.56,.64,1);
+  --anc-duration:       320ms;
+
+  /* Neutral palette (slate) */
+  --anc-slate-50:       #f8fafc;
+  --anc-slate-100:      #f1f5f9;
+  --anc-slate-200:      #e2e8f0;
+  --anc-slate-300:      #cbd5e1;
+  --anc-slate-400:      #94a3b8;
+  --anc-slate-500:      #64748b;
+  --anc-slate-600:      #475569;
+  --anc-slate-700:      #334155;
+  --anc-slate-800:      #1e293b;
+  --anc-slate-900:      #0f172a;
+
+  /* Brand */
+  --anc-brand:          #2563eb;
+  --anc-brand-hover:    #1d4ed8;
+  --anc-brand-soft:     #eff6ff;
+  --anc-brand-border:   #bfdbfe;
+
+  /* Severity (refined, less saturated than v0.4) */
+  --anc-red:            #dc2626;
+  --anc-red-bg:         #fef2f2;
+  --anc-red-border:     #fecaca;
+  --anc-red-soft:       #fee2e2;
+
+  --anc-orange:         #d97706;
+  --anc-orange-bg:      #fffbeb;
+  --anc-orange-border:  #fde68a;
+  --anc-orange-soft:    #fef3c7;
+
+  --anc-green:          #059669;
+  --anc-green-bg:       #ecfdf5;
+  --anc-green-border:   #a7f3d0;
+  --anc-green-soft:     #d1fae5;
+
+  /* Typography */
+  --anc-font:           'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --anc-font-mono:      'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Live status */
+  --anc-live-dot:       #10b981;
+}
+
+/* ── Backdrop overlay (refined blur) ──────────────────────────────────────── */
+.anc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  z-index: var(--anc-z-overlay);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--anc-duration) var(--anc-easing),
+              background var(--anc-duration) var(--anc-easing);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+}
+
+.anc-overlay.anc-visible {
+  opacity: 1;
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.32);
+  backdrop-filter: blur(6px) saturate(1.2);
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+}
+
+/* ── Main panel (refined shadow + border) ─────────────────────────────────── */
+.anc-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--anc-panel-width);
+  height: 100dvh;
+  background: #ffffff;
+  z-index: var(--anc-z-panel);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--anc-shadow);
+  border-left: 1px solid var(--anc-slate-200);
+  transform: translateX(100%);
+  transition: transform var(--anc-duration) var(--anc-easing);
+  outline: none;
+  will-change: transform;
+  font-family: var(--anc-font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.anc-panel.anc-panel-open {
+  transform: translateX(0);
+}
+
+/* ── Header (LIGHT theme — 2-row layout to prevent crowding) ──────────────── */
+.anc-panel-header {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px 14px;
+  min-height: var(--anc-header-h);
+  background: #ffffff;
+  border-bottom: 1px solid var(--anc-slate-200);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* Subtle brand accent strip on top of header for depth (no dark gradient) */
+.anc-panel-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--anc-brand) 0%, #3b82f6 50%, var(--anc-brand) 100%);
+  pointer-events: none;
+}
+
+/* Row 1: title + close button */
+.anc-panel-header-row1 {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 1;
+}
+
+/* Row 2: action buttons (Baca Semua + Hapus Semua) — full width, even spacing */
+.anc-panel-header-row2 {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1;
+}
+
+.anc-panel-title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.anc-panel-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--anc-brand-soft);
+  border: 1px solid var(--anc-brand-border);
+  border-radius: 10px;
+  font-size: 20px;
+  color: var(--anc-brand);
+  flex-shrink: 0;
+}
+
+.anc-panel-title-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.anc-panel-heading {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--anc-slate-900);
+  letter-spacing: -.015em;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Live "real-time" badge — LIGHT theme: green tint with dark green text */
+.anc-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  background: var(--anc-green-bg);
+  border: 1px solid var(--anc-green-border);
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--anc-green);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.anc-live-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--anc-live-dot);
+  box-shadow: 0 0 0 0 rgba(16,185,129,.6);
+  animation: anc-live-pulse 2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes anc-live-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,.6); }
+  70%  { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+
+.anc-panel-sub {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--anc-slate-500);
+  font-weight: 500;
+  letter-spacing: -.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Header buttons (LIGHT theme — refined for 2-row layout) ──────────────── */
+/* In row 2, buttons grow to fill available space evenly */
+.anc-mark-read-btn,
+.anc-clear-all-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--anc-slate-200);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--anc-font);
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s, transform .15s;
+  white-space: nowrap;
+  letter-spacing: -.005em;
+  flex: 1;
+}
+
+.anc-mark-read-btn {
+  background: #ffffff;
+  color: var(--anc-slate-700);
+}
+.anc-mark-read-btn:hover {
+  background: var(--anc-slate-50);
+  border-color: var(--anc-slate-300);
+  color: var(--anc-slate-900);
+}
+.anc-mark-read-btn i { font-size: 15px; }
+
+.anc-clear-all-btn {
+  background: #ffffff;
+  color: var(--anc-red);
+  border-color: var(--anc-red-border);
+}
+.anc-clear-all-btn:hover:not(:disabled) {
+  background: var(--anc-red-bg);
+  border-color: var(--anc-red);
+  color: var(--anc-red);
+}
+.anc-clear-all-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+  color: var(--anc-slate-400);
+  border-color: var(--anc-slate-200);
+}
+.anc-clear-all-btn i { font-size: 15px; }
+
+.anc-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--anc-slate-200);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--anc-slate-500);
+  font-size: 18px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s, transform .2s var(--anc-spring);
+  flex-shrink: 0;
+}
+
+.anc-close-btn:hover {
+  background: var(--anc-slate-100);
+  border-color: var(--anc-slate-300);
+  color: var(--anc-slate-900);
+  transform: rotate(90deg);
+}
+
+/* ── Tabs (sliding pill indicator) ────────────────────────────────────────── */
+.anc-tabs {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  padding: 8px 12px;
+  min-height: var(--anc-tabs-h);
+  align-items: center;
+  background: var(--anc-slate-50);
+  border-bottom: 1px solid var(--anc-slate-200);
+  flex-shrink: 0;
+}
+
+.anc-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--anc-slate-500);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--anc-font);
+  cursor: pointer;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
+  letter-spacing: -.005em;
+}
+
+.anc-tab i { font-size: 15px; opacity: .85; }
+
+.anc-tab:hover:not(.active) {
+  color: var(--anc-slate-700);
+  background: var(--anc-slate-100);
+}
+
+.anc-tab.active {
+  color: var(--anc-slate-900);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 0 0 1px rgba(15,23,42,.04);
+}
+
+.anc-tab.active i { opacity: 1; }
+
+/* Tab counter (refined pill) */
+.anc-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--anc-slate-200);
+  color: var(--anc-slate-600);
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.01em;
+  transition: background .15s, color .15s;
+}
+
+.anc-tab.active .anc-tab-count {
+  background: var(--anc-brand-soft);
+  color: var(--anc-brand);
+}
+
+.anc-tab-count-red   { background: var(--anc-red-soft) !important;   color: var(--anc-red) !important; }
+.anc-tab-count-green { background: var(--anc-green-soft) !important; color: var(--anc-green) !important; }
+
+.anc-tab.active .anc-tab-count-red   { background: var(--anc-red) !important;   color: #fff !important; }
+.anc-tab.active .anc-tab-count-green { background: var(--anc-green) !important; color: #fff !important; }
+
+/* ── Panel body (scrollable list) ─────────────────────────────────────────── */
+.anc-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0;
+  scroll-behavior: smooth;
+  background: #ffffff;
+  scrollbar-width: thin;
+  scrollbar-color: var(--anc-slate-300) transparent;
+}
+
+.anc-panel-body::-webkit-scrollbar       { width: 6px; }
+.anc-panel-body::-webkit-scrollbar-track { background: transparent; }
+.anc-panel-body::-webkit-scrollbar-thumb {
+  background: var(--anc-slate-300);
+  border-radius: 6px;
+  border: 2px solid #fff;
+}
+.anc-panel-body::-webkit-scrollbar-thumb:hover { background: var(--anc-slate-400); }
+
+/* ── Separators ───────────────────────────────────────────────────────────── */
+.anc-separator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--anc-slate-400);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.anc-separator::before,
+.anc-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--anc-slate-200);
+}
+
+.anc-separator-new span {
+  color: var(--anc-brand);
+  font-weight: 700;
+}
+
+/* ── Notification items (enterprise card style) ───────────────────────────── */
+.anc-notif-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px 12px 18px;
+  margin: 3px 10px;
+  border-radius: var(--anc-radius-sm);
+  border: 1px solid transparent;
+  transition: background .12s, box-shadow .15s, opacity .25s, transform .25s, max-height .25s, border-color .12s;
+  cursor: default;
+  overflow: hidden;
+}
+
+/* Subtle left accent strip — thicker + softer than v0.4 */
+.anc-item-indicator {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  opacity: 0;
+  transition: opacity .15s, width .15s;
+}
+
+.anc-item-unread .anc-item-indicator { opacity: 1; }
+
+/* Severity variants — refined, less saturated backgrounds */
+.anc-item-orange {
+  background: var(--anc-orange-bg);
+  border-color: var(--anc-orange-border);
+}
+.anc-item-orange .anc-item-indicator { background: var(--anc-orange); }
+.anc-item-orange:hover {
+  background: var(--anc-orange-soft);
+  box-shadow: 0 2px 8px -2px rgba(217,119,6,.18);
+  border-color: var(--anc-orange);
+}
+
+.anc-item-red {
+  background: var(--anc-red-bg);
+  border-color: var(--anc-red-border);
+}
+.anc-item-red .anc-item-indicator { background: var(--anc-red); }
+.anc-item-red:hover {
+  background: var(--anc-red-soft);
+  box-shadow: 0 2px 8px -2px rgba(220,38,38,.2);
+  border-color: var(--anc-red);
+}
+
+.anc-item-green {
+  background: var(--anc-green-bg);
+  border-color: var(--anc-green-border);
+}
+.anc-item-green .anc-item-indicator { background: var(--anc-green); }
+.anc-item-green:hover {
+  background: var(--anc-green-soft);
+  box-shadow: 0 2px 8px -2px rgba(5,150,105,.15);
+  border-color: var(--anc-green);
+}
+
+/* Critical (max violation) — pulsing border */
+.anc-item-critical {
+  border-width: 1.5px;
+  border-color: var(--anc-red);
+  box-shadow: 0 0 0 0 rgba(220,38,38,.4);
+  animation: anc-critical-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes anc-critical-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+  50%      { box-shadow: 0 0 0 4px rgba(220,38,38,.08); }
+}
+
+.anc-item-read {
+  opacity: .65;
+  background: var(--anc-slate-50) !important;
+  border-color: var(--anc-slate-200) !important;
+}
+
+.anc-item-read:hover {
+  opacity: .85;
+  background: var(--anc-slate-100) !important;
+  box-shadow: none !important;
+}
+
+.anc-item-read .anc-item-indicator { opacity: 0 !important; }
+
+/* Dismiss animation (refined slide-out) */
+.anc-item-removing {
+  opacity: 0 !important;
+  transform: translateX(40px) scale(.98) !important;
+  max-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  border-width: 0 !important;
+  pointer-events: none;
+}
+
+/* Icon container (rounded square, not circle — more enterprise) */
+.anc-item-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  font-size: 18px;
+  margin-top: 1px;
+  border: 1px solid transparent;
+}
+
+.anc-item-orange .anc-item-icon { background: var(--anc-orange-soft); border-color: var(--anc-orange-border); }
+.anc-item-red    .anc-item-icon { background: var(--anc-red-soft);    border-color: var(--anc-red-border); }
+.anc-item-green  .anc-item-icon { background: var(--anc-green-soft);  border-color: var(--anc-green-border); }
+
+.anc-icon-orange { color: var(--anc-orange); }
+.anc-icon-red    { color: var(--anc-red); }
+.anc-icon-green  { color: var(--anc-green); }
+
+/* Content */
+.anc-item-content { flex: 1; min-width: 0; }
+
+.anc-item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+
+.anc-item-user {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--anc-slate-900);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -.01em;
+}
+
+/* Severity chips (refined, less candy-colored) */
+.anc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.anc-chip-orange { background: var(--anc-orange-soft);   color: #92400e; border-color: var(--anc-orange-border); }
+.anc-chip-red    { background: var(--anc-red);           color: #fff;    border-color: var(--anc-red); }
+.anc-chip-green  { background: var(--anc-green-soft);    color: #065f46; border-color: var(--anc-green-border); }
+
+/* Critical chip — pulsing dot before text */
+.anc-chip-red::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  animation: anc-chip-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes anc-chip-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .3; }
+}
+
+.anc-item-exam {
+  font-size: 12px;
+  color: var(--anc-slate-500);
+  font-weight: 600;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.anc-item-exam::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--anc-slate-300);
+  flex-shrink: 0;
+}
+
+.anc-item-msg {
+  font-size: 12.5px;
+  color: var(--anc-slate-700);
+  line-height: 1.5;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  letter-spacing: -.005em;
+}
+
+.anc-item-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--anc-slate-400);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.anc-item-time i { font-size: 12px; }
+
+/* ── Item controls (mark-read + dismiss) ──────────────────────────────────── */
+.anc-item-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  opacity: 0;
+  transition: opacity .15s;
+}
+
+.anc-notif-item:hover .anc-item-controls,
+.anc-notif-item:focus-within .anc-item-controls {
+  opacity: 1;
+}
+
+.anc-item-mark-btn,
+.anc-item-dismiss-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s, color .12s, transform .15s var(--anc-spring), border-color .12s;
+}
+
+.anc-item-mark-btn {
+  background: var(--anc-slate-100);
+  color: var(--anc-slate-500);
+  border-color: var(--anc-slate-200);
+}
+.anc-item-mark-btn:hover {
+  background: var(--anc-green);
+  color: #fff;
+  border-color: var(--anc-green);
+  transform: scale(1.08);
+}
+
+.anc-item-dismiss-btn {
+  background: var(--anc-slate-100);
+  color: var(--anc-slate-400);
+  border-color: var(--anc-slate-200);
+}
+.anc-item-dismiss-btn:hover {
+  background: var(--anc-red);
+  color: #fff;
+  border-color: var(--anc-red);
+  transform: scale(1.08);
+}
+
+/* Always show controls on touch devices (no hover) */
+@media (hover: none) {
+  .anc-item-controls { opacity: 1; }
+}
+
+/* ── Empty state (refined illustration) ───────────────────────────────────── */
+.anc-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 70px 32px 50px;
+  text-align: center;
+  animation: anc-fade-in .4s var(--anc-easing);
+}
+
+@keyframes anc-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.anc-empty-icon {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--anc-slate-50) 0%, var(--anc-slate-100) 100%);
+  border: 1px solid var(--anc-slate-200);
+}
+
+.anc-empty-icon::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px dashed var(--anc-slate-200);
+  opacity: .6;
+  animation: anc-empty-rotate 24s linear infinite;
+}
+
+@keyframes anc-empty-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.anc-empty-icon i {
+  font-size: 40px;
+  color: var(--anc-slate-400);
+}
+
+.anc-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--anc-slate-700);
+  margin: 0 0 6px;
+  letter-spacing: -.01em;
+}
+
+.anc-empty-sub {
+  font-size: 12.5px;
+  color: var(--anc-slate-400);
+  margin: 0;
+  max-width: 260px;
+  line-height: 1.5;
+}
+
+/* ── Footer (live status + last updated) ──────────────────────────────────── */
+.anc-panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  border-top: 1px solid var(--anc-slate-200);
+  min-height: var(--anc-footer-h);
+  background: var(--anc-slate-50);
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.anc-footer-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--anc-slate-500);
+  font-weight: 600;
+}
+
+.anc-footer-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--anc-live-dot);
+  box-shadow: 0 0 0 0 rgba(16,185,129,.5);
+  animation: anc-footer-pulse 2.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes anc-footer-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,.4); }
+  50%      { box-shadow: 0 0 0 5px rgba(16,185,129,0); }
+}
+
+.anc-footer-note {
+  font-size: 11px;
+  color: var(--anc-slate-400);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Bell button enhancements ─────────────────────────────────────────────── */
+@keyframes anc-bell-shake {
+  0%,100% { transform: rotate(0); }
+  20%     { transform: rotate(-12deg); }
+  40%     { transform: rotate(12deg); }
+  60%     { transform: rotate(-8deg); }
+  80%     { transform: rotate(8deg); }
+}
+
+.anc-bell-pulse {
+  animation: anc-bell-shake .55s ease !important;
+}
+
+.anc-badge-pulse {
+  animation: anc-badge-pop .4s var(--anc-spring) !important;
+}
+
+@keyframes anc-badge-pop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+
+/* ── Badge ────────────────────────────────────────────────────────────────── */
+.notification-btn .badge {
+  display: flex;
+}
+
+/* ── Mobile / narrow viewport ──────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .anc-panel {
+    width: 100%;
+    border-left: none;
+  }
+
+  /* On very small screens, hide button text labels — show only icons */
+  .anc-mark-read-btn span,
+  .anc-clear-all-btn span {
+    display: none;
+  }
+
+  .anc-mark-read-btn,
+  .anc-clear-all-btn {
+    flex: 1;
+    padding: 10px 8px;
+  }
+
+  .anc-panel-header {
+    padding: 14px 14px 12px;
+  }
+
+  .anc-notif-item {
+    margin: 3px 8px;
+    padding: 12px 12px 12px 16px;
+  }
+
+  .anc-item-controls {
+    opacity: 1; /* always visible on mobile */
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --anc-panel-width: min(100vw, 400px);
+  }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .anc-panel,
+  .anc-overlay,
+  .anc-notif-item {
+    transition: none;
+  }
+
+  .anc-item-removing {
+    display: none !important;
+  }
+
+  .anc-bell-pulse,
+  .anc-badge-pulse,
+  .anc-critical-pulse,
+  .anc-chip-blink,
+  .anc-empty-rotate,
+  .anc-footer-pulse,
+  .anc-live-pulse {
+    animation: none !important;
+  }
+}

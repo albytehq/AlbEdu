@@ -1,0 +1,1018 @@
+/* ═══════════════════════════════════════════════════════════════
+   navigasi.css v2.0 — AlbEdu Admin Sidebar Navigation
+   ───────────────────────────────────────────────────────────────
+   Rebuild from scratch. Design goals:
+   • No idle / looping animations — every transition is triggered
+     by a user action (hover, focus, active, click, touch).
+   • Two-state logo:
+       - Expanded → <a> link to home, separate toggle button visible.
+       - Collapsed → logo takes over as expand button (link disabled),
+         separate toggle button hidden ("melebur" into the logo).
+   • Hover / focus / active on the logo while collapsed cross-fades
+     the default AlbEdu icon → chevron icon (smooth, not instant).
+   • Mobile breakpoint pinned at 1023px (matches navigasi.js).
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══ App shell ═══ */
+.container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ════════════════════════════════════════
+   SIDEBAR — Collapsible Sidebar Pro v2
+   ════════════════════════════════════════ */
+.sidebar {
+    width: var(--sidebar-width, 260px);
+    min-width: var(--sidebar-width, 260px);
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    z-index: var(--z-sticky, 20);
+    box-shadow: 4px 0 16px rgba(37, 99, 235, 0.04);
+    transition:
+        width 280ms cubic-bezier(0.16, 1, 0.3, 1),
+        min-width 280ms cubic-bezier(0.16, 1, 0.3, 1),
+        transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sidebar::-webkit-scrollbar { display: none; }
+
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed, 68px);
+    min-width: var(--sidebar-collapsed, 68px);
+}
+
+/* ════════════════════════════════════════
+   LOGO HEADER — wrapper for icon-link + text + toggle
+   ════════════════════════════════════════ */
+.logo {
+    position: relative;
+    border-bottom: 1px solid var(--color-border);
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+}
+
+/* ── Logo icon link — ONLY the AlbEdu icon is clickable.
+   The text "AlbEdu Creates" is a sibling <span>, not inside
+   the <a>, so clicking the text does nothing. ── */
+.logo-icon-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: inherit;
+    flex-shrink: 0;
+    background: transparent;
+    border-radius: var(--radius-md, 8px);
+    -webkit-tap-highlight-color: transparent;
+    transition: background var(--duration-fast) var(--ease-default);
+}
+.logo-icon-link:hover {
+    background: transparent;
+}
+.logo-icon-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-md, 8px);
+}
+
+/* ── Icon stack — AlbEdu icon (default) + open-sidebar icon (reveal) ── */
+.logo-icon-stack {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: inline-block;
+}
+.logo-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: var(--radius-md, 8px);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    object-fit: cover;
+    pointer-events: none;
+    box-sizing: border-box;
+    transition:
+        opacity var(--duration-normal) var(--ease-default),
+        transform var(--duration-normal) var(--ease-default);
+}
+.logo-icon--default {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+}
+.logo-icon--reveal {
+    opacity: 0;
+    transform: scale(0.6);
+    color: #ffffff;
+    background: transparent;
+    font-family: 'Material Symbols Outlined' !important;
+    font-size: 24px !important;
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-flex;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
+
+/* When collapsed + hover: AlbEdu icon FULLY FADES OUT (morph penuh)
+   and the open-sidebar icon fades in on top. Both share the 200ms
+   cross-fade — the AlbEdu glyph reaches opacity 0 so only the
+   left_panel_open glyph remains visible at the end of the morph.
+   Trigger is hover-only (desktop), per UX spec. */
+.sidebar.collapsed .logo-icon-link:hover    .logo-icon--default {
+    opacity: 0;
+    transform: scale(0.85);
+}
+.sidebar.collapsed .logo-icon-link:hover    .logo-icon--reveal {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* ── Logo text label — NOT clickable, just display ── */
+.logo-text {
+    font-size: 0.9375rem;
+    font-weight: 800;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.01em;
+    user-select: none;
+    transition: opacity var(--duration-normal) var(--ease-default);
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* ── Collapsed: center logo icon, hide text ──
+ * FIX 1: .logo-text has flex:1 1 auto — even when opacity:0 + width:0,
+ * it still takes remaining flex space. Set flex:0 0 0.
+ * FIX 2: .logo has gap:10px which still applies between icon-link
+ * and text even when text width=0, pushing icon off-center.
+ * Set gap:0 when collapsed so icon truly centers. */
+.sidebar.collapsed .logo {
+    justify-content: center;
+    padding: 10px 0;
+    gap: 0;
+}
+.sidebar.collapsed .logo-text {
+    opacity: 0;
+    width: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    flex: 0 0 0 !important;
+}
+
+/* ════════════════════════════════════════
+   COLLAPSE TOGGLE — Premium Fancy Edition (Inline)
+   ───────────────────────────────────────────
+   Visible only when expanded. When collapsed, the
+   button "melebur" into the logo: opacity→0,
+   visibility→hidden, pointer-events→none. The
+   logo-link takes over the expand role.
+
+   Position: FULLY INSIDE the sidebar, top-right corner
+   of the logo row (right: 12px, top: 50%). No longer
+   floating half-outside the sidebar edge — cleaner look
+   that doesn't visually overflow into main content.
+
+   Design features:
+   • 32×32 canvas (inline-sized, balanced with logo icon)
+   • 135° blue gradient (primary → primary-hover) for depth
+   • Triple-layer shadow: blue glow + ambient + inset highlight
+   • 10px radius (soft-modern, matches --radius-md token)
+   • Pseudo-element ::before for subtle top-edge shine (glass)
+   • Hover: lift + scale + intensified glow + icon scale
+   • Active: press-in with reduced glow
+   • Focus-visible: glowing ring (not just outline)
+   • Chevron rotates 180° with spring easing when collapsed
+   ════════════════════════════════════════ */
+.sidebar-collapse-toggle {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: none;
+    background: #ffffff;
+    color: var(--color-primary, #2563EB);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-dropdown, 10);
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        0 0 0 1px rgba(0, 0, 0, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    transition:
+        background 220ms cubic-bezier(0.16, 1, 0.3, 1),
+        color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 280ms cubic-bezier(0.16, 1, 0.3, 1),
+        transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        opacity 200ms cubic-bezier(0.16, 1, 0.3, 1),
+        visibility 0ms linear 200ms;
+    overflow: hidden;
+}
+
+/* Glass-shine disabled on the solid-white variant — no top-edge
+   gloss is visible against an opaque white background, so we keep
+   the pseudo-element at opacity 0 to avoid a muddy overlay. */
+.sidebar-collapse-toggle::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 40%;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    border-radius: 8px 8px 50% 50%;
+    pointer-events: none;
+    transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0;
+}
+
+.sidebar-collapse-toggle:hover {
+    background: #ffffff;
+    color: var(--color-primary-hover, #1D4ED8);
+    box-shadow:
+        0 6px 18px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(0, 0, 0, 0.06),
+        0 0 0 4px rgba(37, 99, 235, 0.1);
+    transform: translateY(-50%) scale(1.06);
+}
+.sidebar-collapse-toggle:hover::before {
+    opacity: 0;
+}
+.sidebar-collapse-toggle:hover .material-symbols-outlined {
+    transform: scale(1.15) rotate(-8deg);
+}
+
+.sidebar-collapse-toggle:active {
+    background: #f1f5f9;
+    box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.1),
+        0 0 0 1px rgba(0, 0, 0, 0.05),
+        inset 0 2px 4px rgba(0, 0, 0, 0.12);
+    transform: translateY(-50%) scale(0.94);
+}
+
+.sidebar-collapse-toggle:focus-visible {
+    outline: none;
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        0 0 0 1px rgba(0, 0, 0, 0.05),
+        0 0 0 3px rgba(37, 99, 235, 0.4);
+}
+
+.sidebar-collapse-toggle .material-symbols-outlined {
+    line-height: 1;
+    font-size: 18px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    z-index: 1;
+}
+.sidebar.collapsed .sidebar-collapse-toggle .material-symbols-outlined {
+    transform: rotate(180deg);
+}
+.sidebar-collapse-toggle:hover .material-symbols-outlined {
+    transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Hide toggle when collapsed — logo takes over ──
+ * FIX i1.5: `aria-hidden="true"` + `inert`-equivalent combo via JS
+ * (the JS adds `aria-hidden` dynamically — see navigasi.js
+ * `syncAriaLabels()`). CSS here handles the visual fade-out and
+ * removes the button from tab order via visibility:hidden, which
+ * also removes it from the accessibility tree (per WAI-ARIA spec
+ * when combined with aria-hidden=true). */
+.sidebar.collapsed .sidebar-collapse-toggle {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    /* Morphing slide animation: toggle slides towards the logo icon
+       (translateX) while spinning (rotate) and shrinking (scale).
+       The sidebar width shrinking naturally moves the toggle left
+       (it's at right:12px), and the extra -16px translateX pushes
+       it further into the logo icon area. The -180deg rotation
+       creates a dramatic spin, and scale(0) vanishes it at the end.
+       On expand: the reverse plays — toggle "unfolds" from the logo
+       with spring easing for a satisfying bounce. */
+    transform: translateY(-50%) translateX(-16px) scale(0) rotate(-180deg);
+    transition-delay: 0ms;
+}
+
+/* ── Sidebar text — smooth fade transition base ──
+   Applies to both collapse (1→0) and expand (0→1).
+   Duration-fast (150ms) so text fades before sidebar
+   finishes its 280ms width animation, preventing the
+   clipped-text flicker that occurred in the previous
+   instant-opacity-swap approach. */
+.sidebar-text {
+    transition: opacity var(--duration-fast) var(--ease-default);
+}
+
+/* ════════════════════════════════════════
+   COLLAPSED — hide sidebar text labels everywhere
+   ════════════════════════════════════════ */
+.sidebar.collapsed .sidebar-text {
+    opacity: 0 !important;
+    width: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.sidebar.collapsed .menu-item-content {
+    justify-content: center;
+    padding: 10px 0;
+    gap: 0;
+    /* FIX: gap must be 0 when collapsed. Previously the 12px gap
+       was still active between icon (20px) and text (width:0),
+       pushing the icon ~6px off-center. With gap:0 the icon is
+       perfectly dead-center in the 68px rail. The gap also
+       transitions smoothly (280ms) for the "Kiri ke Tengah"
+       slide effect. */
+}
+.sidebar.collapsed .menu-item .material-symbols-outlined {
+    margin: 0 auto;
+}
+.sidebar.collapsed .user-info {
+    display: none;
+}
+.sidebar.collapsed .user-profile-content {
+    justify-content: center;
+    padding: 10px 0;
+    gap: 0;
+}
+
+/* ════════════════════════════════════════
+   NAV MENU
+   ════════════════════════════════════════ */
+.menu { flex: 1; padding: var(--sp-3, 12px) var(--sp-2, 8px); }
+.menu ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+
+.menu-item {
+    border-radius: var(--radius-md, 8px);
+    overflow: hidden;
+}
+.menu-item-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md, 8px);
+    text-decoration: none;
+    color: var(--color-text-2);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    /* Gap + padding transition: icon smoothly slides from left to
+       center as gap closes from 12px→0 and padding adjusts. This
+       creates the "Kiri ke Tengah" effect without justify-content
+       animation (which CSS cannot transition). Colour animates for
+       hover feedback as before. */
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease,
+                gap 280ms cubic-bezier(0.16, 1, 0.3, 1),
+                padding 280ms cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+}
+
+.menu-item .material-symbols-outlined {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    line-height: 1;
+    text-align: center;
+    flex-shrink: 0;
+    color: var(--color-text-muted);
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    /* ONLY colour transitions — never transform/translate, so the
+       glyph stays pixel-still during collapse/expand and on hover. */
+    transition: color 0.15s ease;
+}
+
+.menu-item span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.menu-item:hover .menu-item-content,
+.menu-item-content:hover {
+    background: var(--color-primary-light);
+    color: var(--color-primary-hover);
+}
+.menu-item:hover .material-symbols-outlined { color: var(--color-primary); }
+
+/* Active state — blue pill */
+.menu-item.active .menu-item-content {
+    background: var(--color-primary);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+}
+.menu-item.active .material-symbols-outlined { color: #ffffff !important; }
+
+/* ════════════════════════════════════════
+   SIDEBAR USER CARD (bottom)
+   ════════════════════════════════════════ */
+.user-profile {
+    padding: var(--sp-3, 12px) var(--sp-2, 8px);
+    border-top: 1px solid var(--color-border);
+    margin-top: auto;
+    position: relative;
+}
+
+.user-profile-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: var(--radius-lg, 12px);
+    cursor: pointer;
+    transition: background 0.15s ease,
+                gap 280ms cubic-bezier(0.16, 1, 0.3, 1),
+                padding 280ms cubic-bezier(0.16, 1, 0.3, 1);
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+}
+.user-profile-content:hover { background: var(--color-primary-light); }
+.user-profile-content:focus-visible {
+    outline: none;
+    background: var(--color-primary-light);
+}
+
+.user-profile .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--color-primary-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    color: var(--color-primary);
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 1.5px solid var(--blue-200, #BFDBFE);
+}
+.user-profile .avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+.user-profile .avatar .material-symbols-outlined {
+    font-size: 18px;
+    line-height: 1;
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+/* ── Sidebar user-info (scoped to .user-profile to win specificity vs
+   generic .user-info in profile.css and ujian.css which load on the
+   same page and would otherwise override text-align, margins, border,
+   and animation, breaking the sidebar layout). ── */
+.user-profile .user-info {
+    text-align: left;
+    margin: 0;
+    padding: 0;
+    border: none;
+    animation: none;
+    min-width: 0;
+    flex: 1;
+}
+
+.user-profile .user-info h4 {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+    margin: 0;
+    line-height: 1.3;
+}
+.user-profile .user-info p {
+    font-size: 0.6875rem;
+    color: var(--color-text-muted);
+    margin: 1px 0 0;
+    line-height: 1.3;
+}
+
+/* ── Sidebar user dropdown ── */
+.sidebar-user-dropdown {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 8px;
+    right: 8px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-2);
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: var(--shadow-xl, 0 8px 24px rgba(0,0,0,0.08));
+    z-index: 500;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+    pointer-events: none;
+    transition: opacity 0.2s cubic-bezier(0.22,1,0.36,1),
+                transform 0.2s cubic-bezier(0.22,1,0.36,1);
+}
+.sidebar-user-dropdown.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+}
+
+.dropdown-user-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--color-border);
+}
+.dropdown-user-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dropdown-user-email {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dropdown-user-role {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 8px;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    border-radius: var(--radius-full, 9999px);
+    font-size: 0.6875rem;
+    font-weight: 600;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--color-border);
+    margin: 4px 0;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    font-size: 0.8125rem;
+    color: var(--color-text);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    transition: background 0.12s ease;
+    text-decoration: none;
+}
+.dropdown-item:hover { background: var(--color-primary-light); }
+.dropdown-item i {
+    font-size: 13px;
+    width: 16px;
+    text-align: center;
+    color: var(--color-text-muted);
+}
+.dropdown-item.danger { color: var(--color-destructive); }
+.dropdown-item.danger i { color: var(--color-destructive); }
+.dropdown-item.danger:hover { background: var(--color-destructive-bg); }
+
+/* Incomplete profile indicator */
+.profile-incomplete-dot {
+    width: 8px; height: 8px;
+    background: var(--color-destructive);
+    border-radius: 50%;
+    margin-left: auto;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px var(--color-surface);
+}
+
+/* ════════════════════════════════════════
+   MAIN CONTENT
+   ════════════════════════════════════════ */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-width: 0;
+}
+
+/* ── Topbar header ── */
+.header {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 24px;
+    height: var(--header-height, 56px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky, 20);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.menu-toggle {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-2);
+    font-size: 14px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.menu-toggle:hover {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.header-left h1 {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Notification button */
+.notification-btn {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-2);
+    font-size: 13px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.notification-btn:hover {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.notification-btn .badge {
+    position: absolute;
+    top: -4px; right: -4px;
+    min-width: 16px; height: 16px;
+    background: var(--color-destructive);
+    color: white;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    border: 1.5px solid var(--color-surface);
+}
+
+/* Logout button */
+.logout-btn {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-2);
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.logout-btn:hover {
+    background: var(--color-destructive-bg);
+    color: var(--color-destructive);
+    border-color: var(--color-destructive);
+}
+
+/* ── Header avatar ── */
+.header-avatar-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--color-border);
+    background: var(--color-primary-light);
+    cursor: pointer;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    padding: 0;
+    position: relative;
+}
+.header-avatar-btn:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(37,99,235,0.15));
+}
+.header-avatar-btn img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+.header-avatar-btn .avatar-initials {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-primary);
+    user-select: none;
+}
+.header-avatar-incomplete {
+    position: absolute;
+    top: -1px; right: -1px;
+    width: 9px; height: 9px;
+    background: var(--color-destructive);
+    border-radius: 50%;
+    border: 1.5px solid var(--color-surface);
+}
+
+/* ── Content area ── */
+.content-area {
+    flex: 1;
+    padding: var(--sp-6, 24px);
+    overflow-y: auto;
+    background: var(--color-bg);
+}
+
+.content-header {
+    margin-bottom: var(--sp-6, 24px);
+}
+.content-header h2 {
+    font-size: var(--text-xl, 1.25rem);
+    font-weight: 800;
+    color: var(--color-text);
+    margin-bottom: 4px;
+}
+.content-header p {
+    color: var(--color-text-muted);
+    font-size: var(--text-base, 0.875rem);
+}
+
+.content-body {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg, 12px);
+    padding: var(--sp-6, 24px);
+    min-height: calc(100vh - 200px);
+    box-shadow: var(--shadow-md);
+}
+
+/* ── Footer ── */
+.footer {
+    background: var(--color-surface);
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+}
+
+/* ── Logout modal ── */
+.logout-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    backdrop-filter: blur(2px);
+}
+.modal-content {
+    background: var(--color-surface);
+    padding: 28px;
+    border-radius: var(--radius-xl, 16px);
+    text-align: center;
+    max-width: 380px;
+    width: 90%;
+    box-shadow: var(--shadow-xl);
+}
+.modal-content i {
+    font-size: 40px;
+    color: var(--color-primary);
+    margin-bottom: 16px;
+}
+.modal-content h3 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 8px;
+}
+.modal-content p {
+    color: var(--color-text-2);
+    font-size: 0.875rem;
+    margin-bottom: 20px;
+}
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+.modal-buttons button {
+    padding: 10px 20px;
+    border-radius: var(--radius-md, 8px);
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-cancel {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    border: 1px solid var(--color-border-2) !important;
+}
+.btn-cancel:hover { background: var(--color-border); }
+.btn-confirm {
+    background: var(--color-primary);
+    color: white;
+}
+.btn-confirm:hover { background: var(--color-primary-hover); transform: translateY(-1px); }
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--color-surface);
+    padding: 12px 16px;
+    border-radius: var(--radius-md, 8px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow-lg);
+    z-index: 9998;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s ease;
+    border-left: 3px solid var(--color-primary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text);
+}
+.toast-success { border-left-color: var(--color-success); }
+.toast-error   { border-left-color: var(--color-destructive); }
+
+/* ── Sidebar overlay (mobile) ── */
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms var(--ease-in-out, cubic-bezier(0.4, 0, 0.2, 1));
+}
+.sidebar-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* ════════════════════════════════════════
+   MOBILE — ≤1023px: sidebar becomes drawer.
+   Breakpoint MUST match MOBILE_BREAKPOINT
+   in navigasi.js. Previously some inline
+   scripts used 992/1024 → dead-zone bugs.
+   ════════════════════════════════════════ */
+@media (max-width: 1023px) {
+    .menu-toggle { display: flex !important; }
+    .sidebar-collapse-toggle { display: none !important; }
+
+    .sidebar {
+        position: fixed;
+        left: 0; top: 0;
+        height: 100vh;
+        transform: translateX(-100%);
+        z-index: 1001;
+        box-shadow: 4px 0 16px rgba(0,0,0,0.1);
+        width: var(--sidebar-width, 260px);
+        min-width: var(--sidebar-width, 260px);
+    }
+    .sidebar.active {
+        transform: translateX(0);
+    }
+
+    /* Reset collapsed state on mobile — drawer is always full-width */
+    .sidebar.collapsed {
+        width: var(--sidebar-width, 260px);
+        min-width: var(--sidebar-width, 260px);
+    }
+    .sidebar.collapsed .sidebar-text {
+        opacity: 1 !important;
+        width: auto;
+        margin: initial;
+        padding: initial;
+        overflow: visible;
+    }
+    .sidebar.collapsed .menu-item-content {
+        justify-content: initial;
+        padding: 10px 12px;
+        gap: 12px;
+    }
+    .sidebar.collapsed .user-info {
+        display: block;
+    }
+    .sidebar.collapsed .user-profile-content {
+        justify-content: initial;
+        padding: 10px;
+        gap: 10px;
+    }
+    .sidebar.collapsed .logo-text {
+        opacity: 1;
+        width: auto;
+        overflow: visible;
+    }
+    .sidebar.collapsed .logo {
+        justify-content: flex-start;
+        padding: 10px 16px;
+        gap: 10px;
+    }
+
+    /* On mobile, never show the reveal glyph — sidebar is always
+       expanded when open, so the logo just acts as a normal link.
+       Override :hover (the only desktop morph trigger). */
+    .sidebar.collapsed .logo-icon-link:hover    .logo-icon--default {
+        opacity: 1;
+        transform: scale(1);
+    }
+    .sidebar.collapsed .logo-icon-link:hover    .logo-icon--reveal {
+        opacity: 0;
+        transform: scale(0.6);
+    }
+
+    .main-content { width: 100%; }
+}
+
+@media (max-width: 768px) {
+    .header { padding: 0 16px; }
+    .content-area { padding: 16px; }
+    .content-body { padding: 16px; }
+    .header-left h1 { font-size: 0.875rem; }
+}
+
+@media (max-width: 480px) {
+    .content-header h2 { font-size: 1.125rem; }
+    .footer { flex-direction: column; gap: 8px; text-align: center; }
+}

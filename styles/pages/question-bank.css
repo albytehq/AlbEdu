@@ -1,0 +1,208 @@
+/* ==========================================================================
+   question-bank.css — Bank Soal (Question Bank admin page)
+   Extracted from: /home/z/my-project/AlbEdu/pages/admin/pages/question-bank.html
+   ========================================================================== */
+
+      /* ─── Question Bank page-specific styles ─── */
+      .qb-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .qb-toolbar-left {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .qb-search {
+        position: relative;
+        flex: 1;
+        min-width: 220px;
+      }
+      .qb-search .material-symbols-outlined {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--albedu-body, #64748b);
+        font-size: 20px;
+        pointer-events: none;
+      }
+      .qb-search input {
+        width: 100%;
+        padding: 12px 16px 12px 44px;
+        border: 1px solid var(--albedu-border, #e2e8f0);
+        border-radius: var(--albedu-radius-md, 10px);
+        background: var(--albedu-surface, #fff);
+        color: var(--albedu-heading, #0f172a);
+        font-size: 14px;
+        font-family: inherit;
+        transition: border-color .15s ease, box-shadow .15s ease;
+      }
+      .qb-search input:focus {
+        outline: none;
+        border-color: var(--albedu-primary, #2563eb);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+      }
+
+      .qb-filters {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+        padding: 16px;
+        background: var(--albedu-surface, #fff);
+        border: 1px solid var(--albedu-border, #e2e8f0);
+        border-radius: var(--albedu-radius-lg, 14px);
+      }
+      .qb-filter-field label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--albedu-body, #64748b);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+      }
+      .qb-filter-field select,
+      .qb-filter-field input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--albedu-border, #e2e8f0);
+        border-radius: var(--albedu-radius-md, 10px);
+        background: var(--albedu-surface, #fff);
+        color: var(--albedu-heading, #0f172a);
+        font-size: 13px;
+        font-family: inherit;
+      }
+      .qb-filter-field select:focus,
+      .qb-filter-field input:focus {
+        outline: none;
+        border-color: var(--albedu-primary, #2563eb);
+      }
+
+      .qb-stats {
+        display: flex;
+        gap: 16px;
+        font-size: 13px;
+        color: var(--albedu-body, #64748b);
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .qb-stats strong { color: var(--albedu-heading, #0f172a); font-weight: 700; }
+
+      .qb-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 16px;
+      }
+
+      .qb-card {
+        background: var(--albedu-surface, #fff);
+        border: 1px solid var(--albedu-border, #e2e8f0);
+        border-radius: var(--albedu-radius-lg, 14px);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+      }
+      .qb-card:hover {
+        box-shadow: var(--albedu-shadow-card, 0 4px 16px rgba(15, 23, 42, .06));
+        border-color: var(--albedu-primary-soft, #c7d2fe);
+        transform: translateY(-2px);
+      }
+
+      .qb-card-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .qb-type-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+      }
+      .qb-type-PG    { background: rgba(37, 99, 235, .12); color: #2563eb; }
+      .qb-type-ESAI  { background: rgba(168, 85, 247, .12); color: #9333ea; }
+
+      .qb-difficulty-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+      }
+      .qb-difficulty-easy   { background: rgba(16, 185, 129, .14); color: #059669; }
+      .qb-difficulty-medium { background: rgba(245, 158, 11, .14); color: #d97706; }
+      .qb-difficulty-hard   { background: rgba(239, 68, 68, .14); color: #dc2626; }
+
+      .qb-usage {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--albedu-body, #64748b);
+        font-weight: 600;
+      }
+
+      .qb-card-text {
+        font-size: 14px;
+        color: var(--albedu-heading, #0f172a);
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 60px;
+      }
+
+      .qb-card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--albedu-body, #64748b);
+      }
+      .qb-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: rgba(100, 116, 139, .1);
+        color: var(--albedu-body, #64748b);
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .qb-subject {
+        font-weight: 600;
+        color: var(--albedu-primary, #2563eb);
+      }
+
+      .qb-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding-top: 12px;
+        border-top: 1px solid var(--albedu-border, #e2e8f0);
+      }
+
+      @media (max-width: 768px) {
+        .qb-toolbar { flex-direction: column; align-items: stretch; }
+        .qb-grid { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 480px) {
+        .qb-card { padding: 16px; }
+        .qb-filters { grid-template-columns: 1fr; padding: 12px; }
+      }
+    

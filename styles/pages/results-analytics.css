@@ -1,0 +1,268 @@
+/* ==========================================================================
+   results-analytics.css — Hasil & Analitik (Results & Analytics admin page)
+   Extracted from: /home/z/my-project/AlbEdu/pages/admin/pages/results-analytics.html
+   ========================================================================== */
+
+      /* ─── Results & Analytics page-specific styles ─── */
+      .ra-controls {
+        display: flex;
+        align-items: end;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: var(--albedu-surface, #fff);
+        border: 1px solid var(--albedu-border, #e2e8f0);
+        border-radius: var(--albedu-radius-lg, 14px);
+        flex-wrap: wrap;
+      }
+      .ra-controls > div { flex: 1; min-width: 240px; }
+      .ra-controls label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--albedu-body, #64748b);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+      }
+      .ra-select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--albedu-border, #e2e8f0);
+        border-radius: var(--albedu-radius-md, 10px);
+        background: var(--albedu-surface, #fff);
+        color: var(--albedu-heading, #0f172a);
+        font-size: 14px;
+        font-family: inherit;
+      }
+      .ra-select:focus { outline: none; border-color: var(--albedu-primary, #2563eb); }
+
+      .ra-export-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-left: auto;
+      }
+
+      /* Stats cards */
+      .ra-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+      .ra-stat-card {
+        background: var(--albedu-surface, #fff);
+        border: 1px solid var(--albedu-border, #e2e8f0);
+        border-radius: var(--albedu-radius-lg, 14px);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .ra-stat-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--albedu-body, #64748b);
+      }
+      .ra-stat-value {
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--albedu-heading, #0f172a);
+        line-height: 1.1;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+      }
+      .ra-stat-sub {
+        font-size: 12px;
+        color: var(--albedu-body, #64748b);
+      }
+
+      /* Section card */
+      .ra-section {
+        background: var(--albedu-surface, #fff);
+        border: 1px solid var(--albedu-border, #e2e8f0);
+        border-radius: var(--albedu-radius-lg, 14px);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .ra-section-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--albedu-heading, #0f172a);
+        margin: 0 0 4px;
+      }
+      .ra-section-desc {
+        font-size: 13px;
+        color: var(--albedu-body, #64748b);
+        margin: 0 0 16px;
+      }
+
+      /* Histogram (CSS bars, no chart lib) */
+      .ra-histogram {
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        height: 180px;
+        padding: 12px 4px 0;
+        border-bottom: 1px solid var(--albedu-border, #e2e8f0);
+        margin-bottom: 8px;
+      }
+      .ra-histo-bar {
+        flex: 1;
+        min-width: 12px;
+        background: linear-gradient(180deg, var(--albedu-primary, #2563eb), rgba(37, 99, 235, .55));
+        border-radius: 4px 4px 0 0;
+        position: relative;
+        transition: opacity .15s ease;
+        cursor: default;
+        min-height: 2px;
+      }
+      .ra-histo-bar:hover { opacity: .85; }
+      .ra-histo-bar::after {
+        content: attr(data-count);
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--albedu-heading, #0f172a);
+        opacity: 0;
+        transition: opacity .15s ease;
+      }
+      .ra-histo-bar:hover::after { opacity: 1; }
+      .ra-histo-labels {
+        display: flex;
+        gap: 4px;
+        font-size: 10px;
+        color: var(--albedu-body, #64748b);
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+      }
+      .ra-histo-labels span {
+        flex: 1;
+        text-align: center;
+      }
+
+      /* Tables */
+      .ra-table-wrap {
+        overflow-x: auto;
+        max-height: 420px;
+        overflow-y: auto;
+      }
+      .ra-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .ra-table thead {
+        position: sticky;
+        top: 0;
+        background: var(--albedu-surface, #fff);
+        z-index: 1;
+      }
+      .ra-table th {
+        text-align: left;
+        padding: 10px 12px;
+        font-weight: 700;
+        color: var(--albedu-body, #64748b);
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: .04em;
+        border-bottom: 2px solid var(--albedu-border, #e2e8f0);
+        white-space: nowrap;
+      }
+      .ra-table td {
+        padding: 10px 12px;
+        color: var(--albedu-heading, #0f172a);
+        border-bottom: 1px solid var(--albedu-border, #e2e8f0);
+        vertical-align: middle;
+      }
+      .ra-table tbody tr:hover { background: rgba(37, 99, 235, .03); }
+      .ra-table code {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .ra-difficulty-bar {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 120px;
+      }
+      .ra-difficulty-track {
+        flex: 1;
+        height: 6px;
+        background: rgba(100, 116, 139, .15);
+        border-radius: 3px;
+        overflow: hidden;
+        min-width: 60px;
+      }
+      .ra-difficulty-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width .3s ease;
+      }
+      .ra-difficulty-fill.easy   { background: #10b981; }
+      .ra-difficulty-fill.medium { background: #f59e0b; }
+      .ra-difficulty-fill.hard   { background: #ef4444; }
+      .ra-difficulty-pct {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 12px;
+        font-weight: 700;
+        min-width: 40px;
+        text-align: right;
+      }
+
+      /* Distractor breakdown (mini bars) */
+      .ra-distractors {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 140px;
+      }
+      .ra-distractor-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+      }
+      .ra-distractor-label {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-weight: 700;
+        color: var(--albedu-body, #64748b);
+        width: 14px;
+      }
+      .ra-distractor-bar {
+        flex: 1;
+        height: 4px;
+        background: rgba(100, 116, 139, .15);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .ra-distractor-bar-fill {
+        height: 100%;
+        background: var(--albedu-primary, #2563eb);
+        border-radius: 2px;
+      }
+      .ra-distractor-bar-fill.correct { background: #10b981; }
+      .ra-distractor-pct {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-weight: 600;
+        color: var(--albedu-body, #64748b);
+        min-width: 30px;
+        text-align: right;
+      }
+
+      @media (max-width: 768px) {
+        .ra-controls { flex-direction: column; align-items: stretch; }
+        .ra-export-actions { margin-left: 0; }
+        .ra-stats-grid { grid-template-columns: repeat(2, 1fr); }
+      }
+      @media (max-width: 480px) {
+        .ra-stats-grid { grid-template-columns: 1fr; }
+        .ra-section { padding: 16px; }
+        .ra-stat-value { font-size: 22px; }
+      }
+    

@@ -1,0 +1,152 @@
+/* ==========================================================================
+   assessment-entry.css — Assessment Entry (participant access code entry page)
+   Extracted from: /home/z/my-project/AlbEdu/pages/assessment/index.html
+   ========================================================================== */
+
+      body {
+        background: linear-gradient(135deg, var(--albedu-primary-muted, #eff6ff) 0%, var(--albedu-surface, #fff) 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .token-container {
+        max-width: 480px;
+        width: 100%;
+        text-align: center;
+      }
+      .token-logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 24px;
+        background: var(--albedu-primary, #2563eb);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 12px 32px var(--albedu-primary-ring, rgba(37, 99, 235, 0.2));
+      }
+      .token-logo .material-symbols-outlined {
+        font-size: 40px;
+        color: #fff;
+      }
+      .token-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--albedu-heading, #0f172a);
+        margin: 0 0 8px;
+        letter-spacing: -0.02em;
+      }
+      .token-subtitle {
+        font-size: 15px;
+        color: var(--albedu-body, #475569);
+        margin: 0 0 40px;
+      }
+      .token-inputs {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        margin-bottom: 32px;
+      }
+      .token-input {
+        width: 56px;
+        height: 72px;
+        text-align: center;
+        font-size: 32px;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--albedu-heading, #0f172a);
+        background: var(--albedu-surface, #fff);
+        border: 2px solid var(--albedu-border, #e2e8f0);
+        border-radius: 12px;
+        outline: none;
+        transition: all 150ms;
+        -webkit-appearance: none;
+        -moz-appearance: textfield;
+      }
+      .token-input::-webkit-outer-spin-button,
+      .token-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      .token-input:hover:not(:focus) {
+        border-color: var(--albedu-primary, #2563eb);
+      }
+      .token-input:focus {
+        border-color: var(--albedu-primary, #2563eb);
+        box-shadow: 0 0 0 4px var(--albedu-primary-ring, rgba(37, 99, 235, 0.2));
+        transform: translateY(-2px);
+      }
+      .token-input.filled {
+        border-color: var(--albedu-primary, #2563eb);
+        background: var(--albedu-primary-muted, #eff6ff);
+      }
+      .token-input.error {
+        border-color: var(--albedu-danger, #ef4444);
+        animation: shake 0.4s;
+      }
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-8px); }
+        75% { transform: translateX(8px); }
+      }
+      .turnstile-wrap {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 24px;
+        min-height: 65px;
+      }
+      .token-submit {
+        width: 100%;
+        padding: 16px;
+        font-size: 16px;
+        font-weight: 600;
+        background: var(--albedu-primary, #2563eb);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 150ms;
+        font-family: inherit;
+        box-shadow: 0 4px 12px var(--albedu-primary-ring, rgba(37, 99, 235, 0.2));
+      }
+      .token-submit:hover:not(:disabled) {
+        background: var(--albedu-primary-hover, #1d4ed8);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px var(--albedu-primary-ring, rgba(37, 99, 235, 0.3));
+      }
+      .token-submit:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .token-back {
+        margin-top: 24px;
+        font-size: 14px;
+        color: var(--albedu-body, #475569);
+      }
+      .token-back a {
+        color: var(--albedu-primary, #2563eb);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .token-back a:hover {
+        text-decoration: underline;
+      }
+      .cooldown-banner {
+        background: #fef3c7;
+        border: 1px solid #fde68a;
+        color: var(--albedu-warning, #f59e0b);
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 24px;
+        display: none;
+      }
+      .cooldown-banner.show { display: block; }
+      @media (max-width: 480px) {
+        .token-input { width: 44px; height: 60px; font-size: 26px; }
+        .token-inputs { gap: 8px; }
+        .token-title { font-size: 24px; }
+      }
+    

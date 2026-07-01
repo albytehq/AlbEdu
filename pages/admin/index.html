@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Panel Administrator - AlbEdu</title>
+    <meta name="description" content="Panel Administrator AlbEdu">
+    <meta name="theme-color" content="#2563eb">
+    
+    <!-- Mobile App Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    
+    
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="../../public/images/favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="../../public/images/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="96x96" href="../../public/images/favicon/favicon-96x96.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../public/images/favicon/apple-touch-icon.png">
+    <link rel="manifest" href="../../public/images/favicon/site.webmanifest">
+
+    <!-- Design System Tokens -->
+    <link rel="stylesheet" href="../../styles/tokens.css">
+  <!-- F1+F2 fix: font loading strategy (preconnect + swap, no @import) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+    <!-- QNotify Styles -->
+    <link rel="stylesheet" href="../../public/QNotify/ui/notify.css">
+    <link rel="stylesheet" href="../../public/QNotify/ui/dialog.css">
+    <link rel="stylesheet" href="../../public/QNotify/ui/label.css">
+    <link rel="stylesheet" href="../../public/QNotify/ui/Readnote.css">
+    <!-- style.css removed — tokens.css provides skip-to-main, focus ring, and global reset -->
+
+    <!-- Loading System -->
+    <link rel="stylesheet" href="../../styles/loading.css">
+    <link rel="stylesheet" href="../../styles/admin-panel.css">
+    <link rel="stylesheet" href="../../styles/notification-panel.css">
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+    <script src="../../src/utils/supabase-api.js" defer></script>
+    <!-- Self Storage (v0.5.0) — auto-provisions storage on admin login -->
+    <script src="../../src/utils/self-storage.js" defer></script>
+    
+    <!-- Load module (URUTAN PENTING) -->
+    <script src="../../src/auth/security.js" defer></script>
+    <script src="../../src/utils/ui.js" defer></script>
+    <script src="../../src/auth/errors.js" defer></script>
+    <script src="../../src/auth/user-helpers.js" defer></script>
+    <script src="../../src/auth/main.js" defer></script>
+    <script src="../../src/auth/byteward.js" defer></script>
+    <script src="../../src/pages/panel.js" defer></script>
+
+    <!-- QNotify Module + Bridge -->
+    <script type="module">
+        import QNotify from '../../public/QNotify/api/index.js';
+        window.QNotify = QNotify;
+        window.show    = QNotify;
+        window.notify  = {
+            success:          (t, m, d) => QNotify.notify.success(t, m, d),
+            error:            (t, m, d) => QNotify.notify.error(t, m, d),
+            warning:          (t, m, d) => QNotify.notify.warning(t, m, d),
+            info:             (t, m, d) => QNotify.notify.info(t, m, d),
+            confirm:          (opts)    => QNotify.dialog.confirm(opts),
+            holdConfirmAsync: (opts)    => QNotify.dialog.holdAsync(opts),
+        };
+        window.dispatchEvent(new Event('qnotify-ready'));
+    </script>
+</head>
+<body>
+    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
+    <div class="panel-container">
+
+        <!-- Header -->
+        <div class="mobile-header">
+            <div class="header-top">
+                <div class="app-title">AlbEdu Admin</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <button class="notification-btn" id="notification-btn-index"
+                            aria-label="Notifikasi pelanggaran ujian">
+                        <i class="material-symbols-outlined">notifications</i>
+                        <span class="badge" id="anc-bell-badge"
+                              style="position:absolute;top:-5px;right:-5px;width:15px;height:15px;
+                                     background:#dc2626;color:#fff;border-radius:50%;font-size:9px;
+                                     display:none;align-items:center;justify-content:center;font-weight:700;">0</span>
+                    </button>
+                    <div class="time-display" id="currentTime">--:--</div>
+                </div>
+            </div>
+            
+            <div id="userInfo" class="user-info-mobile">
+                <!-- Populated by panel.js -->
+                <div class="user-avatar-mobile">
+                    <i class="material-symbols-outlined">manage_accounts</i>
+                </div>
+                <div class="user-details-mobile">
+                    <h3>Administrator</h3>
+                    <p>admin@albedu.com</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="mobile-content" id="main-content">
+
+            <!-- Greeting -->
+            <div class="greeting-section">
+                <h2 id="greeting">Panel Administrator</h2>
+                <p>Pilih halaman yang ingin Anda kunjungi</p>
+            </div>
+
+            <!-- Cards -->
+            <div class="mobile-cards">
+
+                <!-- AlbEdu Creates -->
+                <div class="mobile-card mobile-card-primary" data-link="pages/profile.html"
+                     role="button" tabindex="0" aria-label="Buka AlbEdu Creates">
+                    <div class="card-icon-mobile">
+                        <i class="material-symbols-outlined">auto_fix_high</i>
+                    </div>
+                    <div class="card-content-mobile">
+                        <span class="card-kicker-mobile">Workspace admin</span>
+                        <h3 class="card-title-mobile">AlbEdu Creates</h3>
+                        <p class="card-description-mobile">
+                            Buat dan kelola konten pembelajaran untuk platform AlbEdu.
+                        </p>
+                    </div>
+                    <div class="card-arrow-mobile">
+                        <i class="material-symbols-outlined">chevron_right</i>
+                    </div>
+                </div>
+
+                <!-- Halaman Ujian -->
+                <div class="mobile-card" data-link="../ujian/index.html"
+                     role="button" tabindex="0" aria-label="Buka Halaman Ujian">
+                    <div class="card-icon-mobile">
+                        <i class="material-symbols-outlined">assignment_turned_in</i>
+                    </div>
+                    <div class="card-content-mobile">
+                        <h3 class="card-title-mobile">Halaman Ujian</h3>
+                        <p class="card-description-mobile">
+                            Kelola sistem ujian online dan pantau hasil ujian peserta.
+                        </p>
+                    </div>
+                    <div class="card-arrow-mobile">
+                        <i class="material-symbols-outlined">chevron_right</i>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="mobile-status">
+            AlbEdu Admin Panel
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('touchstart', function() {}, { passive: true });
+    </script>
+
+    <!-- Notification Center -->
+    <script src="../../src/utils/admin-notification-center.js" defer></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var btn = document.getElementById("notification-btn-index");
+            if (btn) {
+                btn.addEventListener("click", function () {
+                    if (window.AdminNotificationCenter) AdminNotificationCenter.openPanel();
+                });
+            }
+        });
+    </script>
+</body>
+</html>

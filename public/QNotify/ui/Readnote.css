@@ -1,0 +1,926 @@
+/* Readnote.css — Qnotify v8.0.5 (was v7.5.0
+ *
+ * ReadNote — Label Family
+ * Komponen card informasi/instruksi fullscreen-ish.
+ * Tema: BIRU eksklusif (tidak bisa diubah).
+ *
+ * Namespace:
+ *   Container:  .label-readnote
+ *   Keyframes:  rn*
+ *   Variables:  --rn-*
+ *
+ * Sections:
+ *   §0  Isolation shield
+ *   §1  Hard reset
+ *   §2  Design tokens (light mode)
+ *   §3  Dark mode tokens
+ *   §4  Backdrop / overlay
+ *   §5  Card base
+ *   §6  Close button  [U4: rn-close-hidden state]
+ *   §7  Content area
+ *   §8  ui_type: default
+ *   §9  ui_type: text_only
+ *   §10 Progress bar
+ *   §11 Footer / continue button  [U5: bounce-unlock]
+ *   §12 Responsive (mobile)
+ *   §13 Accessibility
+ *   §14 High contrast + print
+ *   §15 Body text + divider
+ *   §16 Scroll-progress system
+ *   §17 Step dots  [U6: multi-step]
+ */
+
+
+/* ════════════════════════════════════════════════════════════════
+   §0  ISOLATION SHIELD
+   ════════════════════════════════════════════════════════════════ */
+
+.mobile-mode .qnotify-label.label-readnote.notification-item,
+.desktop-mode .qnotify-label.label-readnote.notification-item {
+    background:              transparent            !important;
+    color:                   unset                  !important;
+    box-shadow:              none                   !important;
+    will-change:             unset                  !important;
+    backdrop-filter:         none                   !important;
+    -webkit-backdrop-filter: none                   !important;
+    transition:              none                   !important;
+    border:                  none                   !important;
+}
+
+.mobile-mode .qnotify-label.label-readnote.notification-item {
+    top:          0           !important;
+    left:         0           !important;
+    display:      block       !important;
+    align-items:  unset       !important;
+    overflow:     visible     !important;
+    touch-action: auto        !important;
+    min-height:   unset       !important;
+    padding:      0           !important;
+}
+
+.mobile-mode .qnotify-label.label-readnote.notification-item.active,
+.desktop-mode .qnotify-label.label-readnote.notification-item.active {
+    opacity: 1      !important;
+    z-index: 10010  !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §1  HARD RESET
+   ════════════════════════════════════════════════════════════════ */
+
+.qnotify-label.label-readnote.notification-item {
+    position:       fixed           !important;
+    inset:          0               !important;
+    width:          100%            !important;
+    height:         100%            !important;
+    min-height:     unset           !important;
+    max-height:     unset           !important;
+    padding:        0               !important;
+    margin:         0               !important;
+    flex-direction: unset           !important;
+    align-items:    unset           !important;
+    gap:            unset           !important;
+    border:         none            !important;
+    border-radius:  0               !important;
+    translate:      none            !important;
+    transform:      none            !important;
+
+    --shadow-primary-y:         0;
+    --shadow-primary-blur:      0;
+    --shadow-primary-opacity:   0;
+    --shadow-secondary-y:       0;
+    --shadow-secondary-blur:    0;
+    --shadow-secondary-opacity: 0;
+}
+
+.label-readnote .progress-track,
+.label-readnote .progress-bar { display: none !important; }
+
+
+/* ════════════════════════════════════════════════════════════════
+   §2  DESIGN TOKENS  (light mode)
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote {
+    /* Blue palette — immutable */
+    --rn-accent:        #0A84FF;
+    --rn-accent-deep:   #0060D1;
+    --rn-accent-light:  rgba(10, 132, 255, 0.12);
+    --rn-accent-glow:   rgba(10, 132, 255, 0.28);
+    --rn-blue-100:      #E8F2FF;
+    --rn-blue-200:      #C6DEFF;
+    --rn-blue-800:      #003F99;
+
+    /* Card */
+    --rn-card-bg:       #ffffff;
+    --rn-card-border:   rgba(10, 132, 255, 0.18);
+    --rn-card-shadow:
+        0 2px 6px rgba(0,0,0,0.06),
+        0 8px 24px rgba(0, 100, 220, 0.14),
+        0 24px 64px rgba(0, 80, 200, 0.10),
+        inset 0 1px 0 rgba(255,255,255,0.95);
+
+    /* Text */
+    --rn-title-color:    #0d1a2e;
+    --rn-subtitle-color: #536078;
+    --rn-close-color:    #8a9ab0;
+    --rn-close-hover:    #0A84FF;
+
+    /* Logo icon */
+    --rn-logo-bg:       var(--rn-accent-light);
+    --rn-logo-icon-clr: var(--rn-accent);
+
+    /* Progress */
+    --rn-prog-track:    #e8eef5;
+    --rn-prog-fill:     var(--rn-accent);
+    --rn-prog-glow:     var(--rn-accent-glow);
+
+    /* Backdrop */
+    --rn-backdrop-bg:   rgba(10, 30, 80, 0.40);
+
+    /* Footer button */
+    --rn-btn-bg:        var(--rn-accent);
+    --rn-btn-bg-floor:  var(--rn-accent-deep);
+    --rn-btn-text:      #ffffff;
+    --rn-btn-glow:      var(--rn-accent-glow);
+
+    /* Sizing */
+    --rn-card-padding:  36px;
+    --rn-card-radius:   24px;
+    --rn-card-maxw:     520px;
+
+    /* Step dots */
+    --rn-dot-size:      7px;
+    --rn-dot-color:     rgba(10, 132, 255, 0.22);
+    --rn-dot-active:    var(--rn-accent);
+
+    isolation: isolate; /* [v7.5.0] prevent paint bleed */}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §3  DARK MODE TOKENS
+   ════════════════════════════════════════════════════════════════ */
+
+@media (prefers-color-scheme: dark) {
+    .label-readnote {
+        --rn-card-bg:       #0e1621;
+        --rn-card-border:   rgba(10, 132, 255, 0.22);
+        --rn-card-shadow:
+            0 2px 8px rgba(0,0,0,0.40),
+            0 12px 32px rgba(0, 100, 220, 0.22),
+            0 32px 80px rgba(0, 80, 200, 0.18),
+            inset 0 1px 0 rgba(255,255,255,0.06);
+
+        --rn-title-color:    #e8f0fe;
+        --rn-subtitle-color: #7d95b8;
+        --rn-close-color:    #4a6080;
+        --rn-close-hover:    #4da3ff;
+
+        --rn-logo-bg:       rgba(10, 132, 255, 0.15);
+        --rn-logo-icon-clr: #4da3ff;
+
+        --rn-prog-track:    rgba(255,255,255,0.07);
+        --rn-btn-bg:        #1a7de8;
+        --rn-btn-bg-floor:  #0f5cb8;
+        --rn-backdrop-bg:   rgba(0, 8, 24, 0.65);
+        --rn-blue-100:      rgba(10,132,255,0.12);
+
+        --rn-dot-color:     rgba(10, 132, 255, 0.18);
+    }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §4  BACKDROP / OVERLAY
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote .rn-backdrop {
+    position:   fixed;
+    inset:      0;
+    background: var(--rn-backdrop-bg);
+    z-index:    0;
+
+    backdrop-filter:         blur(4px) saturate(1.3);
+    -webkit-backdrop-filter: blur(4px) saturate(1.3);
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §5  CARD BASE
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote .rn-card {
+    position:         fixed;
+    left:             50%;
+    top:              50%;
+    transform:        translate(-50%, -50%);
+    z-index:          1;
+
+    width:            min(var(--rn-card-maxw), 92vw);
+    max-height:       min(88vh, 680px);
+
+    /* [v8.0.1] Flex layout: content scrolls, footer always anchored at bottom.
+     * Prevents button from being pushed outside the card on short viewports or
+     * in required-read mode where scroll-progress bar + footer stacked up. */
+    display:          flex;
+    flex-direction:   column;
+
+    background:       var(--rn-card-bg);
+    border:           1px solid var(--rn-card-border);
+    border-radius:    var(--rn-card-radius);
+    box-shadow:       var(--rn-card-shadow); /* [U3] overridden inline during enter spring */
+    overflow:         hidden;
+
+    background-image:
+        linear-gradient(
+            to bottom,
+            var(--rn-blue-100) 0%,
+            transparent 72px
+        );
+
+    /* [v7.5.0] will-change stays here — ReadNote only exists during display,
+     * so the compositor layer is always warranted while it's in the DOM. */
+    will-change: transform, opacity;
+    box-sizing:  border-box;
+}
+
+/* [v7.5.0 FOUC+FOIS Fix] ReadNote spawn: visibility:hidden until JS springs fire.
+ * glitch.stampInitialState() writes opacity+transform inline before DOM insert.
+ * afterTwoFrames() removes .spawn after compositor commit.
+ * CSS visibility is the absolute safety net — zero flash on any device. */
+.label-readnote.spawn .rn-card,
+.label-readnote.spawn .rn-backdrop {
+    visibility:     hidden;
+    pointer-events: none;
+}
+.label-readnote.active .rn-card,
+.label-readnote.active .rn-backdrop {
+    visibility: visible;
+}
+
+.label-readnote .rn-card::before {
+    content:         '';
+    position:        absolute;
+    inset-inline:    20%;
+    top:             0;
+    height:          2px;
+    border-radius:   0 0 4px 4px;
+    background:      linear-gradient(
+                         90deg,
+                         transparent,
+                         var(--rn-accent) 30%,
+                         var(--rn-accent) 70%,
+                         transparent
+                     );
+    opacity:         0.7;
+    pointer-events:  none;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §6  CLOSE BUTTON
+   [U4] rn-close-hidden — initial state before deferred enter anim.
+        JS removes this class after spring completes.
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote .rn-close-btn {
+    position:         absolute;
+    top:              14px;
+    right:            14px;
+    z-index:          10;
+
+    display:          flex;
+    align-items:      center;
+    justify-content:  center;
+    width:            34px;
+    height:           34px;
+    padding:          0;
+    border:           none;
+    border-radius:    50%;
+    background:       transparent;
+    cursor:           pointer;
+    color:            var(--rn-close-color);
+
+    transition:
+        background 0.18s ease,
+        color      0.18s ease,
+        transform  0.15s cubic-bezier(0.25, 0, 0.25, 1);
+}
+
+/* [U4] Hidden state — JS-animated, pointer-events off until visible */
+.label-readnote .rn-close-btn.rn-close-hidden {
+    pointer-events: none;
+}
+
+.label-readnote .rn-close-btn .material-icons-round {
+    font-size: 18px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.label-readnote .rn-close-btn:hover {
+    background: var(--rn-accent-light);
+    color:      var(--rn-close-hover);
+    transform:  scale(1.08);
+}
+
+.label-readnote .rn-close-btn:active {
+    transform: scale(0.92);
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §7  CONTENT AREA
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote .rn-content {
+    padding:         var(--rn-card-padding);
+    padding-top:     44px;
+    overflow-y:      auto;
+    overflow-x:      hidden; /* no horizontal scroll */
+    /* [v8.0.1] flex: 1 1 auto + min-height: 0 replaces the old max-height calc().
+     * The card is the flex parent (max-height: min(88vh,680px)). Content grows to fill
+     * all available space, leaving footer/progress pinned at the bottom.
+     * min-height: 0 is critical — without it flex items cannot shrink below their
+     * natural content height, breaking the scroll contract. */
+    flex:            1 1 auto;
+    min-height:      0;
+    box-sizing:      border-box;
+    word-break:      break-word;
+    overflow-wrap:   break-word;
+
+    scrollbar-width:  thin;
+    scrollbar-color:  rgba(10,132,255,0.25) transparent;
+}
+
+.label-readnote .rn-content::-webkit-scrollbar {
+    width: 4px;
+}
+.label-readnote .rn-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.label-readnote .rn-content::-webkit-scrollbar-thumb {
+    background:    rgba(10,132,255,0.28);
+    border-radius: 4px;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §8  UI TYPE: DEFAULT
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote.rn-ui-default .rn-content {
+    display:         flex;
+    flex-direction:  column;
+    align-items:     center;
+    text-align:      center;
+    padding-top:     52px;
+    padding-bottom:  32px;
+    gap:             0;
+}
+
+.label-readnote.rn-ui-default .rn-logo-wrap {
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    margin-bottom:   20px;
+}
+
+.label-readnote.rn-ui-default .rn-logo-img {
+    width:         80px;
+    height:        80px;
+    border-radius: 20px;
+    object-fit:    cover;
+    box-shadow:    0 4px 16px var(--rn-accent-glow);
+}
+
+.label-readnote.rn-ui-default .rn-logo-icon {
+    width:            80px;
+    height:           80px;
+    border-radius:    50%;
+    background:       var(--rn-logo-bg);
+    border:           2px solid var(--rn-card-border);
+    display:          flex;
+    align-items:      center;
+    justify-content:  center;
+    box-shadow:       0 4px 20px var(--rn-accent-glow);
+}
+
+.label-readnote.rn-ui-default .rn-logo-icon .material-icons-round {
+    font-size: 38px;
+    color:     var(--rn-logo-icon-clr);
+}
+
+.label-readnote.rn-ui-default .rn-title {
+    font-size:   22px;
+    font-weight: 700;
+    color:       var(--rn-title-color);
+    line-height: 1.3;
+    letter-spacing: -0.3px;
+    margin-top:  4px;
+    /* [v8.0.1] width:100% + explicit text-align: without these, a narrow
+     * title (short text) rendered as a flex item could end up left-aligned
+     * post-animation when the inline transform is cleared. width:100% ensures
+     * the element spans the full content column so text-align:center is
+     * always applied to the full available width, never just content-width. */
+    width:       100%;
+    text-align:  center;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §9  UI TYPE: TEXT_ONLY
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote.rn-ui-text_only .rn-content {
+    display:         flex;
+    flex-direction:  column;
+    align-items:     flex-start;
+    text-align:      left;
+    padding-top:     52px;
+    padding-bottom:  28px;
+    gap:             0;
+}
+
+.label-readnote.rn-ui-text_only .rn-title {
+    font-size:      26px;
+    font-weight:    700;
+    color:          var(--rn-title-color);
+    line-height:    1.25;
+    letter-spacing: -0.5px;
+    margin-bottom:  14px;
+}
+
+.label-readnote.rn-ui-text_only .rn-subtitle {
+    font-size:      15px;
+    font-weight:    400;
+    color:          var(--rn-subtitle-color);
+    line-height:    1.65;
+    letter-spacing: 0.1px;
+}
+
+.label-readnote.rn-ui-text_only .rn-title::after {
+    content:         '';
+    display:         block;
+    width:           40px;
+    height:          3px;
+    border-radius:   2px;
+    background:      linear-gradient(90deg, var(--rn-accent), var(--rn-accent-deep));
+    margin-top:      10px;
+    opacity:         0.8;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §10  PROGRESS BAR
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote .rn-progress-wrap {
+    padding:     0 var(--rn-card-padding) 20px;
+    box-sizing:  border-box;
+    /* [v8.0.1] Always pinned — never compressed by content scroll */
+    flex-shrink: 0;
+}
+
+.label-readnote .rn-progress-track {
+    width:         100%;
+    height:        4px;
+    border-radius: 4px;
+    background:    var(--rn-prog-track);
+    overflow:      hidden;
+}
+
+.label-readnote .rn-progress-bar {
+    height:           100%;
+    border-radius:    4px;
+    background:       linear-gradient(
+                          90deg,
+                          var(--rn-accent-deep),
+                          var(--rn-accent)
+                      );
+    box-shadow:       0 0 8px var(--rn-prog-glow);
+    will-change:      width;
+    transition:       none;
+    min-width:        0%;
+    max-width:        100%;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §11  FOOTER  +  CONTINUE BUTTON
+   [U5] Bounce-unlock is spring-driven from JS.
+        CSS transition is intentionally minimal — JS owns the bounce.
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote .rn-footer {
+    padding:         16px var(--rn-card-padding) 24px;
+    display:         flex;
+    justify-content: flex-end;
+    border-top:      1px solid var(--rn-card-border);
+    box-sizing:      border-box;
+    /* [v8.0.1] flex-shrink:0 — footer is always pinned at card bottom.
+     * Without this, in required-read mode the footer + progress bar could be
+     * compressed by content, making the button appear buried or misaligned. */
+    flex-shrink:     0;
+}
+
+.label-readnote .rn-continue-btn {
+    position:         relative;
+    display:          inline-flex;
+    align-items:      center;
+    justify-content:  center;
+    padding:          0 28px;
+    height:           44px;
+    border:           none;
+    border-radius:    12px;
+    font-size:        15px;
+    font-weight:      600;
+    letter-spacing:   0.1px;
+    cursor:           pointer;
+    user-select:      none;
+    -webkit-user-select: none;
+    outline:          none;
+
+    color:            var(--rn-btn-text);
+    background:       var(--rn-btn-bg);
+    box-shadow:
+        0 4px 0 var(--rn-btn-bg-floor),
+        0 6px 20px var(--rn-btn-glow),
+        inset 0 1px 0 rgba(255,255,255,0.22);
+
+    /* [U5] Minimal CSS transition — JS spring handles bounce-unlock */
+    transition:
+        transform   0.12s cubic-bezier(0.25, 0, 0.25, 1),
+        box-shadow  0.12s cubic-bezier(0.25, 0, 0.25, 1);
+}
+
+.label-readnote .rn-continue-btn:hover {
+    transform:  translateY(-2px);
+    box-shadow:
+        0 6px 0 var(--rn-btn-bg-floor),
+        0 10px 28px var(--rn-btn-glow),
+        inset 0 1px 0 rgba(255,255,255,0.26);
+}
+
+.label-readnote .rn-continue-btn:active {
+    transform:  translateY(2px);
+    box-shadow:
+        0 2px 0 var(--rn-btn-bg-floor),
+        0 2px 8px var(--rn-btn-glow),
+        inset 0 1px 0 rgba(255,255,255,0.16);
+}
+
+.label-readnote .rn-continue-btn:focus-visible {
+    outline:        3px solid var(--rn-accent);
+    outline-offset: 3px;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §12  RESPONSIVE  (mobile ≤ 480px)
+   ════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+    .label-readnote {
+        --rn-card-padding: 24px;
+        --rn-card-radius:  18px;
+    }
+
+    .label-readnote.rn-ui-default .rn-logo-img,
+    .label-readnote.rn-ui-default .rn-logo-icon {
+        width:  64px;
+        height: 64px;
+    }
+
+    .label-readnote.rn-ui-default .rn-logo-icon .material-icons-round {
+        font-size: 30px;
+    }
+
+    .label-readnote.rn-ui-default .rn-title {
+        font-size: 19px;
+    }
+
+    .label-readnote.rn-ui-text_only .rn-title {
+        font-size: 22px;
+    }
+
+    .label-readnote .rn-content {
+        padding-top: 40px;
+    }
+
+    .label-readnote .rn-footer {
+        justify-content: stretch;
+    }
+    .label-readnote .rn-continue-btn {
+        width: 100%;
+    }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §13  ACCESSIBILITY
+   ════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+    .label-readnote .rn-card,
+    .label-readnote .rn-anim-item,
+    .label-readnote .rn-close-btn,
+    .label-readnote .rn-continue-btn {
+        transition-duration: 0.01ms !important;
+        animation-duration:  0.01ms !important;
+    }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §14  HIGH CONTRAST + PRINT
+   ════════════════════════════════════════════════════════════════ */
+
+@media (forced-colors: active) {
+    .label-readnote .rn-card {
+        border: 2px solid ButtonText;
+    }
+    .label-readnote .rn-continue-btn {
+        forced-color-adjust: none;
+    }
+}
+
+@media print {
+    .label-readnote .rn-backdrop { display: none; }
+    .label-readnote .rn-card {
+        position: static;
+        transform: none;
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+    .label-readnote .rn-close-btn { display: none; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §15  BODY TEXT + DIVIDER
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote .rn-divider {
+    width:        100%;
+    height:       1px;
+    background:   linear-gradient(90deg, transparent, var(--rn-card-border) 30%, var(--rn-card-border) 70%, transparent);
+    margin:       16px 0;
+    flex-shrink:  0;
+}
+
+.label-readnote .rn-body-text {
+    font-size:      14.5px;
+    font-weight:    400;
+    color:          var(--rn-subtitle-color);
+    line-height:    1.7;
+    letter-spacing: 0.1px;
+    width:          100%;
+    min-width:      0;
+    word-break:     break-word;
+    overflow-wrap:  break-word;
+    white-space:    normal;
+}
+
+/* ── Markdown-rendered elements inside rn-body-text ── */
+.label-readnote .rn-body-text h1,
+.label-readnote .rn-body-text h2,
+.label-readnote .rn-body-text h3,
+.label-readnote .rn-body-text h4 {
+    font-weight:    700;
+    color:          var(--rn-title-color);
+    line-height:    1.3;
+    margin:         16px 0 6px;
+    word-break:     break-word;
+}
+.label-readnote .rn-body-text h1 { font-size: 20px; }
+.label-readnote .rn-body-text h2 { font-size: 17px; }
+.label-readnote .rn-body-text h3 { font-size: 15px; }
+.label-readnote .rn-body-text h4 { font-size: 14px; }
+
+.label-readnote .rn-body-text p {
+    margin: 0 0 10px;
+    word-break:    break-word;
+    overflow-wrap: break-word;
+}
+.label-readnote .rn-body-text p:last-child { margin-bottom: 0; }
+
+.label-readnote .rn-body-text strong { font-weight: 700; color: var(--rn-title-color); }
+.label-readnote .rn-body-text em     { font-style: italic; }
+.label-readnote .rn-body-text s      { text-decoration: line-through; opacity: 0.6; }
+
+.label-readnote .rn-body-text code {
+    font-family:      'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size:        12.5px;
+    background:       var(--rn-accent-light);
+    color:            var(--rn-accent-deep);
+    border-radius:    4px;
+    padding:          1px 5px;
+    word-break:       break-all;
+}
+
+.label-readnote .rn-body-text pre {
+    background:    var(--rn-accent-light);
+    border-radius: 8px;
+    padding:       10px 14px;
+    overflow-x:    hidden;
+    word-break:    break-all;
+    white-space:   pre-wrap;
+    margin:        8px 0;
+}
+.label-readnote .rn-body-text pre code {
+    background: none;
+    padding:    0;
+    font-size:  12px;
+}
+
+.label-readnote .rn-body-text ul,
+.label-readnote .rn-body-text ol {
+    margin:      6px 0 10px;
+    padding-left: 20px;
+    word-break:  break-word;
+}
+.label-readnote .rn-body-text li { margin-bottom: 4px; }
+
+.label-readnote .rn-body-text blockquote {
+    border-left:  3px solid var(--rn-accent);
+    margin:       8px 0;
+    padding:      4px 12px;
+    opacity:      0.8;
+    font-style:   italic;
+    word-break:   break-word;
+}
+
+.label-readnote .rn-body-text hr {
+    border: none;
+    border-top: 1px solid var(--rn-card-border);
+    margin: 12px 0;
+}
+
+.label-readnote .rn-body-text a {
+    color:           var(--rn-accent);
+    text-decoration: underline;
+    word-break:      break-all;
+}
+
+.label-readnote.rn-ui-default .rn-body-text {
+    text-align: center;
+}
+
+.label-readnote.rn-ui-text_only .rn-body-text {
+    text-align: left;
+}
+
+.label-readnote.rn-ui-text_only .rn-subtitle {
+    font-size:      13px;
+    font-weight:    500;
+    color:          var(--rn-accent);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    margin-top:     -8px;
+    margin-bottom:  8px;
+    opacity:        0.85;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §16  SCROLL-PROGRESS SYSTEM
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote .rn-read-progress-wrap {
+    padding:        8px var(--rn-card-padding) 12px;
+    display:        flex;
+    align-items:    center;
+    gap:            10px;
+    border-top:     1px solid var(--rn-card-border);
+    box-sizing:     border-box;
+    /* [v8.0.1] Pinned above footer — not compressible by content */
+    flex-shrink:    0;
+}
+
+.label-readnote .rn-read-progress-track {
+    flex:          1;
+    height:        4px;
+    border-radius: 4px;
+    background:    var(--rn-prog-track);
+    overflow:      hidden;
+}
+
+.label-readnote .rn-read-progress-bar {
+    height:        100%;
+    border-radius: 4px;
+    background:    linear-gradient(90deg, var(--rn-accent-deep), var(--rn-accent));
+    box-shadow:    0 0 6px var(--rn-prog-glow);
+    width:         0%;
+    transition:    width 0.1s ease;
+}
+
+.label-readnote .rn-read-progress-bar.rn-read-done {
+    background: linear-gradient(90deg, #1a8c2d, #34c759);
+    box-shadow: 0 0 8px rgba(52, 199, 89, 0.35);
+    transition: width 0.3s cubic-bezier(0.34, 1.4, 0.64, 1),
+                background 0.4s ease,
+                box-shadow 0.4s ease;
+}
+
+.label-readnote .rn-read-label {
+    font-size:    11px;
+    font-weight:  500;
+    color:        var(--rn-close-color);
+    white-space:  nowrap;
+    letter-spacing: 0.2px;
+    transition:   color 0.3s ease;
+    flex-shrink:  0;
+}
+
+.label-readnote .rn-read-label.rn-read-done-label {
+    color: #34c759;
+}
+
+/* Locked continue button */
+.label-readnote .rn-continue-btn.rn-btn-locked {
+    opacity:        0.38;
+    cursor:         not-allowed;
+    transform:      none !important;
+    box-shadow:
+        0 3px 0 rgba(0, 96, 209, 0.3),
+        0 4px 12px rgba(10, 132, 255, 0.10),
+        inset 0 1px 0 rgba(255,255,255,0.14);
+    filter:         grayscale(0.3);
+}
+
+.label-readnote .rn-continue-btn:not(.rn-btn-locked) {
+    transition:
+        transform   0.12s cubic-bezier(0.25, 0, 0.25, 1),
+        box-shadow  0.12s cubic-bezier(0.25, 0, 0.25, 1),
+        opacity     0.25s ease,
+        filter      0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .label-readnote .rn-read-progress-bar,
+    .label-readnote .rn-continue-btn {
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .label-readnote .rn-read-progress-wrap {
+        padding: 8px var(--rn-card-padding) 10px;
+    }
+    .label-readnote .rn-body-text {
+        font-size: 14px;
+    }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §17  STEP DOTS  [U6]
+   Indicator row below content, above footer.
+   Only rendered when steps[] is provided.
+   ════════════════════════════════════════════════════════════════ */
+
+.label-readnote .rn-step-dots {
+    display:         flex;
+    justify-content: center;
+    align-items:     center;
+    gap:             6px;
+    padding:         10px var(--rn-card-padding) 4px;
+    box-sizing:      border-box;
+    /* [v8.0.1] Pinned — step dots never pushed out of card */
+    flex-shrink:     0;
+}
+
+.label-readnote .rn-dot {
+    width:         var(--rn-dot-size);
+    height:        var(--rn-dot-size);
+    border-radius: 50%;
+    background:    var(--rn-dot-color);
+    transition:
+        background      0.25s cubic-bezier(0.34, 1.4, 0.64, 1),
+        transform       0.25s cubic-bezier(0.34, 1.4, 0.64, 1),
+        width           0.25s cubic-bezier(0.34, 1.4, 0.64, 1);
+    flex-shrink:   0;
+}
+
+/* Active dot: wider pill shape */
+.label-readnote .rn-dot.rn-dot-active {
+    background: var(--rn-dot-active);
+    width:      18px;
+    border-radius: 4px;
+    transform:  scaleY(1.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .label-readnote .rn-dot {
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .label-readnote .rn-step-dots {
+        padding: 8px var(--rn-card-padding) 2px;
+        gap:     5px;
+    }
+}

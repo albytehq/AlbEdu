@@ -1,0 +1,785 @@
+/* =============================================================
+   data-hasil.css — AlbEdu Data Hasil Ujian
+   Ground-up redesign. Modern SaaS dashboard feel.
+   Target: guru / admin yang kerja cepat, bukan showcase.
+   ============================================================= */
+
+/* ── Design Tokens ──────────────────────────────────────────── */
+:root {
+  /* Surface */
+  --dh-bg:          #f5f9ff;
+  --dh-surface:     #ffffff;
+  --dh-surface-2:   #f8fbff;
+
+  /* Border */
+  --dh-border:      #dbeafe;
+  --dh-border-soft: #eaf2ff;
+
+  /* Text */
+  --dh-text-1:  #0f172a;
+  --dh-text-2:  #374151;
+  --dh-text-3:  #6b7280;
+  --dh-text-4:  #9ca3af;
+
+  /* Brand */
+  --dh-blue:        #2563eb;
+  --dh-blue-dim:    #eff6ff;
+  --dh-blue-hover:  #1d4ed8;
+  --dh-indigo:      #2563eb;
+  --dh-indigo-dim:  #eff6ff;
+
+  /* Score */
+  --dh-green:       #16a34a;
+  --dh-green-dim:   #dcfce7;
+  --dh-yellow:      #ca8a04;
+  --dh-yellow-dim:  #fef9c3;
+  --dh-red:         #dc2626;
+  --dh-red-dim:     #fee2e2;
+
+  /* Shadows — layered for realism */
+  --dh-shadow-xs: 0 1px 2px rgb(0 0 0/.04);
+  --dh-shadow-sm:
+    0 8px 20px rgb(37 99 235/.06),
+    0 1px 2px  rgb(15 23 42/.04);
+  --dh-shadow-md:
+    0 12px 28px rgb(37 99 235/.08),
+    0 2px 4px  rgb(15 23 42/.05);
+  --dh-shadow-lg:
+    0 18px 40px rgb(37 99 235/.10),
+    0  4px 10px rgb(15 23 42/.05);
+  --dh-shadow-hover:
+    0 22px 46px rgb(37 99 235/.15),
+    0  6px 14px rgb(15 23 42/.05);
+
+  /* Motion */
+  --dh-ease:        cubic-bezier(0.22, 1, 0.36, 1);
+  --dh-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dh-dur-fast:    150ms;
+  --dh-dur:         220ms;
+  --dh-dur-slow:    360ms;
+
+  /* Geometry */
+  --dh-r-sm:   10px;
+  --dh-r:      14px;
+  --dh-r-lg:   20px;
+  --dh-r-pill: 999px;
+}
+
+/* ── Root wrapper ───────────────────────────────────────────── */
+.dh-root {
+  padding: clamp(20px, 3vw, 36px);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  /* WHY: biarkan main-content flex-grow yang handle tinggi,
+     jangan hardcode tinggi header supaya tidak kepotong di berbagai device */
+  flex: 1;
+  background: var(--dh-bg);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* ── ① Hero Header ──────────────────────────────────────────── */
+.dh-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.dh-hero__title {
+  font-size: clamp(20px, 2.5vw, 28px);
+  font-weight: 800;
+  color: var(--dh-text-1);
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  margin: 0 0 6px;
+}
+
+.dh-hero__sub {
+  font-size: 14px;
+  color: var(--dh-text-3);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.dh-hero__sub strong {
+  color: var(--dh-blue);
+  font-weight: 600;
+}
+
+/* Filter controls cluster */
+.dh-hero__right {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dh-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dh-filter-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--dh-text-3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dh-filter-label i {
+  font-size: 10px;
+  color: var(--dh-blue);
+}
+
+/* Select wrapper with custom chevron */
+.dh-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dh-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--dh-surface);
+  border: 1.5px solid var(--dh-border);
+  border-radius: var(--dh-r-sm);
+  color: var(--dh-text-2);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 9px 38px 9px 14px;
+  cursor: pointer;
+  transition:
+    border-color var(--dh-dur-fast) ease,
+    box-shadow   var(--dh-dur-fast) ease,
+    background   var(--dh-dur-fast) ease;
+  box-shadow: var(--dh-shadow-xs);
+  min-width: 140px;
+  line-height: 1.4;
+}
+
+.dh-select:focus {
+  outline: none;
+  border-color: var(--dh-blue);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12), var(--dh-shadow-sm);
+}
+
+.dh-select:hover:not(:focus) {
+  border-color: #c4cfe3;
+  background: var(--dh-surface-2);
+}
+
+/* Small variant for toolbar */
+.dh-select--sm {
+  font-size: 13px;
+  padding: 8px 34px 8px 12px;
+  min-width: 0;
+}
+
+.dh-select-wrap--sm { flex-shrink: 0; }
+
+.dh-select-icon {
+  position: absolute;
+  right: 12px;
+  font-size: 10px;
+  color: var(--dh-text-4);
+  pointer-events: none;
+  transition: transform var(--dh-dur-fast) ease;
+}
+
+.dh-select:focus ~ .dh-select-icon {
+  color: var(--dh-blue);
+}
+
+/* ── ② Stat Pills ───────────────────────────────────────────── */
+.dh-stats {
+  display: flex;
+  align-items: center;
+  background: var(--dh-surface);
+  border: 1.5px solid var(--dh-border);
+  border-radius: var(--dh-r);
+  box-shadow: var(--dh-shadow-sm);
+  padding: 0 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dh-stats::-webkit-scrollbar { display: none; }
+
+.dh-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 16px 28px;
+  flex: 1;
+  min-width: 80px;
+}
+
+.dh-stat__num {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--dh-text-1);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  /* Counter animation driven by JS */
+  transition: color 0.3s ease;
+}
+
+.dh-stat__lbl {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--dh-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.dh-stat-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--dh-border);
+  flex-shrink: 0;
+}
+
+/* ── ③ Toolbar ──────────────────────────────────────────────── */
+.dh-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dh-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dh-count {
+  font-size: 13.5px;
+  color: var(--dh-text-3);
+}
+
+.dh-count strong {
+  color: var(--dh-text-1);
+  font-weight: 700;
+}
+
+/* Export button */
+.dh-btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--dh-surface);
+  color: var(--dh-text-2);
+  border: 1.5px solid var(--dh-border);
+  border-radius: var(--dh-r-sm);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--dh-shadow-sm);
+  transition:
+    background  var(--dh-dur-fast) ease,
+    border-color var(--dh-dur-fast) ease,
+    color       var(--dh-dur-fast) ease,
+    box-shadow  var(--dh-dur-fast) ease,
+    transform   var(--dh-dur-fast) var(--dh-ease-spring);
+  white-space: nowrap;
+}
+
+.dh-btn-export i {
+  font-size: 14px;
+  color: #16a34a;
+  transition: color var(--dh-dur-fast) ease;
+}
+
+.dh-btn-export:hover {
+  background: var(--dh-blue-dim);
+  border-color: #bfdbfe;
+  color: var(--dh-blue);
+  box-shadow: var(--dh-shadow-md);
+  transform: translateY(-2px);
+}
+
+.dh-btn-export:hover i { color: var(--dh-blue); }
+
+.dh-btn-export:active {
+  transform: translateY(0);
+  box-shadow: var(--dh-shadow-xs);
+}
+
+/* Export loading state */
+.dh-btn-export.is-loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* ── ④ Card Grid ────────────────────────────────────────────── */
+.dh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 16px;
+}
+
+/* Stagger animation keyframe */
+@keyframes dh-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+/* Grid exit/enter for filter changes */
+.dh-grid.is-shuffling .dh-card {
+  animation: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+/* ── User Card ───────────────────────────────────────────── */
+.dh-card {
+  background: var(--dh-surface);
+  border: 1.5px solid var(--dh-border);
+  border-radius: var(--dh-r-lg);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--dh-shadow-sm);
+  cursor: default;
+
+  /* Cascade in via --card-i set by JS */
+  animation: dh-card-rise 0.38s var(--dh-ease) both;
+  animation-delay: calc(var(--card-i, 0) * 45ms);
+
+  /* Hover prep */
+  transition:
+    box-shadow  var(--dh-dur) var(--dh-ease),
+    transform   var(--dh-dur) var(--dh-ease),
+    border-color var(--dh-dur) ease;
+  will-change: transform;
+}
+
+.dh-card:hover {
+  box-shadow: var(--dh-shadow-hover);
+  transform: translateY(-4px) scale(1.008);
+  border-color: #d0daf0;
+}
+
+/* ── Card: Top row (avatar + name + email) ─────────────────── */
+.dh-card__head {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+/* Avatar circle with initials */
+.dh-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  /* Color set via inline style by JS — rotates through palette */
+  background: var(--av-bg, var(--dh-blue-dim));
+  color: var(--av-color, var(--dh-blue));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6);
+}
+
+.dh-card__meta { min-width: 0; flex: 1; }
+
+.dh-card__name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--dh-text-1);
+  letter-spacing: -0.015em;
+  margin: 0 0 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dh-card__email {
+  font-size: 12px;
+  color: var(--dh-text-4);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Card: Chips row ───────────────────────────────────────── */
+.dh-card__chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dh-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--dh-text-3);
+  background: var(--dh-surface-2);
+  border: 1px solid var(--dh-border-soft);
+  border-radius: var(--dh-r-pill);
+  padding: 3px 9px 3px 7px;
+  white-space: nowrap;
+}
+
+.dh-chip i {
+  font-size: 9.5px;
+  color: var(--dh-blue);
+}
+
+/* Score wrapper — groups badge + bar with clean spacing */
+.dh-card__score-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Card: Score section ───────────────────────────────────── */
+.dh-card__score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dh-card__score-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--dh-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Score badge — the hero element of each card */
+.dh-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 6px 14px;
+  border-radius: var(--dh-r-pill);
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  /* Subtle inner glow */
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5);
+  transition: transform var(--dh-dur-fast) var(--dh-ease-spring);
+}
+
+.dh-card:hover .dh-score {
+  transform: scale(1.06);
+}
+
+.dh-score--high {
+  background: var(--dh-green-dim);
+  color: var(--dh-green);
+}
+
+.dh-score--mid {
+  background: var(--dh-yellow-dim);
+  color: var(--dh-yellow);
+}
+
+.dh-score--low {
+  background: var(--dh-red-dim);
+  color: var(--dh-red);
+}
+
+/* Score bar */
+.dh-score-track {
+  height: 5px;
+  background: var(--dh-border-soft);
+  border-radius: var(--dh-r-pill);
+  overflow: hidden;
+  margin-top: 8px; /* was -4px — caused visual overlap/clipping in some browsers */
+}
+
+.dh-score-fill {
+  height: 100%;
+  border-radius: var(--dh-r-pill);
+  /* Width set inline by JS; animate on render */
+  width: 0;
+  transition: width 0.7s var(--dh-ease);
+}
+
+.dh-score-fill--high { background: linear-gradient(90deg, #4ade80, #16a34a); }
+.dh-score-fill--mid  { background: linear-gradient(90deg, #fde047, #ca8a04); }
+.dh-score-fill--low  { background: linear-gradient(90deg, #f87171, #dc2626); }
+
+/* ── Empty State ───────────────────────────────────────────── */
+.dh-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 72px 24px;
+  animation: dh-card-rise 0.4s var(--dh-ease) both;
+}
+
+.dh-empty__icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--dh-blue-dim) 0%, var(--dh-indigo-dim) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  color: var(--dh-blue);
+  margin-bottom: 22px;
+  box-shadow:
+    0 8px 24px rgb(37 99 235 / 0.12),
+    0 2px  6px rgb(37 99 235 / 0.08);
+}
+
+.dh-empty__title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--dh-text-1);
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+}
+
+.dh-empty p {
+  font-size: 14px;
+  color: var(--dh-text-3);
+  max-width: 320px;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* ── Avatar color palette (cycled by JS via --av-bg / --av-color) ── */
+/* Nothing here — handled inline per-card */
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (min-width: 1400px) {
+  .dh-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .dh-root { padding: 16px; gap: 16px; }
+
+  .dh-hero {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .dh-hero__right {
+    gap: 10px;
+  }
+
+  .dh-hero__right .dh-filter-group {
+    flex: 1;
+  }
+
+  .dh-hero__right .dh-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dh-stats {
+    padding: 0;
+    border-radius: var(--dh-r-sm);
+  }
+
+  .dh-stat {
+    padding: 14px 16px;
+  }
+
+  .dh-stat__num { font-size: 20px; }
+
+  .dh-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dh-btn-export {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .dh-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .dh-card,
+  .dh-empty {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .dh-card:hover {
+    transform: none;
+  }
+
+  .dh-score-fill {
+    transition: none;
+  }
+}
+
+/* AlbEdu Creates visual refresh - white/blue */
+.dh-root {
+  background: #f5f9ff;
+}
+
+.dh-hero {
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 16px 40px rgba(37, 99, 235, 0.08);
+}
+
+.dh-hero__title,
+.dh-count strong,
+.dh-card__name,
+.dh-empty__title {
+  color: #0f172a;
+}
+
+.dh-stats,
+.dh-card,
+.dh-select,
+.dh-btn-export {
+  border-color: #dbeafe;
+}
+
+.dh-stat__num {
+  color: #1d4ed8;
+}
+
+.dh-card:hover {
+  border-color: #93c5fd;
+}
+
+.dh-chip,
+.dh-btn-export:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+/* =============================================================
+   WIP State — "Sedang dalam pengembangan"
+   Used when the page is temporarily disabled.
+   ============================================================= */
+
+.dh-root--wip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 48px 24px;
+}
+
+.dh-wip {
+  max-width: 460px;
+  margin: 0 auto;
+  text-align: center;
+  background: var(--dh-surface, #ffffff);
+  border: 1px solid var(--dh-border, #dbeafe);
+  border-radius: 16px;
+  padding: 48px 32px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .04), 0 8px 32px rgba(15, 23, 42, .06);
+}
+
+.dh-wip__icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--dh-blue-dim, #eff6ff);
+  color: var(--dh-blue, #2563eb);
+  font-size: 28px;
+}
+
+.dh-wip__title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--dh-text-1, #0f172a);
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
+}
+
+.dh-wip__desc {
+  font-size: 0.9375rem;
+  color: var(--dh-text-3, #6b7280);
+  line-height: 1.6;
+  margin: 0 0 28px;
+}
+
+.dh-wip__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 8px;
+  background: var(--dh-blue, #2563eb);
+  color: #ffffff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.dh-wip__cta:hover,
+.dh-wip__cta:focus-visible {
+  background: var(--dh-blue-hover, #1d4ed8);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .dh-wip {
+    padding: 36px 24px;
+  }
+  .dh-wip__title {
+    font-size: 1.25rem;
+  }
+}

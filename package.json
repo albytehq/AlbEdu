@@ -1,0 +1,27 @@
+{
+  "name": "albedu",
+  "version": "0.741.5",
+  "description": "AlbEdu platform for assesments and other educational purposes",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "build": "node scripts/minify.mjs",
+    "start": "node scripts/serve.mjs",
+    "verify": "node scripts/verify-structure.mjs",
+    "lint": "eslint src/ --ext .js 2>/dev/null || echo 'ESLint not configured — skipping'",
+    "test": "echo 'Tests in tests/ directory — run manually' && exit 0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.23.0",
+    "lightningcss": "^1.25.0"
+  },
+  "keywords": [
+    "education",
+    "exam",
+    "supabase",
+    "vanilla-js",
+    "by-feature"
+  ],
+  "license": "MIT"
+}

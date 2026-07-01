@@ -1,0 +1,423 @@
+/*
+ * 404.css — Extracted from pages/404.html
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Auto-extracted during v2.0.0 restructure.
+ * Loaded by: pages/404.html
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+   404 Page — Interactive Fun
+   All colors reference tokens.css custom properties
+
+   ═══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  position: relative;
+}
+
+/* ── Dot Grid Background ───────────────────────────────────── */
+.dot-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image: radial-gradient(
+    circle,
+    var(--color-border) 1px,
+    transparent 1px
+  );
+  background-size: 32px 32px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* ── Main Wrapper ───────────────────────────────────────────── */
+.wrapper {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  transform: translateY(-20px);
+}
+
+/* ── 404 Number Row ─────────────────────────────────────────── */
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+}
+
+.num-svg {
+  width: 95px;
+  height: 125px;
+  fill: var(--color-text);
+  opacity: 0;
+}
+
+/* Left 4 */
+.num-left {
+  animation: dropIn var(--duration-slowest) var(--ease-spring) 0.1s forwards;
+}
+
+/* Right 4 */
+.num-right {
+  animation: dropIn var(--duration-slowest) var(--ease-spring) 0.5s forwards;
+}
+
+/* ── Character (between the 4s) ─────────────────────────────── */
+.face-wrap {
+  width: 120px;
+  height: 140px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  opacity: 0;
+  transform-origin: center bottom;
+  animation: popUpSpring var(--duration-slowest) var(--ease-spring) 0.3s forwards;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Background circle behind face */
+.bg-circle {
+  position: absolute;
+  top: 24px;
+  width: 116px;
+  height: 116px;
+  background: var(--color-text);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+/* White head in front */
+.head {
+  position: relative;
+  z-index: 2;
+  width: 94px;
+  height: 130px;
+  background: var(--color-surface);
+  border: 4.5px solid var(--color-text);
+  border-top-left-radius: var(--radius-md);
+  border-top-right-radius: 0;
+  border-bottom-left-radius: 50px;
+  border-bottom-right-radius: 50px;
+  margin-top: 6px;
+}
+
+/* Diagonal cut at top-right corner */
+.cut {
+  position: absolute;
+  top: -4.5px;
+  right: -4.5px;
+  width: 22px;
+  height: 22px;
+  background: var(--color-surface);
+  clip-path: polygon(100% 0, 100% 100%, 0 0);
+  border-top: 4.5px solid var(--color-text);
+  border-right: 4.5px solid var(--color-text);
+}
+
+/* ── Eyes — Follow Mouse ────────────────────────────────────── */
+.eye {
+  position: absolute;
+  top: 34px;
+  width: 14px;
+  height: 14px;
+  background: var(--color-surface);
+  border: 2.5px solid var(--color-text);
+  border-radius: 50%;
+  z-index: 3;
+  overflow: hidden;
+}
+
+.eye.left { left: 21px; }
+.eye.right { right: 21px; }
+
+/* Pupil inside eye — moved by JS */
+.pupil {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  background: var(--color-text);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: transform var(--duration-fast) var(--ease-default);
+}
+
+/* Blink animation */
+.eye.blinking {
+  animation: blink var(--duration-normal) var(--ease-in-out) both;
+}
+
+/* ── Cheeks ─────────────────────────────────────────────────── */
+.cheek {
+  position: absolute;
+  top: 50px;
+  width: 11px;
+  height: 4px;
+  background: var(--color-primary);
+  opacity: 0.18;
+  border-radius: var(--radius-full);
+  z-index: 3;
+  opacity: 0;
+  animation: fadeIn var(--duration-normal) var(--ease-default) forwards 1s;
+}
+
+.cheek.left { left: 13px; }
+.cheek.right { right: 13px; }
+
+/* ── Mouth ──────────────────────────────────────────────────── */
+.mouth {
+  position: absolute;
+  top: 66px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 2.5px;
+  background: var(--color-text);
+  border-radius: var(--radius-full);
+  z-index: 3;
+  opacity: 0;
+  animation: fadeIn var(--duration-normal) var(--ease-default) forwards 0.9s;
+}
+
+/* ── Jump Animation on Click ────────────────────────────────── */
+.face-wrap.jumping {
+  animation: jumpBounce var(--duration-slow) var(--ease-spring) both;
+}
+
+/* ── Message ────────────────────────────────────────────────── */
+.message {
+  margin-top: var(--sp-10);
+  font-size: var(--text-lg);
+  color: var(--color-text-muted);
+  font-weight: var(--fw-regular);
+  letter-spacing: var(--tracking-wide);
+  line-height: var(--leading-relaxed);
+  opacity: 0;
+  animation: slideUpFade var(--duration-slowest) var(--ease-out) 0.8s forwards;
+}
+
+/* ── CTA Button — uses tokens .btn .btn-primary ─────────────── */
+.cta-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-8);
+  padding: var(--sp-2-5) var(--sp-6);
+  height: 48px;
+  text-decoration: none;
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: var(--fw-semibold);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--duration-fast) var(--ease-default);
+  opacity: 0;
+  animation: slideUpFade var(--duration-slowest) var(--ease-out) 1s forwards;
+}
+
+.cta-btn:hover {
+  background: var(--color-primary-hover);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25), 0 4px 14px rgba(37, 99, 235, 0.15);
+  transform: translateY(-2px);
+}
+
+.cta-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+}
+
+/* ── Alternative Link ───────────────────────────────────────── */
+.alt-link {
+  display: block;
+  margin-top: var(--sp-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+  opacity: 0;
+  animation: slideUpFade var(--duration-slowest) var(--ease-out) 1.2s forwards;
+}
+
+.alt-link a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: var(--fw-medium);
+  transition: color var(--transition-fast);
+}
+
+.alt-link a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Numbers drop in with spring bounce */
+@keyframes dropIn {
+  0% {
+    transform: translateY(-80px) rotate(-5deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+}
+
+/* Character pops up with spring */
+@keyframes popUpSpring {
+  0% {
+    transform: scale(0.3) translateY(40px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Text & button slide up and fade in */
+@keyframes slideUpFade {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Simple fade for cheeks & mouth */
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+/* Natural blink — eyes squeeze shut briefly */
+@keyframes blink {
+  0%, 100% { transform: scaleY(1); }
+  40%, 60% { transform: scaleY(0.08); }
+}
+
+/* Jump bounce on click */
+@keyframes jumpBounce {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  20% {
+    transform: translateY(0) scale(1.08, 0.92);
+  }
+  40% {
+    transform: translateY(-30px) scale(0.95, 1.05);
+  }
+  55% {
+    transform: translateY(-32px) scale(1, 1);
+  }
+  70% {
+    transform: translateY(0) scale(1.04, 0.96);
+  }
+  85% {
+    transform: translateY(-5px) scale(0.99, 1.01);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .num-svg {
+    width: 65px;
+    height: 85px;
+  }
+  .face-wrap {
+    width: 85px;
+    height: 100px;
+  }
+  .bg-circle {
+    width: 80px;
+    height: 80px;
+    top: 18px;
+  }
+  .head {
+    width: 66px;
+    height: 92px;
+    border-width: 3.5px;
+  }
+  .cut {
+    width: 16px;
+    height: 16px;
+    top: -3.5px;
+    right: -3.5px;
+    border-width: 3.5px;
+  }
+  .eye {
+    width: 10px;
+    height: 10px;
+    border-width: 2px;
+    top: 24px;
+  }
+  .eye.left { left: 14px; }
+  .eye.right { right: 14px; }
+  .pupil {
+    width: 5px;
+    height: 5px;
+  }
+  .cheek { top: 36px; }
+  .cheek.left { left: 8px; }
+  .cheek.right { right: 8px; }
+  .mouth { top: 46px; width: 12px; height: 2px; }
+  .message { font-size: var(--text-base); margin-top: var(--sp-6); }
+  .cta-btn { height: 44px; font-size: var(--text-sm); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .num-svg,
+  .face-wrap,
+  .message,
+  .cta-btn,
+  .alt-link,
+  .cheek,
+  .mouth,
+  .eye.blinking,
+  .face-wrap.jumping {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .pupil {
+    transition: none !important;
+  }
+}

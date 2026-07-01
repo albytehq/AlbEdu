@@ -1,0 +1,70 @@
+{
+  "name": "AlbEdu — Assessment Platform",
+  "short_name": "AlbEdu",
+  "description": "Platform asesmen online untuk sekolah menengah. Buat, kelola, dan pantak asesmen dengan anti-cheat enterprise-grade.",
+  "version": "0.741.5",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "lang": "id",
+  "dir": "ltr",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/public/images/favicon/favicon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/public/images/favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Buat Asesmen",
+      "short_name": "Buat",
+      "description": "Buat asesmen baru",
+      "url": "/pages/admin/pages/create-assessment.html",
+      "icons": [{ "src": "/public/images/favicon/favicon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Asesmen Aktif",
+      "short_name": "Aktif",
+      "description": "Kelola asesmen yang sedang berjalan",
+      "url": "/pages/admin/pages/active-assessments.html",
+      "icons": [{ "src": "/public/images/favicon/favicon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Masuk Asesmen",
+      "short_name": "Masuk",
+      "description": "Input kode akses untuk mengerjakan asesmen",
+      "url": "/pages/assessment/index.html",
+      "icons": [{ "src": "/public/images/favicon/favicon-96x96.png", "sizes": "96x96" }]
+    }
+  ]
+}

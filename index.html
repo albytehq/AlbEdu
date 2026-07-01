@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlbEdu — Kelola Ujian Online, Tanpa Ribet</title>
+  <meta name="description" content="Platform ujian dan pengelolaan peserta untuk sekolah dan guru. Buat ujian dalam hitungan menit, koreksi otomatis, data hasil real-time.">
+  <meta name="theme-color" content="#1E40AF">
+  <link rel="icon" type="image/x-icon" href="public/images/favicon/favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="public/images/favicon/favicon.svg">
+  <link rel="icon" type="image/png" sizes="96x96" href="public/images/favicon/favicon-96x96.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="public/images/favicon/apple-touch-icon.png">
+  
+
+
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/tokens.css">
+  <!-- F1+F2 fix: font loading strategy (preconnect + swap, no @import) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+
+  <link rel="stylesheet" href="styles/landing.css">
+</head>
+
+<body>
+  <!-- Skip to main content -->
+  <a href="#main" class="skip-link">Langsung ke konten utama</a>
+
+  <!-- ═══ Navbar ═══ -->
+  <header class="navbar" role="banner">
+    <div class="navbar-inner">
+      <a href="./" class="nav-brand" aria-label="AlbEdu Beranda">
+        <img src="public/images/logo.svg" alt="" aria-hidden="true" width="32" height="32">
+        <span class="nav-brand-name">AlbEdu</span>
+      </a>
+      <nav class="nav-actions" aria-label="Navigasi utama">
+        <a href="pages/login.html" class="nav-btn-login" aria-label="Masuk ke akun">
+          <i aria-hidden="true" class="material-symbols-outlined">login</i>
+          <span>Login</span>
+        </a>
+        <a href="pages/register-admin.html" class="nav-btn-primary" aria-label="Daftar akun admin baru">
+          <i aria-hidden="true" class="material-symbols-outlined">person_add</i>
+          <span>Daftar Admin</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" role="main">
+
+    <!-- ═══ Hero Section ═══ -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="hero-grid" aria-hidden="true"></div>
+      <div class="hero-content">
+        <div class="hero-badge reveal">
+          <i aria-hidden="true" class="material-symbols-outlined">science</i>
+          Akses Awal — Sudah Tersedia
+        </div>
+        <h1 id="hero-title" class="hero-title reveal reveal-delay-1">
+          Kelola Ujian Online,<br><span class="text-primary">Tanpa Ribet</span>
+        </h1>
+        <p class="hero-subtitle reveal reveal-delay-2">
+          Buat ujian dalam hitungan menit, koreksi otomatis, dan pantau hasil peserta secara real-time. Semua dari satu platform.
+        </p>
+        <div class="hero-ctas reveal reveal-delay-3">
+          <a href="pages/login.html" class="hero-cta-primary">
+            <i aria-hidden="true" class="material-symbols-outlined">rocket_launch</i>
+            Mulai Sekarang
+          </a>
+          <a href="#how" class="hero-cta-secondary">
+            <i aria-hidden="true" class="material-symbols-outlined">play_circle</i>
+            Lihat Demo
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Problem Section ═══ -->
+    <section class="section problem-section" aria-labelledby="problem-title">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">Masalah</span>
+          <h2 id="problem-title" class="section-title">Kendala yang Dihadapi Guru</h2>
+          <p class="section-desc">Proses ujian konvensional penuh hambatan yang membuang waktu dan energi.</p>
+        </div>
+        <div class="problem-grid">
+          <article class="problem-card reveal reveal-delay-1">
+            <div class="problem-icon" aria-hidden="true">
+              <i class="material-symbols-outlined">design_services</i>
+            </div>
+            <h3>Pengerjaan Manual</h3>
+            <p>Menyusun soal satu per satu, mencetak kertas, dan membagikan ke peserta memakan waktu berjam-jam yang bisa dipakai untuk mengajar.</p>
+          </article>
+          <article class="problem-card reveal reveal-delay-2">
+            <div class="problem-icon" aria-hidden="true">
+              <i class="material-symbols-outlined">history</i>
+            </div>
+            <h3>Pengoreksian Lama</h3>
+            <p>Mengoreksi ratusan lembar jawaban manual berisiko kesalahan dan membutuhkan waktu berminggu-minggu sebelum hasil bisa diumumkan.</p>
+          </article>
+          <article class="problem-card reveal reveal-delay-3">
+            <div class="problem-icon" aria-hidden="true">
+              <i class="material-symbols-outlined">database</i>
+            </div>
+            <h3>Data Terserak</h3>
+            <p>Hasil ujian tersebar di file Excel, kertas, dan folder berbeda — sulit dianalisis dan dijadikan dasar keputusan pembelajaran.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Solution Section ═══ -->
+    <section class="section solution-section" aria-labelledby="solution-title">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">Solusi</span>
+          <h2 id="solution-title" class="section-title">AlbEdu Solusinya</h2>
+          <p class="section-desc">Satu platform yang menyelesaikan semua kebutuhan ujian Anda, dari pembuatan hingga analisis.</p>
+        </div>
+        <div class="solution-grid">
+          <article class="solution-card reveal reveal-delay-1">
+            <div class="solution-icon" aria-hidden="true">
+              <i class="material-symbols-outlined">bolt</i>
+            </div>
+            <h3>Buat Ujian dalam Hitungan Menit</h3>
+            <p>Wizard pembuatan ujian yang intuitif — tinggal pilih jenis soal, atur waktu, dan ujian siap dibagikan. Tidak perlu keahlian teknis.</p>
+          </article>
+          <article class="solution-card reveal reveal-delay-2">
+            <div class="solution-icon" aria-hidden="true">
+              <i class="material-symbols-outlined">smart_toy</i>
+            </div>
+            <h3>Koreksi Otomatis</h3>
+            <p>Sistem mengoreksi jawaban pilihan ganda dan isian secara instan saat peserta selesai mengerjakan. Tanpa delay, tanpa kesalahan.</p>
+          </article>
+          <article class="solution-card reveal reveal-delay-3">
+            <div class="solution-icon" aria-hidden="true">
+              <i class="material-symbols-outlined">monitoring</i>
+            </div>
+            <h3>Data Hasil Real-Time</h3>
+            <p>Pantau hasil ujian secara langsung — lihat skor, distribusi jawaban, dan analisis per soal segera setelah peserta submit.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ How It Works ═══ -->
+    <section id="how" class="section how-section" aria-labelledby="how-title">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">Cara Kerja</span>
+          <h2 id="how-title" class="section-title">Tiga Langkah Simpel</h2>
+          <p class="section-desc">Dari nol hingga hasil, hanya butuh 3 langkah mudah.</p>
+        </div>
+        <div class="steps-container">
+          <article class="step-card reveal reveal-delay-1">
+            <div class="step-number" aria-hidden="true">1</div>
+            <div class="step-body">
+              <h3>Buat Ujian</h3>
+              <p>Gunakan wizard untuk menyusun soal, atur durasi dan opsi pengerjaan. Selesai dalam beberapa menit.</p>
+            </div>
+          </article>
+          <article class="step-card reveal reveal-delay-2">
+            <div class="step-number" aria-hidden="true">2</div>
+            <div class="step-body">
+              <h3>Bagikan Token</h3>
+              <p>Dapatkan token unik yang bisa dibagikan ke peserta. Mereka langsung mengerjakan tanpa perlu registrasi.</p>
+            </div>
+          </article>
+          <article class="step-card reveal reveal-delay-3">
+            <div class="step-number" aria-hidden="true">3</div>
+            <div class="step-body">
+              <h3>Lihat Hasil</h3>
+              <p>Hasil muncul secara real-time di dashboard. Analisis skor, waktu pengerjaan, dan distribusi jawaban.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Early Access ═══ -->
+    <section class="section proof-section" aria-labelledby="proof-title">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">Akses Awal</span>
+          <h2 id="proof-title" class="section-title">AlbEdu Akses Awal Sudah Ada</h2>
+          <p class="section-desc">Kami sedang membangun platform ujian yang lebih baik. Jadilah bagian dari awal — masuk sekarang dan bentuk AlbEdu bersama kami.</p>
+        </div>
+        <div class="stats-grid reveal">
+          <div class="stat-item">
+            <div class="stat-icon" aria-hidden="true"><i class="material-symbols-outlined">rocket_launch</i></div>
+            <div class="stat-number">Akses Awal</div>
+            <div class="stat-label">Tersedia Sekarang</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon" aria-hidden="true"><i class="material-symbols-outlined">chat_bubble</i></div>
+            <div class="stat-number">Masukanmu</div>
+            <div class="stat-label">Bentuk Masa Depan AlbEdu</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon" aria-hidden="true"><i class="material-symbols-outlined">bolt</i></div>
+            <div class="stat-number">Gratis</div>
+            <div class="stat-label">Selama Masa Akses Awal</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ CTA Section ═══ -->
+    <section class="section cta-section" aria-labelledby="cta-title">
+      <div class="container">
+        <div class="cta-card reveal">
+          <div class="cta-content">
+            <h2 id="cta-title" class="cta-title">Siap Jadi Yang Pertama?</h2>
+            <p class="cta-desc">Akses awal AlbEdu sudah tersedia. Daftar sekarang dan jadilah pengguna pertama yang membentuk platform ini.</p>
+            <a href="pages/register-admin.html" class="cta-btn">
+              <i aria-hidden="true" class="material-symbols-outlined">person_add</i>
+              Daftar Sekarang
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══ Footer ═══ -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-inner">
+        <a href="./" class="footer-brand" aria-label="AlbEdu Beranda">
+          <img src="public/images/logo.svg" alt="" aria-hidden="true" width="24" height="24">
+          <span class="footer-brand-name">AlbEdu</span>
+        </a>
+        <nav aria-label="Footer navigasi">
+          <ul class="footer-links">
+            <li><a href="pages/login.html">Login</a></li>
+            <li><a href="pages/register-admin.html">Daftar</a></li>
+            <li><a href="mailto:support@albedu.id">Bantuan</a></li>
+          </ul>
+        </nav>
+        <p class="footer-copy">&copy; 2026 AlbEdu. Hak cipta dilindungi.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ═══ Scripts ═══ -->
+  <script>
+    (function () {
+      'use strict';
+
+      // ── Reduced Motion Check ─────────────────────────────────
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // ── Scroll-triggered Reveal ──────────────────────────────
+      if (!prefersReducedMotion) {
+        const revealEls = document.querySelectorAll('.reveal');
+        const revealObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('revealed');
+              revealObserver.unobserve(entry.target);
+            }
+          });
+        }, {
+          threshold: 0.12,
+          rootMargin: '0px 0px -40px 0px'
+        });
+
+        revealEls.forEach(function (el) {
+          revealObserver.observe(el);
+        });
+      } else {
+        // Immediately show all elements
+        document.querySelectorAll('.reveal').forEach(function (el) {
+          el.classList.add('revealed');
+        });
+      }
+
+      // ── Navbar Scroll Shadow ─────────────────────────────────
+      var navbar = document.querySelector('.navbar');
+      var lastScroll = 0;
+
+      function onNavScroll() {
+        var scrollY = window.scrollY || window.pageYOffset;
+        if (scrollY > 10) {
+          navbar.classList.add('scrolled');
+        } else {
+          navbar.classList.remove('scrolled');
+        }
+        lastScroll = scrollY;
+      }
+
+      window.addEventListener('scroll', onNavScroll, { passive: true });
+      onNavScroll();
+
+      // ── Parallax Hero Background ─────────────────────────────
+      if (!prefersReducedMotion) {
+        var heroBg = document.querySelector('.hero-bg');
+        var ticking = false;
+
+        function onParallaxScroll() {
+          if (!ticking) {
+            window.requestAnimationFrame(function () {
+              var scrollY = window.scrollY || window.pageYOffset;
+              var heroHeight = document.querySelector('.hero').offsetHeight;
+              if (scrollY < heroHeight) {
+                heroBg.style.transform = 'translateY(' + (scrollY * 0.3) + 'px)';
+              }
+              ticking = false;
+            });
+            ticking = true;
+          }
+        }
+
+        window.addEventListener('scroll', onParallaxScroll, { passive: true });
+      }
+
+      // ── Count-Up removed — Early Access stats are static text, no data-count needed
+
+      // ── Hero Content Staggered Fade-in ───────────────────────
+      if (!prefersReducedMotion) {
+        var heroReveals = document.querySelectorAll('.hero-content .reveal');
+        // The IntersectionObserver handles it, but let's trigger immediately
+        // since hero is visible on load
+        setTimeout(function () {
+          heroReveals.forEach(function (el) {
+            el.classList.add('revealed');
+          });
+        }, 150);
+      }
+
+    })();
+  </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('public/service-worker.js').catch(() => {}));
+      }
+    </script>
+</body>
+
+</html>

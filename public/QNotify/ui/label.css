@@ -1,0 +1,647 @@
+/* label.css — QNotify 1.0.5 For AlbEdu
+ *
+ * PERF MIGRATION v7.3.0-perf:
+ *
+ *  [F1] REMOVED §6 KEYFRAMES entirely:
+ *       laCardIn, laCardOut, laBarIn, laRingPop, laGlyphPop,
+ *       laRingGlow, laFadeUp, laBtnPop — all deleted.
+ *       All animation is now driven by Hybrid Springs in label.js.
+ *
+ *  [F2] STATE MACHINE §10 gutted:
+ *       .active no longer fires CSS animation — JS controls all motion.
+ *       .exit   no longer fires CSS animation — JS animateAlertExit() owns it.
+ *       .spawn  still sets initial hidden state (opacity:0, transform) so
+ *               the element is invisible before JS spring starts.
+ *
+ *  [F3] laRingGlow (@keyframes box-shadow) permanently removed.
+ *       Animating box-shadow triggers paint — not compositor-safe.
+ *       Static shadow defined on .alert-icon-ring covers the visual.
+ *
+ *  [F4] laShimmer kept for button hover ::before — this is a CSS-only
+ *       cosmetic hover effect, not a motion animation. Acceptable.
+ *
+ *  [F5] will-change on .label-alert removed from CSS base rule.
+ *       JS sets will-change at animation start, clears after settle.
+ *       Permanent will-change wastes compositor memory layers.
+ *
+ *  Sections:
+ *    §0  Isolation shield
+ *    §1  Hard reset
+ *    §2  Design tokens (mobile-first)
+ *    §3  Dark mode tokens
+ *    §4  Intent accents (light mode)
+ *    §5  Desktop tokens
+ *    §6  KEYFRAMES — button shimmer only (hover cosmetic)
+ *    §7  Base card
+ *    §8  Internal components (initial states for JS spring)
+ *    §9  3D button
+ *    §10 State machine (spawn/active/exit — animation-free)
+ *    §11 Responsive
+ *    §12 Accessibility
+ *    §13 High contrast + print
+ *
+ * v7.5.0 ANTI-GLITCH ADDITIONS:
+ *  [G1] .spawn: visibility:hidden only — CSS+JS transform authority unified.
+ *  [G2] .active: visibility:visible explicitly.
+ *  [G3] Reduced motion: snap to final state instantly (no opacity flicker).
+ */
+
+
+/* ════════════════════════════════════════════════════════════════
+   §0  ISOLATION SHIELD
+   ════════════════════════════════════════════════════════════════ */
+
+.mobile-mode .qnotify-label.notification-item,
+.desktop-mode .qnotify-label.notification-item {
+    background:              var(--la-bg)           !important;
+    color:                   unset                  !important;
+    box-shadow:              var(--la-card-shadow)  !important;
+    backdrop-filter:         unset                  !important;
+    -webkit-backdrop-filter: unset                  !important;
+    backface-visibility:     unset                  !important;
+    -webkit-backface-visibility: unset              !important;
+    transition:              none                   !important;
+}
+
+.mobile-mode .qnotify-label.notification-item {
+    top:           50%                         !important;
+    left:          50%                         !important;
+    display:       block                       !important;
+    align-items:   unset                       !important;
+    border:        1px solid var(--la-border)  !important;
+    overflow:      hidden                      !important;
+    touch-action:  auto                        !important;
+    min-height:    unset                       !important;
+    padding-right: 0                           !important;
+    padding-left:  0                           !important;
+}
+
+/* [F2] .active no longer has opacity override — JS spring controls it */
+.mobile-mode .qnotify-label.notification-item.active,
+.desktop-mode .qnotify-label.notification-item.active {
+    z-index: 10002 !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §1  HARD RESET
+   ════════════════════════════════════════════════════════════════ */
+
+.qnotify-label.label-alert.notification-item {
+    position:       fixed           !important;
+    display:        block           !important;
+    width:          auto            !important;
+    height:         auto            !important;
+    min-height:     unset           !important;
+    max-height:     unset           !important;
+    padding:        0               !important;
+    margin:         0               !important;
+    flex-direction: unset           !important;
+    align-items:    unset           !important;
+    gap:            unset           !important;
+    border:         none            !important;
+    translate:      none            !important;
+    --shadow-primary-y:         0;
+    --shadow-primary-blur:      0;
+    --shadow-primary-opacity:   0;
+    --shadow-secondary-y:       0;
+    --shadow-secondary-blur:    0;
+    --shadow-secondary-opacity: 0;
+}
+
+.label-alert .progress-track,
+.label-alert .progress-bar { display: none !important; }
+
+
+/* ════════════════════════════════════════════════════════════════
+   §2  DESIGN TOKENS — mobile-first
+   ════════════════════════════════════════════════════════════════ */
+
+.label-alert {
+    --la-bg:     #ffffff;
+    --la-border: rgba(0, 0, 0, 0.07);
+    --la-radius: 26px;
+
+    --la-card-shadow:
+        0 0   0  1px  rgba(0, 0, 0, 0.06),
+        0 2px 8px     rgba(0, 0, 0, 0.06),
+        0 12px 32px   rgba(0, 0, 0, 0.12),
+        0 32px 64px   rgba(0, 0, 0, 0.16);
+
+    --la-title:      #0a0a0b;
+    --la-msg:        #52525e;
+    --la-title-size: 18px;
+    --la-msg-size:   14.5px;
+
+    --la-ring-size: 76px;
+    --la-icon-size: 34px;
+
+    --la-accent:      #007aff;
+    --la-accent-mid:  #0068e0;
+    --la-accent-dark: #0051b3;
+    --la-accent-glow: rgba(0, 122, 255, 0.22);
+
+    --la-btn-text:   #ffffff;
+    --la-btn-size:   15.5px;
+    --la-btn-radius: 16px;
+    --la-btn-depth:  5px;
+    --la-btn-pad:    14px 0;
+
+    --la-width:   min(92vw, 350px);
+    --la-pad:     0 0 24px;
+    --la-bar-h:   5px;
+    --la-icon-mb: 18px;
+    --la-msg-mb:  22px;
+
+    /* [F4] Kept only for button shimmer hover cosmetic */
+    --la-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --la-snap:     cubic-bezier(0.25, 0, 0.25, 1);
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §3  DARK MODE TOKENS
+   ════════════════════════════════════════════════════════════════ */
+
+@media (prefers-color-scheme: dark) {
+    .label-alert {
+        --la-bg:     #1c1c1e;
+        --la-border: rgba(255, 255, 255, 0.09);
+        --la-card-shadow:
+            0 0   0  1px  rgba(0, 0, 0, 0.45),
+            0 2px 8px     rgba(0, 0, 0, 0.35),
+            0 12px 32px   rgba(0, 0, 0, 0.50),
+            0 32px 64px   rgba(0, 0, 0, 0.60);
+        --la-title: #f2f2f7;
+        --la-msg:   #8e8e93;
+    }
+    .label-alert.danger,
+    .label-alert.error   { --la-accent: #ff453a; --la-accent-mid: #e03030; --la-accent-dark: #b32222; --la-accent-glow: rgba(255, 69, 58, 0.28); }
+    .label-alert.warning { --la-accent: #ff9f0a; --la-accent-mid: #e08800; --la-accent-dark: #b36a00; --la-accent-glow: rgba(255, 159, 10, 0.28); }
+    .label-alert.success { --la-accent: #30d158; --la-accent-mid: #26b83d; --la-accent-dark: #1a8c2d; --la-accent-glow: rgba(48, 209, 88, 0.28); }
+    .label-alert.info    { --la-accent: #0a84ff; --la-accent-mid: #006ee0; --la-accent-dark: #0051b3; --la-accent-glow: rgba(10, 132, 255, 0.28); }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §4  INTENT ACCENTS — light mode
+   ════════════════════════════════════════════════════════════════ */
+
+.label-alert.danger,
+.label-alert.error   { --la-accent: #ff3b30; --la-accent-mid: #e02820; --la-accent-dark: #b81e14; --la-accent-glow: rgba(255, 59, 48, 0.22); }
+.label-alert.warning { --la-accent: #ff9500; --la-accent-mid: #e07f00; --la-accent-dark: #b36300; --la-accent-glow: rgba(255, 149, 0, 0.22); }
+.label-alert.success { --la-accent: #34c759; --la-accent-mid: #28a847; --la-accent-dark: #1c7e34; --la-accent-glow: rgba(52, 199, 89, 0.22); }
+.label-alert.info    { --la-accent: #007aff; --la-accent-mid: #0068e0; --la-accent-dark: #0051b3; --la-accent-glow: rgba(0, 122, 255, 0.22); }
+
+
+/* ════════════════════════════════════════════════════════════════
+   §5  DESKTOP TOKENS
+   ════════════════════════════════════════════════════════════════ */
+
+.desktop-mode .label-alert {
+    --la-width:      min(88vw, 420px);
+    --la-radius:     30px;
+    --la-ring-size:  88px;
+    --la-icon-size:  42px;
+    --la-title-size: 20px;
+    --la-msg-size:   15px;
+    --la-btn-size:   15.5px;
+    --la-btn-pad:    15px 0;
+    --la-btn-depth:  6px;
+    --la-bar-h:      6px;
+    --la-icon-mb:    22px;
+    --la-msg-mb:     26px;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §6  KEYFRAMES — button shimmer only
+   ════════════════════════════════════════════════════════════════
+   [F1] All card/child entry/exit keyframes removed.
+   [F4] laShimmer kept — hover cosmetic on the OK button, not motion.
+   ════════════════════════════════════════════════════════════════ */
+
+@keyframes laShimmer {
+    0%   { left: -100%; }
+    100% { left:  155%; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §7  BASE CARD
+   ════════════════════════════════════════════════════════════════ */
+
+.label-alert {
+    position:        fixed !important;
+    z-index:         10002 !important;
+    pointer-events:  none; /* JS sets auto after enter spring starts */
+
+    left:   50%  !important;
+    top:    50%  !important;
+    right:  auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+
+    width:     var(--la-width) !important;
+    max-width: none            !important;
+
+    background:    var(--la-bg)          !important;
+    border-radius: var(--la-radius)      !important;
+    border:        1px solid var(--la-border) !important;
+    overflow:      hidden                !important;
+    box-shadow:    var(--la-card-shadow) !important;
+
+    /* Card opacity managed by JS springs — no permanent hidden state */
+    opacity: 1;
+    /* [F5] will-change NOT set here — JS sets/clears per-animation */
+
+    font-family:
+        -apple-system, BlinkMacSystemFont,
+        'SF Pro Display', 'Segoe UI', system-ui, sans-serif !important;
+    -webkit-font-smoothing:  antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    -webkit-user-select: none;
+    -moz-user-select:    none;
+    -ms-user-select:     none;
+    user-select:         none;
+    -webkit-touch-callout:       none;
+    -webkit-tap-highlight-color: transparent;
+
+    transition: none !important;
+}
+
+.label-alert * {
+    -webkit-user-select: none;
+    -moz-user-select:    none;
+    -ms-user-select:     none;
+    user-select:         none;
+    -webkit-touch-callout: none;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §8  INTERNAL COMPONENTS
+   ════════════════════════════════════════════════════════════════
+   FIX: Initial hidden states ONLY apply under .spawn.
+   Once JS removes .spawn and spring starts animating inline,
+   clearing inline styles after settle will NOT re-hide elements.
+   ════════════════════════════════════════════════════════════════ */
+
+/* Accent bar — JS spring animates scaleX(0→1) */
+.label-alert .alert-header {
+    height:           var(--la-bar-h);
+    width:            100%;
+    background:       linear-gradient(
+        90deg,
+        var(--la-accent)     0%,
+        var(--la-accent-mid) 55%,
+        var(--la-accent)    100%
+    );
+    background-size:  200% 100%;
+    transform-origin: left center;
+    box-shadow:       0 2px 10px var(--la-accent-glow);
+}
+/* Initial state — only before animation starts */
+.label-alert.spawn .alert-header {
+    transform: scaleX(0);
+    opacity:   0.5;
+}
+
+/* Body container */
+.label-alert .alert-content {
+    padding:        var(--la-pad) !important;
+    padding-left:   26px !important;
+    padding-right:  26px !important;
+    padding-top:    28px !important;
+    display:        flex         !important;
+    flex-direction: column       !important;
+    align-items:    center       !important;
+    text-align:     center;
+}
+
+/* Icon wrapper — JS spring: scale(0.45,−12deg→1,0) + opacity(0→1) */
+.label-alert .alert-icon {
+    margin-bottom:   var(--la-icon-mb);
+    display:         flex;
+    justify-content: center;
+    align-items:     center;
+}
+.label-alert.spawn .alert-icon {
+    opacity:   0;
+    transform: scale(0.45) rotate(-12deg);
+}
+
+/* Ring — static, no animation */
+.label-alert .alert-icon-ring {
+    width:           var(--la-ring-size);
+    height:          var(--la-ring-size);
+    border-radius:   50%;
+    background:      color-mix(in srgb, var(--la-accent) 14%, white);
+    border:          2px solid color-mix(in srgb, var(--la-accent) 28%, transparent);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.45),
+        0 6px 18px var(--la-accent-glow);
+    display:         flex;
+    justify-content: center;
+    align-items:     center;
+    position:        relative;
+}
+
+/* Glyph — JS spring: scale(0.15,−22deg→1,0) + opacity(0→1) */
+.label-alert .alert-icon .material-icons-round {
+    font-size:  var(--la-icon-size);
+    color:      var(--la-accent);
+    filter:     drop-shadow(0 2px 8px var(--la-accent-glow));
+    position:   relative;
+    z-index:    1;
+}
+.label-alert.spawn .alert-icon .material-icons-round {
+    opacity:   0;
+    transform: scale(0.15) rotate(-22deg);
+}
+
+/* Title — JS spring: translateY(10px→0) + opacity(0→1) */
+.label-alert .alert-title {
+    font-size:      var(--la-title-size);
+    font-weight:    760;
+    color:          var(--la-title);
+    line-height:    1.2;
+    letter-spacing: -0.022em;
+    margin-bottom:  8px;
+}
+.label-alert.spawn .alert-title {
+    opacity:   0;
+    transform: translateY(10px);
+}
+
+/* Message — JS spring: translateY(10px→0) + opacity(0→1) */
+.label-alert .alert-message {
+    font-size:     var(--la-msg-size);
+    line-height:   1.58;
+    color:         var(--la-msg);
+    margin-bottom: var(--la-msg-mb);
+    padding:       0 4px;
+    max-width:     100%;
+    word-break:    break-word;
+}
+.label-alert.spawn .alert-message {
+    opacity:   0;
+    transform: translateY(10px);
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §9  3D BUTTON
+   ════════════════════════════════════════════════════════════════ */
+
+.qnotify-btn.alert-btn {
+    width:           100%;
+    background:      var(--la-accent);
+    color:           var(--la-btn-text);
+    border:          none;
+    padding:         var(--la-btn-pad);
+    border-radius:   var(--la-btn-radius);
+    font-weight:     660;
+    font-size:       var(--la-btn-size);
+    font-family:     inherit;
+    letter-spacing:  -0.01em;
+    cursor:          pointer;
+    display:         flex;
+    justify-content: center;
+    align-items:     center;
+    outline:         none;
+    position:        relative;
+    overflow:        hidden;
+
+    /* Button has no initial hidden state — spawn class handles it */
+    opacity:   1;
+    transform: none;
+
+    box-shadow:
+        0 var(--la-btn-depth) 0                           var(--la-accent-dark),
+        0 calc(var(--la-btn-depth) + 5px) 18px            var(--la-accent-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+
+    transition: transform 0.18s cubic-bezier(0.25, 0, 0.25, 1);
+    will-change: transform;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Initial state for btn — only before animation */
+.label-alert.spawn .qnotify-btn.alert-btn {
+    opacity:   0;
+    transform: translateY(14px) scale(0.92);
+}
+
+/* Shimmer overlay */
+.qnotify-btn.alert-btn::before {
+    content:        '';
+    position:       absolute;
+    top: 0; left: -100%;
+    width:          58%; height: 100%;
+    background:     linear-gradient(
+        108deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.20) 50%,
+        transparent 100%
+    );
+    transform:      skewX(-15deg);
+    pointer-events: none;
+    transition:     none;
+}
+
+/* Top bevel */
+.qnotify-btn.alert-btn::after {
+    content:        '';
+    position:       absolute;
+    top: 0; left: 0; right: 0;
+    height:         1px;
+    background:     rgba(255, 255, 255, 0.32);
+    border-radius:  var(--la-btn-radius) var(--la-btn-radius) 0 0;
+    pointer-events: none;
+}
+
+@media (hover: hover) {
+    .qnotify-btn.alert-btn:hover {
+        transform: translateY(-4px) !important;
+        filter:    brightness(1.07);
+        box-shadow:
+            0 calc(var(--la-btn-depth) + 3px) 0              var(--la-accent-dark),
+            0 calc(var(--la-btn-depth) + 10px) 22px           var(--la-accent-glow),
+            inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    }
+
+    /* [F4] laShimmer kept — hover cosmetic only, not motion animation */
+    .qnotify-btn.alert-btn:hover::before {
+        animation: laShimmer 0.55s var(--la-ease-out) forwards;
+    }
+}
+
+.qnotify-btn.alert-btn:active {
+    transform: translateY(var(--la-btn-depth)) !important;
+    filter:    brightness(0.91);
+    box-shadow:
+        0 0 0                           var(--la-accent-dark),
+        0 2px 10px                      var(--la-accent-glow),
+        inset 0 2px 5px rgba(0, 0, 0, 0.20) !important;
+    transition: transform 0.05s ease !important;
+}
+
+.qnotify-btn.alert-btn:focus-visible {
+    outline:        3px solid var(--la-accent);
+    outline-offset: 3px;
+    box-shadow:
+        0 var(--la-btn-depth) 0 var(--la-accent-dark),
+        0 0 0 6px color-mix(in srgb, var(--la-accent) 20%, transparent);
+}
+
+.qnotify-btn.alert-btn:disabled,
+.qnotify-btn.alert-btn[data-locked="true"] {
+    pointer-events: none;
+    cursor:         default;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §10 STATE MACHINE — spawn → active → exit
+   ════════════════════════════════════════════════════════════════
+   [F2] CSS animations removed. JS hybrid springs own all motion.
+        .spawn:  initial hidden state — JS spring starts from here.
+        .active: pointer-events only — no CSS animation.
+        .exit:   pointer-events only — animateAlertExit() owns motion.
+   ════════════════════════════════════════════════════════════════ */
+
+/* Initial hidden state before JS spring fires */
+.label-alert.spawn {
+    /* [v7.5.0 FOIS+FOUC Fix] Same genius solution as .qnotify-dialog.spawn:
+     *   CSS ONLY provides visibility:hidden — the absolute safety floor.
+     *   JS glitch.stampInitialState() owns transform + opacity (inline style).
+     *   afterTwoFrames() removes .spawn after compositor commit.
+     *   Spring starts from stamped state — zero flash, zero jump.
+     *
+     * OLD: opacity:0 + transform in CSS fought with JS inline style.
+     * NEW: CSS = visibility ground truth. JS = motion authority.
+     */
+    visibility:     hidden   !important;
+    pointer-events: none     !important;
+}
+
+/* Active — JS spring running or settled. No CSS animation. */
+.label-alert.active {
+    /* [v7.5.0] Restore visibility after .spawn removed */
+    visibility:     visible  !important;
+    pointer-events: auto     !important;
+    /* [F2] animation: removed — JS animateAlertEnter() drives all motion */
+}
+
+/* Exit — pointer disabled. JS animateAlertExit() drives motion. */
+.label-alert.exit {
+    pointer-events: none !important;
+    /* [F2] animation: removed — JS animateAlertExit() drives all motion */
+}
+
+/* Reset children on exit — prevents stale inline transforms conflicting
+   with card collapse. JS resets these explicitly, but CSS fallback here. */
+.label-alert.exit .alert-header,
+.label-alert.exit .alert-icon,
+.label-alert.exit .alert-icon-ring,
+.label-alert.exit .alert-icon .material-icons-round,
+.label-alert.exit .alert-title,
+.label-alert.exit .alert-message,
+.label-alert.exit .alert-btn {
+    animation:  none !important;
+    transition: none !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §11 RESPONSIVE
+   ════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 768px) {
+    .label-alert {
+        --la-width:      min(88vw, 420px);
+        --la-radius:     30px;
+        --la-ring-size:  88px;
+        --la-icon-size:  42px;
+        --la-title-size: 20px;
+        --la-msg-size:   15px;
+        --la-btn-size:   15.5px;
+        --la-btn-pad:    15px 0;
+        --la-btn-depth:  6px;
+        --la-bar-h:      6px;
+        --la-icon-mb:    22px;
+        --la-msg-mb:     26px;
+    }
+}
+
+@media (min-width: 1280px) {
+    .label-alert {
+        --la-width:      min(88vw, 440px);
+        --la-radius:     32px;
+        --la-title-size: 21px;
+        --la-msg-size:   15.5px;
+    }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+    .label-alert {
+        --la-ring-size:  52px;
+        --la-icon-size:  24px;
+        --la-title-size: 15px;
+        --la-msg-size:   13px;
+        --la-btn-pad:    11px 0;
+        --la-btn-depth:  3px;
+        --la-icon-mb:    12px;
+        --la-msg-mb:     16px;
+        max-height:      90vh;
+        overflow-y:      auto;
+        overscroll-behavior: contain;
+    }
+
+    .label-alert .alert-content {
+        padding-top:    20px !important;
+        padding-left:   20px !important;
+        padding-right:  20px !important;
+        padding-bottom: 16px !important;
+    }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §12 ACCESSIBILITY
+   ════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+    /* JS springs respect this via the global RAF loop pausing,
+       but we also snap all elements to final state immediately */
+    .label-alert.active {
+        opacity:   1 !important;
+        transform: translate(-50%, -50%) !important;
+    }
+    .label-alert.active .alert-header  { transform: scaleX(1); opacity: 1; }
+    .label-alert.active .alert-icon    { opacity: 1; transform: none; }
+    .label-alert.active .alert-icon .material-icons-round { opacity: 1; transform: none; }
+    .label-alert.active .alert-title   { opacity: 1; transform: none; }
+    .label-alert.active .alert-message { opacity: 1; transform: none; }
+    .label-alert.active .alert-btn     { opacity: 1; transform: none; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   §13 HIGH CONTRAST + PRINT
+   ════════════════════════════════════════════════════════════════ */
+
+@media (forced-colors: active) {
+    .label-alert              { border: 2px solid ButtonText !important; box-shadow: none !important; }
+    .qnotify-btn.alert-btn    { border: 2px solid ButtonText; box-shadow: none !important; }
+    .label-alert .alert-header { background: Highlight; box-shadow: none !important; }
+    .label-alert .alert-icon-ring { border: 2px solid ButtonText; background: ButtonFace; }
+}
+
+@media print {
+    .label-alert,
+    #qnotify-backdrop,
+    .qnotify-backdrop { display: none !important; }
+}

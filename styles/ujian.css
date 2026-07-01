@@ -1,0 +1,520 @@
+/*
+ * ═══════════════════════════════════════════════════════════════
+ *  AlbEdu Ujian — Token Input Styles
+ *  All values reference tokens.css custom properties
+ *  Dark mode: auto via tokens.css prefers-color-scheme
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* ── Exam Container ──────────────────────────────────────────── */
+.exam-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-5);
+    background-color: var(--color-bg);
+}
+
+/* ── Exam Card — extends .card from tokens.css ───────────────── */
+.exam-card {
+    width: 100%;
+    max-width: 500px;
+    /* .card from tokens.css provides: background, border, border-radius, padding, box-shadow */
+    box-shadow: var(--shadow-md);
+}
+
+/* ── Exam Header ─────────────────────────────────────────────── */
+.exam-header {
+    text-align: center;
+    margin-bottom: var(--sp-8);
+}
+
+.exam-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-lg);
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    font-size: var(--text-xl);
+    margin-bottom: var(--sp-4);
+}
+
+.exam-header h1 {
+    color: var(--color-primary);
+    font-size: var(--text-3xl);
+    font-weight: var(--fw-extrabold);
+    margin-bottom: var(--sp-4);
+    letter-spacing: var(--tracking-tight);
+}
+
+.welcome-message h2 {
+    font-size: var(--text-xl);
+    color: var(--color-text);
+    font-weight: var(--fw-bold);
+    margin-bottom: var(--sp-1-5);
+}
+
+.sub-text {
+    color: var(--color-text-muted);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+}
+
+/* ── Token Input Section ─────────────────────────────────────── */
+.token-input-section {
+    margin: var(--sp-8) 0;
+}
+
+.token-inputs {
+    display: flex;
+    justify-content: center;
+    gap: var(--sp-3);
+    margin-bottom: 0;
+}
+
+/* ── Token slot: wrapper — overflow:visible so animations don't clip */
+.token-slot {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    overflow: visible;
+    border-radius: var(--radius-md);
+}
+
+/* ── Clip wrapper: contains digit-display, overflow:hidden */
+.token-slot-clip {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* ── Token Input ─────────────────────────────────────────────── */
+.token-input {
+    width: 60px;
+    height: 60px;
+    text-align: center;
+    font-size: var(--text-3xl);
+    font-weight: var(--fw-semibold);
+    font-family: var(--font-mono);
+    border: 2px solid var(--color-border-2);
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface-2);
+    transition:
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        background-color var(--transition-fast);
+    color: transparent;
+    caret-color: var(--color-primary);
+    position: relative;
+    z-index: 0;
+}
+
+/* ── FILLED state: input changes color when digit entered */
+.token-input.filled {
+    border-color: var(--blue-300);
+    background-color: var(--color-primary-light);
+}
+
+/* ── ALL COMPLETE state: green when 5/5 filled */
+.token-input.all-complete {
+    border-color: var(--color-success);
+    background-color: var(--color-success-bg);
+}
+
+/* ── Digit display ───────────────────────────────────────────── */
+.digit-display {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    font-size: var(--text-3xl);
+    font-weight: var(--fw-semibold);
+    font-family: var(--font-mono);
+    color: var(--color-text);
+    line-height: 1;
+    transition: color var(--transition-fast);
+}
+
+.digit-display.filled {
+    color: var(--blue-800);
+}
+
+.digit-display.all-complete {
+    color: var(--emerald-700);
+}
+
+/* ── Disabled state ──────────────────────────────────────────── */
+.token-slot.disabled .digit-display {
+    color: var(--color-text-muted);
+}
+
+/* ── Digit slide-up bounce ───────────────────────────────────── */
+@keyframes digitSlideUp {
+    0% {
+        transform: translateY(100%) scale(0.85);
+        opacity: 0;
+    }
+    30% {
+        transform: translateY(-6%) scale(1.04);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(3%) scale(0.98);
+        opacity: 1;
+    }
+    70% {
+        transform: translateY(-1.5%) scale(1.01);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.digit-display.animate-in {
+    animation: digitSlideUp var(--duration-slower) var(--ease-spring) both;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATION 1 — RIPPLE PULSE on .token-slot (overflow:visible)
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes ripplePulse {
+    0% {
+        box-shadow: 0 0 0 0 var(--color-primary-ring);
+    }
+    50% {
+        box-shadow: 0 0 0 7px rgba(37, 99, 235, 0.1);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+    }
+}
+
+.token-slot.ripple-pulse {
+    animation: ripplePulse 0.55s var(--ease-in-out) both;
+    border-radius: var(--radius-md);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATION 2 — PROGRESS GLOW bar
+   ═══════════════════════════════════════════════════════════════ */
+.token-progress-track {
+    width: 100%;
+    max-width: 348px;
+    height: 3px;
+    background: var(--color-border);
+    border-radius: var(--radius-full);
+    margin: var(--sp-3) auto var(--sp-8);
+    overflow: hidden;
+    position: relative;
+}
+
+.token-progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: var(--radius-full);
+    background: linear-gradient(90deg, var(--blue-400), var(--color-primary));
+    transition:
+        width 0.35s var(--ease-in-out),
+        background var(--duration-slow) var(--ease-default);
+    position: relative;
+}
+
+/* Glow dot at the fill end */
+.token-progress-fill::after {
+    content: '';
+    position: absolute;
+    right: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    box-shadow: 0 0 6px 2px var(--color-primary-ring);
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-default);
+}
+
+.token-progress-fill.has-progress::after {
+    opacity: 1;
+}
+
+/* 5/5 complete — green + pulse */
+.token-progress-fill.complete {
+    background: linear-gradient(90deg, var(--emerald-500), var(--color-success));
+}
+
+.token-progress-fill.complete::after {
+    background: var(--color-success);
+    box-shadow: 0 0 8px 3px rgba(5, 150, 105, 0.35);
+    animation: progressCompletePulse var(--duration-slowest) var(--ease-in-out) infinite;
+}
+
+@keyframes progressCompletePulse {
+    0%   { box-shadow: 0 0 6px 2px rgba(5, 150, 105, 0.35); }
+    50%  { box-shadow: 0 0 12px 5px rgba(5, 150, 105, 0.55); }
+    100% { box-shadow: 0 0 6px 2px rgba(5, 150, 105, 0.35); }
+}
+
+/* Error flash — progress bar red */
+.token-progress-fill.error-flash {
+    background: linear-gradient(90deg, var(--red-500), var(--color-destructive)) !important;
+    transition: background 0.1s var(--ease-default);
+}
+
+.token-progress-fill.error-flash::after {
+    background: var(--color-destructive) !important;
+    box-shadow: 0 0 6px 2px rgba(220, 38, 38, 0.4) !important;
+    animation: none !important;
+    opacity: 1 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATION 3 — SHAKE + RED FLASH on wrong token
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes tokenShake {
+    0%   { transform: translateX(0); }
+    10%  { transform: translateX(-8px); }
+    20%  { transform: translateX(7px); }
+    30%  { transform: translateX(-6px); }
+    40%  { transform: translateX(5px); }
+    50%  { transform: translateX(-3px); }
+    60%  { transform: translateX(2.5px); }
+    70%  { transform: translateX(-1.5px); }
+    80%  { transform: translateX(1px); }
+    90%  { transform: translateX(-0.5px); }
+    100% { transform: translateX(0); }
+}
+
+@keyframes tokenRedFlash {
+    0%   { border-color: var(--color-border-2); background-color: var(--color-surface-2); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    10%  { border-color: var(--red-500); background-color: var(--color-destructive-bg); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+    25%  { border-color: var(--red-500); background-color: var(--color-destructive-bg); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
+    40%  { border-color: var(--red-500); background-color: var(--color-destructive-bg); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+    60%  { border-color: var(--red-500); background-color: var(--color-destructive-bg); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    100% { border-color: var(--color-border-2); background-color: var(--color-surface-2); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.token-slot.shake-error {
+    animation: tokenShake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* IMPORTANT: transition must be NONE during shake — otherwise transition
+   fights the animation and !important overrides keyframe values */
+.token-input.shake-error {
+    animation: tokenRedFlash 0.7s var(--ease-default) both !important;
+    transition: none !important;
+}
+
+.digit-display.shake-error {
+    color: var(--color-destructive) !important;
+    transition: color 0.1s var(--ease-default);
+}
+
+/* ── Remove spinner ──────────────────────────────────────────── */
+.token-input::-webkit-outer-spin-button,
+.token-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.token-input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* ── Focus State ─────────────────────────────────────────────── */
+.token-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-focus);
+}
+
+/* ── Disabled State ──────────────────────────────────────────── */
+.token-input:disabled {
+    background-color: var(--color-surface-3);
+    cursor: not-allowed;
+}
+
+/* ── Form Actions ────────────────────────────────────────────── */
+.form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+}
+
+/* ── Submit Button — extends .btn .btn-primary from tokens.css */
+.submit-button {
+    width: 100%;
+    padding: var(--sp-3) var(--sp-4);
+    font-size: var(--text-md);
+    font-weight: var(--fw-semibold);
+    border-radius: var(--radius-md);
+}
+
+.submit-button:disabled {
+    background: var(--color-text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none !important;
+}
+
+/* ── Back Button — extends .btn .btn-secondary from tokens.css */
+.back-button {
+    width: 100%;
+    padding: var(--sp-3) var(--sp-4);
+    font-size: var(--text-md);
+    font-weight: var(--fw-semibold);
+    border-radius: var(--radius-md);
+}
+
+/* ── User Info ───────────────────────────────────────────────── */
+.user-info {
+    margin-top: var(--sp-6);
+    padding-top: var(--sp-6);
+    border-top: 1px solid var(--color-divider);
+    text-align: center;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+/* ── Countdown Timer ─────────────────────────────────────────── */
+.countdown-timer {
+    text-align: center;
+    margin-top: var(--sp-4);
+    padding: var(--sp-3);
+    background-color: var(--color-destructive-bg);
+    border-radius: var(--radius-md);
+    color: var(--color-destructive);
+    font-weight: var(--fw-semibold);
+    font-size: var(--text-sm);
+}
+
+.countdown-timer i {
+    margin-right: var(--sp-2);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE — Additional overrides (supplements tokens.css)
+   ═══════════════════════════════════════════════════════════════ */
+@media (prefers-color-scheme: dark) {
+    .digit-display.filled {
+        color: var(--blue-300);
+    }
+
+    .digit-display.all-complete {
+        color: var(--emerald-500);
+    }
+
+    .token-input.filled {
+        border-color: var(--blue-500);
+        background-color: rgba(59, 130, 246, 0.12);
+    }
+
+    .token-input.all-complete {
+        border-color: var(--color-success);
+        background-color: var(--color-success-bg);
+    }
+
+    /* Ripple pulse uses darker ring in dark mode */
+    @keyframes ripplePulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.35);
+        }
+        50% {
+            box-shadow: 0 0 0 7px rgba(59, 130, 246, 0.1);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+        }
+    }
+
+    /* Red flash adjustments for dark mode */
+    @keyframes tokenRedFlash {
+        0%   { border-color: var(--color-border-2); background-color: var(--color-surface-2); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        10%  { border-color: var(--red-500); background-color: var(--color-destructive-bg); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25); }
+        25%  { border-color: var(--red-500); background-color: var(--color-destructive-bg); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+        40%  { border-color: var(--red-500); background-color: var(--color-destructive-bg); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25); }
+        60%  { border-color: var(--red-500); background-color: var(--color-destructive-bg); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        100% { border-color: var(--color-border-2); background-color: var(--color-surface-2); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .token-progress-fill::after {
+        box-shadow: 0 0 6px 2px rgba(59, 130, 246, 0.3);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
+@media (min-width: 768px) {
+    .exam-card {
+        padding: var(--sp-12);
+    }
+
+    .form-actions {
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    .submit-button, .back-button {
+        min-width: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .exam-card {
+        padding: var(--sp-6);
+    }
+
+    .token-slot {
+        width: 50px;
+        height: 50px;
+    }
+
+    .token-input {
+        width: 50px;
+        height: 50px;
+        font-size: var(--text-2xl);
+    }
+
+    .digit-display {
+        font-size: var(--text-2xl);
+    }
+
+    .token-progress-track {
+        max-width: 298px;
+    }
+
+    .welcome-message h2 {
+        font-size: var(--text-lg);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+    .digit-display.animate-in,
+    .token-slot.ripple-pulse,
+    .token-slot.shake-error,
+    .token-input.shake-error,
+    .token-progress-fill.complete::after {
+        animation: none !important;
+    }
+
+    .token-progress-fill {
+        transition: width 0.01s !important;
+    }
+}

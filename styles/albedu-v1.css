@@ -1,0 +1,627 @@
+/* ==========================================================================
+   styles/albedu-v1.css — AlbEdu v1.0.0 Enterprise Design System
+   --------------------------------------------------------------------------
+   White-blue palette. Google Form-like theme editor.
+   All form controls custom-styled (no default Chrome).
+   Tokens: see --albedu-* variables in styles/tokens.css (set by ThemeSystem).
+   ========================================================================== */
+
+/* ── Reset & base ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--albedu-font);
+  color: var(--albedu-body);
+  background: var(--albedu-surface-alt);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+::selection { background: var(--albedu-primary-muted); color: var(--albedu-primary-hover); }
+
+/* Scrollbar */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--albedu-border); border-radius: 4px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--albedu-body); }
+
+/* ── Custom form controls (replace all default Chrome UI) ─────────────── */
+.albedu-input,
+.albedu-select,
+.albedu-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--albedu-font);
+  font-size: 14px;
+  color: var(--albedu-heading);
+  background: var(--albedu-surface);
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius-sm);
+  outline: none;
+  transition: border-color var(--albedu-transition), box-shadow var(--albedu-transition);
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.albedu-input::placeholder,
+.albedu-textarea::placeholder { color: #94a3b8; }
+.albedu-input:hover:not(:focus):not(:disabled),
+.albedu-select:hover:not(:focus):not(:disabled),
+.albedu-textarea:hover:not(:focus):not(:disabled) { border-color: var(--albedu-primary); }
+.albedu-input:focus,
+.albedu-select:focus,
+.albedu-textarea:focus {
+  border-color: var(--albedu-primary);
+  box-shadow: 0 0 0 3px var(--albedu-primary-ring);
+}
+.albedu-textarea { resize: vertical; min-height: 80px; }
+.albedu-input:disabled, .albedu-select:disabled { background: var(--albedu-surface-alt); color: #94a3b8; cursor: not-allowed; }
+
+/* Custom select arrow */
+.albedu-select {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+/* Number input — hide spinner */
+.albedu-input[type="number"]::-webkit-inner-spin-button,
+.albedu-input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.albedu-input[type="number"] { -moz-appearance: textfield; }
+
+/* Datetime picker — blue calendar icon */
+.albedu-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(40%) sepia(60%) saturate(2000%) hue-rotate(200deg);
+  opacity: .7;
+}
+.albedu-input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+/* Override Chrome autofill */
+.albedu-input:-webkit-autofill,
+.albedu-select:-webkit-autofill,
+.albedu-textarea:-webkit-autofill {
+  -webkit-text-fill-color: var(--albedu-heading) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--albedu-surface) inset !important;
+  caret-color: var(--albedu-heading);
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.albedu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--albedu-radius-sm);
+  font-family: var(--albedu-font);
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--albedu-transition);
+  white-space: nowrap;
+  text-decoration: none;
+  line-height: 1.4;
+}
+.albedu-btn .material-symbols-outlined { font-size: 18px; }
+
+.albedu-btn-primary {
+  background: var(--albedu-primary);
+  color: #fff;
+  border-color: var(--albedu-primary);
+  box-shadow: 0 1px 2px var(--albedu-primary-ring);
+}
+.albedu-btn-primary:hover:not(:disabled) {
+  background: var(--albedu-primary-hover);
+  border-color: var(--albedu-primary-hover);
+  box-shadow: 0 4px 12px var(--albedu-primary-ring);
+  transform: translateY(-1px);
+}
+.albedu-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+.albedu-btn-secondary {
+  background: var(--albedu-surface);
+  color: var(--albedu-primary);
+  border-color: var(--albedu-primary);
+}
+.albedu-btn-secondary:hover:not(:disabled) { background: var(--albedu-primary-muted); }
+
+.albedu-btn-ghost {
+  background: transparent;
+  color: var(--albedu-body);
+  border-color: transparent;
+}
+.albedu-btn-ghost:hover:not(:disabled) { background: var(--albedu-surface-alt); color: var(--albedu-heading); }
+.albedu-btn-ghost:disabled { opacity: .4; cursor: not-allowed; }
+
+.albedu-btn-danger { background: var(--albedu-danger); color: #fff; border-color: var(--albedu-danger); }
+.albedu-btn-danger:hover:not(:disabled) { background: #dc2626; }
+
+.albedu-btn-sm { padding: 6px 10px; font-size: 13px; }
+.albedu-btn-sm .material-symbols-outlined { font-size: 16px; }
+.albedu-btn-lg { padding: 12px 22px; font-size: 15px; }
+
+/* ── Cards ─────────────────────────────────────────────────────────────── */
+.albedu-card {
+  background: var(--albedu-surface);
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius-lg);
+  overflow: hidden;
+  transition: border-color var(--albedu-transition), box-shadow var(--albedu-transition);
+}
+.albedu-card:hover { border-color: var(--albedu-primary); box-shadow: var(--albedu-shadow-md); }
+
+.albedu-card-header {
+  padding: 18px var(--albedu-spacing-card);
+  border-bottom: 1px solid var(--albedu-border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.albedu-card-title { font-size: 16px; font-weight: 600; margin: 0; color: var(--albedu-heading); }
+.albedu-card-desc { font-size: 13px; color: var(--albedu-body); margin: 4px 0 0; }
+.albedu-card-body { padding: var(--albedu-spacing-card); }
+
+/* ── Form ──────────────────────────────────────────────────────────────── */
+.albedu-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.albedu-field-full { grid-column: 1 / -1; }
+.albedu-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.albedu-field label { font-size: 13px; font-weight: 500; color: var(--albedu-heading); }
+.albedu-required { color: var(--albedu-danger); }
+.albedu-field-hint { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+.albedu-hint-error { color: var(--albedu-danger); }
+.albedu-field-error { border-color: var(--albedu-danger) !important; }
+
+/* ── Step indicator ────────────────────────────────────────────────────── */
+.albedu-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+.albedu-step { display: flex; align-items: center; gap: 10px; cursor: default; user-select: none; }
+.albedu-step[data-clickable="true"] { cursor: pointer; }
+.albedu-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--albedu-surface);
+  border: 2px solid var(--albedu-border);
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all var(--albedu-transition);
+}
+.albedu-step-label { font-size: 13px; font-weight: 500; color: #94a3b8; transition: color var(--albedu-transition); }
+.albedu-step-line { flex: 1; height: 2px; background: var(--albedu-border); border-radius: 1px; min-width: 20px; transition: background var(--albedu-transition); }
+.albedu-step.albedu-step-active .albedu-step-num {
+  background: var(--albedu-primary);
+  border-color: var(--albedu-primary);
+  color: #fff;
+  box-shadow: 0 0 0 4px var(--albedu-primary-ring);
+}
+.albedu-step.albedu-step-active .albedu-step-label { color: var(--albedu-primary); font-weight: 600; }
+.albedu-step.albedu-step-complete .albedu-step-num { background: var(--albedu-primary); border-color: var(--albedu-primary); color: #fff; }
+.albedu-step.albedu-step-complete .albedu-step-num::after { content: '✓'; font-weight: 700; }
+.albedu-step.albedu-step-complete .albedu-step-num-text { display: none; }
+.albedu-step.albedu-step-complete .albedu-step-label { color: var(--albedu-body); }
+.albedu-step.albedu-step-complete + .albedu-step-line { background: var(--albedu-primary); }
+
+/* ── Toggle (custom checkbox) ──────────────────────────────────────────── */
+.albedu-toggle { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+.albedu-toggle input[type="checkbox"] { position: absolute; opacity: 0; pointer-events: none; }
+.albedu-toggle-track {
+  width: 36px; height: 20px; border-radius: 999px; background: var(--albedu-border);
+  position: relative; transition: background var(--albedu-transition); flex-shrink: 0;
+}
+.albedu-toggle-track::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--albedu-surface); transition: transform var(--albedu-transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+.albedu-toggle input:checked + .albedu-toggle-track { background: var(--albedu-primary); }
+.albedu-toggle input:checked + .albedu-toggle-track::after { transform: translateX(16px); }
+.albedu-toggle-label { font-size: 14px; color: var(--albedu-heading); }
+
+/* ── Radio cards (identity mode) ───────────────────────────────────────── */
+.albedu-radio-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.albedu-radio-card { position: relative; display: block; cursor: pointer; }
+.albedu-radio-card input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+.albedu-radio-card-content {
+  display: flex; align-items: flex-start; gap: 12px; padding: 16px;
+  border: 1.5px solid var(--albedu-border); border-radius: var(--albedu-radius);
+  background: var(--albedu-surface); transition: all var(--albedu-transition);
+}
+.albedu-radio-card-content .material-symbols-outlined { font-size: 22px; color: #94a3b8; transition: color var(--albedu-transition); }
+.albedu-radio-card-title { font-size: 14px; font-weight: 600; color: var(--albedu-heading); }
+.albedu-radio-card-desc { font-size: 12px; color: var(--albedu-body); margin-top: 2px; }
+.albedu-radio-card:hover .albedu-radio-card-content { border-color: var(--albedu-primary); }
+.albedu-radio-card input:checked + .albedu-radio-card-content {
+  border-color: var(--albedu-primary);
+  background: var(--albedu-primary-muted);
+  box-shadow: 0 0 0 3px var(--albedu-primary-ring);
+}
+.albedu-radio-card input:checked + .albedu-radio-card-content .material-symbols-outlined { color: var(--albedu-primary); }
+
+/* ── Theme editor (Google Form-like) ───────────────────────────────────── */
+.albedu-theme-section {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--albedu-border);
+}
+.albedu-theme-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 16px;
+}
+.albedu-theme-controls { display: flex; flex-direction: column; gap: 16px; }
+.albedu-theme-control-group { display: flex; flex-direction: column; gap: 8px; }
+.albedu-theme-control-group > label { font-size: 13px; font-weight: 500; color: var(--albedu-heading); }
+
+/* Preset chips */
+.albedu-preset-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.albedu-preset-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--albedu-border);
+  border-radius: 999px;
+  background: var(--albedu-surface);
+  color: var(--albedu-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--albedu-transition);
+}
+.albedu-preset-chip:hover { border-color: var(--albedu-primary); color: var(--albedu-primary); }
+.albedu-preset-chip.albedu-active {
+  background: var(--albedu-primary);
+  color: #fff;
+  border-color: var(--albedu-primary);
+}
+
+/* Quick-pick colors */
+.albedu-color-quickpicks { display: flex; flex-wrap: wrap; gap: 8px; }
+.albedu-color-swatch-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--albedu-surface);
+  box-shadow: 0 0 0 1px var(--albedu-border);
+  cursor: pointer;
+  transition: transform var(--albedu-transition), box-shadow var(--albedu-transition);
+}
+.albedu-color-swatch-btn:hover { transform: scale(1.1); box-shadow: 0 0 0 2px var(--albedu-primary); }
+.albedu-color-swatch-btn.albedu-active { box-shadow: 0 0 0 2px var(--albedu-primary), 0 0 0 4px var(--albedu-primary-ring); }
+
+/* Custom color picker */
+.albedu-color-picker-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius-sm);
+  background: var(--albedu-surface);
+}
+.albedu-color-picker-wrap input[type="color"] {
+  width: 28px; height: 28px;
+  border: none;
+  border-radius: var(--albedu-radius-sm);
+  cursor: pointer;
+  background: transparent;
+}
+.albedu-color-picker-wrap input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
+.albedu-color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.albedu-color-hex {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--albedu-body);
+  flex: 1;
+}
+
+/* Live preview */
+.albedu-theme-preview {
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius);
+  padding: 20px;
+  background: var(--albedu-surface);
+  min-height: 200px;
+}
+.albedu-theme-preview-title { font-size: 13px; font-weight: 600; color: var(--albedu-body); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+.albedu-preview-card {
+  background: var(--albedu-surface);
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius);
+  padding: 16px;
+}
+.albedu-preview-heading { font-size: 16px; font-weight: 700; color: var(--albedu-heading); margin: 0 0 8px; }
+.albedu-preview-question { font-size: 14px; color: var(--albedu-body); margin: 0 0 12px; }
+.albedu-preview-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.albedu-preview-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius-sm);
+  font-size: 13px; color: var(--albedu-body);
+  cursor: pointer;
+}
+.albedu-preview-option:hover { border-color: var(--albedu-primary); background: var(--albedu-primary-muted); }
+.albedu-preview-radio {
+  width: 16px; height: 16px;
+  border: 2px solid var(--albedu-border);
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: border-color var(--albedu-transition);
+}
+.albedu-preview-option:hover .albedu-preview-radio { border-color: var(--albedu-primary); }
+
+.albedu-wcag-status {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: var(--albedu-radius-sm);
+}
+.albedu-wcag-pass { background: #ecfdf5; color: var(--albedu-success); }
+.albedu-wcag-fail { background: #fef2f2; color: var(--albedu-danger); }
+
+/* ── Step content ──────────────────────────────────────────────────────── */
+.albedu-step-content {
+  background: var(--albedu-surface);
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius-lg);
+  padding: var(--albedu-spacing-card);
+  box-shadow: var(--albedu-shadow-sm);
+}
+.albedu-step-content[hidden] { display: none; }
+.albedu-step-title { font-size: 18px; font-weight: 700; margin: 0 0 4px; color: var(--albedu-heading); }
+.albedu-step-desc { font-size: 13px; color: var(--albedu-body); margin: 0 0 24px; }
+
+/* ── Soal (questions) ──────────────────────────────────────────────────── */
+.albedu-soal-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 20px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--albedu-border);
+  flex-wrap: wrap;
+}
+.albedu-soal-toolbar-info { font-size: 13px; color: var(--albedu-body); }
+.albedu-soal-toolbar-info strong { color: var(--albedu-primary); font-weight: 600; }
+
+.albedu-empty-state {
+  text-align: center; padding: 48px 24px;
+  background: var(--albedu-surface);
+  border: 1px dashed var(--albedu-border);
+  border-radius: var(--albedu-radius);
+  color: var(--albedu-body);
+}
+.albedu-empty-state .material-symbols-outlined { font-size: 56px; color: var(--albedu-border); margin-bottom: 12px; }
+.albedu-empty-state h3 { font-size: 18px; font-weight: 600; color: var(--albedu-heading); margin: 0 0 6px; }
+.albedu-empty-state p { font-size: 14px; margin: 0 0 20px; }
+
+.albedu-sections-list { display: flex; flex-direction: column; gap: 16px; }
+.albedu-section-block { border: 1px solid var(--albedu-border); border-radius: var(--albedu-radius); overflow: hidden; }
+.albedu-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 14px 16px;
+  background: var(--albedu-surface-alt);
+  border-bottom: 1px solid var(--albedu-border);
+  flex-wrap: wrap;
+}
+.albedu-section-name { font-size: 15px; font-weight: 600; margin: 0; color: var(--albedu-heading); }
+.albedu-section-meta { font-size: 12px; color: var(--albedu-body); }
+.albedu-section-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.albedu-question-row {
+  display: grid;
+  grid-template-columns: 28px 60px 1fr 50px auto;
+  gap: 12px; align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--albedu-radius-sm);
+  cursor: pointer;
+  transition: background var(--albedu-transition);
+}
+.albedu-question-row:hover { background: var(--albedu-primary-muted); }
+.albedu-question-num { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #94a3b8; text-align: center; }
+.albedu-question-type {
+  font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+  text-align: center; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.albedu-q-type-PG { background: var(--albedu-primary-muted); color: var(--albedu-primary); }
+.albedu-q-type-esai { background: #fef3c7; color: var(--albedu-warning); }
+.albedu-question-text {
+  font-size: 14px; color: var(--albedu-heading);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.albedu-question-score { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--albedu-primary); text-align: right; font-weight: 600; }
+.albedu-question-actions { display: flex; gap: 2px; }
+
+/* ── Summary grid ──────────────────────────────────────────────────────── */
+.albedu-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.albedu-summary-item {
+  padding: 18px;
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius);
+  background: var(--albedu-surface-alt);
+  text-align: center;
+}
+.albedu-summary-label {
+  font-size: 11px; color: var(--albedu-body);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin-bottom: 8px; font-weight: 500;
+}
+.albedu-summary-value {
+  font-size: 26px; font-weight: 700; color: var(--albedu-primary);
+  letter-spacing: -0.02em; font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Token display ─────────────────────────────────────────────────────── */
+.albedu-token-display {
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px;
+  border: 1.5px dashed var(--albedu-primary);
+  border-radius: var(--albedu-radius);
+  background: var(--albedu-primary-muted);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.albedu-token-label { font-size: 13px; color: var(--albedu-primary-hover); font-weight: 500; }
+.albedu-token-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px; font-weight: 700;
+  color: var(--albedu-primary);
+  letter-spacing: 0.1em;
+  flex: 1; min-width: 100px;
+}
+
+.albedu-publish-warning {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--albedu-radius-sm);
+  background: #fef3c7;
+  color: var(--albedu-warning);
+  font-size: 13px;
+  margin-bottom: 20px;
+  border: 1px solid #fde68a;
+}
+.albedu-publish-warning .material-symbols-outlined { font-size: 20px; flex-shrink: 0; }
+
+/* ── Wizard footer ─────────────────────────────────────────────────────── */
+.albedu-wizard-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 24px; padding-top: 20px;
+  border-top: 1px solid var(--albedu-border);
+  flex-wrap: wrap;
+}
+.albedu-wizard-footer-right { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+
+/* ── Assessment cards (list view) ──────────────────────────────────────── */
+.albedu-assessments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.albedu-assessment-card {
+  background: var(--albedu-surface);
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius);
+  padding: 18px;
+  transition: all var(--albedu-transition);
+  cursor: default;
+}
+.albedu-assessment-card:hover {
+  border-color: var(--albedu-primary);
+  box-shadow: var(--albedu-shadow-md);
+  transform: translateY(-2px);
+}
+.albedu-assessment-card-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 12px;
+}
+.albedu-assessment-card-title { font-size: 16px; font-weight: 600; margin: 0; color: var(--albedu-heading); line-height: 1.4; }
+.albedu-assessment-card-token {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--albedu-primary);
+  background: var(--albedu-primary-muted);
+  padding: 3px 8px; border-radius: var(--albedu-radius-sm);
+  white-space: nowrap; font-weight: 600; letter-spacing: 0.04em;
+}
+.albedu-assessment-card-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+.albedu-assessment-card-meta span {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 13px; color: var(--albedu-body);
+}
+.albedu-assessment-card-meta .material-symbols-outlined { font-size: 16px; color: #94a3b8; }
+.albedu-assessment-card-date { font-size: 12px; color: #94a3b8; padding-top: 10px; border-top: 1px solid var(--albedu-border); }
+
+/* Status badges */
+.albedu-status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 999px;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.albedu-status-not_started { background: #f1f5f9; color: #475569; }
+.albedu-status-running { background: #ecfdf5; color: var(--albedu-success); }
+.albedu-status-paused { background: #fef3c7; color: var(--albedu-warning); }
+.albedu-status-finished { background: #fef2f2; color: var(--albedu-danger); }
+
+/* ── Language switcher ─────────────────────────────────────────────────── */
+.albedu-lang-switcher {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius-sm);
+  background: var(--albedu-surface);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--albedu-body);
+  transition: all var(--albedu-transition);
+}
+.albedu-lang-switcher:hover { border-color: var(--albedu-primary); color: var(--albedu-primary); }
+.albedu-lang-dropdown {
+  position: absolute;
+  top: 100%; right: 0;
+  margin-top: 4px;
+  background: var(--albedu-surface);
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius-sm);
+  box-shadow: var(--albedu-shadow-md);
+  min-width: 160px;
+  z-index: 100;
+  overflow: hidden;
+}
+.albedu-lang-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--albedu-body);
+  cursor: pointer;
+  transition: background var(--albedu-transition);
+}
+.albedu-lang-option:hover { background: var(--albedu-surface-alt); }
+.albedu-lang-option.albedu-active { color: var(--albedu-primary); font-weight: 600; background: var(--albedu-primary-muted); }
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .albedu-summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .albedu-theme-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .albedu-form-grid { grid-template-columns: 1fr; }
+  .albedu-radio-cards { grid-template-columns: 1fr; }
+  .albedu-step-label { display: none; }
+  .albedu-section-header { flex-direction: column; align-items: stretch; }
+  .albedu-section-actions { width: 100%; }
+  .albedu-question-row {
+    grid-template-columns: 24px 48px 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 8px;
+  }
+  .albedu-question-text { grid-column: 1 / -1; white-space: normal; }
+  .albedu-question-score { grid-column: 3; text-align: right; }
+  .albedu-question-actions { grid-column: 4; }
+  .albedu-wizard-footer { flex-direction: column-reverse; align-items: stretch; }
+  .albedu-wizard-footer-right { width: 100%; margin-left: 0; }
+  .albedu-wizard-footer-right .albedu-btn { flex: 1; justify-content: center; }
+}
+@media (max-width: 480px) {
+  .albedu-summary-grid { grid-template-columns: 1fr 1fr; }
+  .albedu-summary-value { font-size: 20px; }
+  .albedu-token-value { font-size: 22px; }
+}

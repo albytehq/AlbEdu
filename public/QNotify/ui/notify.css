@@ -1,0 +1,381 @@
+/* notify.css — Qnotify v8.0.5
+ * CSS ISOLATION: All shared selectors (.icon-blob, .text-main, .text-small)
+ * are scoped to .qnotify-item:not(.qnotify-dialog):not(.qnotify-label)
+ * to prevent cascade bleeding into dialog and label components.
+ * ╔══════════════════════════════════════════════════════════╗
+ * ║  Qnotify — notify.css  (REFACTORED)                     ║
+ * ║  "Toast Notification Styles"                            ║
+ * ╚══════════════════════════════════════════════════════════╝
+ *
+ * REFACTOR CHANGELOG (7.0.0 → 7.1.0):
+ *
+ *  [FIX-1]  Removed `transition: box-shadow` from .qnotify-item base.
+ *           box-shadow transitions restart on every applyDepthShadow()
+ *           call during rapid hover, causing visible jitter. Shadow
+ *           interpolation is now 100% JS-driven via applyDepthShadow().
+ *
+ *  [FIX-2]  Hover system unified: toast items get z-index lift only.
+ *           No CSS transform on hover — RK4 bump spring in motion.js
+ *           owns all positional feedback. This prevents animation
+ *           restart artifacts on rapid hover in/out.
+ *
+ *  [FIX-3]  will-change: transform, opacity declared unconditionally
+ *           on desktop items so the compositor layer is promoted before
+ *           the first frame. JS still removes it on rest.
+ *
+ *  [FIX-4]  Removed `background 0.3s ease` from .icon-blob. Background
+ *           never changes after spawn — this was an unnecessary
+ *           recomposite trigger.
+ *
+ *  [FIX-5]  All mobile state classes use `transition: none` — JS
+ *           (RK4 springs) owns all positional movement, no competing
+ *           CSS transition.
+
+ * v7.5.0 ANTI-GLITCH ADDITIONS:
+ *  [G1] .spawn gets visibility:hidden — belt-and-suspenders FOUC guard.
+ *       glitch.js stampInitialState() handles transform+opacity. CSS provides
+ *       the safety net for before-JS-runs case.
+ *  [G2] Desktop .spawn explicitly declared — no implicit state leakage.
+ *  [G3] progress-bar animation-play-state paused during spawn to prevent
+ *       timer running before notification is visually active.
+ */
+
+/* ── CSS Custom Properties ───────────────────────────────── */
+:root {
+    --qnotify-notif-light:         rgba(255, 255, 255, 0.96);
+    --qnotify-fluid-enter:         cubic-bezier(0.2, 0.9, 0.3, 1.1);
+    --qnotify-fluid-exit:          cubic-bezier(0.3, 0, 0.2, 1);
+    --qnotify-fluid-bounce:        cubic-bezier(0.34, 1.56, 0.64, 1);
+    --qnotify-fluid-soft:          cubic-bezier(0.23, 1, 0.32, 1);
+    --qnotify-morph-ease:          cubic-bezier(0.25, 0.1, 0.25, 1);
+
+    --qnotify-desktop-bg-light:    rgba(255, 255, 255, 0.96);
+    --qnotify-desktop-text-light:  #1d1d1f;
+    --qnotify-desktop-border:      rgba(0, 0, 0, 0.12);
+    --qnotify-desktop-subtext:     rgba(60, 60, 67, 0.7);
+}
+
+/* ── Container ───────────────────────────────────────────── */
+#qnotify-container,
+.qnotify-notification-container {
+    position:       fixed;
+    inset:          0;
+    pointer-events: none;
+    z-index:        10000;
+    font-family:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow:       visible;
+}
+
+.qnotify-item { pointer-events: auto !important; }
+
+/* ── Shadow System — CSS vars, NO transition ─────────────── */
+/*
+ * [FIX-1] box-shadow transition removed entirely.
+ * When applyDepthShadow() sets --shadow-* vars rapidly (e.g. 20 hover
+ * events/sec), a CSS transition on box-shadow creates a queue of
+ * competing animations, causing flicker and jitter. Removing the
+ * transition means each applyDepthShadow() call takes effect
+ * immediately — shadow is interpolated frame-by-frame in JS instead.
+ */
+.qnotify-item:not(.qnotify-label):not(.qnotify-dialog) {
+    backdrop-filter:             none;
+    -webkit-backdrop-filter:     none;
+    background:                  var(--qnotify-notif-light);
+    backface-visibility:         hidden;
+    -webkit-backface-visibility: hidden;
+    will-change:                 transform, opacity;
+    contain:                     layout style paint;
+
+    --shadow-x-offset:           0px;
+    --shadow-primary-y:          0;
+    --shadow-primary-blur:       0;
+    --shadow-primary-opacity:    0;
+    --shadow-primary-color:      0, 0, 0;
+    --shadow-secondary-y:        0;
+    --shadow-secondary-blur:     0;
+    --shadow-secondary-opacity:  0;
+    --shadow-secondary-color:    0, 0, 0;
+
+    /* NO transition here — JS owns shadow interpolation */
+    box-shadow:
+        var(--shadow-x-offset) calc(var(--shadow-primary-y)   * 1px) calc(var(--shadow-primary-blur)   * 1px) 0 rgba(var(--shadow-primary-color),   var(--shadow-primary-opacity)),
+        var(--shadow-x-offset) calc(var(--shadow-secondary-y) * 1px) calc(var(--shadow-secondary-blur) * 1px) 0 rgba(var(--shadow-secondary-color), var(--shadow-secondary-opacity));
+}
+
+/* ── Progress Bar Keyframes ──────────────────────────────── */
+@keyframes qnotify-progress-vertical   { from { transform: scaleY(1); } to { transform: scaleY(0); } }
+@keyframes qnotify-progress-horizontal { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE STYLES
+   ═══════════════════════════════════════════════════════════ */
+
+.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) {
+    position:    fixed;
+    left:        50%;
+    top:         0;
+    border:      1.5px solid rgba(0, 0, 0, 0.12);
+    display:     flex;
+    align-items: center;
+    overflow:    hidden;
+    /* [FIX-5] No CSS transition — RK4 springs own all movement */
+    transition:  none;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select:         none;
+}
+
+.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label).spawn {
+    /* [v7.5.0] glitch.js stampInitialState() owns transform + opacity.
+     * CSS only provides visibility:hidden as belt-and-suspenders FOUC guard.
+     * This ensures zero flash even if JS hasn't run yet on first frame. */
+    opacity:    0 !important;
+    visibility: hidden;
+}
+.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label).active { visibility: visible; opacity: 1; z-index: 100; }
+.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label).layer-1 { opacity: 0.6; z-index: 90; }
+.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label).layer-2 { opacity: 0.3; z-index: 80; }
+
+.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label).exit {
+    opacity:        0;
+    transform:      translateX(60px) scale(0.92) !important;
+    pointer-events: none;
+    transition:     opacity 0.28s cubic-bezier(0.3, 0, 0.6, 1),
+                    transform 0.28s cubic-bezier(0.3, 0, 0.6, 1) !important;
+}
+
+.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .progress-track {
+    position:   absolute;
+    bottom:     0; left: 0;
+    width:      100%; height: 3px;
+    background: rgba(0, 0, 0, 0.04);
+    overflow:   hidden;
+}
+
+.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .progress-bar {
+    height:          100%; width: 100%;
+    transform-origin: left;
+    animation:        qnotify-progress-horizontal linear forwards;
+    /* [v7.5.0 G3] Pause timer visual until notification is active (not spawning) */
+    animation-play-state: paused;
+    will-change:      transform;
+}
+.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label):not(.spawn) .progress-bar {
+    animation-play-state: running;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DESKTOP STYLES
+   ═══════════════════════════════════════════════════════════ */
+
+.desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label).spawn {
+    /* [v7.5.0] FOUC guard — JS stampInitialState() handles actual transform/opacity.
+     * CSS visibility ensures zero flash before JS runs. */
+    opacity:    0 !important;
+    visibility: hidden;
+}
+
+/* Restore visibility after spawn removed — JS spring controls opacity/transform */
+.desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label):not(.spawn) {
+    visibility: visible;
+}
+
+.desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) {
+    position:    fixed;
+    right:       40px;
+    bottom:      40px;
+    width:       clamp(320px, 88vw, 390px);  /* fluid: never clips on small screens */
+    height:      auto;
+    min-height:  145px;
+    border-radius: 18px;
+    background:  var(--qnotify-desktop-bg-light);
+    border:      2px solid var(--qnotify-desktop-border);
+    color:       var(--qnotify-desktop-text-light);
+    display:     flex;
+    align-items: center;
+    padding-right: 44px;
+    padding-left:  6px;
+    will-change:   transform, opacity;
+    touch-action:  none;
+    -webkit-user-select: none;
+    user-select:         none;
+}
+
+/*
+ * [FIX-2] Hover: z-index only. No CSS transform on hover.
+ *
+ * Why: The RK4 bump spring system in motion.js responds to
+ * pointerdown/pointermove/pointerup — it provides rich depth
+ * feedback. Adding a CSS :hover transform on top creates two
+ * competing animation sources on the same property. Under rapid
+ * hover spam, the CSS transition and JS spring fight each other,
+ * producing jitter. Removing the CSS hover transform means JS
+ * is the single authority on the element's transform.
+ *
+ * The z-index bump (200) remains so hovered items render on top
+ * of adjacent stacked items — this is a stacking-context change,
+ * not a visual animation, so it cannot flicker.
+ */
+.desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label):hover,
+.desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label):active {
+    z-index: 200 !important;
+}
+
+/* Desktop Progress Bar */
+.desktop-mode .progress-track {
+    position:     absolute;
+    top: 30px; bottom: 30px; right: 18px;
+    width:        8px;
+    background:   rgba(0, 0, 0, 0.08);
+    border:       1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+    overflow:     hidden;
+}
+
+.desktop-mode .progress-bar {
+    width:            100%; height: 100%;
+    transform-origin: bottom;
+    animation:        qnotify-progress-vertical linear forwards;
+    border-radius:    10px;
+    position:         relative; overflow: hidden;
+    will-change:      transform;
+}
+
+.desktop-mode .progress-bar::after {
+    content:      '';
+    position:     absolute; top: 0; left: 0; right: 0; height: 30%;
+    background:   linear-gradient(to bottom, rgba(255,255,255,.6) 0%, rgba(255,255,255,.3) 100%);
+    border-radius: 10px 10px 0 0;
+    pointer-events: none;
+}
+
+/* ── Content Layout ──────────────────────────────────────── */
+.notification-icon {
+    min-width: 70px;
+    display:   flex;
+    justify-content: center;
+}
+
+.desktop-mode .notification-icon {
+    min-width:   86px;
+    padding-left: 10px;
+}
+
+/*
+ * [FIX-4] `background 0.3s ease` removed from .icon-blob.
+ * The background gradient never changes after the notification spawns —
+ * it is set once by the .success/.error/.warning/.info parent class.
+ * Keeping a background transition wastes a compositor hint and can
+ * cause an unwanted flash on first paint.
+ *
+ * transform transition kept — it cooperates with JS bump spring
+ * (the spring writes transform directly so a competing CSS transition
+ * on transform must be shorter than the spring settle time ~16ms).
+ * 0.20s is safe here because bump events use JS-driven spring which
+ * bypasses CSS transitions entirely when writing via style.transform.
+ */
+.qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .icon-blob {
+    width:         54px; height: 54px;
+    border-radius: 100px;
+    display:       flex; align-items: center; justify-content: center;
+    color:         white;
+    box-shadow:    0 4px 0 rgba(0, 0, 0, 0.18);
+    font-size:     24px;
+    transition:    transform 0.20s var(--qnotify-fluid-bounce);
+}
+
+.desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .icon-blob {
+    width:         66px; height: 66px;
+    border-radius: 22px; font-size: 28px;
+    box-shadow:    0 6px 0 rgba(0, 0, 0, 0.18);
+}
+
+.notification-text { flex: 1; padding: 0 12px; }
+.desktop-mode .notification-text { padding-right: 28px; }
+.mobile-mode  .notification-text { padding-left: 18px; padding-right: 18px; }
+
+.qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .text-small {
+    font-size:      11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    margin-bottom:  2px;
+    color:          rgba(0, 0, 0, 0.55);
+}
+
+.desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .text-small {
+    font-size:     13px; letter-spacing: 0.8px; margin-bottom: 5px;
+    color:         var(--qnotify-desktop-subtext);
+}
+
+.qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .text-main {
+    font-size:   15px; font-weight: 600;
+    line-height: 1.35; color: #1a1a1a;
+}
+
+.desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .text-main {
+    font-size:   19px; font-weight: 700;
+    line-height: 1.4; color: var(--qnotify-desktop-text-light);
+}
+
+/* ── Icon Colors ─────────────────────────────────────────── */
+/* [v8.0.0] Upgraded icon blob gradients — richer depth, inset glass edge */
+.qnotify-item.success .icon-blob {
+    background: linear-gradient(145deg, #4cd97a 0%, #34c759 40%, #1e8f3f 100%);
+    box-shadow: 0 4px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.30);
+}
+.desktop-mode .success .progress-bar { background: linear-gradient(to top, rgba(52,199,89,.96), rgba(148,255,188,.92)); }
+.mobile-mode  .success .progress-bar { background: #34c759; }
+
+.qnotify-item.error .icon-blob {
+    background: linear-gradient(145deg, #ff6b63 0%, #ff3b30 40%, #b81e14 100%);
+    box-shadow: 0 4px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.28);
+}
+.desktop-mode .error .progress-bar { background: linear-gradient(to top, rgba(255,59,48,.96), rgba(255,144,138,.92)); }
+.mobile-mode  .error .progress-bar { background: #ff3b30; }
+
+.qnotify-item.warning .icon-blob {
+    background: linear-gradient(145deg, #ffc340 0%, #ff9500 40%, #c06600 100%);
+    box-shadow: 0 4px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.30);
+}
+.desktop-mode .warning .progress-bar { background: linear-gradient(to top, rgba(255,149,0,.96), rgba(255,214,130,.92)); }
+.mobile-mode  .warning .progress-bar { background: #ff9500; }
+
+.qnotify-item.info .icon-blob {
+    background: linear-gradient(145deg, #3d9eff 0%, #007aff 40%, #0052cc 100%);
+    box-shadow: 0 4px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.30);
+}
+.desktop-mode .info .progress-bar { background: linear-gradient(to top, rgba(0,122,255,.96), rgba(100,210,255,.92)); }
+.mobile-mode  .info .progress-bar { background: #007aff; }
+
+/* ── Dark Mode ───────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+    .mobile-mode .qnotify-item:not(.qnotify-label):not(.qnotify-dialog),
+    .desktop-mode .qnotify-item:not(.qnotify-label):not(.qnotify-dialog) {
+        background: #2c2c2e;
+        color:      #f5f5f7;
+    }
+    .mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) {
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+    .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .text-small { color: rgba(255, 255, 255, 0.55); }
+    .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .text-main  { color: #f5f5f7; }
+    .mobile-mode .progress-track { background: rgba(255, 255, 255, 0.1); }
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 480px) {
+    .desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) {
+        right: 16px; bottom: 16px; width: clamp(280px, 92vw, 340px); min-height: 120px;
+    }
+    .desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .icon-blob { width: 58px; height: 58px; font-size: 24px; }
+    .desktop-mode .text-main { font-size: 17px; }
+}
+
+/* ── Reduced Motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .qnotify-item,
+    .qnotify-item .icon-blob,
+    .qnotify-item .progress-bar {
+        transition-duration: 0.01ms !important;
+        animation-duration:  0.01ms !important;
+    }
+}

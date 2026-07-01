@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Administrator — AlbEdu</title>
+    <meta name="description" content="Daftarkan akun administrator AlbEdu.">
+    <meta name="theme-color" content="#1E40AF">
+    <link rel="icon" type="image/x-icon" href="../public/images/favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="../public/images/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="96x96" href="../public/images/favicon/favicon-96x96.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="../public/images/favicon/apple-touch-icon.png">
+    <link rel="manifest" href="../public/images/favicon/site.webmanifest">
+    <link rel="stylesheet" href="../styles/tokens.css">
+  <!-- F1+F2 fix: font loading strategy (preconnect + swap, no @import) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+
+    <link rel="stylesheet" href="../styles/register.css">
+
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+    <script src="../src/utils/supabase-api.js" defer></script>
+    <script src="../src/auth/device-fingerprint.js" defer></script>
+    <script type="module"src="../src/auth/admin-onboarding.js" defer></script>
+</head>
+
+<body>
+
+    <div class="split-screen">
+        <!-- ═══ LEFT PANEL — Form ═══ -->
+        <div class="split-left">
+            <div class="form-container" role="main">
+
+                <!-- Logo + title -->
+                <div class="form-header">
+                    <div class="form-logo-row">
+                        <img src="../public/images/logo.svg" alt="AlbEdu" width="36" height="36">
+                        <span class="form-logo-name">AlbEdu</span>
+                    </div>
+                    <h1 class="form-title">Buat Akun Administrator</h1>
+                    <p class="form-subtitle">Kelola sistem pendidikan dengan akses penuh</p>
+                </div>
+
+                <!-- Registration form — IDs preserved for AdminOnboarding.js -->
+                <form id="adminRegisterForm" novalidate>
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <input id="email" name="email" type="email" autocomplete="email"
+                            class="input" placeholder="nama@sekolah.sch.id" required>
+                    </div>
+
+                    <div class="field field-password">
+                        <label for="password">Kata Sandi</label>
+                        <input id="password" name="password" type="password" autocomplete="new-password" minlength="8"
+                            class="input" placeholder="Minimal 8 karakter" required>
+                        <button type="button" class="toggle-visibility" data-target="password"
+                            aria-label="Tampilkan kata sandi">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                class="icon-eye">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                class="icon-eye-off" style="display:none">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        </button>
+                        <!-- Strength bars — managed by AdminOnboarding.js -->
+                        <div class="password-strength" id="passwordStrength" hidden>
+                            <div class="strength-bar"></div>
+                            <div class="strength-bar"></div>
+                            <div class="strength-bar"></div>
+                            <div class="strength-bar"></div>
+                        </div>
+                        <div class="strength-text" id="strengthText" hidden></div>
+                    </div>
+
+                    <div class="field field-password">
+                        <label for="confirmPassword">Konfirmasi Kata Sandi</label>
+                        <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password"
+                            minlength="8" class="input" placeholder="Ulangi kata sandi" required>
+                        <button type="button" class="toggle-visibility" data-target="confirmPassword"
+                            aria-label="Tampilkan kata sandi">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                class="icon-eye">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                class="icon-eye-off" style="display:none">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Turnstile widget -->
+                    <div class="turnstile-wrap">
+                        <div class="cf-turnstile" data-sitekey="0x4AAAAAADf1nq5nQwB729CG"></div>
+                    </div>
+
+                    <!-- Submit button -->
+                    <button id="registerBtn" type="submit" aria-busy="false">
+                        Daftar Sekarang
+                    </button>
+
+                    <!-- Message area -->
+                    <div id="registerMessage" class="message message-error" role="alert" aria-live="assertive"
+                        tabindex="-1" hidden></div>
+                </form>
+
+                <div class="back-link-wrap">
+                    <a class="back-link" href="login.html">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                        Kembali ke Login
+                    </a>
+                </div>
+
+                <p class="page-footer">
+                    &copy; <span id="regYear"></span> AlbEdu — Akses terbatas untuk administrator terdaftar.
+                </p>
+            </div>
+        </div>
+
+        <!-- ═══ RIGHT PANEL — Branding ═══ -->
+        <div class="split-right">
+            <div class="branding-content">
+                <div class="branding-logo" aria-hidden="true">
+                    <img src="../public/images/logo.svg" alt="" width="40" height="40">
+                </div>
+                <h2 class="branding-title">Bergabung dengan AlbEdu</h2>
+                <p class="branding-tagline">Daftarkan diri Anda sebagai administrator dan mulai kelola sistem pendidikan secara digital.</p>
+
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <div class="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </div>
+                        <div class="feature-text-wrap">
+                            <span class="feature-label">Akses Penuh</span>
+                            <span class="feature-desc">Kelola peserta, ujian, dan seluruh sistem</span>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                        </div>
+                        <div class="feature-text-wrap">
+                            <span class="feature-label">Keamanan Terjamin</span>
+                            <span class="feature-desc">Verifikasi email & proteksi perangkat</span>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                            </svg>
+                        </div>
+                        <div class="feature-text-wrap">
+                            <span class="feature-label">Siap dalam Hitungan Menit</span>
+                            <span class="feature-desc">Pendaftaran cepat, langsung aktif</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password visibility toggle logic -->
+    <script type="module">
+        document.getElementById('regYear').textContent = new Date().getFullYear();
+
+        document.querySelectorAll('.toggle-visibility').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var targetId = this.getAttribute('data-target');
+                var input = document.getElementById(targetId);
+                if (!input) return;
+                var isPassword = input.type === 'password';
+                input.type = isPassword ? 'text' : 'password';
+                var eyeIcon = this.querySelector('.icon-eye');
+                var eyeOffIcon = this.querySelector('.icon-eye-off');
+                if (eyeIcon && eyeOffIcon) {
+                    eyeIcon.style.display = isPassword ? 'none' : 'block';
+                    eyeOffIcon.style.display = isPassword ? 'block' : 'none';
+                }
+                this.setAttribute('aria-label', isPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
+            });
+        });
+    </script>
+</body>
+
+</html>

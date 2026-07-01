@@ -1,0 +1,861 @@
+/* dialog.css — Qnotify v8.0.5
+ * ╔══════════════════════════════════════════════════════════════╗
+ * ║  Qnotify — dialog.css v8.0.5                             ║
+ * ║  "Visual King — Production Grade, Zero Glitch"              ║
+ * ╚══════════════════════════════════════════════════════════════╝
+ *
+ * v8.0.0 CHANGES:
+ *  [B1] Backdrop transition: SATU definisi, di sini saja.
+ *       glitch.js critical CSS tidak lagi mendefinisikan transition backdrop.
+ *       Eliminates specificity race yang menyebabkan backdrop flicker.
+ *
+ *  [B2] Backdrop z-index di-set via CSS var yang di-sync dengan glitch.Z.
+ *       Tidak ada hard-coded z-index di sini — semua via CSS custom property.
+ *
+ *  [D1] Dialog: .spawn hanya visibility:hidden. JS owns transform + opacity.
+ *       CSS dan JS tidak lagi fight untuk authority atas property yang sama.
+ *
+ *  [D2] Dialog masuk body langsung (bukan dalam container) — stacking context
+ *       isolation tidak bisa menyebabkan dialog tertutup backdrop.
+ *
+ *  [P1] Performance: added contain:layout style paint untuk dialog card.
+ *       Isolates paint operations — tidak bleeding ke parent.
+ *
+ *  [V1] Visual upgrade: richer background blur, deeper shadow system,
+ *       refined icon blob gradients, premium button press feel.
+ */
+
+
+/* ══════════════════════════════════════════════════════════════
+   BACKDROP — Single source of truth for transition
+
+   WHY TWO LAYERS (::before pseudo-element trick):
+   backdrop-filter creates its own stacking context and blurs
+   everything painted BELOW the element at composite time.
+   This means a dialog at z-index 10002 ABOVE the backdrop (10001)
+   was still getting blurred — z-index cannot override backdrop-filter
+   compositing behavior.
+
+   Fix: The actual #qnotify-backdrop element is COLOR ONLY (rgba).
+   The blur lives in ::before — a pseudo-element that is a CHILD of
+   the backdrop. Children never create stacking contexts that reach
+   ABOVE their parent, so the dialog (z-index 10002, sibling of
+   backdrop) is completely unaffected by the blur.
+
+   Paint order:
+     Page content          ← blurred by ::before
+     ::before (blur layer) ← blur stops here
+     #qnotify-backdrop     ← color overlay
+     Dialog (z 10002)      ← NOT blurred ✅
+   ══════════════════════════════════════════════════════════════ */
+
+#qnotify-backdrop,
+.qnotify-backdrop {
+    position:       fixed;
+    inset:          0;
+    /* Color-only — NO backdrop-filter here (that's in ::before) */
+    background:     rgba(0, 0, 0, 0.45);
+
+    /* [B1] THE ONLY TRANSITION DEFINITION for backdrop. */
+    transition:     opacity 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+
+    z-index:        10001;
+    opacity:        0;
+    pointer-events: none;
+    will-change:    opacity;
+}
+
+/* Blur lives here — as a child pseudo-element.
+   Children cannot bleed their stacking context above siblings
+   of the parent, so dialog at z-index 10002 is safe. */
+#qnotify-backdrop::before,
+.qnotify-backdrop::before {
+    content:                 '';
+    position:                absolute;
+    inset:                   0;
+    backdrop-filter:         blur(8px) saturate(0.75);
+    -webkit-backdrop-filter: blur(8px) saturate(0.75);
+    pointer-events:          none;
+    /* No z-index here — pseudo-elements stay within parent stacking context */
+}
+
+#qnotify-backdrop.active,
+.qnotify-backdrop.active {
+    opacity:        1;
+    pointer-events: auto;
+}
+
+body.qnotify-no-scroll,
+body.no-scroll {
+    overflow: hidden !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   DIALOG CARD BASE — All types share identical structure
+   ══════════════════════════════════════════════════════════════ */
+
+.qnotify-dialog.notification-item {
+    position:       fixed;
+    left:           50%;
+    top:            50%;
+    /* [D1] transform ONLY for centering at rest — JS spring controls
+     * scale + translateY during animation.
+     * CSS defines rest state; JS spring converges toward translate(-50%,-50%). */
+    transform:      translate(-50%, -50%);
+    width:          clamp(320px, 88vw, 500px);
+    padding:        32px 32px 36px;
+    border-radius:  44px;
+
+    /* Rich frosted glass — premium feel */
+    background:     rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+
+    /* 5-layer shadow depth: ambient → contact → lift → dramatic → glow */
+    box-shadow:
+        0 0   0   1px rgba(0,   0,   0,   0.05),
+        0 1px 3px  0   rgba(0,   0,   0,   0.06),
+        0 4px 12px 0   rgba(0,   0,   0,   0.08),
+        0 16px 40px 0   rgba(0,   0,   0,   0.12),
+        0 32px 64px 0   rgba(0,   0,   0,   0.16);
+
+    border:         none;
+
+    /* [B2] Dialog ABOVE backdrop: 10002 */
+    z-index:        10002 !important;
+
+    display:        flex;
+    flex-direction: column;
+    align-items:    center;
+    text-align:     center;
+    pointer-events: auto !important;
+
+    /* [P1] Paint isolation */
+    contain:        layout style paint;
+
+    -webkit-user-select:        none;
+    -moz-user-select:           none;
+    -ms-user-select:            none;
+    user-select:                none;
+    -webkit-touch-callout:      none;
+    -webkit-tap-highlight-color: transparent;
+
+    /* [D1] NO transition on base — ALL motion is JS spring driven.
+     * Individual properties (icon-blob background) get inline transitions
+     * set by morphTheme() where semantically appropriate. */
+    transition: none;
+}
+
+.qnotify-dialog * {
+    -webkit-user-select:   none;
+    -moz-user-select:      none;
+    -ms-user-select:       none;
+    user-select:           none;
+    -webkit-touch-callout: none;
+}
+
+.desktop-mode .qnotify-dialog.notification-item {
+    width:         clamp(420px, 60vw, 540px);
+    padding:       36px 36px 40px;
+    border-radius: 48px;
+}
+
+.mobile-mode .qnotify-dialog.notification-item {
+    width:         min(90vw, 400px);
+    padding:       28px 24px 32px;
+    border-radius: 36px;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   STATE MACHINE: spawn → active → exit
+   ══════════════════════════════════════════════════════════════ */
+
+.qnotify-dialog.notification-item.spawn {
+    /* [D1] ONLY visibility:hidden here.
+     * JS _stampDialogInitial() sets transform + opacity BEFORE DOM insert.
+     * CSS does NOT define transform or opacity in spawn state.
+     *
+     * Why: if CSS defined opacity:0 AND JS set opacity:0, removing .spawn
+     * class could cause a 1-frame flash where CSS opacity:0 is gone but
+     * JS hasn't started the spring yet. visibility:hidden is safer — it
+     * cannot flash because it has no intermediate visual state. */
+    visibility:     hidden !important;
+    pointer-events: none   !important;
+}
+
+.qnotify-dialog.notification-item.active {
+    /* Restore visibility after spawn — JS spring controls opacity/transform */
+    visibility:     visible;
+    pointer-events: auto;
+}
+
+.qnotify-dialog.notification-item.exit {
+    pointer-events: none !important;
+}
+
+.qnotify-dialog .progress-track {
+    display: none !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   STAGGER ENTER — Child elements
+   ══════════════════════════════════════════════════════════════ */
+
+.qnotify-dialog .stagger {
+    transition: none;
+}
+
+.qnotify-dialog .stagger-init {
+    opacity:   0 !important;
+    transform: translateY(12px) !important;
+    transition: none !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   ICON BLOB — Premium gradient system
+   ══════════════════════════════════════════════════════════════ */
+
+.qnotify-dialog .icon-blob {
+    width:           80px;
+    height:          80px;
+    border-radius:   40px;
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    color:           white;
+    font-size:       40px;
+    margin-bottom:   20px;
+    position:        relative;
+    overflow:        visible;
+    flex-shrink:     0;
+
+    /* Smooth theme morphing with spring-like easing */
+    transition:
+        background  0.55s cubic-bezier(0.34, 1.2, 0.64, 1),
+        box-shadow  0.55s cubic-bezier(0.34, 1.2, 0.64, 1);
+    /* transform: JS spring ONLY — no CSS transition on transform */
+}
+
+/* Default: info blue */
+.qnotify-dialog .icon-blob {
+    background: linear-gradient(145deg, #3d9eff 0%, #007aff 45%, #004ecf 100%);
+    box-shadow:
+        0 8px 24px -4px rgba(0, 122, 255, 0.40),
+        0 2px 6px  0   rgba(0,   0,   0,   0.10),
+        inset 0 1px 0  rgba(255, 255, 255, 0.28),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+}
+
+.qnotify-dialog.warning .icon-blob {
+    background: linear-gradient(145deg, #ffc340 0%, #ff9500 45%, #c06600 100%);
+    box-shadow:
+        0 8px 24px -4px rgba(255, 149, 0,  0.38),
+        0 2px 6px  0   rgba(0,   0,   0,   0.10),
+        inset 0 1px 0  rgba(255, 255, 255, 0.28),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+}
+
+.qnotify-dialog.danger .icon-blob {
+    background: linear-gradient(145deg, #ff6b63 0%, #ff3b30 45%, #c0201a 100%);
+    box-shadow:
+        0 8px 24px -4px rgba(255, 59,  48,  0.40),
+        0 2px 6px  0   rgba(0,   0,   0,   0.10),
+        inset 0 1px 0  rgba(255, 255, 255, 0.28),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+}
+
+.qnotify-dialog.info .icon-blob {
+    background: linear-gradient(145deg, #3d9eff 0%, #007aff 45%, #004ecf 100%);
+    box-shadow:
+        0 8px 24px -4px rgba(0,   122, 255, 0.40),
+        0 2px 6px  0   rgba(0,   0,   0,   0.10),
+        inset 0 1px 0  rgba(255, 255, 255, 0.28),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+}
+
+.desktop-mode .qnotify-dialog .icon-blob {
+    width:         88px;
+    height:        88px;
+    border-radius: 44px;
+    font-size:     46px;
+}
+
+/* Icon glyph — JS handles opacity transition via morphTheme() */
+.qnotify-dialog .icon-blob .material-icons-round {
+    position: relative;
+    z-index:  2;
+    /* NO CSS transition — morphTheme() sets inline transition when needed */
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   PROCESSING STATE — Spinning ring pulse
+   ══════════════════════════════════════════════════════════════ */
+
+@keyframes qnotify-processing-pulse {
+    0%   {
+        box-shadow:
+            0 8px 24px -4px rgba(142,142,147,0.30),
+            0 2px 6px rgba(0,0,0,0.10),
+            inset 0 1px 0 rgba(255,255,255,0.18),
+            0 0 0 0   rgba(142,142,147,0);
+    }
+    50%  {
+        box-shadow:
+            0 8px 24px -4px rgba(142,142,147,0.30),
+            0 2px 6px rgba(0,0,0,0.10),
+            inset 0 1px 0 rgba(255,255,255,0.18),
+            0 0 0 12px rgba(142,142,147,0.10);
+    }
+    100% {
+        box-shadow:
+            0 8px 24px -4px rgba(142,142,147,0.30),
+            0 2px 6px rgba(0,0,0,0.10),
+            inset 0 1px 0 rgba(255,255,255,0.18),
+            0 0 0 0   rgba(142,142,147,0);
+    }
+}
+
+.qnotify-dialog.processing .icon-blob {
+    animation: qnotify-processing-pulse 1.8s ease-in-out infinite;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   RESULT STATES
+   ══════════════════════════════════════════════════════════════ */
+
+.qnotify-dialog.result-success .icon-blob {
+    animation: qnotify-success-pop 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.qnotify-dialog.result-error .icon-blob {
+    animation: qnotify-error-shake 0.40s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   DIALOG TEXT — Precise typographic hierarchy
+   ══════════════════════════════════════════════════════════════ */
+
+.qnotify-dialog .text-main {
+    font-size:      21px;
+    font-weight:    720;
+    color:          #111112;
+    margin-bottom:  8px;
+    line-height:    1.25;
+    letter-spacing: -0.025em;
+    position:       relative;
+    overflow:       hidden;
+    transition:     color 0.35s ease;
+    width:          100%;
+    text-align:     center;
+}
+
+.desktop-mode .qnotify-dialog .text-main {
+    font-size: 23px;
+}
+
+.qnotify-dialog .text-small {
+    font-size:      12px;
+    font-weight:    650;
+    color:          #8e8e93;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom:  6px;
+    width:          100%;
+    text-align:     center;
+    transition:     opacity 0.22s ease, transform 0.22s ease;
+}
+
+.qnotify-dialog .notification-text {
+    width:         100%;
+    text-align:    center;
+    padding:       0;
+    padding-left:  0 !important;
+    padding-right: 0 !important;
+    flex:          none !important;
+    display:       block;
+}
+
+/* Guarantee centering — overrides any notify.css cascade */
+.qnotify-dialog .text-main,
+.qnotify-dialog .text-small,
+.qnotify-dialog .text-body {
+    text-align:   center !important;
+    margin-left:  auto;
+    margin-right: auto;
+}
+
+.qnotify-dialog .text-body {
+    font-size:     15px;
+    color:         #6b6b72;
+    line-height:   1.6;
+    margin-bottom: 6px;
+    padding:       0 4px;
+    transition:    opacity 0.22s ease, transform 0.22s ease;
+    width:         100%;
+    text-align:    center;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   BUTTON CONTAINER
+   ══════════════════════════════════════════════════════════════ */
+
+.confirmation-actions {
+    display:         flex;
+    gap:             12px;
+    margin-top:      24px;
+    width:           100%;
+    justify-content: center;
+    transition:      opacity 0.20s ease, transform 0.20s ease;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   TITLE MORPH ANIMATION — Slide + blur (premium iOS/macOS feel)
+   ══════════════════════════════════════════════════════════════ */
+
+.qnotify-dialog .text-main.morphing-out {
+    animation: qnotify-title-out 0.20s ease forwards;
+}
+
+.qnotify-dialog .text-main.morphing-in {
+    animation: qnotify-title-in 0.30s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes qnotify-title-out {
+    0%   { opacity: 1; transform: translateY(0)     scale(1);    filter: blur(0px);  }
+    100% { opacity: 0; transform: translateY(-14px)  scale(0.94); filter: blur(4px); }
+}
+
+@keyframes qnotify-title-in {
+    0%   { opacity: 0; transform: translateY(14px)  scale(0.94); filter: blur(4px); }
+    100% { opacity: 1; transform: translateY(0)     scale(1);    filter: blur(0px);  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   3D BUTTON SYSTEM — Tactile, premium, satisfying
+   ══════════════════════════════════════════════════════════════ */
+
+.qnotify-btn.confirm-btn {
+    --btn-depth: 5px;
+
+    position:       relative;
+    overflow:       hidden;
+    padding:        15px 30px;
+    border:         none;
+    border-radius:  16px;
+    font-size:      15px;
+    font-weight:    650;
+    cursor:         pointer;
+    min-width:      120px;
+    font-family:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif;
+    letter-spacing: 0.1px;
+    -webkit-user-select:         none;
+    user-select:                 none;
+    -webkit-tap-highlight-color: transparent;
+
+    transition:
+        transform  0.18s cubic-bezier(0.25, 0, 0.25, 1),
+        background 0.45s cubic-bezier(0.34, 1.2, 0.64, 1),
+        box-shadow 0.45s cubic-bezier(0.34, 1.2, 0.64, 1),
+        opacity    0.22s ease;
+
+    will-change: transform;
+}
+
+/* Shimmer sweep on hover */
+.qnotify-btn.confirm-btn:not(.hold-btn)::before {
+    content:        '';
+    position:       absolute;
+    top:            0;
+    left:           -110%;
+    width:          60%;
+    height:         100%;
+    background:     linear-gradient(
+        100deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.28) 50%,
+        transparent 100%
+    );
+    pointer-events: none;
+    border-radius:  inherit;
+    transition:     none;
+}
+
+/* Top bevel glass edge */
+.qnotify-btn.confirm-btn:not(.hold-btn)::after {
+    content:        '';
+    position:       absolute;
+    top:            0; left: 0; right: 0;
+    height:         1px;
+    background:     rgba(255, 255, 255, 0.35);
+    border-radius:  16px 16px 0 0;
+    pointer-events: none;
+}
+
+@media (hover: hover) {
+    .qnotify-btn.confirm-btn:hover:not(:disabled) {
+        transform: translateY(-3px);
+        filter:    brightness(1.06);
+    }
+
+    .qnotify-btn.confirm-btn:not(.hold-btn):hover:not(:disabled)::before {
+        animation: qnotify-shimmer 0.55s ease forwards;
+    }
+
+    .qnotify-btn.confirm-btn.yes:hover:not(:disabled) {
+        box-shadow:
+            0 calc(var(--btn-depth) + 3px) 0 var(--btn-floor, #0051b3),
+            0 16px 36px var(--btn-glow, rgba(0, 122, 255, 0.30)),
+            inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    }
+
+    .qnotify-btn.confirm-btn.no:hover:not(:disabled) {
+        background: #e5e5ea;
+        box-shadow:
+            0 calc(var(--btn-depth) + 3px) 0 #c4c4cc,
+            0 14px 28px rgba(0, 0, 0, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    }
+
+    .hold-btn:hover:not(:disabled):not(.holding) {
+        transform: translateY(-3px);
+        filter:    brightness(1.06);
+    }
+}
+
+/* Active press state — 3D push feel */
+.qnotify-btn.confirm-btn:active:not(:disabled) {
+    transform: translateY(var(--btn-depth)) !important;
+    filter:    brightness(0.90);
+    transition: transform 0.05s ease !important;
+}
+
+@keyframes qnotify-shimmer {
+    0%   { left: -110%; }
+    100% { left:  160%; }
+}
+
+
+/* ── Yes / confirm button ─────────────────────────────────── */
+
+.qnotify-btn.confirm-btn.yes {
+    color:      white;
+    background: var(--btn-bg, #007aff);
+    box-shadow:
+        0 var(--btn-depth) 0 var(--btn-floor, #0051b3),
+        0 8px 22px var(--btn-glow, rgba(0, 122, 255, 0.22)),
+        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    transition:
+        transform  0.18s cubic-bezier(0.25, 0, 0.25, 1),
+        background 0.45s cubic-bezier(0.34, 1.2, 0.64, 1),
+        box-shadow 0.45s cubic-bezier(0.34, 1.2, 0.64, 1),
+        opacity    0.22s ease;
+}
+
+.qnotify-btn.confirm-btn.yes:active:not(:disabled) {
+    box-shadow:
+        0 0 0 var(--btn-floor, #0051b3),
+        0 2px 8px var(--btn-glow, rgba(0, 122, 255, 0.18)),
+        inset 0 2px 6px rgba(0, 0, 0, 0.22) !important;
+}
+
+/* Intent-specific button colors */
+.qnotify-dialog.info .qnotify-btn.confirm-btn.yes {
+    --btn-bg:    #007aff;
+    --btn-floor: #004ecf;
+    --btn-glow:  rgba(0, 122, 255, 0.24);
+}
+
+.qnotify-dialog.warning .qnotify-btn.confirm-btn.yes {
+    --btn-bg:    #ff9500;
+    --btn-floor: #b36300;
+    --btn-glow:  rgba(255, 149, 0, 0.24);
+}
+
+.qnotify-dialog.danger .qnotify-btn.confirm-btn.yes {
+    --btn-bg:    #ff3b30;
+    --btn-floor: #c0201a;
+    --btn-glow:  rgba(255, 59, 48, 0.24);
+}
+
+
+/* ── No / cancel button ───────────────────────────────────── */
+
+.qnotify-btn.confirm-btn.no {
+    background: #f2f2f7;
+    color:      #1c1c1e;
+    box-shadow:
+        0 var(--btn-depth) 0 #c8c8ce,
+        0 8px 18px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.qnotify-btn.confirm-btn.no:active:not(:disabled) {
+    box-shadow:
+        0 0 0 #c8c8ce,
+        0 2px 6px rgba(0, 0, 0, 0.08),
+        inset 0 2px 6px rgba(0, 0, 0, 0.10) !important;
+}
+
+.qnotify-btn.confirm-btn:disabled {
+    opacity:        0.38;
+    pointer-events: none;
+    transform:      translateY(calc(var(--btn-depth) * 0.5));
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   HOLD BUTTON
+   ══════════════════════════════════════════════════════════════ */
+
+.hold-btn {
+    transition:
+        transform  0.18s cubic-bezier(0.25, 0, 0.25, 1),
+        background 0.45s cubic-bezier(0.34, 1.2, 0.64, 1),
+        box-shadow 0.45s cubic-bezier(0.34, 1.2, 0.64, 1);
+    transform:   translateY(0);
+    will-change: transform;
+    z-index:     1;
+}
+
+.hold-btn.holding {
+    transform:  translateY(calc(var(--btn-depth) + 1px)) !important;
+    transition: transform 0.05s ease !important;
+    filter:     brightness(0.90);
+    box-shadow:
+        0 0 0 transparent,
+        inset 0 2px 8px rgba(0, 0, 0, 0.26),
+        inset 0 0 0 1px rgba(0, 0, 0, 0.12) !important;
+}
+
+.hold-fill-track {
+    position:         absolute;
+    inset:            0;
+    transform:        scaleX(0);
+    transform-origin: left center;
+    transition:       none;
+    pointer-events:   none;
+    border-radius:    inherit;
+    z-index:          0;
+    will-change:      transform;
+    box-shadow:       inset 0 1px 0 rgba(255, 255, 255, 0.40);
+}
+
+@keyframes qnotify-hold-pulse {
+    0%   { opacity: 0.80; }
+    50%  { opacity: 1.00; }
+    100% { opacity: 0.80; }
+}
+
+.hold-btn.holding .hold-fill-track {
+    animation: qnotify-hold-pulse 1.2s ease-in-out infinite;
+}
+
+.hold-btn > *:not(.hold-fill-track) {
+    position: relative;
+    z-index:  2;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   ASYNC LOADER
+   ══════════════════════════════════════════════════════════════ */
+
+.qnotify-loader,
+.premium-loader {
+    position:       absolute;
+    top:            50%;
+    left:           50%;
+    transform:      translate(-50%, -50%);
+    width:          84px;
+    height:         84px;
+    opacity:        0;
+    transition:     opacity 0.28s ease;
+    pointer-events: none;
+}
+
+.qnotify-loader.visible,
+.premium-loader.visible { opacity: 1; }
+
+.loader-bg   { stroke: rgba(255, 255, 255, 0.20); }
+
+.loader-path {
+    stroke-dasharray:  264;
+    stroke-dashoffset: 264;
+    transform-origin:  center;
+}
+
+@keyframes qnotify-dash {
+    0%   { stroke-dashoffset: 264; }
+    50%  { stroke-dashoffset:  66; }
+    100% { stroke-dashoffset: 264; }
+}
+
+@keyframes qnotify-rotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   PROCESSING STATE — Body dissolve (morphBodyOut controls inline)
+   ══════════════════════════════════════════════════════════════ */
+
+.qnotify-dialog.processing .text-small,
+.qnotify-dialog.processing .confirmation-actions {
+    /* morphBodyOut() sets these inline — this is CSS fallback only */
+    opacity: 0;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   FEEDBACK ANIMATIONS
+   ══════════════════════════════════════════════════════════════ */
+
+@keyframes qnotify-success-pop {
+    0%   { transform: scale(1)    rotate(0deg); }
+    25%  { transform: scale(1.30) rotate(9deg); }
+    60%  { transform: scale(0.96) rotate(-2deg); }
+    100% { transform: scale(1)    rotate(0deg); }
+}
+
+@keyframes qnotify-error-shake {
+    0%,  100% { transform: translateX(0)    rotate(0deg);  }
+    20%, 60%  { transform: translateX(-8px) rotate(-3deg); }
+    40%, 80%  { transform: translateX(8px)  rotate(3deg);  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   DARK MODE
+   ══════════════════════════════════════════════════════════════ */
+
+@media (prefers-color-scheme: dark) {
+    /* Color-only — blur stays in ::before, same rule as light mode.
+     * WHY: backdrop-filter on the element itself creates a compositing context
+     * that bleeds into siblings, blurring the dialog/alert card above it.
+     * ::before trick confines the blur strictly to content BELOW the backdrop. */
+    #qnotify-backdrop,
+    .qnotify-backdrop {
+        background: rgba(0, 0, 0, 0.75);
+    }
+
+    /* Dark mode blur lives here — in ::before, never on the parent element */
+    #qnotify-backdrop::before,
+    .qnotify-backdrop::before {
+        backdrop-filter:         blur(10px) saturate(0.6);
+        -webkit-backdrop-filter: blur(10px) saturate(0.6);
+    }
+
+    .qnotify-dialog.notification-item {
+        background: rgba(26, 26, 28, 0.98);
+        backdrop-filter: blur(20px) saturate(1.2);
+        -webkit-backdrop-filter: blur(20px) saturate(1.2);
+        box-shadow:
+            0 0   0   1px rgba(255, 255, 255, 0.09),
+            0 1px 3px  0   rgba(0,   0,   0,   0.60),
+            0 4px 12px 0   rgba(0,   0,   0,   0.65),
+            0 16px 40px 0   rgba(0,   0,   0,   0.70),
+            0 32px 64px 0   rgba(0,   0,   0,   0.75);
+    }
+
+    .qnotify-dialog .text-main  { color: #f2f2f7; }
+    .qnotify-dialog .text-small { color: rgba(255, 255, 255, 0.40); }
+    .qnotify-dialog .text-body  { color: rgba(255, 255, 255, 0.52); }
+
+    .qnotify-btn.confirm-btn.no {
+        background: #2c2c2e;
+        color:      #f2f2f7;
+        box-shadow:
+            0 var(--btn-depth) 0 #1a1a1c,
+            0 8px 18px rgba(0, 0, 0, 0.50),
+            inset 0 1px 0 rgba(255, 255, 255, 0.09);
+    }
+
+    .qnotify-btn.confirm-btn.no:active:not(:disabled) {
+        box-shadow:
+            0 0 0 #1a1a1c,
+            0 2px 6px rgba(0, 0, 0, 0.45),
+            inset 0 2px 6px rgba(0, 0, 0, 0.32) !important;
+    }
+
+    .loader-bg { stroke: rgba(255, 255, 255, 0.16); }
+
+    .hold-btn.holding {
+        box-shadow:
+            0 0 0 transparent,
+            inset 0 2px 8px rgba(0, 0, 0, 0.58),
+            inset 0 0 0 1px rgba(0, 0, 0, 0.30) !important;
+    }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+    .confirmation-actions {
+        flex-direction: column;
+        gap:            10px;
+    }
+
+    .qnotify-btn.confirm-btn {
+        width:     100%;
+        min-width: auto;
+        padding:   13px 20px;
+    }
+
+    .qnotify-loader, .premium-loader {
+        width: 64px; height: 64px;
+    }
+
+    .qnotify-dialog .icon-blob {
+        width:         68px;
+        height:        68px;
+        border-radius: 34px;
+        font-size:     34px;
+    }
+
+    .qnotify-dialog .text-main  { font-size: 19px; }
+    .qnotify-dialog .text-small { font-size: 11px; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   REDUCED MOTION
+   ══════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+    #qnotify-backdrop,
+    .qnotify-backdrop,
+    .qnotify-dialog,
+    .qnotify-dialog .stagger,
+    .qnotify-btn.confirm-btn,
+    .hold-btn, .hold-btn .hold-fill-track,
+    .qnotify-dialog .icon-blob,
+    .qnotify-dialog .text-main {
+        transition-duration: 0.01ms !important;
+        animation-duration:  0.01ms !important;
+        filter: none !important;
+    }
+
+    .qnotify-dialog.notification-item.active {
+        opacity:   1 !important;
+        transform: translate(-50%, -50%) !important;
+    }
+
+    .qnotify-dialog.active .stagger {
+        opacity:   1 !important;
+        transform: none !important;
+    }
+}
