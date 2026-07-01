@@ -3,7 +3,7 @@
 // =============================================================================
 
 export const AUTH_CONFIG = {
-    TURNSTILE_SITE_KEY: '0x4AAAAAADf1nq5nQwB729CG',
+    TURNSTILE_SITE_KEY: '0x4AAAAAADtSMQt5KNMPWBzW',
     PREFLIGHT_KEY: 'albedu_user_auth_preflight',
     PREFLIGHT_TTL_MS: 15 * 60 * 1000, // 15 menit
 };
