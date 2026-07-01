@@ -1,5 +1,5 @@
 // =============================================================================
-// service-worker.js — AlbEdu v0.742.3 PWA Service Worker
+// service-worker.js — AlbEdu v0.742.5 PWA Service Worker
 // =============================================================================
 // Strategy: stale-while-revalidate for static assets, network-first for API.
 // Cache limit: ~5MB (Free Plan safe).
@@ -14,7 +14,7 @@
 //   7. Cache size → evict oldest entries if > 100 entries
 // =============================================================================
 
-const CACHE_VERSION = 'albedu-v0.742.3';
+const CACHE_VERSION = 'albedu-v0.742.5';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const MAX_CACHE_ENTRIES = 100;

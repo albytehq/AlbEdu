@@ -1,16 +1,30 @@
 // =============================================================================
-// security/consent.js — UU PDP Consent Gate (v1.0.0)
+// security/consent.js — UU PDP Consent Gate (v1.1.0)
 // =============================================================================
 // Checks if peserta has given consent. If not, shows consent popup.
-// Records consent to `consents` table via Supabase REST API.
+// Records consent to `consents` table via Supabase native client (window.sb).
 // Blocks access to assessment until consent given.
+//
+// v1.1.0 (v0.742.5): Rewrote to use window.sb (Supabase native) directly.
+//   Previous v1.0.0 used Firebase Firestore API (db.collection().where().get(),
+//   .add()) via the Firestore-compat shim — but the shim had two bugs:
+//     1. .where('revoked_at', '==', null) translated to PostgREST
+//        ?revoked_at=eq.null — which is the STRING "null", not SQL NULL.
+//        PostgREST requires .is(col, null) for NULL checks. Supabase
+//        returned HTTP 400: "invalid input syntax for type timestamp
+//        with time zone: 'null'".
+//     2. .add() was never implemented on the shim's collection ref —
+//        so granting consent threw "db.collection(...).add is not a
+//        function".
+//   Fix: bypass the shim entirely. Use window.sb.from('consents') with
+//   native Supabase query builder (.eq, .is, .order, .limit, .insert).
 //
 // Edge cases handled:
 //   - First login (no consent) → show popup
 //   - Consent already given → skip
 //   - Policy version change → re-consent required
 //   - Network error → show popup anyway (fail-safe)
-//   - User not logged in → redirect to login
+//   - User not logged in → skip (auth will handle redirect)
 //   - "Tidak Setuju" → logout
 //   - Refresh during consent → re-show
 // =============================================================================
@@ -25,36 +39,43 @@
     async check() {
       // Wait for auth
       if (!window.firebaseAuth?.currentUser) {
-        // Not logged in — redirect to login
+        // Not logged in — let auth flow handle redirect
         console.info('[consent] User not logged in, skipping consent');
         return true;
       }
 
-      const user = window.firebaseAuth.currentUser;
-      const db = window.firebaseDb;
-      if (!db) {
-        console.warn('[consent] DB not ready, allowing access (fail-safe)');
+      const sb = window.sb;
+      if (!sb) {
+        console.warn('[consent] window.sb not ready, allowing access (fail-safe)');
         return true;
       }
 
-      try {
-        // Check existing consent
-        const snap = await db.collection('consents')
-          .where('user_id', '==', user.uid)
-          .where('consent_type', '==', CONSENT_TYPE)
-          .where('granted', '==', true)
-          .where('revoked_at', '==', null)
-          .orderBy('granted_at', 'desc')
-          .limit(1)
-          .get();
+      const user = window.firebaseAuth.currentUser;
 
-        if (snap.empty) {
+      try {
+        // Check existing consent.
+        // v1.1.0: use .is('revoked_at', null) instead of .eq(..., null).
+        // PostgREST requires .is() for NULL comparisons — .eq(col, null)
+        // produces ?col=eq.null which is the string "null", not SQL NULL.
+        const { data, error } = await sb
+          .from('consents')
+          .select('*')
+          .eq('user_id', user.uid)
+          .eq('consent_type', CONSENT_TYPE)
+          .eq('granted', true)
+          .is('revoked_at', null)
+          .order('granted_at', { ascending: false })
+          .limit(1);
+
+        if (error) throw new Error(`[consent] query failed: ${error.message}`);
+
+        if (!data || data.length === 0) {
           // No consent — show popup
           console.info('[consent] No consent found, showing popup');
           return this._showPopup();
         }
 
-        const latest = snap.docs[0].data();
+        const latest = data[0];
         // Check version — re-consent if policy updated
         if (latest.version !== POLICY_VERSION) {
           console.info(`[consent] Policy updated (${latest.version} → ${POLICY_VERSION}), re-consent required`);
@@ -73,14 +94,20 @@
 
     async _syncConsentAt(userId) {
       try {
-        const db = window.firebaseDb;
-        const user = window.firebaseAuth?.currentUser;
-        if (!db || !user) return;
-        // Update users.consent_at if null (one-time sync)
-        await db.collection('users').doc(userId).update({
-          consent_at: new Date().toISOString(),
-          consent_version: POLICY_VERSION,
-        });
+        const sb = window.sb;
+        if (!sb) return;
+        // Update users.consent_at + consent_version.
+        // Using .eq('id', userId) + .select() to confirm the row was touched.
+        const { error } = await sb
+          .from('users')
+          .update({
+            consent_at: new Date().toISOString(),
+            consent_version: POLICY_VERSION,
+          })
+          .eq('id', userId);
+        if (error) {
+          console.warn('[consent] sync consent_at failed:', error.message);
+        }
       } catch (err) {
         console.warn('[consent] sync consent_at failed:', err);
       }
@@ -186,7 +213,9 @@
           if (window.Auth?.authLogout) {
             window.Auth.authLogout({ skipConfirm: true });
           } else {
-            window.location.href = '../pages/login.html';
+            // Fallback: redirect to login (v0.742.3+ login page is at /pages/login.html)
+            const basePath = window.Auth?.getBasePath?.() || '/';
+            window.location.href = basePath + 'pages/login.html';
           }
           resolve(false);
         });
@@ -195,28 +224,44 @@
 
     async _grantConsent() {
       const user = window.firebaseAuth?.currentUser;
-      const db = window.firebaseDb;
-      if (!user || !db) throw new Error('Auth not ready');
+      const sb = window.sb;
+      if (!user || !sb) throw new Error('Auth not ready');
 
       const ip = await this._getClientIP();
       const userAgent = navigator.userAgent;
 
-      // Insert consent record
-      await db.collection('consents').add({
-        user_id: user.uid,
-        consent_type: CONSENT_TYPE,
-        version: POLICY_VERSION,
-        granted: true,
-        granted_at: new Date().toISOString(),
-        ip_address: ip,
-        user_agent: userAgent,
-      });
+      // v1.1.0: Insert consent record via native Supabase .insert().
+      // Previous v1.0.0 used db.collection('consents').add() — the Firestore
+      // shim never implemented .add(), so this threw
+      // "db.collection(...).add is not a function".
+      const { error: insertError } = await sb
+        .from('consents')
+        .insert({
+          user_id: user.uid,
+          consent_type: CONSENT_TYPE,
+          version: POLICY_VERSION,
+          granted: true,
+          granted_at: new Date().toISOString(),
+          ip_address: ip,
+          user_agent: userAgent,
+        });
 
-      // Update user's consent_at
-      await db.collection('users').doc(user.uid).update({
-        consent_at: new Date().toISOString(),
-        consent_version: POLICY_VERSION,
-      });
+      if (insertError) {
+        throw new Error(`[consent] insert failed: ${insertError.message}`);
+      }
+
+      // Update user's consent_at + consent_version
+      const { error: updateError } = await sb
+        .from('users')
+        .update({
+          consent_at: new Date().toISOString(),
+          consent_version: POLICY_VERSION,
+        })
+        .eq('id', user.uid);
+
+      if (updateError) {
+        console.warn('[consent] sync consent_at failed:', updateError.message);
+      }
 
       console.info('[consent] Consent granted, version', POLICY_VERSION);
     },

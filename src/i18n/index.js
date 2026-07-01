@@ -206,4 +206,35 @@ export async function initI18n() {
 // Expose to window for classic script access
 window.i18n = { t, switchLocale, getCurrentLocale, getSupportedLocales, onLocaleChange, initI18n };
 
+// v0.742.4 FIX: Auto-initialize on DOMContentLoaded.
+// Previously, the module exported initI18n() but never called it — so every
+// page that loaded the module via `<script type="module" src=".../i18n/index.js">`
+// saw raw i18n keys (e.g. "nav.profile", "create.page_title") instead of
+// translated text. The fallback text in HTML (e.g. <span data-i18n="nav.profile">Profil Admin</span>)
+// was being overwritten by updateDOM() which called t(key) — but t(key)
+// returned the KEY itself because _translations was empty (no locale loaded).
+//
+// Now: auto-init when DOM is ready. This is idempotent and safe to call
+// from multiple pages. Pages that want to control init timing can still
+// call window.i18n.initI18n() manually — the auto-init checks if already
+// initialized and skips.
+let _initialized = false;
+
+async function _autoInit() {
+  if (_initialized) return;
+  _initialized = true;
+  try {
+    await initI18n();
+  } catch (err) {
+    console.error('[i18n] auto-init failed:', err);
+    _initialized = false; // allow retry
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _autoInit);
+} else {
+  _autoInit();
+}
+
 export default { t, switchLocale, getCurrentLocale, getSupportedLocales, onLocaleChange, initI18n };

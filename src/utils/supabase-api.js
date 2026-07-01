@@ -994,7 +994,18 @@ function _buildDbShim(sb) {
         if (f.op === 'array-contains') {
           q = q.contains(col, [f.val]);
         } else if (op) {
-          q = q[op](col, f.val);
+          // v0.742.5 FIX: NULL comparisons must use .is() / .not.is(),
+          // NOT .eq() / .neq(). PostgREST translates .eq(col, null) to
+          // ?col=eq.null — the STRING "null", not SQL NULL — which causes
+          // HTTP 400 "invalid input syntax for type timestamp with time
+          // zone: 'null'" on timestamptz columns.
+          if (f.val === null) {
+            if (f.op === '==')      q = q.is(col, null);
+            else if (f.op === '!=') q = q.not.is(col, null);
+            else                    q = q[op](col, f.val); // <, <=, >, >= with null → no-op
+          } else {
+            q = q[op](col, f.val);
+          }
         }
       }
 
@@ -1039,6 +1050,19 @@ function _buildDbShim(sb) {
         const { data, error } = await _buildQuery();
         if (error) throw new Error(`[Supabase] ${table}.get: ${error.message}`);
         return _toQuerySnap(data, table, null);
+      },
+
+      // ── INSERT (v0.742.5) ───────────────────────────────────
+      // Firestore's collection.add(doc) ≈ Supabase's from(table).insert(doc).
+      // Returns a doc-ref-like object with .id + .get() for parity.
+      // Previously .add() was not implemented on the shim, so callers
+      // (e.g. consent.js v1.0.0) threw "db.collection(...).add is not a
+      // function". Now implemented as a thin wrapper.
+      async add(doc) {
+        const insertPayload = _translateKeys(doc);
+        const { data, error } = await sb.from(table).insert(insertPayload).select().single();
+        if (error) throw new Error(`[Supabase] ${table}.add: ${error.message}`);
+        return _docRef(table, data?.id ?? null);
       },
 
       // ── REALTIME / POLLING ────────────────────────────────────
