@@ -195,7 +195,9 @@ function checkPageAccess() {
     if (!auth.currentUser) {
         if (_isWithinApp()) {
             console.info('[AuthRedirect] checkPageAccess: no user on protected page → login');
-            _navigateTo(auth.getBasePath() + 'login.html', 'no session → login');
+            // v0.742.3: use auth.loginUrl() instead of hardcoded 'login.html'.
+            // The login page is at /pages/login.html, not /login.html.
+            _navigateTo(auth.loginUrl(), 'no session → login');
         }
         return false;
     }
@@ -245,13 +247,16 @@ function checkPageAccess() {
 function handle404Page() {
     const auth     = window.Auth;
     const basePath = auth?.getBasePath?.() ?? '/';
+    // v0.742.3: use auth.loginUrl() — login page is at /pages/login.html,
+    // not /login.html. Old code redirected 404 users to a non-existent URL.
+    const loginUrl = auth?.loginUrl?.() ?? (basePath + 'pages/login.html');
 
     if (!auth?.currentUser) {
-        _navigateTo(basePath + 'login.html', '404 + no session → login');
+        _navigateTo(loginUrl, '404 + no session → login');
     } else {
         const role = auth.userRole || 'peserta';
         _navigateTo(
-            auth.getRoleRedirectPath?.(role) ?? basePath + 'login.html',
+            auth.getRoleRedirectPath?.(role) ?? loginUrl,
             `404 + role=${role} → dashboard`
         );
     }
@@ -269,9 +274,11 @@ function _showAccessDenied() {
     const auth     = window.Auth;
     const role     = auth?.userRole;
     const basePath = auth?.getBasePath?.() ?? '/';
+    // v0.742.3: use auth.loginUrl() — login page is at /pages/login.html.
+    const loginUrl = auth?.loginUrl?.() ?? (basePath + 'pages/login.html');
     const dashPath = role
-        ? (auth?.getRoleRedirectPath?.(role) ?? basePath + 'login.html')
-        : basePath + 'login.html';
+        ? (auth?.getRoleRedirectPath?.(role) ?? loginUrl)
+        : loginUrl;
 
     const wrap = document.createElement('div');
     Object.assign(wrap.style, {

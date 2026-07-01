@@ -162,12 +162,23 @@
    *   4. Whatever is left is BASE_PATH (e.g. '/AlbEdu/')
    *
    * v0.742.0: `/admin/pages/` retained as legacy pattern for old bookmarks.
+   * v0.742.2: Added `/pages/`, `/pages/admin/`, `/pages/assessment/`,
+   *           `/pages/ujian/`, `/pages/admin/pages/` to mirror the
+   *           AUTH_CONFIG.BASE_PATH logic in src/auth/main.js exactly.
+   *           Previously this 404 CTA rewriter could return `/pages/`
+   *           instead of `/` when the 404 was served from a `/pages/`
+   *           URL — sending the user to `/pages/` (no index.html there).
    */
   function computeBasePath() {
     var p    = window.location.pathname;
     var base = p.substring(0, p.lastIndexOf('/') + 1);
 
-    var APP_SUBFOLDERS = ['/admin/pages/', '/ujian/', '/admin/'];
+    // Order matters: longer paths first.
+    var APP_SUBFOLDERS = [
+      '/pages/admin/pages/', '/pages/assessment/',
+      '/pages/admin/', '/pages/ujian/', '/pages/',
+      '/admin/pages/', '/ujian/', '/admin/',
+    ];
     for (var i = 0; i < APP_SUBFOLDERS.length; i++) {
       var idx = base.indexOf(APP_SUBFOLDERS[i]);
       if (idx !== -1) return base.substring(0, idx + 1);

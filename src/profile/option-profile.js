@@ -920,7 +920,10 @@
   // ── Navigate ───────────────────────────────────────────────
   function _navigateToAdmin() {
     const basePath = window.Auth?.getBasePath?.() || '/';
-    const target = basePath + 'admin/index.html';
+    // v0.742.3 FIX: admin panel lives at /pages/admin/index.html, not
+    // /admin/index.html. Old code used the pre-v0.741.5 path structure,
+    // so clicking "Panel Admin" in the option-profile dropdown 404'd.
+    const target = basePath + 'pages/admin/index.html';
     window.location.replace(target);
   }
 

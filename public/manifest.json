@@ -2,7 +2,7 @@
   "name": "AlbEdu — Assessment Platform",
   "short_name": "AlbEdu",
   "description": "Platform asesmen online untuk sekolah menengah. Buat, kelola, dan pantak asesmen dengan anti-cheat enterprise-grade.",
-  "version": "0.742.1",
+  "version": "0.742.3",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

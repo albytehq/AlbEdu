@@ -65,6 +65,7 @@ const AUTH_CONFIG = {
     // Contoh resolusi:
     //   localhost:5500/login.html              → '/'
     //   localhost:5500/ujian/index.html        → '/'
+    //   localhost:5500/pages/login.html        → '/'         (v0.742.2 fix)
     //   vercel.app/AlbEdu/login.html           → '/AlbEdu/'
     //   vercel.app/AlbEdu/admin/index.html     → '/AlbEdu/'
     //   vercel.app/AlbEdu/admin/x.html         → '/AlbEdu/'  (v0.742.0+ structure)
@@ -83,7 +84,15 @@ const AUTH_CONFIG = {
         // still needs to derive BASE_PATH correctly so its redirect links
         // resolve. The patterns are harmless on live pages (no admin page
         // lives there anymore) and cost nothing at runtime.
-        const APP_SUBFOLDERS = ['/pages/admin/pages/', '/pages/assessment/', '/pages/admin/', '/pages/ujian/', '/admin/pages/', '/ujian/', '/admin/'];
+        //
+        // v0.742.2 FIX: Added `/pages/` to the list. Previously, when a user
+        // was on `/pages/login.html` (or any other page directly under
+        // `/pages/`), BASE_PATH returned `/pages/` instead of `/`. This
+        // caused pathForRole() to produce `/pages/pages/admin/index.html`
+        // — a doubled `/pages/` segment → 404 after login. The bug was
+        // latent because most testing happened from the root index.html
+        // (which already had BASE_PATH = '/'), not from /pages/login.html.
+        const APP_SUBFOLDERS = ['/pages/admin/pages/', '/pages/assessment/', '/pages/admin/', '/pages/ujian/', '/pages/', '/admin/pages/', '/ujian/', '/admin/'];
 
         for (const sub of APP_SUBFOLDERS) {
             const idx = base.indexOf(sub);
@@ -98,7 +107,12 @@ const AUTH_CONFIG = {
     // Empty string keeps BASE_PATH intact and lets the server resolve index.html.
     LANDING_PAGE: '',
 
-    LOGIN_PAGE: 'login.html',
+    // v0.742.3 FIX: Login page lives at /pages/login.html, not /login.html.
+    // Previously this was 'login.html', so loginUrl() returned '/login.html'
+    // → 404. Any auth-state-change to user=null (token refresh, network blip,
+    // race condition) redirected the user to a 404 instead of the real login
+    // page — appearing as "dikeluarkan saat mau masuk".
+    LOGIN_PAGE: 'pages/login.html',
 
     // Maps role → absolute path from BASE_PATH.
     // 'guru' intentionally absent — that role is removed.
@@ -233,6 +247,15 @@ function _navigateTo(path, reason, delay = REDIRECT_DELAY_MS) {
 // Mirrors byteward.js _getRouteScope() logic so both files classify pages
 // the same way.  This prevents /admin/index.html from being mis-identified
 // as a "login page" just because its filename is 'index.html'.
+//
+// v0.742.3 FIX: Previously this only checked the FIRST path segment against
+// { ujian, admin }. For /pages/admin/index.html, firstSegment is 'pages'
+// (not 'admin'), so scope was mis-returned as 'public'. This caused
+// _isLoginPage() to return TRUE for /pages/admin/index.html (because
+// 'index.html' is in _PUBLIC_ENTRY_FILES and scope==='public'), which
+// then triggered spurious "already logged in" redirects and access-check
+// confusion. Now mirrors byteward.js exactly: checks second segment when
+// firstSegment is 'pages'.
 function _getRouteScope() {
     const basePath = AUTH_CONFIG.BASE_PATH;
     const pathname = window.location.pathname.split('?')[0];
@@ -243,8 +266,25 @@ function _getRouteScope() {
 
     const firstSegment = relative.split('/')[0];
 
-    const FOLDER_SCOPE = { ujian: 'ujian', admin: 'admin' };
-    return FOLDER_SCOPE[firstSegment] ?? 'public';
+    const FOLDER_SCOPE = {
+        ujian: 'ujian',
+        admin: 'admin',
+        assessment: 'ujian',  // /pages/assessment/ → peserta scope (was /ujian/)
+    };
+
+    let scope = FOLDER_SCOPE[firstSegment] ?? 'public';
+
+    // For /pages/admin/, /pages/assessment/, /pages/ujian/ paths,
+    // firstSegment is 'pages' — check second segment for the real scope.
+    if (firstSegment === 'pages') {
+        const secondSegment = relative.split('/')[1] ?? '';
+        if (secondSegment === 'admin') scope = 'admin';
+        else if (secondSegment === 'assessment') scope = 'ujian';
+        else if (secondSegment === 'ujian') scope = 'ujian';
+        else scope = 'public'; // /pages/login.html, /pages/privacy-policy.html, etc.
+    }
+
+    return scope;
 }
 
 // Root-level HTML files where an authenticated user should be redirected

@@ -3,7 +3,7 @@
 > **Single source of truth** for URL routing, navigation, and redirect logic in AlbEdu.
 > Read this BEFORE editing any HTML link, any `window.location.*` call, or any auth redirect.
 >
-> **Version:** 0.742.1  |  **Last updated:** 2026-07-02  |  **Owner:** Albi Fahriza (albytehq)
+> **Version:** 0.742.3  |  **Last updated:** 2026-07-02  |  **Owner:** Albi Fahriza (albytehq)
 
 ---
 
@@ -44,10 +44,13 @@ AUTH_CONFIG = {
     const base = p.substring(0, p.lastIndexOf('/') + 1);
     const APP_SUBFOLDERS = [
       '/pages/admin/pages/', '/pages/assessment/', '/pages/admin/',
-      '/pages/ujian/', '/admin/pages/', '/ujian/', '/admin/',
+      '/pages/ujian/', '/pages/', '/admin/pages/', '/ujian/', '/admin/',
       // v0.742.0: '/pages/admin/pages/' and '/admin/pages/' are kept as
       // legacy patterns for old bookmarked URLs that 404 — base path
       // detection must still work on the 404 page.
+      // v0.742.2: '/pages/' added — without it, BASE_PATH returned
+      // '/pages/' (not '/') when on /pages/login.html, causing
+      // pathForRole() to emit '/pages/pages/admin/index.html' (doubled).
     ];
     for (const sub of APP_SUBFOLDERS) {
       const idx = base.indexOf(sub);
@@ -201,6 +204,8 @@ const res = await fetch(`${basePath}src/i18n/locales/${locale}.json`);
 
 | Version | Date | Change |
 |---|---|---|
+| 0.742.3 | 2026-07-02 | **Fix "kicked out on admin entry" + option-profile navigation**: Three intertwined routing bugs. (1) `LOGIN_PAGE` constant was `'login.html'` but the login page actually lives at `/pages/login.html` — so `loginUrl()` returned `/login.html` (404) and any auth-state-change to `user=null` (token refresh, race condition) redirected the user to a non-existent page, appearing as "dikeluarkan saat mau masuk". Fixed to `'pages/login.html'`. (2) `_getRouteScope()` in `src/auth/main.js` only checked the first path segment against `{ujian, admin}` — for `/pages/admin/index.html`, firstSegment is `'pages'`, so scope was mis-returned as `'public'`, causing `_isLoginPage()` to return TRUE for the admin dashboard (since `'index.html'` is in `_PUBLIC_ENTRY_FILES` and scope==='public'). This triggered spurious "already logged in" redirects. Fixed to mirror `byteward.js` exactly: check second segment when firstSegment is `'pages'`. (3) `option-profile.js _navigateToAdmin()` used `basePath + 'admin/index.html'` (pre-v0.741.5 path) instead of `basePath + 'pages/admin/index.html'` — clicking "Panel Admin" in the option-profile dropdown 404'd. Fixed. Also: `byteward.js` `handle404Page()` and `_showAccessDenied()` now use `auth.loginUrl()` instead of hardcoded `+ 'login.html'`. Admin home (`pages/admin/index.html`) simplified to 2 cards: "AlbEdu Creates" (was "Profil Admin") and "Halaman Asesmen" (was "Halaman Ujian"). |
+| 0.742.2 | 2026-07-02 | **Fix post-login double `/pages/` 404**: Added `/pages/` to the `APP_SUBFOLDERS` list in `AUTH_CONFIG.BASE_PATH` (`src/auth/main.js`). Previously, when a user was on `/pages/login.html`, `BASE_PATH` returned `/pages/` instead of `/`, so `pathForRole('admin')` produced `/pages/pages/admin/index.html` — a doubled `/pages/` segment that 404'd after login. Same fix applied to `404.html computeBasePath()` (CTA rewriter) and `src/utils/supabase-api.js _resolveRedirectUrl()` for consistency. The bug was latent for a long time because most testing happened from root `index.html` (which already had `BASE_PATH = '/'`), not from `/pages/login.html`. |
 | 0.742.1 | 2026-07-02 | **Fix navigation flash**: `.page-transition` overlay changed from visible-by-default to hidden-by-default (CSS). `navigasi.js` no longer waits for `window.load` + 300ms to hide the overlay — it starts hidden, eliminating the solid-color flash on every admin page navigation. Admin home (`pages/admin/index.html`) enhanced with 8 navigation cards covering all admin pages (was 2 cards). Legacy redirect stubs (`buat-ujian.html`, `data-hasil.html`, `ujian-peserta.html`) now have empty `<body>` — no visible "Mengalihkan" text if hit via old bookmark. Service worker cache version bumped to invalidate stale browser caches that may still hold pre-v0.742.0 sidebar HTML. |
 | 0.742.0 | 2026-07-01 | **Flatten admin structure**: moved `pages/admin/pages/*.html` up one level to `pages/admin/*.html`, deleted the empty `pages/admin/pages/` folder. All relative asset paths updated from `../../../` → `../../`. `navigasi.js` pageMapping extended to cover all admin pages (incl. legacy redirect stubs). Legacy subfolder patterns kept in `APP_SUBFOLDERS` for old bookmark 404 base-path detection. |
 | 0.741.5 | 2026-07-01 | Final release. All routing fixed for v0.741.5 structure. Secrets removed from documentation. |

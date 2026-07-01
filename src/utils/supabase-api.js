@@ -353,9 +353,11 @@ function _buildAuthShim(sb) {
           return window.location.href;
         }
         // Derive BASE_PATH from current pathname (same logic as auth.js)
+        // v0.742.2: sync subfolder list with src/auth/main.js — added
+        // `/pages/` family so BASE_PATH is consistent everywhere.
         const p = window.location.pathname;
         const base = p.substring(0, p.lastIndexOf('/') + 1);
-        const subfolders = ['/admin/pages/', '/ujian/', '/admin/'];
+        const subfolders = ['/pages/admin/pages/', '/pages/assessment/', '/pages/admin/', '/pages/ujian/', '/pages/', '/admin/pages/', '/ujian/', '/admin/'];
         let basePath = base || '/';
         for (const sub of subfolders) {
           const idx = base.indexOf(sub);
