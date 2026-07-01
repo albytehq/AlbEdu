@@ -3,27 +3,27 @@
 > **Single source of truth** for URL routing, navigation, and redirect logic in AlbEdu.
 > Read this BEFORE editing any HTML link, any `window.location.*` call, or any auth redirect.
 >
-> **Version:** 0.741.5  |  **Last updated:** 2026-07-01  |  **Owner:** Albi Fahriza (albytehq)
+> **Version:** 0.742.1  |  **Last updated:** 2026-07-02  |  **Owner:** Albi Fahriza (albytehq)
 
 ---
 
 ## 0. TL;DR — The 7 Rules You Must Never Break
 
 1. **Base path is `/AlbEdu/`** in production (GitHub Pages: `albytehq.github.io/AlbEdu/`). Locally it's `/`. Never hardcode either — always derive from `AUTH_CONFIG.BASE_PATH`.
-2. **Never use `href="/"`** anywhere. It jumps to `https://albytehq.github.io/` (the user's GitHub profile page), not the AlbEdu app. Use `href="./"` from root, `href="../"` from `pages/`, `href="../../"` from `pages/admin/pages/` and `pages/assessment/`.
+2. **Never use `href="/"`** anywhere. It jumps to `https://albytehq.github.io/` (the user's GitHub profile page), not the AlbEdu app. Use `href="./"` from root, `href="../"` from `pages/`, `href="../../"` from `pages/admin/` and `pages/assessment/` (v0.742.0+ flattened structure).
 3. **Logout redirects to the LANDING PAGE** (root `index.html`), not `login.html`. Use `AUTH_CONFIG.landingUrl()` — never `AUTH_CONFIG.loginUrl()` for logout.
 4. **Unauthenticated-on-protected-page redirects to LOGIN** (`pages/login.html`). Use `_redirectToLogin()` → `AUTH_CONFIG.loginUrl()`. (Different from logout.)
 5. **The auto-404 page lives at project root** (`AlbEdu/404.html`). `pages/404.html` is a redirect stub. Root 404 uses dynamic base path detection for CSS.
 6. **All auth redirects go through `window.Auth`** (`getBasePath()`, `getLandingPath()`, `getRoleRedirectPath()`, `navigateTo()`). Never write raw `window.location.replace('../some-page.html')` from a subfolder.
-7. **Asset paths in HTML are page-relative** (`../styles/x.css` from `pages/foo.html`, `../../styles/x.css` from `pages/admin/pages/foo.html`). The root `index.html` and root `404.html` use bare paths (`styles/x.css`).
+7. **Asset paths in HTML are page-relative** (`../styles/x.css` from `pages/foo.html`, `../../styles/x.css` from `pages/admin/foo.html` (v0.742.0+) or `pages/assessment/foo.html`). The root `index.html` and root `404.html` use bare paths (`styles/x.css`).
 
 ---
 
 ## 1. Production URL Anatomy
 
 ```
-https://albytehq.github.io/AlbEdu/pages/admin/pages/create-assessment.html
-└───────────┬───────────────┘└────┬────┘└────┬─────────────────────┘
+https://albytehq.github.io/AlbEdu/pages/admin/create-assessment.html
+└───────────┬───────────────┘└────┬────┘└────┬───────────────────┘
        GitHub Pages origin     BASE_PATH   page-relative path
 ```
 
@@ -31,7 +31,7 @@ https://albytehq.github.io/AlbEdu/pages/admin/pages/create-assessment.html
 |---|---|---|---|
 | Origin | `https://albytehq.github.io` | `http://127.0.0.1:8765` | `window.location.origin` |
 | BASE_PATH | `/AlbEdu/` | `/` | `AUTH_CONFIG.BASE_PATH` (auto-detected) |
-| Page path | `pages/admin/pages/create-assessment.html` | same | `window.location.pathname` minus BASE_PATH |
+| Page path | `pages/admin/create-assessment.html` | same | `window.location.pathname` minus BASE_PATH |
 
 ---
 
@@ -45,6 +45,9 @@ AUTH_CONFIG = {
     const APP_SUBFOLDERS = [
       '/pages/admin/pages/', '/pages/assessment/', '/pages/admin/',
       '/pages/ujian/', '/admin/pages/', '/ujian/', '/admin/',
+      // v0.742.0: '/pages/admin/pages/' and '/admin/pages/' are kept as
+      // legacy patterns for old bookmarked URLs that 404 — base path
+      // detection must still work on the 404 page.
     ];
     for (const sub of APP_SUBFOLDERS) {
       const idx = base.indexOf(sub);
@@ -86,11 +89,11 @@ AUTH_CONFIG = {
 | Privacy policy | `/AlbEdu/pages/privacy-policy.html` | public | public |
 | 404 | `/AlbEdu/404.html` | public | 404 |
 | Admin dashboard | `/AlbEdu/pages/admin/index.html` | admin | protected |
-| Create assessment | `/AlbEdu/pages/admin/pages/create-assessment.html` | admin | protected |
-| Active assessments | `/AlbEdu/pages/admin/pages/active-assessments.html` | admin | protected |
-| Question bank | `/AlbEdu/pages/admin/pages/question-bank.html` | admin | protected |
-| Monitoring | `/AlbEdu/pages/admin/pages/monitoring.html` | admin | protected |
-| Results analytics | `/AlbEdu/pages/admin/pages/results-analytics.html` | admin | protected |
+| Create assessment | `/AlbEdu/pages/admin/create-assessment.html` | admin | protected |
+| Active assessments | `/AlbEdu/pages/admin/active-assessments.html` | admin | protected |
+| Question bank | `/AlbEdu/pages/admin/question-bank.html` | admin | protected |
+| Monitoring | `/AlbEdu/pages/admin/monitoring.html` | admin | protected |
+| Results analytics | `/AlbEdu/pages/admin/results-analytics.html` | admin | protected |
 | Token entry | `/AlbEdu/pages/assessment/index.html` | ujian | protected (peserta) |
 | Take assessment | `/AlbEdu/pages/assessment/take.html` | ujian | protected (peserta) |
 
@@ -102,7 +105,7 @@ AUTH_CONFIG = {
 |---|---|---|---|
 | Root (`index.html`, `404.html`) | `styles/...`, `src/...` | `pages/admin/index.html` | `pages/assessment/index.html` |
 | `pages/` (`login.html`, etc.) | `../styles/...`, `../src/...` | `../pages/admin/index.html` | `../pages/assessment/index.html` |
-| `pages/admin/pages/` | `../../../styles/...`, `../../../src/...` | `../index.html` | N/A |
+| `pages/admin/` | `../../styles/...`, `../../src/...` | `../index.html` (admin home) | N/A |
 | `pages/assessment/` | `../../styles/...`, `../../src/...` | N/A | `index.html` |
 
 ---
@@ -198,6 +201,8 @@ const res = await fetch(`${basePath}src/i18n/locales/${locale}.json`);
 
 | Version | Date | Change |
 |---|---|---|
+| 0.742.1 | 2026-07-02 | **Fix navigation flash**: `.page-transition` overlay changed from visible-by-default to hidden-by-default (CSS). `navigasi.js` no longer waits for `window.load` + 300ms to hide the overlay — it starts hidden, eliminating the solid-color flash on every admin page navigation. Admin home (`pages/admin/index.html`) enhanced with 8 navigation cards covering all admin pages (was 2 cards). Legacy redirect stubs (`buat-ujian.html`, `data-hasil.html`, `ujian-peserta.html`) now have empty `<body>` — no visible "Mengalihkan" text if hit via old bookmark. Service worker cache version bumped to invalidate stale browser caches that may still hold pre-v0.742.0 sidebar HTML. |
+| 0.742.0 | 2026-07-01 | **Flatten admin structure**: moved `pages/admin/pages/*.html` up one level to `pages/admin/*.html`, deleted the empty `pages/admin/pages/` folder. All relative asset paths updated from `../../../` → `../../`. `navigasi.js` pageMapping extended to cover all admin pages (incl. legacy redirect stubs). Legacy subfolder patterns kept in `APP_SUBFOLDERS` for old bookmark 404 base-path detection. |
 | 0.741.5 | 2026-07-01 | Final release. All routing fixed for v0.741.5 structure. Secrets removed from documentation. |
 | 2.2.0 | 2026-06-30 | Dashboard cards redesign. |
 | 0.2.0 | 2026-06-30 | Step-based wizard, theme color pickers. |

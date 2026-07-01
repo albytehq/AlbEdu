@@ -2,7 +2,7 @@
   "name": "AlbEdu — Assessment Platform",
   "short_name": "AlbEdu",
   "description": "Platform asesmen online untuk sekolah menengah. Buat, kelola, dan pantak asesmen dengan anti-cheat enterprise-grade.",
-  "version": "0.741.5",
+  "version": "0.742.1",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -49,14 +49,14 @@
       "name": "Buat Asesmen",
       "short_name": "Buat",
       "description": "Buat asesmen baru",
-      "url": "/pages/admin/pages/create-assessment.html",
+      "url": "/pages/admin/create-assessment.html",
       "icons": [{ "src": "/public/images/favicon/favicon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Asesmen Aktif",
       "short_name": "Aktif",
       "description": "Kelola asesmen yang sedang berjalan",
-      "url": "/pages/admin/pages/active-assessments.html",
+      "url": "/pages/admin/active-assessments.html",
       "icons": [{ "src": "/public/images/favicon/favicon-96x96.png", "sizes": "96x96" }]
     },
     {

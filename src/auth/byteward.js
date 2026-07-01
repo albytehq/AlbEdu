@@ -129,7 +129,7 @@ function _isWithinApp() {
 //   /ujian/index.html           → 'ujian'
 //   /ujian/kerjakan-ujian.html  → 'ujian'
 //   /admin/index.html           → 'admin'
-//   /admin/pages/buat-ujian.html → 'admin'
+//   /admin/buat-ujian.html        → 'admin'   (v0.742.0+ structure)
 //
 // Examples (Vercel, BASE_PATH = '/AlbEdu/'):
 //   /AlbEdu/login.html          → 'public'
@@ -152,6 +152,7 @@ function _getRouteScope() {
 
     // Known folder → scope map.
     // v0.741.5: paths changed from /ujian/ and /admin/ to /pages/assessment/ and /pages/admin/
+    // v0.742.0: admin pages flattened — /pages/admin/pages/ → /pages/admin/ (no scope change).
     // Support both old and new path structures for backward compat.
     // 'public' is the catch-all for root-level pages.
     const FOLDER_SCOPE = {

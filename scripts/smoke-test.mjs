@@ -20,11 +20,17 @@ const PAGES_TO_TEST = [
   '/pages/reset-password.html',
   '/pages/404.html',                    // legacy 404 (only reachable by direct link)
   '/pages/admin/index.html',
-  '/pages/admin/pages/buat-ujian.html',
-  '/pages/admin/pages/daftar-nama.html',
-  '/pages/admin/pages/data-hasil.html',
-  '/pages/admin/pages/profile.html',
-  '/pages/admin/pages/ujian-peserta.html',
+  // v0.742.0+: admin pages flattened — no more /pages/admin/pages/ subfolder
+  '/pages/admin/buat-ujian.html',
+  '/pages/admin/daftar-nama.html',
+  '/pages/admin/data-hasil.html',
+  '/pages/admin/profile.html',
+  '/pages/admin/ujian-peserta.html',
+  '/pages/admin/create-assessment.html',
+  '/pages/admin/active-assessments.html',
+  '/pages/admin/question-bank.html',
+  '/pages/admin/monitoring.html',
+  '/pages/admin/results-analytics.html',
   '/pages/ujian/index.html',
   '/pages/ujian/kerjakan-ujian.html',
 ];

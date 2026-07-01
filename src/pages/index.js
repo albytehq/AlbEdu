@@ -15,12 +15,12 @@
 // They are NOT exported as globals — they bind to their respective pages only.
 
 export const PAGES = [
-    'create-assessment.js',   // pages/admin/pages/create-assessment.html
-    'active-assessments.js',  // pages/admin/pages/active-assessments.html
-    'results-analytics.js',   // pages/admin/pages/results-analytics.html
+    'create-assessment.js',   // pages/admin/create-assessment.html
+    'active-assessments.js',  // pages/admin/active-assessments.html
+    'results-analytics.js',   // pages/admin/results-analytics.html
     'assessment-entry.js',    // pages/assessment/index.html
     'take-assessment.js',     // pages/assessment/take.html
-    'daftar-nama.js',         // pages/admin/pages/daftar-nama.html
+    'daftar-nama.js',         // pages/admin/daftar-nama.html
     'panel.js',               // pages/admin/index.html
 ];
 

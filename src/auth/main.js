@@ -67,7 +67,7 @@ const AUTH_CONFIG = {
     //   localhost:5500/ujian/index.html        → '/'
     //   vercel.app/AlbEdu/login.html           → '/AlbEdu/'
     //   vercel.app/AlbEdu/admin/index.html     → '/AlbEdu/'
-    //   vercel.app/AlbEdu/admin/pages/x.html   → '/AlbEdu/'
+    //   vercel.app/AlbEdu/admin/x.html         → '/AlbEdu/'  (v0.742.0+ structure)
     //   github.io/AlbEdu/pages/login.html      → '/AlbEdu/'
     BASE_PATH: (function () {
         const p    = window.location.pathname;
@@ -76,6 +76,13 @@ const AUTH_CONFIG = {
         // Walk up past known app subfolders — no 'guru/' (role removed).
         // List order matters: longer paths must come first so they match before
         // the shorter parent path eats the check.
+        //
+        // v0.742.0: `/pages/admin/pages/` and `/admin/pages/` are KEPT for
+        // backward compatibility — old bookmarked URLs that point to the
+        // pre-flatten structure will hit the root 404.html, and that page
+        // still needs to derive BASE_PATH correctly so its redirect links
+        // resolve. The patterns are harmless on live pages (no admin page
+        // lives there anymore) and cost nothing at runtime.
         const APP_SUBFOLDERS = ['/pages/admin/pages/', '/pages/assessment/', '/pages/admin/', '/pages/ujian/', '/admin/pages/', '/ujian/', '/admin/'];
 
         for (const sub of APP_SUBFOLDERS) {

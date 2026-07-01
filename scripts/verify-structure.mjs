@@ -52,7 +52,7 @@ console.log('\n=== Check 1: Folder structure ===');
 const EXPECTED_FOLDERS = [
   'src', 'src/auth', 'src/exam', 'src/identity',
   'src/profile', 'src/pages', 'src/pages/buat-ujian', 'src/utils',
-  'styles', 'pages', 'pages/admin', 'pages/admin/pages', 'pages/ujian',
+  'styles', 'pages', 'pages/admin', 'pages/ujian',
   'public', 'public/images', 'public/images/favicon', 'public/QNotify',
   'supabase', 'supabase/functions', 'supabase/migrations',
   'scripts', 'tests', 'docs',
@@ -119,13 +119,19 @@ const HTML_FILES = [
   'pages/login.html', 'pages/register-admin.html',
   'pages/register-success.html', 'pages/forgot-password.html',
   'pages/reset-password.html', 'pages/404.html',
-  // Admin
+  // Admin (v0.742.0+: flattened — pages/admin/pages/ removed)
   'pages/admin/index.html',
-  'pages/admin/pages/buat-ujian.html', 'pages/admin/pages/daftar-nama.html',
-  'pages/admin/pages/data-hasil.html', 'pages/admin/pages/profile.html',
-  'pages/admin/pages/ujian-peserta.html',
+  'pages/admin/buat-ujian.html', 'pages/admin/daftar-nama.html',
+  'pages/admin/data-hasil.html', 'pages/admin/profile.html',
+  'pages/admin/ujian-peserta.html',
+  'pages/admin/create-assessment.html', 'pages/admin/active-assessments.html',
+  'pages/admin/question-bank.html', 'pages/admin/monitoring.html',
+  'pages/admin/results-analytics.html',
   // Ujian
   'pages/ujian/index.html', 'pages/ujian/kerjakan-ujian.html',
+  // Assessment
+  'pages/assessment/index.html', 'pages/assessment/take.html',
+  'pages/assessment/submitted.html', 'pages/assessment/blocked.html',
 ];
 
 HTML_FILES.forEach(file => {

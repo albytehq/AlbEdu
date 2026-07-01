@@ -59,7 +59,11 @@
   // Detect BASE_PATH: /AlbEdu/ on GitHub Pages, / on localhost
   (function() {
     var p = window.location.pathname;
-    // Walk up past known app subfolders
+    // Walk up past known app subfolders.
+    // v0.742.0: `/pages/admin/pages/` and `/admin/pages/` are kept as legacy
+    // patterns — old bookmarked URLs to the pre-flatten structure will hit
+    // this 404 page, and the base path detection must still work so the
+    // "Kembali ke Beranda" CTA resolves to the correct BASE_PATH.
     var subs = ['/pages/admin/pages/', '/pages/assessment/', '/pages/admin/', '/pages/ujian/', '/admin/pages/', '/ujian/', '/admin/', '/pages/'];
     var base = '/';
     for (var i = 0; i < subs.length; i++) {
@@ -154,8 +158,10 @@
    * Algorithm (identical to src/auth/main.js):
    *   1. Take window.location.pathname
    *   2. Strip everything after the last '/'
-   *   3. Walk up past known app subfolders (admin/pages, ujian, admin)
+   *   3. Walk up past known app subfolders (admin/pages legacy, ujian, admin)
    *   4. Whatever is left is BASE_PATH (e.g. '/AlbEdu/')
+   *
+   * v0.742.0: `/admin/pages/` retained as legacy pattern for old bookmarks.
    */
   function computeBasePath() {
     var p    = window.location.pathname;

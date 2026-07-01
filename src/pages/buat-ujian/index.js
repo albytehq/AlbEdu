@@ -1,7 +1,7 @@
 // =============================================================================
 // src/pages/buat-ujian/index.js — Barrel file for Buat Ujian v0.2.0 modules
 // =============================================================================
-// The HTML page (pages/admin/pages/buat-ujian.html) loads each module as a
+// The HTML page (pages/admin/buat-ujian.html) loads each module as a
 // separate <script defer> tag in dependency order. This barrel exists for
 // discoverability — it documents the modules that compose the Buat Ujian
 // page. It is NOT loaded as a runtime <script>; it's a pure ES module for

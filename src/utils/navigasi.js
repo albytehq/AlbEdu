@@ -138,7 +138,9 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 // EXPANDED STATE (or mobile): icon AlbEdu berfungsi sebagai
                 // LINK ke panel administrator. Restore href.
-                logoLink.setAttribute('href', logoLink.dataset.href || '../index.html');
+                // v0.742.0: fallback is 'index.html' (same folder) since all
+                // admin pages now live at pages/admin/*.html (flat structure).
+                logoLink.setAttribute('href', logoLink.dataset.href || 'index.html');
                 logoLink.setAttribute('aria-label', 'AlbEdu Creates — Ke beranda');
                 logoLink.removeAttribute('role');
                 logoLink.removeAttribute('aria-expanded');
@@ -291,13 +293,24 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    /* ── Active state from URL ─────────────────────────────────── */
+    /* ── Active state from URL ───────────────────────────────────
+     * v0.742.0: Mapping extended to cover every admin page so the
+     * sidebar "active" highlight works uniformly across both legacy
+     * redirect stubs (buat-ujian, data-hasil, ujian-peserta) and the
+     * new v2 admin pages. Legacy stubs still map to their canonical
+     * destination tab so the user lands on the right highlighted
+     * entry even when they hit an old bookmark. */
     const pageMapping = {
-        'profile.html':       'profil',
-        'buat-ujian.html':    'buat-ujian',
-        'data-hasil.html':    'data-hasil',
-        'ujian-peserta.html': 'ujian-peserta',
-        'daftar-nama.html':   'daftar-nama',
+        'profile.html':          'profil',
+        'create-assessment.html': 'create-assessment',
+        'buat-ujian.html':       'create-assessment', // legacy stub → canonical
+        'active-assessments.html': 'active-assessments',
+        'ujian-peserta.html':    'active-assessments', // legacy stub → canonical
+        'question-bank.html':    'question-bank',
+        'monitoring.html':       'monitoring',
+        'results-analytics.html': 'results',
+        'data-hasil.html':       'results',            // legacy stub → canonical
+        'daftar-nama.html':      'daftar-nama',
     };
     const currentPage = window.location.pathname.split('/').pop();
     const activeTab   = pageMapping[currentPage] || null;
@@ -352,23 +365,25 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 150);
     });
 
-    /* ── Page transition overlay — hide on load ──────────────────
-     * loading.css defines .page-transition as a full-screen overlay
-     * (z-index 10000, pointer-events: auto) that covers the page
-     * during navigation. We must hide it once the page is loaded,
-     * otherwise it blocks all clicks on the sidebar.
+    /* ── Page transition overlay — defensive cleanup ────────────
+     * v0.742.1: loading.css was changed so `.page-transition` is
+     * now HIDDEN BY DEFAULT (opacity:0, visibility:hidden). This
+     * means the overlay no longer flashes on every navigation
+     * between admin pages — fixing the "flash pages" complaint.
      *
-     * Two triggers for safety: window.load (fires after all
-     * resources) and a 300ms setTimeout fallback (in case load
-     * is delayed by slow CDN scripts).
-     */
+     * The overlay only becomes visible if JS explicitly adds the
+     * `.visible` class (no caller does this currently, but the
+     * hook is preserved for future use).
+     *
+     * The old hidePageTransition() logic (waiting for window.load
+     * + 300ms timeout) is no longer needed — the overlay starts
+     * hidden. We still strip any stale `.visible` class as a
+     * defensive measure in case a previous page set it before
+     * navigation (BFCache restore, etc.). */
     const pageTransition = document.querySelector('.page-transition');
-    function hidePageTransition() {
-        if (!pageTransition) return;
-        pageTransition.classList.add('hidden', 'gone');
+    if (pageTransition) {
+        pageTransition.classList.remove('visible');
     }
-    window.addEventListener('load', hidePageTransition);
-    setTimeout(hidePageTransition, 300);
 
     /* ── Notification badge ────────────────────────────────────── */
     if (badge) badge.style.display = 'none';
@@ -474,9 +489,9 @@ document.addEventListener('DOMContentLoaded', function () {
      *      never happen since this code IS running from navigasi.js),
      *      fall back to `window.Auth.getBasePath()` + `src/profile/`
      *      (root-relative, e.g. `/AlbEdu/src/profile/`).
-     *   4. Final fallback: assume 3-level page depth (pages/admin/pages/*.html)
-     *      and use `../../../src/profile/`. This matches the actual depth
-     *      of every page that loads navigasi.js.
+     *   4. Final fallback: assume 2-level page depth (pages/admin/*.html)
+     *      and use `../../src/profile/`. This matches the actual depth
+     *      of every page that loads navigasi.js (v0.742.0+).
      *
      * Returns a string suitable for `script.src = base + 'editor-panel.js'`.
      * ═══════════════════════════════════════════════════════════ */
@@ -492,9 +507,9 @@ document.addEventListener('DOMContentLoaded', function () {
         // Fallback 1: use Auth BASE_PATH (root-relative, e.g. '/AlbEdu/')
         const authBase = window.Auth?.getBasePath?.();
         if (authBase) return authBase + 'src/profile/';
-        // Fallback 2: assume 3-level page depth (all pages that load
-        // navigasi.js are at pages/admin/pages/*.html = 3 levels deep).
-        return '../../../src/profile/';
+        // Fallback 2: assume 2-level page depth (all pages that load
+        // navigasi.js are at pages/admin/*.html = 2 levels deep, v0.742.0+).
+        return '../../src/profile/';
     }
 
     /* ═══════════════════════════════════════════════════════════

@@ -9,20 +9,39 @@
    1. PAGE TRANSITION OVERLAY
    Simple fade overlay for page transitions.
    No animated bars — just clean fade in/out.
-   ────────────────────────────────────────────────────────────── */
+   ──────────────────────────────────────────────────────────────
+   v0.742.1: Overlay is now HIDDEN BY DEFAULT. Previously it was
+   visible (opacity:1) on every page load and JS hid it on
+   window.load — causing a solid-color "flash" on every navigation
+   between admin pages. Now the overlay only appears when JS
+   explicitly adds the `.visible` class (e.g., for slow loads or
+   explicit navigation triggers). Normal browser navigation between
+   admin pages no longer shows any overlay flash. */
 
 .page-transition {
     position:       fixed;
     inset:          0;
     background:     var(--color-bg);
     z-index:        10000;
+    opacity:        0;
+    visibility:     hidden;
+    transition:     opacity 200ms var(--ease-default),
+                    visibility 200ms var(--ease-default);
+    pointer-events: none;
+}
+
+.page-transition.visible {
     opacity:        1;
-    transition:     opacity 200ms var(--ease-default);
+    visibility:     visible;
     pointer-events: auto;
 }
 
+/* Legacy compat: `.hidden` and `.gone` classes still work but are
+   now no-ops since the overlay starts hidden. Kept so existing JS
+   (navigasi.js hidePageTransition) doesn't throw. */
 .page-transition.hidden {
     opacity:        0;
+    visibility:     hidden;
     pointer-events: none;
 }
 
