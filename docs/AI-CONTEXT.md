@@ -3,7 +3,7 @@
 > File ini buat AI assistant (Claude, GPT, Copilot, dst.) cepat onboard ke project AlbEdu.
 > **READ THIS FIRST** sebelum edit code apapun.
 
-**Last verified:** 2026-07-02 (v0.742.5)
+**Last verified:** 2026-07-02 (v0.742.6)
 
 ---
 

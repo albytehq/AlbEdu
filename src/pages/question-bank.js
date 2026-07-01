@@ -74,7 +74,9 @@
   function _t(key, params) {
     try {
       if (window.i18n && typeof window.i18n.t === 'function') {
-        return window.i18n.t(key, params);
+        const result = window.i18n.t(key, params);
+        // v0.742.6: t() now returns undefined for missing translations.
+        return result !== undefined ? result : key;
       }
     } catch (_) { /* noop */ }
     return key;

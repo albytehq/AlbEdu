@@ -65,7 +65,12 @@
   function _t(key, params) {
     try {
       if (window.i18n && typeof window.i18n.t === 'function') {
-        return window.i18n.t(key, params);
+        const result = window.i18n.t(key, params);
+        // v0.742.6: t() now returns undefined for missing translations
+        // (was: returned the key itself). Fall back to the key so JS string
+        // operations don't break, but DOM elements with data-i18n will
+        // still preserve their HTML fallback text via updateDOM().
+        return result !== undefined ? result : key;
       }
     } catch (_) { /* noop */ }
     return key;
