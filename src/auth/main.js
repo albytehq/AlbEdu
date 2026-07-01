@@ -76,7 +76,7 @@ const AUTH_CONFIG = {
         // Walk up past known app subfolders — no 'guru/' (role removed).
         // List order matters: longer paths must come first so they match before
         // the shorter parent path eats the check.
-        const APP_SUBFOLDERS = ['/admin/pages/', '/ujian/', '/admin/'];
+        const APP_SUBFOLDERS = ['/pages/admin/pages/', '/pages/assessment/', '/pages/admin/', '/pages/ujian/', '/admin/pages/', '/ujian/', '/admin/'];
 
         for (const sub of APP_SUBFOLDERS) {
             const idx = base.indexOf(sub);
@@ -98,8 +98,8 @@ const AUTH_CONFIG = {
     // Unknown roles get login URL so they can never accidentally reach a protected page.
     pathForRole(role) {
         const map = {
-            peserta: 'ujian/index.html',
-            admin: 'admin/index.html',
+            peserta: 'pages/assessment/index.html',
+            admin: 'pages/admin/index.html',
         };
         if (!(role in map)) {
             console.warn('[AuthRedirect] unknown role:', role, '— redirecting to login');

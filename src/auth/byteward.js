@@ -50,7 +50,7 @@ const APP_CONFIG = {
     //   'public' → login.html, 404.html, root index.html
     //   'admin'  → handled by early-exit in checkPageAccess(); not listed here.
     SCOPE_POLICY: {
-        peserta: ['ujian', 'public'],
+        peserta: ['ujian', 'public'],  // 'ujian' scope = /pages/assessment/ + /ujian/ (legacy)
     },
 };
 
@@ -151,13 +151,24 @@ function _getRouteScope() {
     const firstSegment = relative.split('/')[0];
 
     // Known folder → scope map.
+    // v0.741.5: paths changed from /ujian/ and /admin/ to /pages/assessment/ and /pages/admin/
+    // Support both old and new path structures for backward compat.
     // 'public' is the catch-all for root-level pages.
     const FOLDER_SCOPE = {
         ujian: 'ujian',
         admin: 'admin',
+        assessment: 'ujian',  // /pages/assessment/ → peserta scope (was /ujian/)
     };
 
-    const scope = FOLDER_SCOPE[firstSegment] ?? 'public';
+    // For /pages/admin/ and /pages/assessment/ paths, firstSegment is 'pages'
+    // Check second segment for admin/assessment
+    let scope = FOLDER_SCOPE[firstSegment] ?? 'public';
+    if (firstSegment === 'pages') {
+        const secondSegment = relative.split('/')[1] ?? '';
+        if (secondSegment === 'admin') scope = 'admin';
+        else if (secondSegment === 'assessment') scope = 'ujian'; // peserta scope
+        else scope = 'public'; // /pages/login.html, /pages/privacy-policy.html, etc.
+    }
 
     // FIX BUG-08: Hanya log debug di development, bukan production.
     const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';

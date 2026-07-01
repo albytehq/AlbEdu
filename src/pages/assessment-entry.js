@@ -361,7 +361,7 @@
 
     async _checkRateLimit() {
       try {
-        const res = await fetch('/functions/v1/access-code-attempt', {
+        const res = await fetch('https://kzsrerxhhrtsxnpnmqgl.supabase.co/functions/v1/access-code-attempt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

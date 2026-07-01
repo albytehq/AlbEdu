@@ -362,7 +362,7 @@
 
       // Audit log via Edge Function (non-blocking)
       try {
-        await fetch(`${window.location.origin}/functions/v1/assessment-lifecycle`, {
+        await fetch(`https://kzsrerxhhrtsxnpnmqgl.supabase.co/functions/v1/assessment-lifecycle`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

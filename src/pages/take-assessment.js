@@ -1269,7 +1269,7 @@
         if (!user) throw new Error('Not authenticated');
         const token = await user.getIdToken();
 
-        const res = await fetch('/functions/v1/submit-assessment', {
+        const res = await fetch('https://kzsrerxhhrtsxnpnmqgl.supabase.co/functions/v1/submit-assessment', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

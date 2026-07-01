@@ -43,11 +43,29 @@ export function detectLocale() {
   return mapBrowserLocale(browser);
 }
 
+// Detect base path for locale loading (works on localhost + GitHub Pages subpath)
+function _getBasePath() {
+  // Try import.meta.url (ES module)
+  try {
+    const moduleUrl = new URL(import.meta.url);
+    // moduleUrl = .../src/i18n/index.js → go up 2 levels to project root
+    const rootUrl = new URL('..', moduleUrl);
+    return rootUrl.pathname; // e.g. /AlbEdu/ or /
+  } catch {
+    // Fallback: detect from window location
+    const path = window.location.pathname;
+    // If path contains /AlbEdu/, use it as base
+    const match = path.match(/^(\/[^\/]+\/)/);
+    return match ? match[1] : '/';
+  }
+}
+
 // Load locale JSON file (lazy)
 async function loadLocale(locale) {
   if (_translations[locale]) return _translations[locale];
   try {
-    const res = await fetch(`/src/i18n/locales/${locale}.json`);
+    const basePath = _getBasePath();
+    const res = await fetch(`${basePath}src/i18n/locales/${locale}.json`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     _translations[locale] = data;
