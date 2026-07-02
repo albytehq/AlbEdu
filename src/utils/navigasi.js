@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const mobile    = isMobile();
 
         if (toggleBtn) {
-            const label = collapsed ? 'Buka sidebar' : 'Tutup sidebar';
+            const label = collapsed ? _t('nav.open_sidebar', null, 'Buka sidebar') : _t('nav.close_sidebar', null, 'Tutup sidebar');
             toggleBtn.setAttribute('aria-label',    label);
             toggleBtn.setAttribute('aria-expanded', String(!collapsed));
             toggleBtn.title = label;
@@ -146,10 +146,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 // browser won't navigate to panel admin. Click handler
                 // (registered separately) will call expand().
                 logoLink.removeAttribute('href');
-                logoLink.setAttribute('aria-label', 'Buka sidebar');
+                logoLink.setAttribute('aria-label', _t('nav.open_sidebar', null, 'Buka sidebar'));
                 logoLink.setAttribute('role', 'button');
                 logoLink.setAttribute('aria-expanded', 'false');
-                logoLink.title = 'Buka sidebar';
+                logoLink.title = _t('nav.open_sidebar', null, 'Buka sidebar');
                 logoLink.style.cursor = 'pointer';
             } else {
                 // EXPANDED STATE (or mobile): icon AlbEdu berfungsi sebagai
@@ -445,15 +445,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         }
-        if (nameEl) nameEl.textContent = user.nama  || 'Admin';
-        if (roleEl) roleEl.textContent = user.peran === 'admin' ? 'Administrator' : 'Peserta';
+        if (nameEl) nameEl.textContent = user.nama  || _t('nav.default_admin_name', null, 'Admin');
+        if (roleEl) roleEl.textContent = user.peran === 'admin' ? _t('nav.role_admin', null, 'Administrator') : _t('nav.peserta_role', null, 'Peserta');
 
         const content = document.querySelector('.user-profile-content');
         if (content && user.profilLengkap === false) {
             if (!content.querySelector('.profile-incomplete-dot')) {
                 const dot = document.createElement('span');
                 dot.className = 'profile-incomplete-dot';
-                dot.title = 'Profil belum lengkap';
+                dot.title = _t('nav.profile_incomplete_short', null, 'Profil belum lengkap');
                 content.appendChild(dot);
             }
         }

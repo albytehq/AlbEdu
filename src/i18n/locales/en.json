@@ -27,7 +27,21 @@
     "role_admin": "Administrator",
     "role_admin_alt": "AlbEdu Admin",
     "profile_incomplete": "Profile incomplete",
-    "loading_profile": "Loading profile..."
+    "loading_profile": "Loading profile...",
+    "welcome_back": "Welcome back. Choose your workspace below.",
+    "creates_kicker": "Workspace admin",
+    "creates_desc": "Administrator control center — manage your profile, preferences, and AlbEdu account identity from one place.",
+    "peserta_kicker": "Participant side",
+    "asesmen_title": "Assessment Page",
+    "asesmen_desc": "Open the participant access code input page for testing, flow inspection, or assessment session monitoring.",
+    "open_creates_aria": "Open AlbEdu Creates",
+    "open_asesmen_aria": "Open Assessment Page",
+    "status_bar": "AlbEdu Admin Panel · v0.742.9",
+    "open_sidebar": "Open sidebar",
+    "close_sidebar": "Close sidebar",
+    "default_admin_name": "Admin",
+    "profile_incomplete_short": "Profile incomplete",
+    "peserta_role": "Participant"
   },
   "common": {
     "save": "Save",
@@ -53,7 +67,15 @@
     "export": "Export",
     "skip_to_main": "Skip to main content",
     "or": "or",
-    "year_copyright": "&copy; {{year}} AlbEdu. All rights reserved."
+    "year_copyright": "&copy; {{year}} AlbEdu. All rights reserved.",
+    "copyright": "© {{year}} AlbEdu. All rights reserved.",
+    "select_placeholder": "— Select —",
+    "select_daftar": "— Select list —",
+    "save_question": "Save Question",
+    "cancel_btn": "Cancel",
+    "add_question_modal_title": "Add Question",
+    "add_question_modal_sub": "Section 1 • New question",
+    "assessment_title_label": "Assessment Title"
   },
   "create": {
     "page_title": "Create Assessment",
@@ -144,7 +166,9 @@
     "validation_pg_options": "All options (A, B, C, D) must be filled",
     "validation_pg_answer": "Select the correct answer",
     "validation_identity_name": "At least 1 field with label \"name\"",
-    "validation_daftar_required": "Select a name list"
+    "validation_daftar_required": "Select a name list",
+    "step1_label": "Information",
+    "publish": "Publish"
   },
   "active": {
     "page_title": "Active Assessments",
@@ -160,7 +184,13 @@
     "action_delete": "Delete",
     "action_block": "Block Participant",
     "participants_active": "{{count}} active participants",
-    "delete_confirm": "Are you sure you want to delete this assessment? This action cannot be undone."
+    "delete_confirm": "Are you sure you want to delete this assessment? This action cannot be undone.",
+    "loading_title": "Loading...",
+    "empty_title": "No Active Assessments",
+    "empty_desc": "Click \"Buat Asesmen\" to create your first assessment.",
+    "empty_cta": "Buat Asesmen",
+    "no_results_title": "No Results",
+    "no_results_desc": "No assessments match the current filter."
   },
   "question_bank": {
     "page_title": "Question Bank",
@@ -177,7 +207,14 @@
     "add_to_assessment": "Add to Assessment",
     "usage_count": "Used {{count}}x",
     "empty_title": "No Questions Yet",
-    "empty_desc": "Add questions to reuse in other assessments."
+    "empty_desc": "Add questions to reuse in other assessments.",
+    "add": "Add Question",
+    "import": "Import",
+    "export": "Export",
+    "filter_all": "All",
+    "no_results_title": "No Questions Found",
+    "no_results_desc": "No questions match the current filter. Try adjusting your search.",
+    "filter_tags_placeholder": "Filter by tag..."
   },
   "monitoring": {
     "page_title": "Real-time Monitoring",
@@ -191,7 +228,17 @@
     "participant_heartbeat": "Last active: {{seconds}} seconds ago",
     "block_participant": "Block",
     "view_detail": "Detail",
-    "no_active": "No active participants"
+    "no_active": "No active participants",
+    "select_placeholder": "— Select Assessment —",
+    "auto_refresh": "Auto-refresh every 5 seconds",
+    "stat_active": "Active",
+    "stat_violations": "Violations",
+    "stat_blocked": "Blocked",
+    "stat_finished": "Finished",
+    "empty_select_title": "Select an Assessment",
+    "empty_select_desc": "Pick an assessment from the dropdown to monitor sessions in real-time.",
+    "empty_title": "No Active Sessions",
+    "empty_desc": "No participants are currently taking the selected assessment."
   },
   "results": {
     "page_title": "Results & Analytics",
@@ -227,7 +274,41 @@
     "firebase_not_ready_title": "Firebase Not Ready",
     "firebase_not_ready_msg": "Cannot connect to database.",
     "not_logged_in_title": "Not Logged In",
-    "not_logged_in_msg": "Please log in to access this page."
+    "not_logged_in_msg": "Please log in to access this page.",
+    "select_placeholder": "— Select Assessment —",
+    "export_json": "Export JSON",
+    "stat_mean": "Mean",
+    "stat_mean_sub": "average score",
+    "stat_median": "Median",
+    "stat_median_sub": "middle value",
+    "stat_min": "Minimum",
+    "stat_min_sub": "lowest score",
+    "stat_max": "Maximum",
+    "stat_max_sub": "highest score",
+    "stat_std": "Std Dev",
+    "stat_std_sub": "standard deviation",
+    "stat_count": "Participants",
+    "stat_count_sub": "total submissions",
+    "histogram_title": "Score Distribution",
+    "histogram_desc": "Distribution of participant scores across 10-point bins.",
+    "item_difficulty_title": "Item Difficulty",
+    "item_difficulty_desc": "Per-question analysis: correct rate and distractor distribution.",
+    "item_col_no": "#",
+    "item_col_question": "Question",
+    "item_col_correct": "Correct %",
+    "item_col_distractors": "Distractors",
+    "class_breakdown_title": "Class Breakdown",
+    "class_breakdown_desc": "Statistics grouped by class.",
+    "class_col_name": "Class",
+    "class_col_count": "Count",
+    "class_col_mean": "Mean",
+    "class_col_median": "Median",
+    "class_col_min": "Min",
+    "class_col_max": "Max",
+    "empty_select_title": "Select an Assessment",
+    "empty_select_desc": "Pick an assessment from the dropdown to view submission results and analytics.",
+    "empty_title": "No Submissions Yet",
+    "empty_desc": "No participants have submitted this assessment yet."
   },
   "errors": {
     "validation_failed": "Validation failed",
@@ -362,7 +443,14 @@
     "cta_title": "Ready to Be First?",
     "cta_login": "Login",
     "cta_register": "Register",
-    "footer_help": "Help"
+    "footer_help": "Help",
+    "proof_kicker": "Early Access",
+    "proof_title": "AlbEdu Early Access Is Here",
+    "proof_subtitle": "We are building a better exam platform. Be part of it from the start — join now and help shape AlbEdu with us.",
+    "cta_desc": "AlbEdu early access is now available. Sign up now and be the first user to shape this platform.",
+    "solution_heading": "AlbEdu is the Solution",
+    "solution_subtitle": "One platform that handles all your exam needs, from creation to analysis.",
+    "title": "AlbEdu — Manage Online Exams, Hassle-Free"
   },
   "auth": {
     "login_title": "Sign in to AlbEdu",
@@ -453,7 +541,10 @@
     "logout_confirm_msg": "You will be logged out. Are you sure?",
     "forgot": {
       "email_required": "Please enter your email.",
-      "email_invalid": "Please enter a valid email format."
+      "email_invalid": "Please enter a valid email format.",
+      "back_to_login": "Back to Login",
+      "footer": "AlbEdu — Restricted access for administrators.",
+      "subtitle": "Enter your email and we will send you a link to reset your password."
     },
     "reset": {
       "error_title": "Invalid Link",
@@ -462,10 +553,43 @@
       "password_required": "Please enter a new password.",
       "password_too_short": "Password must be at least 8 characters.",
       "confirm_required": "Please confirm your password.",
-      "password_mismatch": "Password and confirmation do not match."
+      "password_mismatch": "Password and confirmation do not match.",
+      "new_password_label": "New Password",
+      "confirm_label": "Confirm Password",
+      "submit_btn": "Save New Password",
+      "invalid_title": "Invalid Link",
+      "request_new_btn": "Request New Reset Link",
+      "success_title": "Password Successfully Changed",
+      "success_desc": "Your password has been updated. Please log in with your new password.",
+      "login_now_btn": "Log In Now",
+      "auto_redirect": "Auto-redirecting in",
+      "footer": "AlbEdu — Restricted access for administrators.",
+      "subtitle_strong": "Create a strong, secure password to protect your administrator account.",
+      "branding_title": "Reset Password",
+      "branding_tagline": "We will send a secure link to your email to reset your password. The process is fast and easy."
     },
     "register": {
-      "generic_error": "Registration failed. Please try again."
+      "generic_error": "Registration failed. Please try again.",
+      "confirm_label": "Confirm Password",
+      "submit_btn": "Sign Up Now",
+      "back_to_login": "Back to Login",
+      "footer": "AlbEdu — Restricted access for registered administrators.",
+      "feature_1_label": "Full Access",
+      "feature_1_desc": "Manage participants, exams, and the entire system",
+      "feature_2_label": "Guaranteed Security",
+      "feature_2_desc": "Email verification & device protection",
+      "feature_3_label": "Ready in Minutes",
+      "feature_3_desc": "Fast registration, instantly active"
+    },
+    "login": {
+      "footer": "AlbEdu — Restricted access for administrators."
+    },
+    "register_success": {
+      "desc_full": "Your admin account has been created and is ready to use.",
+      "login_btn": "Go to Login Page",
+      "auto_redirect": "Auto-redirecting in",
+      "branding_title": "Welcome!",
+      "branding_tagline": "Your administrator account is ready. Start managing exams and monitoring participant results with ease."
     }
   },
   "peserta": {
@@ -531,7 +655,10 @@
     "field_last_login": "Last Login",
     "btn_change_photo": "Change Photo",
     "btn_change_photo_aria": "Change profile photo",
-    "role_badge": "Administrator"
+    "role_badge": "Administrator",
+    "page_title": "Admin Profile",
+    "uuid_label": "Admin UUID",
+    "last_login_label": "Last Login"
   },
   "exam": {
     "loading": "Preparing Exam...",
@@ -543,7 +670,11 @@
     "submitted_desc": "You have already submitted this exam and cannot retake it. Contact your teacher if there is an error.",
     "default_subject": "Exam",
     "answered": "Answered",
-    "not_answered": "Not yet"
+    "not_answered": "Not yet",
+    "assessment_label": "Assessment",
+    "peserta_label": "Participant",
+    "section_label": "Section {{n}}",
+    "questions_count": "{{count}} Questions"
   },
   "error": {
     "404_title": "404 Not Found | AlbEdu",
@@ -809,5 +940,70 @@
     "time_minutes_ago": "{{n}} minutes ago",
     "time_hours_ago": "{{n}} hours ago",
     "time_days_ago": "{{n}} days ago"
+  },
+  "take": {
+    "loading": {
+      "title": "Preparing Assessment",
+      "status": "Loading..."
+    }
+  },
+  "byteward": {
+    "access_denied_title": "Access Denied",
+    "access_denied_msg": "You do not have permission to access this page.",
+    "back_to_dashboard": "Back to Dashboard"
+  },
+  "privacy": {
+    "page_title": "Privacy Policy - AlbEdu",
+    "main_title": "AlbEdu Privacy Policy",
+    "version": "Version 1.0.0 — Effective July 1, 2026",
+    "section_1_title": "1. Introduction",
+    "section_1_body": "AlbEdu (\"we\") is committed to protecting the privacy of your personal data (\"participant\") in accordance with Indonesian Law No. 27 of 2022 on Personal Data Protection (UU PDP). This policy explains the data we collect, how we use it, and your rights regarding that data.",
+    "section_2_title": "2. Data We Collect",
+    "col_data": "Data",
+    "col_purpose": "Purpose",
+    "col_retention": "Retention",
+    "data_email": "Google Email",
+    "data_email_purpose": "Login, identification",
+    "data_email_retention": "While account is active",
+    "data_name": "Name",
+    "data_name_purpose": "Identity during assessment",
+    "data_name_retention": "While account is active",
+    "data_fingerprint": "Device fingerprint",
+    "data_fingerprint_purpose": "Anti-fraud, rate limit",
+    "data_fingerprint_retention": "1 year",
+    "data_ip": "IP Address",
+    "data_ip_purpose": "Audit log, anti-fraud",
+    "data_ip_retention": "90 days (then hashed)",
+    "data_ua": "User agent",
+    "data_ua_purpose": "Audit log, compatibility",
+    "data_ua_retention": "90 days",
+    "data_answers": "Assessment answers",
+    "data_answers_purpose": "Scoring, history",
+    "data_answers_retention": "3 years",
+    "data_violations": "Violation events",
+    "data_violations_purpose": "Forensic, anti-cheat",
+    "data_violations_retention": "90 days",
+    "data_audit": "Audit log",
+    "data_audit_purpose": "Forensic, compliance",
+    "data_audit_retention": "1 year",
+    "data_consent": "Consent records",
+    "data_consent_purpose": "Proof of consent",
+    "data_consent_retention": "Forever",
+    "section_3_title": "3. Processing Basis",
+    "section_3_body": "We process your data based on:",
+    "section_4_title": "4. Your Rights as a Participant",
+    "right_access": "Right of Access",
+    "right_rectify": "Right to Rectify",
+    "right_erase": "Right to Erasure",
+    "right_erase_desc": "— Delete account and all related data.",
+    "section_5_title": "5. Data Security",
+    "section_5_body": "We implement the following security measures:",
+    "section_6_title": "6. Data Sharing",
+    "section_7_title": "7. Data Breach Notification",
+    "section_8_title": "8. Policy Changes",
+    "section_8_body": "We may update this Privacy Policy from time to time. If there are material changes, we will notify you via email or in-app notification.",
+    "back_btn": "Back",
+    "footer_note": "You can request data access/deletion anytime. See full Privacy Policy.",
+    "privacy_link": "Privacy Policy"
   }
 }

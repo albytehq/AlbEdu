@@ -322,7 +322,7 @@
                                 <div class="albedu-field">
                                     <label for="daftar-select" data-i18n="create.identity_daftar_select">Pilih Daftar Nama</label>
                                     <select id="daftar-select" class="albedu-select">
-                                        <option value="">— Pilih daftar —</option>
+                                        <option value="" data-i18n="common.select_daftar">— Pilih daftar —</option>
                                     </select>
                                 </div>
                             </div>
@@ -424,7 +424,7 @@
                                     <div class="albedu-theme-preview">
                                         <div class="albedu-theme-preview-title" data-i18n="create.theme_preview">Preview Langsung</div>
                                         <div class="albedu-preview-card">
-                                            <h4 class="albedu-preview-heading">Judul Asesmen</h4>
+                                            <h4 class="albedu-preview-heading" data-i18n="common.assessment_title_label">Judul Asesmen</h4>
                                             <p class="albedu-preview-question">Berapakah hasil dari 7 × 8?</p>
                                             <div class="albedu-preview-options">
                                                 <div class="albedu-preview-option">
@@ -539,7 +539,7 @@
             </div>
 
             <footer class="footer">
-                <p>&copy; 2024 AlbEdu. Semua hak dilindungi.</p>
+                <p><span data-i18n="common.copyright" data-i18n-vars="{&quot;year&quot;:2026}">© 2026 AlbEdu. Semua hak dilindungi.</span></p>
                 <p>v0.742.9</p>
             </footer>
         </main>
@@ -550,8 +550,8 @@
       <div class="albedu-modal" id="question-modal" role="dialog" aria-modal="true" style="background: var(--albedu-surface); border-radius: var(--albedu-radius-lg); box-shadow: var(--albedu-shadow-modal); border: 1px solid var(--albedu-border); max-width: 720px; width: 100%; margin: auto;">
         <header style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--albedu-border);">
           <div>
-            <h2 style="font-size: 18px; font-weight: 700; margin: 0; color: var(--albedu-heading);" id="question-modal-title">Tambah Soal</h2>
-            <p style="font-size: 13px; color: var(--albedu-body); margin: 4px 0 0;" id="question-modal-subtitle">Bagian 1 • Soal baru</p>
+            <h2 style="font-size: 18px; font-weight: 700; margin: 0; color: var(--albedu-heading);" id="question-modal-title" data-i18n="common.add_question_modal_title">Tambah Soal</h2>
+            <p style="font-size: 13px; color: var(--albedu-body); margin: 4px 0 0;" id="question-modal-subtitle" data-i18n="common.add_question_modal_sub">Bagian 1 • Soal baru</p>
           </div>
           <button id="question-modal-close" type="button" aria-label="Tutup" style="background: transparent; border: none; cursor: pointer; color: var(--albedu-body); padding: 8px;">
             <i class="material-symbols-outlined">close</i>
@@ -559,10 +559,10 @@
         </header>
         <div id="question-modal-body" style="padding: 24px; max-height: 60vh; overflow-y: auto;"></div>
         <footer style="display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--albedu-border);">
-          <button class="albedu-btn albedu-btn-secondary" id="question-modal-cancel" type="button">Batal</button>
+          <button class="albedu-btn albedu-btn-secondary" id="question-modal-cancel" type="button" data-i18n="common.cancel_btn">Batal</button>
           <button class="albedu-btn albedu-btn-primary" id="question-modal-save" type="button">
             <i class="material-symbols-outlined">check</i>
-            Simpan Soal
+            <span data-i18n="common.save_question">Simpan Soal</span>
           </button>
         </footer>
       </div>

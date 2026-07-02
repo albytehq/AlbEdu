@@ -29,6 +29,15 @@
 (function () {
 'use strict';
 
+// v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+const _t = (key, vars, fallback) => {
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+        const v = window.i18n.t(key, vars);
+        return v !== undefined ? v : fallback;
+    }
+    return fallback;
+};
+
 // ── Config ────────────────────────────────────────────────────────────────────
 const APP_CONFIG = {
     // BASE_PATH sekarang selalu diambil dari window.Auth untuk konsistensi.
@@ -298,11 +307,11 @@ function _showAccessDenied() {
 
     const h2 = document.createElement('h2');
     Object.assign(h2.style, { fontSize: '1.25rem', fontWeight: '600', color: '#1e293b', margin: '0' });
-    h2.textContent = 'Akses Ditolak';
+    h2.textContent = _t('byteward.access_denied_title', null, 'Akses Ditolak');
 
     const p = document.createElement('p');
     Object.assign(p.style, { fontSize: '0.95rem', maxWidth: '380px', color: '#64748b', margin: '0' });
-    p.textContent = 'Anda tidak memiliki izin untuk mengakses halaman ini.';
+    p.textContent = _t('byteward.access_denied_msg', null, 'Anda tidak memiliki izin untuk mengakses halaman ini.');
 
     const a = document.createElement('a');
     a.href = dashPath;
@@ -312,7 +321,7 @@ function _showAccessDenied() {
         textDecoration: 'none', borderRadius: '8px',
         fontWeight: '600', fontSize: '0.9rem',
     });
-    a.textContent = 'Kembali ke Dashboard';
+    a.textContent = _t('byteward.back_to_dashboard', null, 'Kembali ke Dashboard');
 
     wrap.append(h1, h2, p, a);
     document.body.replaceChildren(wrap);

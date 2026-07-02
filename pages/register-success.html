@@ -38,19 +38,16 @@
                     </div>
 
                     <h1 class="success-title" data-i18n="auth.register_success_title">Pendaftaran Berhasil!</h1>
-                    <p class="success-desc">
-                        Akun admin Anda telah dibuat dan siap digunakan.<br>
-                        Silakan cek email Anda untuk verifikasi, lalu login untuk mulai mengelola sistem.
-                    </p>
+                    <p class="success-desc" data-i18n-html="auth.register_success.desc_full">Akun admin Anda telah dibuat dan siap digunakan.<br>Silakan cek email Anda untuk verifikasi, lalu login untuk mulai mengelola sistem.</p>
 
                     <!-- CTA -->
-                    <a href="login.html" class="btn-login" id="loginNowBtn">
+                    <a href="login.html" class="btn-login" id="loginNowBtn" data-i18n="auth.register_success.login_btn">
                         Ke Halaman Login
                     </a>
 
                     <!-- Countdown redirect -->
                     <p class="redirect-notice" id="redirectNotice" aria-live="polite" aria-atomic="true">
-                        Otomatis diarahkan dalam <strong id="countdownNum">8</strong> detik
+                        <span data-i18n="auth.register_success.auto_redirect">Otomatis diarahkan dalam</span> <strong id="countdownNum">8</strong> detik
                     </p>
 
                     <div class="countdown-bar-wrap" aria-hidden="true">
@@ -70,8 +67,8 @@
                 <div class="branding-logo" aria-hidden="true">
                     <img src="../public/images/logo.svg" alt="" width="40" height="40">
                 </div>
-                <h2 class="branding-title">Selamat Datang!</h2>
-                <p class="branding-tagline">Akun administrator Anda sudah siap. Mulai kelola ujian dan pantau hasil peserta dengan mudah.</p>
+                <h2 class="branding-title" data-i18n="auth.register_success.branding_title">Selamat Datang!</h2>
+                <p class="branding-tagline" data-i18n="auth.register_success.branding_tagline">Akun administrator Anda sudah siap. Mulai kelola ujian dan pantau hasil peserta dengan mudah.</p>
             </div>
         </div>
     </div>

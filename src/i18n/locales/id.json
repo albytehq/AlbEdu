@@ -27,7 +27,21 @@
     "role_admin": "Administrator",
     "role_admin_alt": "Admin AlbEdu",
     "profile_incomplete": "Profil belum lengkap",
-    "loading_profile": "Memuat profil..."
+    "loading_profile": "Memuat profil...",
+    "welcome_back": "Selamat datang kembali. Pilih ruang kerja Anda di bawah ini.",
+    "creates_kicker": "Workspace admin",
+    "creates_desc": "Pusat kendali administrator — kelola profil, preferensi, dan identitas akun AlbEdu Anda dari satu tempat.",
+    "peserta_kicker": "Sisi peserta",
+    "asesmen_title": "Halaman Asesmen",
+    "asesmen_desc": "Buka halaman input kode akses peserta untuk uji coba, inspeksi alur, atau pemantauan sesi asesmen.",
+    "open_creates_aria": "Buka AlbEdu Creates",
+    "open_asesmen_aria": "Buka Halaman Asesmen",
+    "status_bar": "AlbEdu Admin Panel · v0.742.9",
+    "open_sidebar": "Buka sidebar",
+    "close_sidebar": "Tutup sidebar",
+    "default_admin_name": "Admin",
+    "profile_incomplete_short": "Profil belum lengkap",
+    "peserta_role": "Peserta"
   },
   "common": {
     "save": "Simpan",
@@ -53,7 +67,15 @@
     "export": "Export",
     "skip_to_main": "Langsung ke konten utama",
     "or": "atau",
-    "year_copyright": "&copy; {{year}} AlbEdu. Hak cipta dilindungi."
+    "year_copyright": "&copy; {{year}} AlbEdu. Hak cipta dilindungi.",
+    "copyright": "© {{year}} AlbEdu. Semua hak dilindungi.",
+    "select_placeholder": "— Pilih —",
+    "select_daftar": "— Pilih daftar —",
+    "save_question": "Simpan Soal",
+    "cancel_btn": "Batal",
+    "add_question_modal_title": "Tambah Soal",
+    "add_question_modal_sub": "Bagian 1 • Soal baru",
+    "assessment_title_label": "Judul Asesmen"
   },
   "create": {
     "page_title": "Buat Asesmen",
@@ -144,7 +166,9 @@
     "validation_pg_options": "Semua opsi (A, B, C, D) harus diisi",
     "validation_pg_answer": "Pilih jawaban benar",
     "validation_identity_name": "Minimal 1 field dengan label \"nama\"",
-    "validation_daftar_required": "Pilih daftar nama"
+    "validation_daftar_required": "Pilih daftar nama",
+    "step1_label": "Informasi",
+    "publish": "Publish Asesmen"
   },
   "active": {
     "page_title": "Asesmen Aktif",
@@ -160,7 +184,13 @@
     "action_delete": "Hapus",
     "action_block": "Blokir Peserta",
     "participants_active": "{{count}} peserta aktif",
-    "delete_confirm": "Yakin hapus asesmen ini? Tindakan ini tidak dapat dibatalkan."
+    "delete_confirm": "Yakin hapus asesmen ini? Tindakan ini tidak dapat dibatalkan.",
+    "loading_title": "Memuat asesmen...",
+    "empty_title": "Belum Ada Asesmen Aktif",
+    "empty_desc": "Buat asesmen baru atau mulai asesmen yang sudah ada.",
+    "empty_cta": "Buat Asesmen",
+    "no_results_title": "Tidak Ditemukan",
+    "no_results_desc": "Coba kata kunci lain."
   },
   "question_bank": {
     "page_title": "Bank Soal",
@@ -177,7 +207,14 @@
     "add_to_assessment": "Tambah ke Asesmen",
     "usage_count": "Dipakai {{count}}x",
     "empty_title": "Belum Ada Soal",
-    "empty_desc": "Tambahkan soal untuk digunakan kembali di asesmen lain."
+    "empty_desc": "Tambahkan soal untuk digunakan kembali di asesmen lain.",
+    "add": "Tambah Soal",
+    "import": "Import JSON",
+    "export": "Export JSON",
+    "filter_all": "Semua",
+    "no_results_title": "Tidak Ditemukan",
+    "no_results_desc": "Coba kata kunci atau filter lain.",
+    "filter_tags_placeholder": "Filter berdasarkan tag..."
   },
   "monitoring": {
     "page_title": "Monitoring Real-time",
@@ -191,7 +228,17 @@
     "participant_heartbeat": "Terakhir aktif: {{seconds}} detik lalu",
     "block_participant": "Blokir",
     "view_detail": "Detail",
-    "no_active": "Tidak ada peserta aktif"
+    "no_active": "Tidak ada peserta aktif",
+    "select_placeholder": "— Pilih asesmen —",
+    "auto_refresh": "Auto-refresh 5s",
+    "stat_active": "Peserta Aktif",
+    "stat_violations": "Pelanggaran",
+    "stat_blocked": "Diblokir",
+    "stat_finished": "Selesai",
+    "empty_select_title": "Pilih Asesmen",
+    "empty_select_desc": "Pilih asesmen dari dropdown di atas untuk melihat peserta.",
+    "empty_title": "Tidak Ada Peserta Aktif",
+    "empty_desc": "Belum ada peserta yang sedang mengerjakan asesmen ini."
   },
   "results": {
     "page_title": "Hasil & Analitik",
@@ -227,7 +274,41 @@
     "firebase_not_ready_title": "Firebase Tidak Siap",
     "firebase_not_ready_msg": "Tidak dapat terhubung ke database.",
     "not_logged_in_title": "Belum Login",
-    "not_logged_in_msg": "Silakan login untuk mengakses halaman ini."
+    "not_logged_in_msg": "Silakan login untuk mengakses halaman ini.",
+    "select_placeholder": "— Pilih asesmen —",
+    "export_json": "JSON",
+    "stat_mean": "Mean",
+    "stat_mean_sub": "Rata-rata",
+    "stat_median": "Median",
+    "stat_median_sub": "Nilai tengah",
+    "stat_min": "Min",
+    "stat_min_sub": "Terendah",
+    "stat_max": "Max",
+    "stat_max_sub": "Tertinggi",
+    "stat_std": "Std Dev",
+    "stat_std_sub": "Standar deviasi",
+    "stat_count": "Submissions",
+    "stat_count_sub": "Total peserta",
+    "histogram_title": "Distribusi Nilai",
+    "histogram_desc": "Histogram nilai peserta dalam rentang 0–100",
+    "item_difficulty_title": "Tingkat Kesulitan Soal",
+    "item_difficulty_desc": "Persentase jawaban benar per soal + distribusi pilihan",
+    "item_col_no": "No",
+    "item_col_question": "Soal",
+    "item_col_correct": "% Benar",
+    "item_col_distractors": "Distraktor",
+    "class_breakdown_title": "Rincian per Kelas",
+    "class_breakdown_desc": "Tersedia jika mode identitas = Daftar Nama",
+    "class_col_name": "Kelas",
+    "class_col_count": "Peserta",
+    "class_col_mean": "Mean",
+    "class_col_median": "Median",
+    "class_col_min": "Min",
+    "class_col_max": "Max",
+    "empty_select_title": "Pilih Asesmen",
+    "empty_select_desc": "Pilih asesmen dari dropdown di atas untuk melihat hasil & analitik.",
+    "empty_title": "Belum Ada Data",
+    "empty_desc": "Belum ada peserta yang menyelesaikan asesmen ini."
   },
   "errors": {
     "validation_failed": "Validasi gagal",
@@ -362,7 +443,14 @@
     "cta_title": "Siap Jadi Yang Pertama?",
     "cta_login": "Login",
     "cta_register": "Daftar",
-    "footer_help": "Bantuan"
+    "footer_help": "Bantuan",
+    "proof_kicker": "Akses Awal",
+    "proof_title": "AlbEdu Akses Awal Sudah Ada",
+    "proof_subtitle": "Kami sedang membangun platform ujian yang lebih baik. Jadilah bagian dari awal — masuk sekarang dan bentuk AlbEdu bersama kami.",
+    "cta_desc": "Akses awal AlbEdu sudah tersedia. Daftar sekarang dan jadilah pengguna pertama yang membentuk platform ini.",
+    "solution_heading": "AlbEdu Solusinya",
+    "solution_subtitle": "Satu platform yang menyelesaikan semua kebutuhan ujian Anda, dari pembuatan hingga analisis.",
+    "title": "AlbEdu — Kelola Ujian Online, Tanpa Ribet"
   },
   "auth": {
     "login_title": "Masuk ke AlbEdu",
@@ -453,7 +541,10 @@
     "logout_confirm_msg": "Anda akan log out. Yakin?",
     "forgot": {
       "email_required": "Masukkan email Anda.",
-      "email_invalid": "Masukkan format email yang valid."
+      "email_invalid": "Masukkan format email yang valid.",
+      "back_to_login": "Kembali ke Login",
+      "footer": "AlbEdu — Akses terbatas untuk administrator.",
+      "subtitle": "Masukkan email Anda dan kami akan mengirimkan link untuk mengatur ulang kata sandi."
     },
     "reset": {
       "error_title": "Link Tidak Valid",
@@ -462,10 +553,43 @@
       "password_required": "Masukkan kata sandi baru.",
       "password_too_short": "Kata sandi minimal 8 karakter.",
       "confirm_required": "Konfirmasi kata sandi Anda.",
-      "password_mismatch": "Kata sandi dan konfirmasi tidak sama."
+      "password_mismatch": "Kata sandi dan konfirmasi tidak sama.",
+      "new_password_label": "Kata Sandi Baru",
+      "confirm_label": "Konfirmasi Kata Sandi",
+      "submit_btn": "Simpan Kata Sandi Baru",
+      "invalid_title": "Link Tidak Valid",
+      "request_new_btn": "Minta Link Reset Baru",
+      "success_title": "Kata Sandi Berhasil Diubah",
+      "success_desc": "Kata sandi Anda telah diperbarui. Silakan login dengan kata sandi baru Anda.",
+      "login_now_btn": "Login Sekarang",
+      "auto_redirect": "Otomatis diarahkan dalam",
+      "footer": "AlbEdu — Akses terbatas untuk administrator.",
+      "subtitle_strong": "Buat kata sandi yang kuat dan aman untuk melindungi akun administrator Anda.",
+      "branding_title": "Reset Kata Sandi",
+      "branding_tagline": "Kami akan mengirimkan link aman ke email Anda untuk mengatur ulang kata sandi. Proses ini cepat dan mudah."
     },
     "register": {
-      "generic_error": "Pendaftaran gagal. Silakan coba lagi."
+      "generic_error": "Pendaftaran gagal. Silakan coba lagi.",
+      "confirm_label": "Konfirmasi Kata Sandi",
+      "submit_btn": "Daftar Sekarang",
+      "back_to_login": "Kembali ke Login",
+      "footer": "AlbEdu — Akses terbatas untuk administrator terdaftar.",
+      "feature_1_label": "Akses Penuh",
+      "feature_1_desc": "Kelola peserta, ujian, dan seluruh sistem",
+      "feature_2_label": "Keamanan Terjamin",
+      "feature_2_desc": "Verifikasi email & proteksi perangkat",
+      "feature_3_label": "Siap dalam Hitungan Menit",
+      "feature_3_desc": "Pendaftaran cepat, langsung aktif"
+    },
+    "login": {
+      "footer": "AlbEdu — Akses terbatas untuk administrator."
+    },
+    "register_success": {
+      "desc_full": "Akun admin Anda telah dibuat dan siap digunakan.",
+      "login_btn": "Ke Halaman Login",
+      "auto_redirect": "Otomatis diarahkan dalam",
+      "branding_title": "Selamat Datang!",
+      "branding_tagline": "Akun administrator Anda sudah siap. Mulai kelola ujian dan pantau hasil peserta dengan mudah."
     }
   },
   "peserta": {
@@ -531,7 +655,10 @@
     "field_last_login": "Terakhir Login",
     "btn_change_photo": "Ganti Foto",
     "btn_change_photo_aria": "Ganti foto profil",
-    "role_badge": "Administrator"
+    "role_badge": "Administrator",
+    "page_title": "Profil Admin",
+    "uuid_label": "UUID Admin",
+    "last_login_label": "Terakhir Login"
   },
   "exam": {
     "loading": "Sedang Menyiapkan Ujian...",
@@ -543,7 +670,11 @@
     "submitted_desc": "Kamu sudah mengumpulkan ujian ini sebelumnya dan tidak dapat mengerjakan ulang. Hubungi guru jika ada kesalahan.",
     "default_subject": "Ujian",
     "answered": "Dijawab",
-    "not_answered": "Belum"
+    "not_answered": "Belum",
+    "assessment_label": "Asesmen",
+    "peserta_label": "Peserta",
+    "section_label": "Bagian {{n}}",
+    "questions_count": "{{count}} Soal"
   },
   "error": {
     "404_title": "404 Tidak Ditemukan | AlbEdu",
@@ -809,5 +940,70 @@
     "time_minutes_ago": "{{n}} menit lalu",
     "time_hours_ago": "{{n}} jam lalu",
     "time_days_ago": "{{n}} hari lalu"
+  },
+  "take": {
+    "loading": {
+      "title": "Menyiapkan asesmen...",
+      "status": "Memuat data peserta"
+    }
+  },
+  "byteward": {
+    "access_denied_title": "Akses Ditolak",
+    "access_denied_msg": "Anda tidak memiliki izin untuk mengakses halaman ini.",
+    "back_to_dashboard": "Kembali ke Dashboard"
+  },
+  "privacy": {
+    "page_title": "Kebijakan Privasi - AlbEdu",
+    "main_title": "Kebijakan Privasi AlbEdu",
+    "version": "Versi 1.0.0 — Berlaku sejak 1 Juli 2026",
+    "section_1_title": "1. Pendahuluan",
+    "section_1_body": "AlbEdu (\"kami\") berkomitmen melindungi privasi data pribadi Anda (\"peserta\") sesuai dengan Undang-Undang No. 27 Tahun 2022 tentang Perlindungan Data Pribadi (UU PDP). Kebijakan ini menjelaskan data yang kami kumpulkan, bagaimana kami menggunakannya, dan hak Anda atas data tersebut.",
+    "section_2_title": "2. Data yang Kami Kumpulkan",
+    "col_data": "Data",
+    "col_purpose": "Tujuan",
+    "col_retention": "Retensi",
+    "data_email": "Email Google",
+    "data_email_purpose": "Login, identifikasi",
+    "data_email_retention": "Selama akun aktif",
+    "data_name": "Nama",
+    "data_name_purpose": "Identitas saat asesmen",
+    "data_name_retention": "Selama akun aktif",
+    "data_fingerprint": "Device fingerprint",
+    "data_fingerprint_purpose": "Anti-fraud, rate limit",
+    "data_fingerprint_retention": "1 tahun",
+    "data_ip": "Alamat IP",
+    "data_ip_purpose": "Audit log, anti-fraud",
+    "data_ip_retention": "90 hari (lalu di-hash)",
+    "data_ua": "User agent",
+    "data_ua_purpose": "Audit log, kompatibilitas",
+    "data_ua_retention": "90 hari",
+    "data_answers": "Jawaban asesmen",
+    "data_answers_purpose": "Scoring, history",
+    "data_answers_retention": "3 tahun",
+    "data_violations": "Violation events",
+    "data_violations_purpose": "Forensic, anti-cheat",
+    "data_violations_retention": "90 hari",
+    "data_audit": "Audit log",
+    "data_audit_purpose": "Forensic, compliance",
+    "data_audit_retention": "1 tahun",
+    "data_consent": "Consent records",
+    "data_consent_purpose": "Bukti persetujuan",
+    "data_consent_retention": "Selamanya",
+    "section_3_title": "3. Dasar Pemrosesan",
+    "section_3_body": "Kami memproses data Anda berdasarkan:",
+    "section_4_title": "4. Hak Anda sebagai Peserta",
+    "right_access": "Hak Akses",
+    "right_rectify": "Hak Koreksi",
+    "right_erase": "Hak Hapus",
+    "right_erase_desc": "— Hapus akun dan semua data terkait.",
+    "section_5_title": "5. Keamanan Data",
+    "section_5_body": "Kami menerapkan langkah-langkah keamanan berikut:",
+    "section_6_title": "6. Pembagian Data",
+    "section_7_title": "7. Notifikasi Pelanggaran Data",
+    "section_8_title": "8. Perubahan Kebijakan",
+    "section_8_body": "Kami dapat memperbarui Kebijakan Privasi ini dari waktu ke waktu. Jika ada perubahan material, kami akan memberi tahu Anda melalui email atau in-app notification.",
+    "back_btn": "Kembali",
+    "footer_note": "Anda dapat meminta akses/penghapusan data kapan saja. Lihat Kebijakan Privasi lengkap.",
+    "privacy_link": "Kebijakan Privasi"
   }
 }

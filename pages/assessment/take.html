@@ -156,8 +156,8 @@
   <main id="identity-phase" hidden aria-labelledby="identity-title">
     <section class="identity-card">
       <header class="identity-banner">
-        <div class="identity-banner__meta" id="identity-subject">Asesmen</div>
-        <h1 class="identity-banner__title" id="identity-title">Asesmen</h1>
+        <div class="identity-banner__meta" id="identity-subject" data-i18n="exam.assessment_label">Asesmen</div>
+        <h1 class="identity-banner__title" id="identity-title" data-i18n="exam.assessment_label">Asesmen</h1>
         <div class="identity-banner__chips" id="identity-chips"></div>
       </header>
       <div class="identity-card__note" id="identity-note" hidden></div>
@@ -173,12 +173,12 @@
   <main id="exam-phase" hidden aria-labelledby="exam-title">
     <header class="exam-header">
       <div class="exam-header__left">
-        <div class="exam-header__badge" id="exam-subject">Asesmen</div>
+        <div class="exam-header__badge" id="exam-subject" data-i18n="exam.assessment_label">Asesmen</div>
         <div class="exam-header__info">
-          <h1 class="exam-header__title" id="exam-title">Asesmen</h1>
+          <h1 class="exam-header__title" id="exam-title" data-i18n="exam.assessment_label">Asesmen</h1>
           <div class="exam-header__user" id="exam-user">
             <i class="material-symbols-outlined">account_circle</i>
-            <span id="exam-user-text">Peserta</span>
+            <span id="exam-user-text" data-i18n="exam.peserta_label">Peserta</span>
           </div>
         </div>
       </div>
@@ -198,8 +198,8 @@
       <div class="exam-content">
         <div class="page-tabs" id="page-tabs" role="tablist" aria-label="Bagian Soal"></div>
         <div class="exam-page-header">
-          <h2 class="exam-page-title" id="page-title">Bagian 1</h2>
-          <div class="exam-page-count" id="page-count">0 Soal</div>
+          <h2 class="exam-page-title" id="page-title" data-i18n="exam.section_label" data-i18n-vars="{&quot;n&quot;:1}">Bagian 1</h2>
+          <div class="exam-page-count" id="page-count" data-i18n="exam.questions_count" data-i18n-vars="{&quot;count&quot;:0}">0 Soal</div>
         </div>
         <div id="question-list" role="region" aria-live="polite" aria-label="Daftar soal"></div>
       </div>

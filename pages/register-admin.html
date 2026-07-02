@@ -81,7 +81,7 @@
                     </div>
 
                     <div class="field field-password">
-                        <label for="confirmPassword">Konfirmasi Kata Sandi</label>
+                        <label for="confirmPassword" data-i18n="auth.register.confirm_label">Konfirmasi Kata Sandi</label>
                         <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password"
                             minlength="8" class="input" placeholder="Ulangi kata sandi" required>
                         <button type="button" class="toggle-visibility" data-target="confirmPassword"
@@ -105,7 +105,7 @@
                     </div>
 
                     <!-- Submit button -->
-                    <button id="registerBtn" type="submit" aria-busy="false">
+                    <button id="registerBtn" type="submit" aria-busy="false" data-i18n="auth.register.submit_btn">
                         Daftar Sekarang
                     </button>
 
@@ -119,12 +119,12 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
-                        Kembali ke Login
+                        <span data-i18n="auth.register.back_to_login">Kembali ke Login</span>
                     </a>
                 </div>
 
                 <p class="page-footer">
-                    &copy; <span id="regYear"></span> AlbEdu — Akses terbatas untuk administrator terdaftar.
+                    &copy; <span id="regYear"></span> <span data-i18n="auth.register.footer">AlbEdu — Akses terbatas untuk administrator terdaftar.</span>
                 </p>
             </div>
         </div>
@@ -149,8 +149,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Akses Penuh</span>
-                            <span class="feature-desc">Kelola peserta, ujian, dan seluruh sistem</span>
+                            <span class="feature-label" data-i18n="auth.register.feature_1_label">Akses Penuh</span>
+                            <span class="feature-desc" data-i18n="auth.register.feature_1_desc">Kelola peserta, ujian, dan seluruh sistem</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -161,8 +161,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Keamanan Terjamin</span>
-                            <span class="feature-desc">Verifikasi email & proteksi perangkat</span>
+                            <span class="feature-label" data-i18n="auth.register.feature_2_label">Keamanan Terjamin</span>
+                            <span class="feature-desc" data-i18n="auth.register.feature_2_desc">Verifikasi email & proteksi perangkat</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -172,8 +172,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Siap dalam Hitungan Menit</span>
-                            <span class="feature-desc">Pendaftaran cepat, langsung aktif</span>
+                            <span class="feature-label" data-i18n="auth.register.feature_3_label">Siap dalam Hitungan Menit</span>
+                            <span class="feature-desc" data-i18n="auth.register.feature_3_desc">Pendaftaran cepat, langsung aktif</span>
                         </div>
                     </div>
                 </div>
