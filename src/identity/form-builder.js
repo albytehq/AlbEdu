@@ -35,6 +35,14 @@
 // =============================================================================
 
 window.IdentityFormBuilder = (() => {
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
   const MAX_FIELDS        = 10;
   const MIN_FIELDS        = 1;
   const MAX_LABEL_LEN     = 30;
@@ -45,11 +53,11 @@ window.IdentityFormBuilder = (() => {
   const MAX_OPTION_LEN    = 50;
 
   const FIELD_TYPES = [
-    { value: 'text',     label: 'Teks Pendek',  icon: 'Aa',  desc: 'Nama, NISN, dll' },
-    { value: 'number',   label: 'Angka',        icon: '123', desc: 'Nomor absen, NISN numerik' },
-    { value: 'select',   label: 'Dropdown',     icon: '▾',   desc: 'Pilihan ganda (Kelas, Jenjang)' },
-    { value: 'textarea', label: 'Teks Panjang', icon: '¶',   desc: 'Alamat, catatan' },
-    { value: 'email',    label: 'Email',        icon: '@',   desc: 'Input email dengan validasi' },
+    { value: 'text',     label: t('identity.type_text', null, 'Teks Pendek'),  icon: 'Aa',  desc: t('identity.type_text_desc', null, 'Nama, NISN, dll') },
+    { value: 'number',   label: t('identity.type_number', null, 'Angka'),        icon: '123', desc: t('identity.type_number_desc', null, 'Nomor absen, NISN numerik') },
+    { value: 'select',   label: t('identity.type_select', null, 'Dropdown'),     icon: '▾',   desc: t('identity.type_select_desc', null, 'Pilihan ganda (Kelas, Jenjang)') },
+    { value: 'textarea', label: t('identity.type_textarea', null, 'Teks Panjang'), icon: '¶',   desc: t('identity.type_textarea_desc', null, 'Alamat, catatan') },
+    { value: 'email',    label: t('identity.type_email', null, 'Email'),        icon: '@',   desc: t('identity.type_email_desc', null, 'Input email dengan validasi') },
   ];
 
   // ── State ────────────────────────────────────────────────────────────────
@@ -327,7 +335,7 @@ window.IdentityFormBuilder = (() => {
 
       const addLabel = document.createElement('div');
       addLabel.className = 'ifb-add-label';
-      addLabel.textContent = 'Tambah field:';
+      addLabel.textContent = t('identity.add_field_label', null, 'Tambah field:');
       addSection.appendChild(addLabel);
 
       const btnGroup = document.createElement('div');

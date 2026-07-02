@@ -19,6 +19,15 @@
 ;(function (global) {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   // ── Constants ──────────────────────────────────────────────
   const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB — Worker max adalah 10MB, kita batasi 4MB di client
   const ALLOWED_TYPES   = ['image/jpeg', 'image/png', 'image/webp'];
@@ -222,12 +231,12 @@
     _panel.className = 'pep-panel';
     _panel.setAttribute('role', 'dialog');
     _panel.setAttribute('aria-modal', 'true');
-    _panel.setAttribute('aria-label', 'Edit Profil');
+    _panel.setAttribute('aria-label', t('pep.title', null, 'Edit Profil'));
     _panel.setAttribute('aria-hidden', 'true');
     _panel.innerHTML = `
       <div class="pep-header">
-        <span class="pep-title">Edit Profil</span>
-        <button class="pep-close" id="pep-close-btn" aria-label="Tutup">
+        <span class="pep-title">${t('pep.title', null, 'Edit Profil')}</span>
+        <button class="pep-close" id="pep-close-btn" aria-label="${t('common.close', null, 'Tutup')}">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
@@ -236,8 +245,8 @@
 
       <div class="pep-body">
         <div class="pep-avatar-wrap">
-          <div class="pep-avatar-ring" id="pep-avatar-ring" role="button" aria-label="Ganti foto profil" tabindex="0">
-            <img class="pep-avatar-img" id="pep-avatar-img" src="" alt="Foto profil" />
+          <div class="pep-avatar-ring" id="pep-avatar-ring" role="button" aria-label="${t('pep.change_photo_aria', null, 'Ganti foto profil')}" tabindex="0">
+            <img class="pep-avatar-img" id="pep-avatar-img" src="" alt="${t('pep.photo_alt', null, 'Foto profil')}" />
             <div class="pep-avatar-overlay">
               <span class="pep-avatar-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -247,14 +256,14 @@
               </span>
             </div>
           </div>
-          <span class="pep-avatar-hint">Klik foto untuk mengubah<br>JPG, PNG, WebP · maks 4 MB</span>
+          <span class="pep-avatar-hint">${t('pep.avatar_hint', null, 'Klik foto untuk mengubah<br>JPG, PNG, WebP · maks 4 MB')}</span>
           <input class="pep-file-input" id="pep-file-input" type="file" accept="image/jpeg,image/png,image/webp" />
         </div>
 
         <div class="pep-field">
-          <label class="pep-label" for="pep-name-input">Nama Lengkap</label>
+          <label class="pep-label" for="pep-name-input">${t('pep.name_label', null, 'Nama Lengkap')}</label>
           <input class="pep-input" id="pep-name-input" type="text"
-            placeholder="Masukkan nama lengkap"
+            placeholder="${t('pep.name_placeholder', null, 'Masukkan nama lengkap')}"
             maxlength="${NAME_MAX_LEN}"
             autocomplete="name"
           />
@@ -266,8 +275,8 @@
         </div>
 
         <div class="pep-actions">
-          <button class="pep-btn pep-btn-cancel" id="pep-cancel-btn">Batal</button>
-          <button class="pep-btn pep-btn-save"   id="pep-save-btn">Simpan</button>
+          <button class="pep-btn pep-btn-cancel" id="pep-cancel-btn">${t('common.cancel', null, 'Batal')}</button>
+          <button class="pep-btn pep-btn-save"   id="pep-save-btn">${t('common.save', null, 'Simpan')}</button>
         </div>
       </div>
     `;
@@ -305,7 +314,7 @@
 
     // Validate size
     if (file.size > MAX_IMAGE_BYTES) {
-      _showToast('Foto terlalu besar. Maks 4 MB.', 'error');
+      _showToast(t('pep.file_too_big', null, 'Foto terlalu besar. Maks 4 MB.'), 'error');
       return;
     }
 
@@ -332,13 +341,13 @@
 
     // Validate name
     if (!name) {
-      nameErrEl.textContent = 'Nama tidak boleh kosong.';
+      nameErrEl.textContent = t('pep.name_empty', null, 'Nama tidak boleh kosong.');
       nameInput.classList.add('pep-error');
       nameInput.focus();
       return;
     }
     if (name.length < 2) {
-      nameErrEl.textContent = 'Nama minimal 2 karakter.';
+      nameErrEl.textContent = t('pep.name_too_short', null, 'Nama minimal 2 karakter.');
       nameInput.classList.add('pep-error');
       return;
     }
@@ -387,12 +396,12 @@
 
     } catch (err) {
       console.error('[ProfileEditorPanel] save error:', err);
-      _showToast(err.message || 'Gagal menyimpan profil. Coba lagi.', 'error');
+      _showToast(err.message || t('pep.save_failed', null, 'Gagal menyimpan profil. Coba lagi.'), 'error');
       _setProgress(0, false);
     } finally {
       _saving = false;
       saveBtn.disabled = false;
-      saveBtn.textContent = 'Simpan';
+      saveBtn.textContent = t('common.save', null, 'Simpan');
     }
   }
 
@@ -451,13 +460,14 @@
   // Pakai QNotify kalau tersedia, fallback ke minimal toast sendiri.
   function _showToast(msg, type = 'info') {
     if (window.notify) {
-      if (type === 'success') return window.notify.success('Profil', msg);
-      if (type === 'error')   return window.notify.error('Profil', msg);
-      return window.notify.info('Profil', msg);
+      const title = t('pep.title', null, 'Profil');
+      if (type === 'success') return window.notify.success(title, msg);
+      if (type === 'error')   return window.notify.error(title, msg);
+      return window.notify.info(title, msg);
     }
     // Fallback minimal toast
-    const t = document.createElement('div');
-    t.style.cssText = `
+    const toastEl = document.createElement('div');
+    toastEl.style.cssText = `
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
       background: ${type === 'error' ? '#ef4444' : '#22c55e'};
       color: #fff; padding: 10px 20px; border-radius: 8px;
@@ -465,9 +475,9 @@
       z-index: 99999; box-shadow: 0 4px 12px rgba(0,0,0,0.18);
       animation: pepToastIn 200ms ease;
     `;
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 3000);
+    toastEl.textContent = msg;
+    document.body.appendChild(toastEl);
+    setTimeout(() => toastEl.remove(), 3000);
   }
 
   // ── Populate panel dengan data user ───────────────────────
@@ -551,10 +561,10 @@
       _populatePanel(user);
     } catch (err) {
       console.error('[ProfileEditorPanel] fetch user error:', err);
-      _showToast('Gagal memuat data profil.', 'error');
+      _showToast(t('pep.load_failed', null, 'Gagal memuat data profil.'), 'error');
     } finally {
       saveBtn.disabled = false;
-      saveBtn.textContent = 'Simpan';
+      saveBtn.textContent = t('common.save', null, 'Simpan');
     }
   }
 

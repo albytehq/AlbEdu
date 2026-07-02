@@ -57,6 +57,15 @@ import {
     waitForSupabaseReady,
 } from './index.js';
 
+// v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+const t = (key, vars, fallback) => {
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+        const v = window.i18n.t(key, vars);
+        return v !== undefined ? v : fallback;
+    }
+    return fallback;
+};
+
 // ── DOM references ──────────────────────────────────────────────────────────
 const form            = document.getElementById('forgotPasswordForm');
 const emailInput      = document.getElementById('email');
@@ -77,7 +86,7 @@ const STORAGE_KEY_TS       = 'albedu_reset_requested_at';     // timestamp reque
 const STORAGE_KEY_STATUS   = 'albedu_reset_last_status';       // 'success' | 'failed' | ''
 const STORAGE_KEY_EMAIL    = 'albedu_reset_last_email';        // email yang dipakai (untuk display masked)
 
-const BTN_TEXT_DEFAULT  = 'Kirim Link Reset';
+const BTN_TEXT_DEFAULT  = t('auth.forgot.submit', null, 'Kirim Link Reset');
 const BTN_TEXT_LOADING  = LOADING_LABELS.sending_reset_email;
 
 // ── State ───────────────────────────────────────────────────────────────────
@@ -264,10 +273,10 @@ function setLoading(loading) {
 function validateEmail() {
     const email = emailInput?.value?.trim() || '';
     if (!email) {
-        return 'Masukkan email Anda.';
+        return t('auth.forgot.email_required', null, 'Masukkan email Anda.');
     }
     if (!emailInput?.validity?.valid) {
-        return 'Masukkan format email yang valid.';
+        return t('auth.forgot.email_invalid', null, 'Masukkan format email yang valid.');
     }
     return '';
 }
@@ -471,7 +480,7 @@ async function handleResend() {
     if (!email || !emailInput?.validity?.valid) {
         // Email tidak valid — kembali ke form state
         showFormState();
-        showMessage('Masukkan email yang valid terlebih dahulu.');
+        showMessage(t('auth.forgot.email_invalid', null, 'Masukkan email yang valid terlebih dahulu.'));
         return;
     }
 

@@ -36,6 +36,15 @@ import {
     waitForSupabaseReady,
 } from './index.js';
 
+// v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+const t = (key, vars, fallback) => {
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+        const v = window.i18n.t(key, vars);
+        return v !== undefined ? v : fallback;
+    }
+    return fallback;
+};
+
 // ── DOM references ──────────────────────────────────────────────────────────
 const form             = document.getElementById('resetPasswordForm');
 const newPasswordInput = document.getElementById('newPassword');
@@ -115,8 +124,8 @@ function showErrorState(title, desc) {
     if (formContent)   formContent.classList.add('hidden');
     if (errorState)    errorState.classList.add('visible');
     if (successState)  successState.classList.remove('visible');
-    if (errorTitle)    errorTitle.textContent = title || 'Link Tidak Valid';
-    if (errorDesc)     errorDesc.textContent  = desc  || 'Link reset kata sandi sudah kadaluarsa atau tidak valid. Silakan minta link reset baru.';
+    if (errorTitle)    errorTitle.textContent = title || t('auth.reset.error_title', null, 'Link Tidak Valid');
+    if (errorDesc)     errorDesc.textContent  = desc  || t('auth.reset.error_desc', null, 'Link reset kata sandi sudah kadaluarsa atau tidak valid. Silakan minta link reset baru.');
 }
 
 function showSuccessState() {
@@ -237,16 +246,16 @@ function validateForm() {
     const confirmPassword = confirmInput?.value || '';
 
     if (!newPassword) {
-        return 'Masukkan kata sandi baru.';
+        return t('auth.reset.password_required', null, 'Masukkan kata sandi baru.');
     }
     if (newPassword.length < 8) {
-        return 'Kata sandi minimal 8 karakter.';
+        return t('auth.reset.password_too_short', null, 'Kata sandi minimal 8 karakter.');
     }
     if (!confirmPassword) {
-        return 'Konfirmasi kata sandi Anda.';
+        return t('auth.reset.confirm_required', null, 'Konfirmasi kata sandi Anda.');
     }
     if (newPassword !== confirmPassword) {
-        return 'Kata sandi dan konfirmasi tidak sama.';
+        return t('auth.reset.password_mismatch', null, 'Kata sandi dan konfirmasi tidak sama.');
     }
 
     return '';
@@ -305,12 +314,12 @@ function handleUrlError(urlErr) {
 }
 
 function _getErrorTitle(errorCode) {
-    if (!errorCode) return 'Link Tidak Valid';
+    if (!errorCode) return t('auth.reset.error_title', null, 'Link Tidak Valid');
     const lower = errorCode.toLowerCase();
-    if (lower.includes('expired')) return 'Link Sudah Kadaluarsa';
-    if (lower.includes('invalid')) return 'Link Tidak Valid';
+    if (lower.includes('expired')) return t('auth.reset.link_expired', null, 'Link Sudah Kadaluarsa');
+    if (lower.includes('invalid')) return t('auth.reset.error_title', null, 'Link Tidak Valid');
     if (lower.includes('access_denied')) return 'Akses Ditolak';
-    return 'Link Tidak Valid';
+    return t('auth.reset.error_title', null, 'Link Tidak Valid');
 }
 
 // =============================================================================
@@ -613,7 +622,7 @@ function startRedirectCountdown() {
         if (remaining <= 0) {
             clearInterval(_redirectTimerId);
             _redirectTimerId = null;
-            if (redirectNotice) redirectNotice.textContent = 'Mengarahkan…';
+            if (redirectNotice) redirectNotice.textContent = t('auth.register_success.redirecting', null, 'Mengarahkan…');
             window.location.replace(LOGIN_URL);
         }
     }, 1000);

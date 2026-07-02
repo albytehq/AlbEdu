@@ -39,6 +39,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   // ── Constants ────────────────────────────────────────────────────────────
   const SUBMIT_UNLOCK_SECONDS = 600;        // 10 minutes
   const TIMER_WARNING_SECONDS = 300;        // 5 min  → yellow
@@ -81,7 +90,7 @@
       _cacheDOM();
 
       // EDGE #2/#3: bfcache bust already in HTML. Here we just boot.
-      _setLoadingStatus('Memuat autentikasi...');
+      _setLoadingStatus(t('assessment.loading_auth', null, 'Memuat autentikasi...'));
 
       // Wait for auth + QNotify (parallel)
       await Promise.all([
@@ -90,7 +99,7 @@
       ]);
 
       // UU PDP consent gate (must run before showing any peserta data)
-      _setLoadingStatus('Memeriksa persetujuan...');
+      _setLoadingStatus(t('assessment.loading_consent', null, 'Memeriksa persetujuan...'));
       try {
         const consentOk = await window.Consent?.check?.();
         if (consentOk === false) return; // consent rejected → user logged out
@@ -103,18 +112,18 @@
       const sessionId = sessionStorage.getItem('assessment_session_id');
 
       if (!token || !sessionId) {
-        _showClosed('Token atau sesi tidak ditemukan.',
-          'Silakan masuk kembali melalui halaman asesmen.', 'danger');
+        _showClosed(t('assessment.closed_no_session_title', null, 'Token atau sesi tidak ditemukan.'),
+          t('assessment.closed_no_session_msg', null, 'Silakan masuk kembali melalui halaman asesmen.'), 'danger');
         return;
       }
 
-      _setLoadingStatus('Mengambil data asesmen...');
+      _setLoadingStatus(t('assessment.loading_assessment', null, 'Mengambil data asesmen...'));
 
       // Fetch assessment (peserta view — strips admin fields)
       const assessment = await _fetchAssessment(token);
       if (!assessment) {
-        _showClosed('Kode akses tidak valid.',
-          'Asesmen tidak ditemukan atau telah diarsipkan.', 'danger');
+        _showClosed(t('assessment.closed_invalid_token_title', null, 'Kode akses tidak valid.'),
+          t('assessment.closed_invalid_token_msg', null, 'Asesmen tidak ditemukan atau telah diarsipkan.'), 'danger');
         return;
       }
       state.assessment = assessment;
@@ -123,11 +132,11 @@
       _applyTheme(assessment.theme_config);
 
       // Fetch session
-      _setLoadingStatus('Memulihkan sesi...');
+      _setLoadingStatus(t('assessment.loading_starting', null, 'Memulihkan sesi...'));
       const session = await _fetchSession(sessionId);
       if (!session) {
-        _showClosed('Sesi tidak ditemukan.',
-          'Sesi telah kedaluwarsa. Silakan masuk kembali.', 'danger');
+        _showClosed(t('assessment.closed_no_session_title', null, 'Sesi tidak ditemukan.'),
+          t('assessment.closed_session_ended_msg', null, 'Sesi telah kedaluwarsa. Silakan masuk kembali.'), 'danger');
         return;
       }
       state.session = session;
@@ -150,7 +159,7 @@
       // Check assessment access status (open / closed / paused / scheduled)
       const access = _checkAccess(assessment);
       if (!access.allowed) {
-        _showClosed(access.title || 'Asesmen Tidak Tersedia', access.message, access.kind || 'warning');
+        _showClosed(access.title || t('assessment.closed_default_title', null, 'Asesmen Tidak Tersedia'), access.message, access.kind || 'warning');
         return;
       }
 
@@ -158,8 +167,8 @@
       state.soalPages = _parseSections(assessment.sections || []);
 
       if (state.soalPages.length === 0) {
-        _showClosed('Soal tidak tersedia.',
-          'Asesmen ini belum memiliki soal. Hubungi admin.', 'danger');
+        _showClosed(t('assessment.closed_no_questions_title', null, 'Soal tidak tersedia.'),
+          t('assessment.closed_no_questions_msg', null, 'Asesmen ini belum memiliki soal. Hubungi admin.'), 'danger');
         return;
       }
 
@@ -445,8 +454,8 @@
     if (assessment.status !== 'active') {
       return {
         allowed: false,
-        title: 'Asesmen Tidak Tersedia',
-        message: 'Asesmen telah diarsipkan atau tidak aktif.',
+        title: t('assessment.closed_default_title', null, 'Asesmen Tidak Tersedia'),
+        message: t('assessment.closed_archived_msg', null, 'Asesmen telah diarsipkan atau tidak aktif.'),
         kind: 'danger',
       };
     }
@@ -455,35 +464,42 @@
       if (assessment.ac_manual_status === 'closed') {
         // Could be paused or not-yet-open
         if (assessment.ac_end && new Date(assessment.ac_end).getTime() < now) {
-          return { allowed: false, title: 'Asesmen Selesai',
-            message: 'Asesmen ini telah berakhir.', kind: 'danger' };
+          return { allowed: false,
+            title: t('assessment.closed_session_ended_title', null, 'Asesmen Selesai'),
+            message: t('assessment.closed_session_ended_msg', null, 'Asesmen ini telah berakhir.'), kind: 'danger' };
         }
-        return { allowed: false, title: 'Asesmen Belum Dibuka',
-          message: 'Tunggu admin membuka asesmen, lalu muat ulang halaman.',
+        return { allowed: false,
+          title: t('assessment.closed_session_title', null, 'Asesmen Belum Dibuka'),
+          message: t('assessment.closed_session_msg', null, 'Tunggu admin membuka asesmen, lalu muat ulang halaman.'),
           kind: 'warning' };
       }
       if (assessment.ac_manual_status === 'finished') {
-        return { allowed: false, title: 'Asesmen Selesai',
-          message: 'Asesmen ini telah berakhir.', kind: 'danger' };
+        return { allowed: false,
+          title: t('assessment.closed_session_ended_title', null, 'Asesmen Selesai'),
+          message: t('assessment.closed_session_ended_msg', null, 'Asesmen ini telah berakhir.'), kind: 'danger' };
       }
       // 'open' — verify ac_end not yet passed
       if (assessment.ac_end && new Date(assessment.ac_end).getTime() < now) {
-        return { allowed: false, title: 'Asesmen Selesai',
-          message: 'Waktu asesmen telah berakhir.', kind: 'danger' };
+        return { allowed: false,
+          title: t('assessment.closed_session_ended_title', null, 'Asesmen Selesai'),
+          message: t('assessment.closed_time_ended_msg', null, 'Waktu asesmen telah berakhir.'), kind: 'danger' };
       }
     } else if (assessment.access_mode === 'scheduled') {
       const start = assessment.ac_scheduled_start ? new Date(assessment.ac_scheduled_start).getTime() : null;
       const end   = assessment.ac_scheduled_end ? new Date(assessment.ac_scheduled_end).getTime() : null;
       if (start && now < start) {
-        const startStr = new Date(start).toLocaleString('id-ID', {
+        const locale = (window.i18n?.getCurrentLocale?.() || 'id') === 'en' ? 'en-US' : 'id-ID';
+        const startStr = new Date(start).toLocaleString(locale, {
           day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
         });
-        return { allowed: false, title: 'Asesmen Belum Dimulai',
-          message: `Asesmen dimulai pada ${startStr}.`, kind: 'warning' };
+        return { allowed: false,
+          title: t('assessment.closed_not_started_title', null, 'Asesmen Belum Dimulai'),
+          message: t('assessment.closed_not_started_msg', { time: startStr }, `Asesmen dimulai pada ${startStr}.`), kind: 'warning' };
       }
       if (end && now > end) {
-        return { allowed: false, title: 'Asesmen Selesai',
-          message: 'Waktu asesmen telah berakhir.', kind: 'danger' };
+        return { allowed: false,
+          title: t('assessment.closed_session_ended_title', null, 'Asesmen Selesai'),
+          message: t('assessment.closed_time_ended_msg', null, 'Waktu asesmen telah berakhir.'), kind: 'danger' };
       }
     }
 
@@ -557,20 +573,20 @@
         );
       } catch (err) {
         console.error('[take] IdentityProvider.render failed:', err);
-        window.notify?.error('Gagal', 'Tidak bisa memuat form identitas. Muat ulang halaman.');
+        window.notify?.error(t('wizard.title_failed', null, 'Gagal'), t('identity.cannot_load_form', null, 'Tidak bisa memuat form identitas. Muat ulang halaman.'));
       }
     } else {
       // Fallback: minimal manual form (shouldn't happen — provider.js always loaded)
       dom.identityMount.innerHTML = `
         <div class="albedu-field">
-          <label for="fallback-nama">Nama Lengkap <span class="albedu-required">*</span></label>
-          <input id="fallback-nama" type="text" class="albedu-input" maxlength="80" placeholder="Masukkan nama lengkap" />
+          <label for="fallback-nama">${t('identity.field_name', null, 'Nama Lengkap')} <span class="albedu-required">*</span></label>
+          <input id="fallback-nama" type="text" class="albedu-input" maxlength="80" placeholder="${t('identity.field_name_placeholder', null, 'Masukkan nama lengkap')}" />
         </div>
-        <button class="albedu-btn albedu-btn-primary" id="fallback-submit" type="button">Mulai Asesmen</button>
+        <button class="albedu-btn albedu-btn-primary" id="fallback-submit" type="button">${t('identity.start_assessment', null, 'Mulai Asesmen')}</button>
       `;
       document.getElementById('fallback-submit').addEventListener('click', () => {
         const nama = document.getElementById('fallback-nama').value.trim();
-        if (!nama) return window.notify?.warning('Validasi', 'Nama wajib diisi');
+        if (!nama) return window.notify?.warning(t('wizard.title_warning', null, 'Validasi'), t('identity.field_required', { field: t('identity.field_name', null, 'Nama') }, 'Nama wajib diisi'));
         _onIdentitySubmit({ _mode: 'manual', _display_name: nama, nama });
       });
     }
@@ -582,7 +598,7 @@
       const cfg = window.IdentityProvider.getIdentityConfig(state.assessment);
       const errors = window.IdentityProvider.validate(cfg, identity);
       if (errors.length > 0) {
-        window.notify?.error('Validasi Gagal', errors[0]);
+        window.notify?.error(t('wizard.validation_failed', null, 'Validasi Gagal'), errors[0]);
         return;
       }
     }
@@ -1131,8 +1147,11 @@
 
   // EDGE #14: 4 violations → reset + reshuffle (v1.0.0: combined Guardian + DevTools)
   async function _handleMaxViolations() {
-    window.notify?.error('Pelanggaran Maksimal',
-      'Soal akan diacak ulang. Jawaban sebelumnya direset.', 5000);
+    window.notify?.error(
+      t('assessment.max_violations_title', null, 'Pelanggaran Maksimal'),
+      t('assessment.max_violations_msg', null, 'Soal akan diacak ulang. Jawaban sebelumnya direset.'),
+      5000
+    );
 
     // Stop security while we reset
     _stopSecurity();
@@ -1206,8 +1225,11 @@
   // EDGE #9 / #16: timer expired → auto-submit (server allows 30s grace)
   function _handleExpired() {
     if (state.isSubmitting || state.phase === 'result') return;
-    window.notify?.warning('Waktu Habis',
-      'Waktu asesmen telah berakhir. Jawaban akan dikumpulkan otomatis.', 3000);
+    window.notify?.warning(
+      t('assessment.time_up', null, 'Waktu Habis'),
+      t('assessment.time_up_msg', null, 'Waktu asesmen telah berakhir. Jawaban akan dikumpulkan otomatis.'),
+      3000
+    );
     // Don't confirm — just submit
     _submitExam({ skipConfirm: true, isAuto: true });
   }
@@ -1228,8 +1250,10 @@
     if (state.submitLocked && !isAuto) {
       const sisa = _getCurrentSisa();
       const mins = Math.max(1, Math.ceil((SUBMIT_UNLOCK_SECONDS - sisa) / 60));
-      window.notify?.info('Submit Terkunci',
-        `Submit terbuka dalam ${mins} menit (10 menit terakhir).`);
+      window.notify?.info(
+        t('assessment.submit_locked_title', null, 'Submit Terkunci'),
+        t('assessment.submit_locked_msg', { mins }, `Submit terbuka dalam ${mins} menit (10 menit terakhir).`)
+      );
       return;
     }
 
@@ -1347,17 +1371,17 @@
       // We'll use QNotify confirm dialog instead for accessibility.
       if (window.notify?.confirm) {
         window.notify.confirm({
-          title: 'Kumpulkan Asesmen?',
-          message: 'Pastikan semua jawaban sudah terisi. Anda tidak bisa mengubah jawaban setelah dikumpulkan.',
+          title: t('assessment.submit_confirm_title', null, 'Kumpulkan Asesmen?'),
+          message: t('assessment.submit_confirm_msg', null, 'Pastikan semua jawaban sudah terisi. Anda tidak bisa mengubah jawaban setelah dikumpulkan.'),
           intent: 'primary',
-          confirmText: 'Ya, Kumpulkan',
-          cancelText: 'Batal',
+          confirmText: t('assessment.submit_confirm_btn', null, 'Ya, Kumpulkan'),
+          cancelText: t('assessment.submit_cancel_btn', null, 'Batal'),
           onYes: () => resolve(true),
           onNo: () => resolve(false),
           onClose: () => resolve(false),
         });
       } else {
-        resolve(confirm('Kumpulkan asesmen? Tindakan ini tidak dapat dibatalkan.'));
+        resolve(confirm(t('assessment.submit_confirm_short', null, 'Kumpulkan asesmen? Tindakan ini tidak dapat dibatalkan.')));
       }
     });
   }
@@ -1380,8 +1404,11 @@
 
   function _showSubmitRetryError(err) {
     if (window.notify?.error) {
-      window.notify.error('Gagal Mengumpulkan',
-        `${err.message || 'Kesalahan jaringan'}. Jawaban Anda tetap tersimpan. Coba lagi dengan tombol Kumpulkan.`, 8000);
+      window.notify.error(
+        t('assessment.submit_failed', null, 'Gagal Mengumpulkan'),
+        t('assessment.submit_retry_msg', { error: err.message || t('assessment.network_error', null, 'Kesalahan jaringan') }, `${err.message || 'Kesalahan jaringan'}. Jawaban Anda tetap tersimpan. Coba lagi dengan tombol Kumpulkan.`),
+        8000
+      );
     }
     // Re-enable submit button so peserta can retry
     if (dom.btnSubmit) {
@@ -1615,11 +1642,17 @@
   function _wireGlobalEvents() {
     // Online/offline (EDGE #4, #5)
     window.addEventListener('online', () => {
-      window.notify?.success('Kembali Online', 'Menyinkronkan jawaban...');
+      window.notify?.success(
+        t('assessment.online_title', null, 'Kembali Online'),
+        t('assessment.online_msg', null, 'Menyinkronkan jawaban...')
+      );
       window.Heartbeat?.syncNow?.();
     });
     window.addEventListener('offline', () => {
-      window.notify?.warning('Offline', 'Jawaban disimpan lokal. Akan disinkronkan saat online.');
+      window.notify?.warning(
+        t('assessment.offline_title', null, 'Offline'),
+        t('assessment.offline_msg', null, 'Jawaban disimpan lokal. Akan disinkronkan saat online.')
+      );
     });
 
     // Keyboard shortcuts (accessibility)
@@ -1649,7 +1682,7 @@
       // Best-effort sync (may not complete — that's why Heartbeat runs every 15s)
       try { window.Heartbeat?.syncNow?.(); } catch (_) {}
       e.preventDefault();
-      e.returnValue = 'Asesmen belum selesai. Yakin ingin meninggalkan halaman?';
+      e.returnValue = t('assessment.beforeunload_msg', null, 'Asesmen belum selesai. Yakin ingin meninggalkan halaman?');
       return e.returnValue;
     }
   }
@@ -1657,8 +1690,11 @@
   function _popstateTrap(e) {
     if (state.phase === 'exam') {
       history.pushState({ albEduExamActive: true }, '', location.href);
-      window.notify?.warning('Tidak Dapat Kembali',
-        'Selesaikan atau kumpulkan asesmen terlebih dahulu.', 3000);
+      window.notify?.warning(
+        t('assessment.cannot_go_back_title', null, 'Tidak Dapat Kembali'),
+        t('assessment.cannot_go_back_msg', null, 'Selesaikan atau kumpulkan asesmen terlebih dahulu.'),
+        3000
+      );
     }
   }
 

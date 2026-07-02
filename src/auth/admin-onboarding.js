@@ -12,6 +12,15 @@ import {
     resetTurnstile as resetSharedTurnstile,
 } from './index.js';
 
+    // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+    const t = (key, vars, fallback) => {
+        if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+            const v = window.i18n.t(key, vars);
+            return v !== undefined ? v : fallback;
+        }
+        return fallback;
+    };
+
     const form           = document.getElementById('adminRegisterForm');
     const emailInput     = document.getElementById('email');
     const passwordInput  = document.getElementById('password');
@@ -22,7 +31,7 @@ import {
     const strengthWrap   = document.getElementById('passwordStrength');
     const strengthText   = document.getElementById('strengthText');
 
-    const GENERIC_ERROR = 'Pendaftaran gagal. Silakan coba lagi.';
+    const GENERIC_ERROR = t('auth.register.generic_error', null, 'Pendaftaran gagal. Silakan coba lagi.');
 
     // Safe messages yang boleh ditampilkan langsung dari server
     const SAFE_SERVER_MESSAGES = new Set([
@@ -51,7 +60,7 @@ import {
     function setLoading(isLoading) {
         button.disabled = isLoading;
         button.setAttribute('aria-busy', isLoading ? 'true' : 'false');
-        button.textContent = isLoading ? LOADING_LABELS.processing_registration : 'Daftar Administrator';
+        button.textContent = isLoading ? LOADING_LABELS.processing_registration : t('auth.register.submit', null, 'Daftar Administrator');
     }
 
     function getTurnstileToken() {

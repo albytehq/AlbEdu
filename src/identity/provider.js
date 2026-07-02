@@ -19,6 +19,15 @@
 
 window.IdentityProvider = (() => {
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   // ── Helpers ────────────────────────────────────────────────────────────
 
   function _escapeHtml(s) {
@@ -82,8 +91,8 @@ window.IdentityProvider = (() => {
         return {
           mode: 'manual',
           fields: [
-            { id: 'field_nama', type: 'text', label: 'Nama', required: true, max_length: 50 },
-            { id: 'field_kelas', type: 'select', label: 'Kelas', required: true, options: identitas.kelas },
+            { id: 'field_nama', type: 'text', label: t('identity.field_name', null, 'Nama'), required: true, max_length: 50 },
+            { id: 'field_kelas', type: 'select', label: t('identity.field_class', null, 'Kelas'), required: true, options: identitas.kelas },
           ],
         };
       }
@@ -95,7 +104,7 @@ window.IdentityProvider = (() => {
 
   function _defaultFields() {
     return [
-      { id: 'field_nama', type: 'text', label: 'Nama', placeholder: 'Masukkan nama lengkap', required: true, max_length: 50 },
+      { id: 'field_nama', type: 'text', label: t('identity.field_name', null, 'Nama'), placeholder: t('identity.field_name_placeholder', null, 'Masukkan nama lengkap'), required: true, max_length: 50 },
     ];
   }
 
@@ -105,7 +114,7 @@ window.IdentityProvider = (() => {
     const errors = [];
 
     if (!identityObj || typeof identityObj !== 'object') {
-      errors.push('Identitas peserta tidak valid.');
+      errors.push(t('identity.invalid', null, 'Identitas peserta tidak valid.'));
       return errors;
     }
 
@@ -118,19 +127,19 @@ window.IdentityProvider = (() => {
       const fields = identityConfig.fields || [];
       fields.forEach(f => {
         if (f.required && !identityObj[f.id]) {
-          errors.push(`Field "${f.label}" wajib diisi.`);
+          errors.push(t('identity.field_required', { field: f.label }, `Field "${f.label}" wajib diisi.`));
         }
       });
       return errors;
     }
 
     if (identityObj._mode === 'daftar') {
-      if (!identityObj.nama) errors.push('Nama peserta wajib dipilih.');
-      if (!identityObj.tab_id) errors.push('Tab/Kelas wajib dipilih.');
+      if (!identityObj.nama) errors.push(t('identity.nama_required', null, 'Nama peserta wajib dipilih.'));
+      if (!identityObj.tab_id) errors.push(t('identity.tab_required', null, 'Tab/Kelas wajib dipilih.'));
       return errors;
     }
 
-    errors.push('Mode identitas tidak dikenal.');
+    errors.push(t('identity.unknown_mode', null, 'Mode identitas tidak dikenal.'));
     return errors;
   }
 
@@ -328,7 +337,7 @@ window.IdentityProvider = (() => {
     manualCb.id = 'ip_manual_toggle';
     const manualLbl = document.createElement('label');
     manualLbl.htmlFor = 'ip_manual_toggle';
-    manualLbl.textContent = 'Nama saya tidak ada di daftar (isi manual)';
+    manualLbl.textContent = t('identity.manual_toggle_label', null, 'Nama saya tidak ada di daftar (isi manual)');
     manualWrap.appendChild(manualCb);
     manualWrap.appendChild(manualLbl);
     namaWrap.appendChild(manualWrap);
@@ -336,7 +345,7 @@ window.IdentityProvider = (() => {
     const manualInput = document.createElement('input');
     manualInput.type = 'text';
     manualInput.className = 'ip-field__input ip-manual-input';
-    manualInput.placeholder = 'Masukkan nama lengkap Anda';
+    manualInput.placeholder = t('identity.field_name_placeholder', null, 'Masukkan nama lengkap Anda');
     manualInput.style.display = 'none';
     namaWrap.appendChild(manualInput);
 

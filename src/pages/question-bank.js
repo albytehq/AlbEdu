@@ -36,6 +36,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   // ─── Constants ──────────────────────────────────────────────────────────
   const COLLECTION             = 'question_bank';
   const SEARCH_DEBOUNCE_MS     = 240;
@@ -310,7 +319,7 @@
     } catch (err) {
       console.error('[QuestionBank] load:', err);
       window.notify && window.notify.error
-        ? window.notify.error('Gagal Memuat', (err && err.message) || 'Tidak dapat memuat bank soal.')
+        ? window.notify.error(t('qb.load_failed_title', null, 'Gagal Memuat'), (err && err.message) || t('qb.load_failed_msg', null, 'Tidak dapat memuat bank soal.'))
         : console.warn('[QuestionBank] notify unavailable');
       _state.questions = [];
       _applyFilters();
@@ -681,13 +690,13 @@
       const q = _state.questions.find((x) => x.id === questionId);
       if (!q) {
         if (window.notify && window.notify.error) {
-          window.notify.error('Tidak Ditemukan', 'Soal tidak ditemukan.');
+          window.notify.error(t('qb.not_found_title', null, 'Tidak Ditemukan'), t('qb.not_found_msg', null, 'Soal tidak ditemukan.'));
         }
         return;
       }
-      _dom.modalTitle.textContent = 'Edit Soal';
+      _dom.modalTitle.textContent = t('qb.edit_title', null, 'Edit Soal');
       _dom.modalSubtitle.textContent =
-        (q.subject || '—') + ' • ' + (q.type === 'PG' ? 'Pilihan Ganda' : 'Esai');
+        (q.subject || '—') + ' • ' + (q.type === 'PG' ? t('wizard.type_pg', null, 'Pilihan Ganda') : t('wizard.type_essay', null, 'Esai'));
 
       if (q.type === 'PG') _dom.modalTypePG.checked = true;
       else                  _dom.modalTypeEsai.checked = true;
@@ -715,8 +724,8 @@
       }
     } else {
       // CREATE mode
-      _dom.modalTitle.textContent = 'Tambah Soal';
-      _dom.modalSubtitle.textContent = 'Buat soal baru untuk bank soal Anda';
+      _dom.modalTitle.textContent = t('qb.add_title', null, 'Tambah Soal');
+      _dom.modalSubtitle.textContent = t('qb.add_subtitle', null, 'Buat soal baru untuk bank soal Anda');
       _dom.modalTypePG.checked = true;
       _togglePilihan(true);
     }
@@ -804,7 +813,7 @@
     const errors = _validateForm(data);
     if (errors.length > 0) {
       if (window.notify && window.notify.error) {
-        window.notify.error('Validasi Gagal', errors.join('\n'));
+        window.notify.error(t('wizard.validation_failed', null, 'Validasi Gagal'), errors.join('\n'));
       }
       return;
     }
@@ -812,7 +821,7 @@
     const db = window.firebaseDb;
     if (!db || !_state.user) {
       if (window.notify && window.notify.error) {
-        window.notify.error('Error', 'Sesi tidak siap. Coba muat ulang halaman.');
+        window.notify.error(t('qb.error_title', null, 'Error'), t('qb.session_not_ready', null, 'Sesi tidak siap. Coba muat ulang halaman.'));
       }
       return;
     }
@@ -821,7 +830,7 @@
     const original = _dom.modalSave.innerHTML;
     _dom.modalSave.disabled = true;
     _dom.modalSave.innerHTML =
-      '<i class="material-symbols-outlined">hourglass_top</i><span>Menyimpan…</span>';
+      '<i class="material-symbols-outlined">hourglass_top</i><span>' + t('common.saving', null, 'Menyimpan…') + '</span>';
 
     try {
       // Build payload — pilihan with uppercase {A,B,C,D} per schema.
@@ -846,7 +855,7 @@
         // UPDATE — don't touch created_at
         await db.collection(COLLECTION).doc(_state.editingId).update(payload);
         if (window.notify && window.notify.success) {
-          window.notify.success('Tersimpan', 'Soal berhasil diperbarui.');
+          window.notify.success(t('wizard.saved_title', null, 'Tersimpan'), t('qb.updated_msg', null, 'Soal berhasil diperbarui.'));
         }
       } else {
         // CREATE — include created_at
@@ -854,7 +863,7 @@
         const newId = _uuid();
         await db.collection(COLLECTION).doc(newId).set(payload);
         if (window.notify && window.notify.success) {
-          window.notify.success('Tersimpan', 'Soal baru berhasil ditambahkan.');
+          window.notify.success(t('wizard.saved_title', null, 'Tersimpan'), t('qb.added_msg', null, 'Soal baru berhasil ditambahkan.'));
         }
       }
 
@@ -864,8 +873,8 @@
       console.error('[QuestionBank] save:', err);
       if (window.notify && window.notify.error) {
         window.notify.error(
-          'Gagal Menyimpan',
-          (err && err.message) || 'Terjadi kesalahan saat menyimpan soal.'
+          t('qb.save_failed_title', null, 'Gagal Menyimpan'),
+          (err && err.message) || t('qb.save_failed_msg', null, 'Terjadi kesalahan saat menyimpan soal.')
         );
       }
     } finally {
@@ -883,8 +892,8 @@
     // Preferred: hold-to-confirm (2s) for destructive action
     if (window.notify && typeof window.notify.holdConfirmAsync === 'function') {
       window.notify.holdConfirmAsync({
-        title: 'Hapus Soal',
-        message: 'Tahan tombol untuk menghapus: "' + preview + '"',
+        title: t('qb.delete_title', null, 'Hapus Soal'),
+        message: t('qb.delete_hold_msg', { preview }, 'Tahan tombol untuk menghapus: "' + preview + '"'),
         intent: 'danger',
         holdDuration: HOLD_CONFIRM_MS,
         onAsyncConfirm: async () => { await _doDelete(id); },
@@ -895,15 +904,15 @@
     // Fallback: regular confirm dialog
     if (window.notify && typeof window.notify.confirm === 'function') {
       window.notify.confirm({
-        title: 'Hapus Soal',
-        message: 'Yakin hapus soal: "' + preview + '"? Tindakan ini tidak dapat dibatalkan.',
+        title: t('qb.delete_title', null, 'Hapus Soal'),
+        message: t('qb.delete_confirm_msg', { preview }, 'Yakin hapus soal: "' + preview + '"? Tindakan ini tidak dapat dibatalkan.'),
         intent: 'danger',
         onYes: function () { _doDelete(id); },
       });
       return;
     }
     // Last resort: native confirm
-    if (window.confirm('Hapus soal: "' + preview + '"?')) _doDelete(id);
+    if (window.confirm(t('qb.delete_confirm_msg', { preview }, 'Hapus soal: "' + preview + '"?'))) _doDelete(id);
   }
 
   async function _doDelete(id) {
@@ -912,13 +921,13 @@
     try {
       await db.collection(COLLECTION).doc(id).delete();
       if (window.notify && window.notify.success) {
-        window.notify.success('Terhapus', 'Soal berhasil dihapus.');
+        window.notify.success(t('qb.deleted_title', null, 'Terhapus'), t('qb.deleted_msg', null, 'Soal berhasil dihapus.'));
       }
       await _loadQuestions();
     } catch (err) {
       console.error('[QuestionBank] delete:', err);
       if (window.notify && window.notify.error) {
-        window.notify.error('Gagal Hapus', (err && err.message) || 'Tidak dapat menghapus soal.');
+        window.notify.error(t('qb.delete_failed_title', null, 'Gagal Hapus'), (err && err.message) || t('qb.delete_failed_msg', null, 'Tidak dapat menghapus soal.'));
       }
     }
   }
@@ -947,8 +956,8 @@
       console.error('[QuestionBank] import parse:', err);
       if (window.notify && window.notify.error) {
         window.notify.error(
-          'Import Gagal',
-          'File JSON tidak valid: ' + ((err && err.message) || 'parse error')
+          t('qb.import_failed_title', null, 'Import Gagal'),
+          t('qb.import_invalid_json', { error: (err && err.message) || 'parse error' }, 'File JSON tidak valid: ' + ((err && err.message) || 'parse error'))
         );
       }
       return;
@@ -961,8 +970,8 @@
     if (!arr) {
       if (window.notify && window.notify.error) {
         window.notify.error(
-          'Import Gagal',
-          'JSON harus berupa array soal atau { questions: [...] }.'
+          t('qb.import_failed_title', null, 'Import Gagal'),
+          t('qb.import_wrong_format', null, 'JSON harus berupa array soal atau { questions: [...] }.')
         );
       }
       return;
@@ -989,8 +998,8 @@
     if (validPayloads.length === 0) {
       if (window.notify && window.notify.warning) {
         window.notify.warning(
-          'Import Kosong',
-          'Tidak ada soal valid. ' + skipped + ' entri dilewati.'
+          t('qb.import_empty_title', null, 'Import Kosong'),
+          t('qb.import_empty_msg', { count: skipped }, 'Tidak ada soal valid. ' + skipped + ' entri dilewati.')
         );
       }
       return;
@@ -1008,18 +1017,18 @@
       await batch.commit();
 
       const msg = skipped > 0
-        ? 'Berhasil import ' + imported + ' soal, ' + skipped + ' dilewati.'
-        : 'Berhasil import ' + imported + ' soal.';
+        ? t('qb.import_success_with_skipped', { imported, skipped }, 'Berhasil import ' + imported + ' soal, ' + skipped + ' dilewati.')
+        : t('qb.import_success', { imported }, 'Berhasil import ' + imported + ' soal.');
       if (window.notify && window.notify.success) {
-        window.notify.success('Import Berhasil', msg);
+        window.notify.success(t('qb.import_success_title', null, 'Import Berhasil'), msg);
       }
       await _loadQuestions();
     } catch (err) {
       console.error('[QuestionBank] import commit:', err);
       if (window.notify && window.notify.error) {
         window.notify.error(
-          'Import Gagal',
-          (err && err.message) || 'Terjadi kesalahan saat import.'
+          t('qb.import_failed_title', null, 'Import Gagal'),
+          (err && err.message) || t('qb.import_failed_msg', null, 'Terjadi kesalahan saat import.')
         );
       }
     }
@@ -1159,14 +1168,14 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
 
       if (window.notify && window.notify.success) {
-        window.notify.success('Export Berhasil', arr.length + ' soal berhasil diexport.');
+        window.notify.success(t('qb.export_success_title', null, 'Export Berhasil'), t('qb.export_success_msg', { count: arr.length }, arr.length + ' soal berhasil diexport.'));
       }
     } catch (err) {
       console.error('[QuestionBank] export:', err);
       if (window.notify && window.notify.error) {
         window.notify.error(
-          'Export Gagal',
-          (err && err.message) || 'Terjadi kesalahan saat export.'
+          t('qb.export_failed_title', null, 'Export Gagal'),
+          (err && err.message) || t('qb.export_failed_msg', null, 'Terjadi kesalahan saat export.')
         );
       }
     }
@@ -1176,8 +1185,8 @@
   function _addToAssessment(_id) {
     if (window.notify && window.notify.info) {
       window.notify.info(
-        'Segera Hadir',
-        'Fitur tambah ke asesmen akan tersedia di versi mendatang.'
+        t('qb.coming_soon_title', null, 'Segera Hadir'),
+        t('qb.coming_soon_msg', null, 'Fitur tambah ke asesmen akan tersedia di versi mendatang.')
       );
     }
   }

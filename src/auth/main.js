@@ -156,6 +156,15 @@ const AUTH_CONFIG = {
 // Loaded via user-helpers.js (deferred, runs before this file).
 // Re-aliased locally for clean code style.
 const _isDev                       = window.AuthHelpers.isDev;
+
+// v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+const _t = (key, vars, fallback) => {
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+        const v = window.i18n.t(key, vars);
+        return v !== undefined ? v : fallback;
+    }
+    return fallback;
+};
 const PROFILE_FETCH_TIMEOUT_MS     = window.AuthHelpers.PROFILE_FETCH_TIMEOUT_MS;
 const AUTH_STATE_TIMEOUT_MS        = window.AuthHelpers.AUTH_STATE_TIMEOUT_MS;
 const REDIRECT_DELAY_MS            = window.AuthHelpers.REDIRECT_DELAY_MS;
@@ -368,8 +377,8 @@ function _redirectForRole(role, delay = REDIRECT_DELAY_MS) {
 }
 
 function _announceAlreadyLoggedIn(role) {
-    const msg = 'Kamu sudah login, kamu akan diarahkan ke halaman sesuai role anda.';
-    const title = 'Sudah login';
+    const msg   = _t('auth.already_logged_in_msg', null, 'Kamu sudah login, kamu akan diarahkan ke halaman sesuai role anda.');
+    const title = _t('auth.already_logged_in_title', null, 'Sudah login');
 
     try {
         if (window.notify?.info) {
@@ -399,8 +408,8 @@ function _announceAlreadyLoggedIn(role) {
 // "Kamu akan diarahkan ke halaman sebelumnya" — then navigate back
 // after 5 seconds instead of redirecting to the dashboard.
 function _handle404Redirect() {
-    const msg   = 'Halaman tidak ditemukan. Kamu akan diarahkan ke halaman sebelumnya dalam 5 detik.';
-    const title = 'Halaman Tidak Ditemukan';
+    const msg   = _t('auth.404_redirect_msg', null, 'Halaman tidak ditemukan. Kamu akan diarahkan ke halaman sebelumnya dalam 5 detik.');
+    const title = _t('error.404_title', null, 'Halaman Tidak Ditemukan');
 
     try {
         if (window.notify?.info) {
@@ -705,7 +714,7 @@ async function authLogin() {
 let _logoutInProgress = false;
 
 function _confirmLogout() {
-    const msg = 'Anda akan log out. Yakin?';
+    const msg = _t('auth.logout_confirm_msg', null, 'Anda akan log out. Yakin?');
     const confirm = window.notify?.confirm || window.QNotify?.dialog?.confirm;
 
     if (typeof confirm === 'function') {

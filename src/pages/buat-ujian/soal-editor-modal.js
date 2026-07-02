@@ -12,6 +12,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   const SoalEditorModal = {
     init() {
       this._overlay = document.getElementById('question-modal-overlay');
@@ -52,20 +61,20 @@
         const state = window.CreateAssessment.getState();
         const sec = state.examData.sections[sectionIndex];
         if (!sec || !sec.questions[questionIndex]) {
-          window.notify?.error('Gagal', 'Soal tidak ditemukan');
+          window.notify?.error(t('wizard.title_failed', null, 'Gagal'), t('wizard.question_not_found', null, 'Soal tidak ditemukan'));
           return;
         }
         this._draft = JSON.parse(JSON.stringify(sec.questions[questionIndex]));
-        this._title.textContent = `Edit Soal #${questionIndex + 1}`;
-        this._subtitle.textContent = `Bagian ${sectionIndex + 1}`;
+        this._title.textContent = t('wizard.edit_question', { n: questionIndex + 1 }, `Edit Soal #${questionIndex + 1}`);
+        this._subtitle.textContent = t('wizard.section_label', { n: sectionIndex + 1 }, `Bagian ${sectionIndex + 1}`);
       } else {
         // new question
         const media = { video: { enabled: false, src: null }, gambar: [] };
         this._draft = questionType === 'PG'
           ? { idq: 0, pertanyaan: '', pilihan: { A: '', B: '', C: '', D: '' }, jawaban_benar: '', media: JSON.parse(JSON.stringify(media)) }
           : { idq: 0, pertanyaan: '', media: JSON.parse(JSON.stringify(media)) };
-        this._title.textContent = 'Tambah Soal';
-        this._subtitle.textContent = `Bagian ${sectionIndex + 1} • ${questionType === 'PG' ? 'Pilihan Ganda' : 'Esai'}`;
+        this._title.textContent = t('wizard.add_question_title', null, 'Tambah Soal');
+        this._subtitle.textContent = t('wizard.section_with_type', { n: sectionIndex + 1, type: questionType === 'PG' ? t('wizard.type_pg', null, 'Pilihan Ganda') : t('wizard.type_essay', null, 'Esai') }, `Bagian ${sectionIndex + 1} • ${questionType === 'PG' ? 'Pilihan Ganda' : 'Esai'}`);
       }
 
       this._renderForm();
@@ -168,19 +177,19 @@
       // Validate pertanyaan (HTML-stripped min 3 chars)
       const cleanQ = (this._draft.pertanyaan || '').replace(/<[^>]*>/g, '').trim();
       if (cleanQ.length < 3) {
-        window.notify?.error('Validasi gagal', 'Pertanyaan minimal 3 karakter');
+        window.notify?.error(t('wizard.validation_failed', null, 'Validasi gagal'), t('wizard.question_too_short', null, 'Pertanyaan minimal 3 karakter'));
         return;
       }
 
       // PG-specific validation
       if (this._draft.pilihan) {
         if (!this._draft.jawaban_benar) {
-          window.notify?.error('Validasi gagal', 'Pilih jawaban benar');
+          window.notify?.error(t('wizard.validation_failed', null, 'Validasi gagal'), t('wizard.pick_correct_answer', null, 'Pilih jawaban benar'));
           return;
         }
         const missing = ['A', 'B', 'C', 'D'].find((k) => !this._draft.pilihan[k]?.trim());
         if (missing) {
-          window.notify?.error('Validasi gagal', `Opsi ${missing} harus diisi`);
+          window.notify?.error(t('wizard.validation_failed', null, 'Validasi gagal'), t('wizard.option_required', { n: missing }, `Opsi ${missing} harus diisi`));
           return;
         }
       }
@@ -189,7 +198,7 @@
       if (this._draft.media?.video?.enabled) {
         const src = this._draft.media.video.src?.trim() || '';
         if (src && !/^https?:\/\//i.test(src)) {
-          window.notify?.error('Validasi gagal', 'URL video harus diawali http:// atau https://');
+          window.notify?.error(t('wizard.validation_failed', null, 'Validasi gagal'), t('wizard.invalid_video_url', null, 'URL video harus diawali http:// atau https://'));
           return;
         }
       }
@@ -199,7 +208,7 @@
         const type = this._draft.pilihan ? 'PG' : 'esai';
         const added = window.CreateAssessment.addQuestion(this._sectionIndex, type);
         if (!added) {
-          window.notify?.error('Gagal', 'Tidak bisa menambah soal (limit tercapai?)');
+          window.notify?.error(t('wizard.title_failed', null, 'Gagal'), t('wizard.cannot_add_question', null, 'Tidak bisa menambah soal (limit tercapai?)'));
           return;
         }
         const qIdx = window.CreateAssessment.getState().examData.sections[this._sectionIndex].questions.length - 1;
@@ -211,7 +220,11 @@
         window.CreateAssessment.updateQuestion(this._sectionIndex, this._questionIndex, this._draft);
       }
 
-      window.notify?.success('Tersimpan', `Soal ${this._mode === 'new' ? 'ditambahkan' : 'diperbarui'}`, 2000);
+      window.notify?.success(
+        t('wizard.saved_title', null, 'Tersimpan'),
+        t('wizard.saved_msg', { action: this._mode === 'new' ? t('wizard.saved_added', null, 'ditambahkan') : t('wizard.saved_updated', null, 'diperbarui') }, `Soal ${this._mode === 'new' ? 'ditambahkan' : 'diperbarui'}`),
+        2000
+      );
       this.close();
     },
 

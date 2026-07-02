@@ -34,6 +34,15 @@
 (function (global) {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   // ── Constants ──────────────────────────────────────────────────────────────
   const MAX_NOTIFS    = 150;
   const PANEL_ID      = 'anc-panel';
@@ -87,13 +96,13 @@
   function _relativeTime(isoOrDate) {
     try {
       const date = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
-      if (isNaN(date.getTime())) return 'baru saja';
+      if (isNaN(date.getTime())) return t('notif.time_just_now', null, 'baru saja');
       const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
-      if (diffSec < 60)    return 'baru saja';
-      if (diffSec < 3600)  return `${Math.floor(diffSec / 60)} menit lalu`;
-      if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} jam lalu`;
-      return `${Math.floor(diffSec / 86400)} hari lalu`;
-    } catch (_) { return 'baru saja'; }
+      if (diffSec < 60)    return t('notif.time_just_now', null, 'baru saja');
+      if (diffSec < 3600)  return t('notif.time_minutes_ago', { n: Math.floor(diffSec / 60) }, `${Math.floor(diffSec / 60)} menit lalu`);
+      if (diffSec < 86400) return t('notif.time_hours_ago', { n: Math.floor(diffSec / 3600) }, `${Math.floor(diffSec / 3600)} jam lalu`);
+      return t('notif.time_days_ago', { n: Math.floor(diffSec / 86400) }, `${Math.floor(diffSec / 86400)} hari lalu`);
+    } catch (_) { return t('notif.time_just_now', null, 'baru saja'); }
   }
 
   function _sanitize(str) {
@@ -140,8 +149,8 @@
         return;
       }
 
-      const userName   = data.user_name   || data.user_id   || 'Peserta';
-      const examTitle  = data.exam_title  || data.access_code || 'Ujian';
+      const userName   = data.user_name   || data.user_id   || t('notif.default_user', null, 'Peserta');
+      const examTitle  = data.exam_title  || data.access_code || t('notif.default_exam', null, 'Ujian');
       const severity   = data.severity    || 'warning';
       // data.event_type (e.g. 'keyboard_violation', 'tab_switch') is available
       // for future per-type rendering; currently all events render as 'violation'.
@@ -159,7 +168,7 @@
         type,
         userName,
         examTitle,
-        message:     data.message || 'Pelanggaran terdeteksi',
+        message:     data.message || t('notif.violation_detected', null, 'Pelanggaran terdeteksi'),
         warningNum:  data.warning_num || null,
         maxWarnings: 4,
         ts,
@@ -296,7 +305,7 @@
     _panelEl.id = PANEL_ID;
     _panelEl.className = 'anc-panel';
     _panelEl.setAttribute('role', 'dialog');
-    _panelEl.setAttribute('aria-label', 'Panel Notifikasi');
+    _panelEl.setAttribute('aria-label', t('notif.panel_aria', null, 'Panel Notifikasi'));
     _panelEl.setAttribute('aria-modal', 'true');
 
     _panelEl.innerHTML = `
@@ -305,36 +314,36 @@
           <div class="anc-panel-title">
             <span class="anc-panel-icon"><i aria-hidden="true" class="material-symbols-outlined">notifications</i></span>
             <div class="anc-panel-title-text">
-              <h2 class="anc-panel-heading">Notifikasi</h2>
-              <p class="anc-panel-sub" id="anc-sub-text">Memuat...</p>
+              <h2 class="anc-panel-heading">${t('notif.panel_title', null, 'Notifikasi')}</h2>
+              <p class="anc-panel-sub" id="anc-sub-text">${t('common.loading', null, 'Memuat...')}</p>
             </div>
           </div>
-          <button class="anc-close-btn" id="anc-close-btn" aria-label="Tutup panel notifikasi">
+          <button class="anc-close-btn" id="anc-close-btn" aria-label="${t('notif.close_aria', null, 'Tutup panel notifikasi')}">
             <i aria-hidden="true" class="material-symbols-outlined">close</i>
           </button>
         </div>
         <div class="anc-panel-header-row2">
-          <button class="anc-mark-read-btn" id="anc-mark-all-btn" aria-label="Tandai semua dibaca">
+          <button class="anc-mark-read-btn" id="anc-mark-all-btn" aria-label="${t('notif.mark_all_read_aria', null, 'Tandai semua dibaca')}">
             <i aria-hidden="true" class="material-symbols-outlined">done_all</i>
-            <span>Baca Semua</span>
+            <span>${t('notif.mark_all_read', null, 'Baca Semua')}</span>
           </button>
-          <button class="anc-clear-all-btn" id="anc-clear-all-btn" aria-label="Hapus semua notifikasi" disabled>
+          <button class="anc-clear-all-btn" id="anc-clear-all-btn" aria-label="${t('notif.clear_all_aria', null, 'Hapus semua notifikasi')}" disabled>
             <i aria-hidden="true" class="material-symbols-outlined">delete</i>
-            <span>Hapus Semua</span>
+            <span>${t('notif.clear_all', null, 'Hapus Semua')}</span>
           </button>
         </div>
       </div>
       <div class="anc-tabs" role="tablist">
         <button class="anc-tab active" data-tab="all" role="tab" aria-selected="true">
-          <i aria-hidden="true" class="material-symbols-outlined">inbox</i> Semua
+          <i aria-hidden="true" class="material-symbols-outlined">inbox</i> ${t('notif.tab_all', null, 'Semua')}
           <span class="anc-tab-count" id="anc-tab-count-all">0</span>
         </button>
         <button class="anc-tab" data-tab="violation" role="tab" aria-selected="false">
-          <i aria-hidden="true" class="material-symbols-outlined">warning</i> Kecurangan
+          <i aria-hidden="true" class="material-symbols-outlined">warning</i> ${t('notif.tab_violation', null, 'Kecurangan')}
           <span class="anc-tab-count anc-tab-count-red" id="anc-tab-count-violation">0</span>
         </button>
         <button class="anc-tab" data-tab="submitted" role="tab" aria-selected="false">
-          <i aria-hidden="true" class="material-symbols-outlined">check_circle</i> Selesai
+          <i aria-hidden="true" class="material-symbols-outlined">check_circle</i> ${t('notif.tab_submitted', null, 'Selesai')}
           <span class="anc-tab-count anc-tab-count-green" id="anc-tab-count-submitted">0</span>
         </button>
       </div>
@@ -342,9 +351,9 @@
       <div class="anc-panel-footer">
         <span class="anc-footer-status">
           <span class="anc-footer-status-dot" aria-hidden="true"></span>
-          Terhubung
+          ${t('notif.connected', null, 'Terhubung')}
         </span>
-        <span class="anc-footer-note" id="anc-footer-note">Data diperbarui otomatis</span>
+        <span class="anc-footer-note" id="anc-footer-note">${t('notif.auto_update', null, 'Data diperbarui otomatis')}</span>
       </div>
     `;
 
@@ -386,9 +395,9 @@
   }
 
   function _chipFor(type, warningNum, maxWarnings) {
-    if (type === 'submitted')     return '<span class="anc-chip anc-chip-green">Selesai</span>';
-    if (type === 'max_violation') return '<span class="anc-chip anc-chip-red">Batas Pelanggaran!</span>';
-    return `<span class="anc-chip anc-chip-orange">Peringatan ${warningNum || '?'}/${maxWarnings || 4}</span>`;
+    if (type === 'submitted')     return '<span class="anc-chip anc-chip-green">' + t('notif.chip_submitted', null, 'Selesai') + '</span>';
+    if (type === 'max_violation') return '<span class="anc-chip anc-chip-red">' + t('notif.chip_max_violation', null, 'Batas Pelanggaran!') + '</span>';
+    return `<span class="anc-chip anc-chip-orange">${t('notif.chip_warning', { num: warningNum || '?', max: maxWarnings || 4 }, 'Peringatan ' + (warningNum || '?') + '/' + (maxWarnings || 4))}</span>`;
   }
 
   function _renderPanelContent() {
@@ -403,10 +412,10 @@
 
     if (subText) {
       subText.textContent = total === 0
-        ? 'Belum ada notifikasi'
+        ? t('notif.empty_all_title', null, 'Belum ada notifikasi')
         : unread > 0
-          ? `${unread} belum dibaca dari ${total} total`
-          : `${total} notifikasi, semua sudah dibaca`;
+          ? t('notif.unread_count', { unread, total }, `${unread} belum dibaca dari ${total} total`)
+          : `${total} ${t('notif.count_suffix', null, 'notifikasi')}, ${t('notif.all_read', null, 'semua sudah dibaca')}`;
     }
 
     if (clearBtn) clearBtn.disabled = total === 0;
@@ -422,14 +431,14 @@
       const emptyIcon = _activeTab === 'submitted' ? 'task_alt'
                       : _activeTab === 'violation' ? 'verified_user'
                       : 'notifications';
-      const emptyTitle = _activeTab === 'submitted' ? 'Belum ada peserta selesai'
-                       : _activeTab === 'violation' ? 'Tidak ada indikasi kecurangan'
-                       : 'Tidak ada notifikasi';
+      const emptyTitle = _activeTab === 'submitted' ? t('notif.empty_submitted_title', null, 'Belum ada peserta selesai')
+                       : _activeTab === 'violation' ? t('notif.empty_violation_title', null, 'Tidak ada indikasi kecurangan')
+                       : t('notif.empty_all_title', null, 'Tidak ada notifikasi');
       const emptySub = _activeTab === 'submitted'
-        ? 'Notifikasi peserta yang mengumpulkan ujian akan muncul di sini secara otomatis.'
+        ? t('notif.empty_submitted_sub', null, 'Notifikasi peserta yang mengumpulkan ujian akan muncul di sini secara otomatis.')
         : _activeTab === 'violation'
-          ? 'Sistem memantau pelanggaran secara real-time. Notifikasi akan muncul di sini saat terdeteksi.'
-          : 'Notifikasi pelanggaran dan pengumpulan ujian akan muncul di sini secara otomatis.';
+          ? t('notif.empty_violation_sub', null, 'Sistem memantau pelanggaran secara real-time. Notifikasi akan muncul di sini saat terdeteksi.')
+          : t('notif.empty_all_sub', null, 'Notifikasi pelanggaran dan pengumpulan ujian akan muncul di sini secara otomatis.');
 
       body.innerHTML = `
         <div class="anc-empty-state">
@@ -445,8 +454,8 @@
     let html = '';
     let lastRead = null;
     items.forEach((n, i) => {
-      if (i === 0 && !n.read) html += `<div class="anc-separator anc-separator-new"><span>Baru</span></div>`;
-      if (lastRead === false && n.read) html += `<div class="anc-separator"><span>Sudah Dibaca</span></div>`;
+      if (i === 0 && !n.read) html += `<div class="anc-separator anc-separator-new"><span>${t('notif.section_new', null, 'Baru')}</span></div>`;
+      if (lastRead === false && n.read) html += `<div class="anc-separator"><span>${t('notif.section_read', null, 'Sudah Dibaca')}</span></div>`;
       lastRead = n.read;
 
       const typeClass = n.type === 'submitted' ? 'anc-item-green'
@@ -468,8 +477,8 @@
             <div class="anc-item-time"><i aria-hidden="true" class="material-symbols-outlined">schedule</i> ${_relativeTime(n.ts)}</div>
           </div>
           <div class="anc-item-controls">
-            ${!n.read ? `<button class="anc-item-mark-btn" data-id="${_sanitize(n.id)}" title="Tandai dibaca" aria-label="Tandai dibaca"><i aria-hidden="true" class="material-symbols-outlined">check</i></button>` : ''}
-            <button class="anc-item-dismiss-btn" data-id="${_sanitize(n.id)}" title="Hapus notifikasi" aria-label="Hapus notifikasi ${_sanitize(n.userName)}">
+            ${!n.read ? `<button class="anc-item-mark-btn" data-id="${_sanitize(n.id)}" title="${t('notif.mark_read', null, 'Tandai dibaca')}" aria-label="${t('notif.mark_read', null, 'Tandai dibaca')}"><i aria-hidden="true" class="material-symbols-outlined">check</i></button>` : ''}
+            <button class="anc-item-dismiss-btn" data-id="${_sanitize(n.id)}" title="${t('notif.dismiss', null, 'Hapus notifikasi')}" aria-label="${t('notif.dismiss_aria', { name: _sanitize(n.userName) }, 'Hapus notifikasi ' + _sanitize(n.userName))}">
               <i aria-hidden="true" class="material-symbols-outlined">close</i>
             </button>
           </div>

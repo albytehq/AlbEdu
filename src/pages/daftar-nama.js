@@ -14,6 +14,14 @@
 // =============================================================================
 
 window.DaftarNama = (() => {
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
   const MAX_DAFTAR       = 3;
   const MAX_TABS         = 10;
   const MIN_TABS         = 1;
@@ -50,42 +58,42 @@ window.DaftarNama = (() => {
 
     // Nama daftar
     if (!namaDaftar || namaDaftar.trim().length < MIN_NAMA_DAFTAR)
-      errors.push(`Nama daftar minimal ${MIN_NAMA_DAFTAR} karakter.`);
+      errors.push(t('daftar_nama.name_too_short', { min: MIN_NAMA_DAFTAR }, `Nama daftar minimal ${MIN_NAMA_DAFTAR} karakter.`));
     else if (namaDaftar.trim().length > MAX_NAMA_DAFTAR)
-      errors.push(`Nama daftar maksimal ${MAX_NAMA_DAFTAR} karakter.`);
+      errors.push(t('daftar_nama.name_too_long', { max: MAX_NAMA_DAFTAR }, `Nama daftar maksimal ${MAX_NAMA_DAFTAR} karakter.`));
 
     // Tipe
     if (!tipeDaftar)
-      errors.push('Tipe daftar harus dipilih.');
+      errors.push(t('daftar_nama.type_required', null, 'Tipe daftar harus dipilih.'));
     if (tipeDaftar === 'Custom' && (!tipeCustom || tipeCustom.trim().length < 2))
-      errors.push('Nama tipe custom harus diisi minimal 2 karakter.');
+      errors.push(t('daftar_nama.custom_type_required', null, 'Nama tipe custom harus diisi minimal 2 karakter.'));
 
     if (!Array.isArray(tabs) || tabs.length < MIN_TABS)
-      errors.push(`Minimal ${MIN_TABS} tab harus ada.`);
+      errors.push(t('daftar_nama.min_tabs', { min: MIN_TABS }, `Minimal ${MIN_TABS} tab harus ada.`));
     else if (tabs.length > MAX_TABS)
-      errors.push(`Maksimal ${MAX_TABS} tab.`);
+      errors.push(t('daftar_nama.max_tabs', { max: MAX_TABS }, `Maksimal ${MAX_TABS} tab.`));
     else {
       // Tab name uniqueness
       const tabNames = tabs.map(t => (t.nama_tab || '').trim().toLowerCase());
       const dupTabNames = tabNames.filter((n, i) => tabNames.indexOf(n) !== i);
       if (dupTabNames.length > 0)
-        errors.push(`Nama tab duplikat: ${[...new Set(dupTabNames)].join(', ')}`);
+        errors.push(t('daftar_nama.duplicate_tab', { names: [...new Set(dupTabNames)].join(', ') }, `Nama tab duplikat: ${[...new Set(dupTabNames)].join(', ')}`));
 
       // Tab name length
       tabs.forEach(t => {
         if ((t.nama_tab || '').trim().length > MAX_TAB_NAME)
-          errors.push(`Nama tab "${t.nama_tab}" melebihi ${MAX_TAB_NAME} karakter.`);
+          errors.push(t('daftar_nama.tab_name_too_long', { name: t.nama_tab, max: MAX_TAB_NAME }, `Nama tab "${t.nama_tab}" melebihi ${MAX_TAB_NAME} karakter.`));
       });
 
       // Empty tabs
       const emptyTabs = tabs.filter(t => !Array.isArray(t.anggota) || t.anggota.length === 0);
       if (emptyTabs.length > 0)
-        errors.push(`Tab kosong: ${emptyTabs.map(t => t.nama_tab).join(', ')}. Setiap tab harus berisi minimal 1 nama.`);
+        errors.push(t('daftar_nama.empty_tab', { names: emptyTabs.map(t => t.nama_tab).join(', ') }, `Tab kosong: ${emptyTabs.map(t => t.nama_tab).join(', ')}. Setiap tab harus berisi minimal 1 nama.`));
 
       // Total name count
       const totalNama = tabs.reduce((s, t) => s + (t.anggota?.length || 0), 0);
       if (totalNama > MAX_TOTAL_NAMA)
-        errors.push(`Total nama melebihi batas ${MAX_TOTAL_NAMA} (sekarang: ${totalNama}).`);
+        errors.push(t('daftar_nama.total_too_many', { max: MAX_TOTAL_NAMA, current: totalNama }, `Total nama melebihi batas ${MAX_TOTAL_NAMA} (sekarang: ${totalNama}).`));
     }
 
     return errors;

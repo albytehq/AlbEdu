@@ -10,6 +10,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   const SoalCard = {
     init() {
       this._list = document.getElementById('sections-list');
@@ -35,10 +44,18 @@
     _addSection() {
       const sec = window.CreateAssessment.addSection();
       if (!sec) {
-        window.notify?.warning('Batas tercapai', 'Maksimal 2 bagian', 2000);
+        window.notify?.warning(
+          t('wizard.max_sections_reached', null, 'Batas tercapai'),
+          t('wizard.max_sections_msg', null, 'Maksimal 2 bagian'),
+          2000
+        );
         return;
       }
-      window.notify?.info('Bagian baru', 'Pilih tipe soal untuk bagian ini', 3000);
+      window.notify?.info(
+        t('wizard.section_added', null, 'Bagian baru'),
+        t('wizard.section_added_msg', null, 'Pilih tipe soal untuk bagian ini'),
+        3000
+      );
     },
 
     _render(state) {
@@ -164,13 +181,13 @@
 
     _deleteSection(sIdx) {
       if (!window.notify?.confirm) {
-        if (!confirm(`Hapus Bagian ${sIdx + 1} beserta semua soal?`)) return;
+        if (!confirm(t('wizard.delete_section_confirm', { n: sIdx + 1 }, `Hapus Bagian ${sIdx + 1} beserta semua soal?`))) return;
         window.CreateAssessment.removeSection(sIdx);
         return;
       }
       window.notify.confirm({
-        title: 'Hapus Bagian',
-        message: `Yakin hapus Bagian ${sIdx + 1}? Semua soal di dalamnya akan dihapus.`,
+        title: t('wizard.delete_section_title', null, 'Hapus Bagian'),
+        message: t('wizard.delete_section_msg', { n: sIdx + 1 }, `Yakin hapus Bagian ${sIdx + 1}? Semua soal di dalamnya akan dihapus.`),
         intent: 'danger',
         onYes: () => window.CreateAssessment.removeSection(sIdx),
       });
@@ -178,13 +195,13 @@
 
     _deleteQuestion(sIdx, qIdx) {
       if (!window.notify?.confirm) {
-        if (!confirm(`Hapus soal #${qIdx + 1}?`)) return;
+        if (!confirm(t('wizard.delete_question_confirm', { n: qIdx + 1 }, `Hapus soal #${qIdx + 1}?`))) return;
         window.CreateAssessment.removeQuestion(sIdx, qIdx);
         return;
       }
       window.notify.confirm({
-        title: 'Hapus Soal',
-        message: `Yakin hapus soal #${qIdx + 1}?`,
+        title: t('wizard.delete_question_title', null, 'Hapus Soal'),
+        message: t('wizard.delete_question_msg', { n: qIdx + 1 }, `Yakin hapus soal #${qIdx + 1}?`),
         intent: 'danger',
         onYes: () => window.CreateAssessment.removeQuestion(sIdx, qIdx),
       });

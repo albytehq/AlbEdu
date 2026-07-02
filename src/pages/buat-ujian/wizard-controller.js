@@ -21,6 +21,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   const TOTAL_STEPS = 3;
 
   // Field-name prefixes that belong to each step (used for partial validation)
@@ -91,12 +100,12 @@
 
       if (window.notify?.confirm) {
         window.notify.confirm({
-          title: 'Batalkan pembuatan ujian?',
-          message: 'Semua perubahan akan hilang. Yakin batal?',
+          title: t('wizard.cancel_title', null, 'Batalkan pembuatan ujian?'),
+          message: t('wizard.cancel_msg', null, 'Semua perubahan akan hilang. Yakin batal?'),
           intent: 'danger',
           onYes: doClose,
         });
-      } else if (confirm('Batalkan pembuatan ujian? Semua perubahan akan hilang.')) {
+      } else if (confirm(t('wizard.cancel_msg_short', null, 'Batalkan pembuatan ujian? Semua perubahan akan hilang.'))) {
         doClose();
       }
     },
@@ -149,7 +158,7 @@
       if (!valid) {
         const stepErrors = this._filterErrorsForStep(errors, this._currentStep);
         if (stepErrors.length) {
-          window.notify?.error('Validasi gagal', stepErrors[0].message, 4000);
+          window.notify?.error(t('wizard.validation_failed', null, 'Validasi gagal'), stepErrors[0].message, 4000);
           return;
         }
       }

@@ -22,6 +22,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   const AssessmentEntry = {
     _inputs: [],
     _submitBtn: null,
@@ -246,7 +255,7 @@
         setTimeout(() => i.classList.remove('error'), 400);
       });
 
-      window.notify?.error('Gagal', message, 4000);
+      window.notify?.error(t('wizard.title_failed', null, 'Gagal'), message, 4000);
 
       // Clear all inputs
       this._inputs.forEach((i) => {
@@ -431,15 +440,15 @@
       return new Promise((resolve) => {
         if (window.notify?.confirm) {
           window.notify.confirm({
-            title: 'Lanjutkan sesi?',
-            message: 'Anda memiliki sesi sebelumnya yang belum selesai. Lanjutkan?',
+            title: t('assessment.resume_title', null, 'Lanjutkan sesi?'),
+            message: t('assessment.resume_msg', null, 'Anda memiliki sesi sebelumnya yang belum selesai. Lanjutkan?'),
             intent: 'primary',
             onYes: () => resolve(true),
             onNo: () => resolve(false),
             onClose: () => resolve(false),
           });
         } else {
-          resolve(confirm('Lanjutkan sesi sebelumnya?'));
+          resolve(confirm(t('assessment.resume_short', null, 'Lanjutkan sesi sebelumnya?')));
         }
       });
     },
@@ -464,40 +473,41 @@
 
       // Check assessment status
       if (assessment.status !== 'active') {
-        return { allowed: false, message: 'Asesmen tidak ditemukan' };
+        return { allowed: false, message: t('assessment.not_found_msg', null, 'Asesmen tidak ditemukan') };
       }
 
       // Check access mode
       if (assessment.access_mode === 'manual') {
         if (assessment.ac_manual_status === 'closed') {
           if (assessment.ac_end && new Date(assessment.ac_end).getTime() < now) {
-            return { allowed: false, message: 'Asesmen sudah selesai' };
+            return { allowed: false, message: t('assessment.closed_session_ended_msg', null, 'Asesmen sudah selesai') };
           }
           if (assessment.ac_remaining_time && assessment.ac_remaining_time > 0) {
             const mins = Math.floor(assessment.ac_remaining_time / 60);
-            return { allowed: false, message: `Asesmen dijeda. Sisa waktu: ${mins} menit.` };
+            return { allowed: false, message: t('assessment.paused_msg', { mins }, `Asesmen dijeda. Sisa waktu: ${mins} menit.`) };
           }
-          return { allowed: false, message: 'Asesmen belum dimulai. Tunggu admin memulai.' };
+          return { allowed: false, message: t('assessment.closed_session_msg', null, 'Asesmen belum dimulai. Tunggu admin memulai.') };
         }
         if (assessment.ac_manual_status === 'finished') {
-          return { allowed: false, message: 'Asesmen sudah selesai' };
+          return { allowed: false, message: t('assessment.closed_session_ended_msg', null, 'Asesmen sudah selesai') };
         }
         // ac_manual_status === 'open'
         if (assessment.ac_end && new Date(assessment.ac_end).getTime() < now) {
-          return { allowed: false, message: 'Asesmen sudah selesai' };
+          return { allowed: false, message: t('assessment.closed_session_ended_msg', null, 'Asesmen sudah selesai') };
         }
       } else if (assessment.access_mode === 'scheduled') {
         const start = assessment.ac_scheduled_start ? new Date(assessment.ac_scheduled_start).getTime() : null;
         const end = assessment.ac_scheduled_end ? new Date(assessment.ac_scheduled_end).getTime() : null;
 
         if (start && now < start) {
-          const startStr = new Date(start).toLocaleString('id-ID', {
+          const locale = (window.i18n?.getCurrentLocale?.() || 'id') === 'en' ? 'en-US' : 'id-ID';
+          const startStr = new Date(start).toLocaleString(locale, {
             day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
           });
-          return { allowed: false, message: `Asesmen belum dimulai. Mulai: ${startStr}` };
+          return { allowed: false, message: t('assessment.not_started_with_time', { time: startStr }, `Asesmen belum dimulai. Mulai: ${startStr}`) };
         }
         if (end && now > end) {
-          return { allowed: false, message: 'Asesmen sudah selesai' };
+          return { allowed: false, message: t('assessment.closed_session_ended_msg', null, 'Asesmen sudah selesai') };
         }
       }
 
@@ -561,9 +571,9 @@
 
         // Check for UNIQUE constraint violation (active session already exists)
         if (err.message?.includes('unique') || err.message?.includes('23505')) {
-          this._showError('Anda sudah memiliki sesi aktif. Lanjutkan sesi tersebut.');
+          this._showError(t('assessment.active_session_exists', null, 'Anda sudah memiliki sesi aktif. Lanjutkan sesi tersebut.'));
         } else {
-          this._showError('Gagal membuat sesi. Coba lagi.');
+          this._showError(t('assessment.create_session_failed', null, 'Gagal membuat sesi. Coba lagi.'));
         }
         return null;
       }

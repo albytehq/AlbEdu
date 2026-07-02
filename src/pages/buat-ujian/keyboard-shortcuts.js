@@ -8,6 +8,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   const KeyboardShortcuts = {
     init() {
       document.addEventListener('keydown', (e) => {
@@ -53,7 +62,11 @@
       const state = window.CreateAssessment.getState();
       const sec = state.examData.sections.find((s) => s.type_question);
       if (!sec) {
-        window.notify?.warning('Tambah bagian dulu', 'Buat bagian dan pilih tipe soal sebelum menambah soal', 3000);
+        window.notify?.warning(
+          t('wizard.add_section_first', null, 'Tambah bagian dulu'),
+          t('wizard.add_section_first_msg', null, 'Buat bagian dan pilih tipe soal sebelum menambah soal'),
+          3000
+        );
         return;
       }
       const sIdx = state.examData.sections.indexOf(sec);

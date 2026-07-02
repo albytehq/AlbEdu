@@ -7,6 +7,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   // ── Question templates (schema-accurate) ──
   // Each template knows its sectionType so the picker can route it to the
   // correct section. create() returns a fresh question object matching the
@@ -117,13 +126,16 @@
             targetSection = state.examData.sections.length - 1;
           }
         } else {
-          window.notify?.error('Tidak bisa', `Tidak ada bagian dengan tipe ${tpl.sectionType}. Ubah tipe bagian existing.`);
+          window.notify?.error(
+            t('wizard.cannot_use_template', null, 'Tidak bisa'),
+            t('wizard.cannot_use_template_msg', { type: tpl.sectionType }, `Tidak ada bagian dengan tipe ${tpl.sectionType}. Ubah tipe bagian existing.`)
+          );
           return;
         }
       }
 
       if (targetSection === -1) {
-        window.notify?.error('Gagal', 'Tidak ada bagian yang bisa dipakai untuk template ini');
+        window.notify?.error(t('wizard.title_failed', null, 'Gagal'), t('wizard.no_section_for_template', null, 'Tidak ada bagian yang bisa dipakai untuk template ini'));
         return;
       }
 

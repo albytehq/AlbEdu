@@ -40,6 +40,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   // ─── Constants ──────────────────────────────────────────────────────────
   const COLLECTION_ASSESSMENTS = 'assessments';
   const COLLECTION_SUBMISSIONS = 'submissions';
@@ -241,7 +250,10 @@
   async function _loadAssessments() {
     const db = window.firebaseDb;
     if (!db) {
-      window.notify?.error?.('DB Tidak Tersedia', 'Firebase shim belum siap.');
+      window.notify?.error?.(
+        t('results.db_not_available_title', null, 'DB Tidak Tersedia'),
+        t('results.db_not_available_msg', null, 'Firebase shim belum siap.')
+      );
       return;
     }
     try {
@@ -259,8 +271,8 @@
     } catch (err) {
       console.error('[ResultsAnalytics] load assessments:', err);
       window.notify?.error?.(
-        'Gagal Memuat Asesmen',
-        (err && err.message) || 'Tidak dapat memuat daftar asesmen.'
+        t('results.load_failed_title', null, 'Gagal Memuat Asesmen'),
+        (err && err.message) || t('results.load_failed_msg', null, 'Tidak dapat memuat daftar asesmen.')
       );
       _state.assessments = [];
       _populateDropdown();
@@ -765,22 +777,34 @@
 
   function _exportPdf() {
     if (!_state.submissions.length) {
-      window.notify?.warning?.('Tidak Ada Data', 'Pilih asesmen yang memiliki submission terlebih dahulu.');
+      window.notify?.warning?.(
+        t('results.no_data_title', null, 'Tidak Ada Data'),
+        t('results.select_with_submission', null, 'Pilih asesmen yang memiliki submission terlebih dahulu.')
+      );
       return;
     }
     // Use browser's print dialog (page CSS hides sidebar/header for print via media=print)
-    window.notify?.info?.('Cetak PDF', 'Dialog cetak browser akan terbuka.');
+    window.notify?.info?.(
+      t('results.print_pdf_title', null, 'Cetak PDF'),
+      t('results.print_pdf_msg', null, 'Dialog cetak browser akan terbuka.')
+    );
     try {
       window.print();
     } catch (err) {
       console.error('[ResultsAnalytics] print:', err);
-      window.notify?.error?.('Gagal Cetak', (err && err.message) || 'Tidak dapat mencetak.');
+      window.notify?.error?.(
+        t('results.print_failed_title', null, 'Gagal Cetak'),
+        (err && err.message) || t('results.print_failed_msg', null, 'Tidak dapat mencetak.')
+      );
     }
   }
 
   function _exportExcel() {
     if (!_state.submissions.length) {
-      window.notify?.warning?.('Tidak Ada Data', 'Pilih asesmen yang memiliki submission terlebih dahulu.');
+      window.notify?.warning?.(
+        t('results.no_data_title', null, 'Tidak Ada Data'),
+        t('results.select_with_submission', null, 'Pilih asesmen yang memiliki submission terlebih dahulu.')
+      );
       return;
     }
     try {
@@ -800,10 +824,16 @@
       // Prepend BOM so Excel reads UTF-8 correctly
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
       _downloadBlob(blob, `albedu-results-${_todayStamp()}.csv`);
-      window.notify?.success?.('Excel Diekspor', `${rows.length} baris diunduh sebagai CSV.`);
+      window.notify?.success?.(
+        t('results.excel_exported_title', null, 'Excel Diekspor'),
+        t('results.excel_exported_msg', { count: rows.length }, `${rows.length} baris diunduh sebagai CSV.`)
+      );
     } catch (err) {
       console.error('[ResultsAnalytics] export excel:', err);
-      window.notify?.error?.('Gagal Ekspor', (err && err.message) || 'Tidak dapat mengekspor Excel.');
+      window.notify?.error?.(
+        t('results.export_failed_title', null, 'Gagal Ekspor'),
+        (err && err.message) || t('results.excel_export_failed_msg', null, 'Tidak dapat mengekspor Excel.')
+      );
     }
   }
 
@@ -817,7 +847,10 @@
 
   function _exportJson() {
     if (!_state.submissions.length) {
-      window.notify?.warning?.('Tidak Ada Data', 'Pilih asesmen yang memiliki submission terlebih dahulu.');
+      window.notify?.warning?.(
+        t('results.no_data_title', null, 'Tidak Ada Data'),
+        t('results.select_with_submission', null, 'Pilih asesmen yang memiliki submission terlebih dahulu.')
+      );
       return;
     }
     try {
@@ -836,10 +869,16 @@
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
       _downloadBlob(blob, `albedu-results-${_todayStamp()}.json`);
-      window.notify?.success?.('JSON Diekspor', `${_state.submissions.length} submission diunduh.`);
+      window.notify?.success?.(
+        t('results.json_exported_title', null, 'JSON Diekspor'),
+        t('results.json_exported_msg', { count: _state.submissions.length }, `${_state.submissions.length} submission diunduh.`)
+      );
     } catch (err) {
       console.error('[ResultsAnalytics] export json:', err);
-      window.notify?.error?.('Gagal Ekspor', (err && err.message) || 'Tidak dapat mengekspor JSON.');
+      window.notify?.error?.(
+        t('results.export_failed_title', null, 'Gagal Ekspor'),
+        (err && err.message) || t('results.json_export_failed_msg', null, 'Tidak dapat mengekspor JSON.')
+      );
     }
   }
 
@@ -866,13 +905,19 @@
 
     const fbOk = await _waitForFirebase(AUTH_WAIT_TIMEOUT_MS);
     if (!fbOk) {
-      window.notify?.error?.('Firebase Tidak Siap', 'Tidak dapat terhubung ke database.');
+      window.notify?.error?.(
+        t('results.firebase_not_ready_title', null, 'Firebase Tidak Siap'),
+        t('results.firebase_not_ready_msg', null, 'Tidak dapat terhubung ke database.')
+      );
       return;
     }
 
     const user = await _waitForAuth(AUTH_WAIT_TIMEOUT_MS);
     if (!user) {
-      window.notify?.warning?.('Belum Login', 'Silakan login untuk mengakses halaman ini.');
+      window.notify?.warning?.(
+        t('results.not_logged_in_title', null, 'Belum Login'),
+        t('results.not_logged_in_msg', null, 'Silakan login untuk mengakses halaman ini.')
+      );
       return;
     }
     _state.user = user;

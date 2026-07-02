@@ -16,6 +16,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   const PublishCard = {
     init() {
       this._summaryGrid = document.getElementById('summary-grid');
@@ -94,17 +103,28 @@
 
     _regenerateToken() {
       const code = window.CreateAssessment.generateToken();
-      window.notify?.success('Token Baru', `Token ${code} di-generate`, 2000);
+      window.notify?.success(
+        t('wizard.token_new', null, 'Token Baru'),
+        t('wizard.token_new_msg', { code }, `Token ${code} di-generate`),
+        2000
+      );
     },
 
     _copyToken() {
       const token = window.CreateAssessment.getToken();
       if (!token) {
-        window.notify?.warning('Belum ada token', 'Generate token dulu');
+        window.notify?.warning(
+          t('wizard.no_token_title', null, 'Belum ada token'),
+          t('wizard.no_token_msg', null, 'Generate token dulu')
+        );
         return;
       }
       navigator.clipboard?.writeText(token).then(() => {
-        window.notify?.success('Tersalin', `Token ${token} disalin`, 2000);
+        window.notify?.success(
+          t('wizard.token_copied', null, 'Tersalin'),
+          t('wizard.token_copied_msg', { code: token }, `Token ${token} disalin`),
+          2000
+        );
       }).catch(() => {
         // Fallback — select text
         const range = document.createRange();
@@ -112,14 +132,20 @@
         const sel = window.getSelection();
         sel.removeAllRanges();
         sel.addRange(range);
-        window.notify?.info('Token dipilih', 'Tekan Cmd/Ctrl+C untuk menyalin');
+        window.notify?.info(
+          t('wizard.token_selected', null, 'Token dipilih'),
+          t('wizard.token_selected_msg', null, 'Tekan Cmd/Ctrl+C untuk menyalin')
+        );
       });
     },
 
     async _publish() {
       const { valid, errors } = window.CreateAssessment.validate();
       if (!valid) {
-        window.notify?.error('Validasi gagal', errors[0]?.message || 'Lengkapi semua field');
+        window.notify?.error(
+          t('wizard.validation_failed', null, 'Validasi gagal'),
+          errors[0]?.message || t('wizard.validation_incomplete', null, 'Lengkapi semua field')
+        );
         return;
       }
 
@@ -133,14 +159,14 @@
       if (!confirmed) return;
 
       try {
-        window.UI?.showAuthLoading?.('Publishing asesmen...');
+        window.UI?.showAuthLoading?.(t('wizard.publishing', null, 'Publishing asesmen...'));
         // v1.0.0 — publishToSupabase handles validate + token + DB insert
         const result = await window.CreateAssessment.publishToSupabase();
 
         window.UI?.hideAuthLoading?.();
         window.notify?.success(
-          'Berhasil!',
-          `Asesmen dipublish dengan token ${result.access_code}`,
+          t('wizard.title_success', null, 'Berhasil!'),
+          t('wizard.published_msg', { code: result.access_code }, `Asesmen dipublish dengan token ${result.access_code}`),
           4000
         );
 
@@ -150,14 +176,17 @@
         }, 1500);
       } catch (err) {
         window.UI?.hideAuthLoading?.();
-        window.notify?.error('Gagal Publish', err?.message || 'Unknown error');
+        window.notify?.error(
+          t('wizard.publish_failed', null, 'Gagal Publish'),
+          err?.message || t('wizard.publish_unknown_error', null, 'Unknown error')
+        );
         console.error('[PublishCard] publish failed:', err);
       }
     },
 
     async _confirmPublish() {
       if (!window.notify?.confirm) {
-        return confirm('Publish asesmen? Peserta bisa mulai mengerjakan setelah ini.');
+        return confirm(t('wizard.publish_confirm', null, 'Publish asesmen? Peserta bisa mulai mengerjakan setelah ini.'));
       }
       return new Promise((resolve) => {
         let settled = false;
@@ -168,8 +197,8 @@
           }
         };
         window.notify.confirm({
-          title: 'Publish Asesmen',
-          message: 'Setelah publish, peserta bisa mulai mengerjakan asesmen dengan token. Yakin?',
+          title: t('wizard.btn_publish', null, 'Publish Asesmen'),
+          message: t('wizard.publish_confirm_msg', null, 'Setelah publish, peserta bisa mulai mengerjakan asesmen dengan token. Yakin?'),
           intent: 'primary',
           onYes: () => done(true),
           onNo: () => done(false),
