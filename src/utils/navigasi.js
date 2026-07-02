@@ -54,13 +54,31 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* ── Native tooltips on menu items (visible when collapsed) ── */
-    document.querySelectorAll('.menu-item-content').forEach(a => {
-        const txt = a.querySelector('.sidebar-text')?.textContent.trim();
-        if (txt) a.setAttribute('title', txt);
-    });
-    const userProfileBtn = document.querySelector('.user-profile-content');
-    if (userProfileBtn && !userProfileBtn.getAttribute('title')) {
-        userProfileBtn.setAttribute('title', 'Menu profil pengguna');
+    // i18n: read text from data-i18n-translated sidebar-text node, fallback to textContent
+    function _t(key, fallback) {
+        if (window.I18n && typeof window.I18n.t === 'function') {
+            return window.I18n.t(key);
+        }
+        return fallback;
+    }
+
+    function _updateTooltips() {
+        document.querySelectorAll('.menu-item-content').forEach(a => {
+            const txt = a.querySelector('.sidebar-text')?.textContent.trim();
+            if (txt) a.setAttribute('title', txt);
+        });
+        const userProfileBtn = document.querySelector('.user-profile-content');
+        if (userProfileBtn && !userProfileBtn.getAttribute('title')) {
+            userProfileBtn.setAttribute('title', _t('sidebar.profile_aria', 'Menu profil pengguna'));
+        }
+    }
+    _updateTooltips();
+
+    // Re-update tooltips when language changes (so they reflect the new lang)
+    if (window.I18n && typeof window.I18n.onChanged === 'function') {
+        window.I18n.onChanged(() => {
+            _updateTooltips();
+        });
     }
 
     /* ── State helpers ─────────────────────────────────────────── */
@@ -138,9 +156,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 // EXPANDED STATE (or mobile): icon AlbEdu berfungsi sebagai
                 // LINK ke panel administrator. Restore href.
-                // v0.742.0: fallback is 'index.html' (same folder) since all
-                // admin pages now live at pages/admin/*.html (flat structure).
-                logoLink.setAttribute('href', logoLink.dataset.href || 'index.html');
+                logoLink.setAttribute('href', logoLink.dataset.href || '../index.html');
                 logoLink.setAttribute('aria-label', 'AlbEdu Creates — Ke beranda');
                 logoLink.removeAttribute('role');
                 logoLink.removeAttribute('aria-expanded');
@@ -293,24 +309,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    /* ── Active state from URL ───────────────────────────────────
-     * v0.742.0: Mapping extended to cover every admin page so the
-     * sidebar "active" highlight works uniformly across both legacy
-     * redirect stubs (buat-ujian, data-hasil, ujian-peserta) and the
-     * new v2 admin pages. Legacy stubs still map to their canonical
-     * destination tab so the user lands on the right highlighted
-     * entry even when they hit an old bookmark. */
+    /* ── Active state from URL ─────────────────────────────────── */
     const pageMapping = {
-        'profile.html':          'profil',
-        'create-assessment.html': 'create-assessment',
-        'buat-ujian.html':       'create-assessment', // legacy stub → canonical
-        'active-assessments.html': 'active-assessments',
-        'ujian-peserta.html':    'active-assessments', // legacy stub → canonical
-        'question-bank.html':    'question-bank',
-        'monitoring.html':       'monitoring',
-        'results-analytics.html': 'results',
-        'data-hasil.html':       'results',            // legacy stub → canonical
-        'daftar-nama.html':      'daftar-nama',
+        'profile.html':       'profil',
+        'buat-ujian.html':    'buat-ujian',
+        'data-hasil.html':    'data-hasil',
+        'ujian-peserta.html': 'ujian-peserta',
+        'daftar-nama.html':   'daftar-nama',
     };
     const currentPage = window.location.pathname.split('/').pop();
     const activeTab   = pageMapping[currentPage] || null;
@@ -365,25 +370,23 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 150);
     });
 
-    /* ── Page transition overlay — defensive cleanup ────────────
-     * v0.742.1: loading.css was changed so `.page-transition` is
-     * now HIDDEN BY DEFAULT (opacity:0, visibility:hidden). This
-     * means the overlay no longer flashes on every navigation
-     * between admin pages — fixing the "flash pages" complaint.
+    /* ── Page transition overlay — hide on load ──────────────────
+     * loading.css defines .page-transition as a full-screen overlay
+     * (z-index 10000, pointer-events: auto) that covers the page
+     * during navigation. We must hide it once the page is loaded,
+     * otherwise it blocks all clicks on the sidebar.
      *
-     * The overlay only becomes visible if JS explicitly adds the
-     * `.visible` class (no caller does this currently, but the
-     * hook is preserved for future use).
-     *
-     * The old hidePageTransition() logic (waiting for window.load
-     * + 300ms timeout) is no longer needed — the overlay starts
-     * hidden. We still strip any stale `.visible` class as a
-     * defensive measure in case a previous page set it before
-     * navigation (BFCache restore, etc.). */
+     * Two triggers for safety: window.load (fires after all
+     * resources) and a 300ms setTimeout fallback (in case load
+     * is delayed by slow CDN scripts).
+     */
     const pageTransition = document.querySelector('.page-transition');
-    if (pageTransition) {
-        pageTransition.classList.remove('visible');
+    function hidePageTransition() {
+        if (!pageTransition) return;
+        pageTransition.classList.add('hidden', 'gone');
     }
+    window.addEventListener('load', hidePageTransition);
+    setTimeout(hidePageTransition, 300);
 
     /* ── Notification badge ────────────────────────────────────── */
     if (badge) badge.style.display = 'none';
@@ -482,16 +485,16 @@ document.addEventListener('DOMContentLoaded', function () {
      * Algorithm:
      *   1. Find the <script> tag that loaded navigasi.js (this file).
      *      Its `src` attribute is a full URL like
-     *      `https://albytehq.github.io/AlbEdu/src/utils/navigasi.js`.
+     *      `https://albedu-id.github.io/AlbEdu/src/utils/navigasi.js`.
      *   2. Strip `utils/navigasi.js` and everything after, replace with
      *      `profile/`. Result: `.../src/profile/`.
      *   3. If navigasi.js can't be found in the DOM (defensive — should
      *      never happen since this code IS running from navigasi.js),
      *      fall back to `window.Auth.getBasePath()` + `src/profile/`
      *      (root-relative, e.g. `/AlbEdu/src/profile/`).
-     *   4. Final fallback: assume 2-level page depth (pages/admin/*.html)
-     *      and use `../../src/profile/`. This matches the actual depth
-     *      of every page that loads navigasi.js (v0.742.0+).
+     *   4. Final fallback: assume 3-level page depth (pages/admin/pages/*.html)
+     *      and use `../../../src/profile/`. This matches the actual depth
+     *      of every page that loads navigasi.js.
      *
      * Returns a string suitable for `script.src = base + 'editor-panel.js'`.
      * ═══════════════════════════════════════════════════════════ */
@@ -507,9 +510,9 @@ document.addEventListener('DOMContentLoaded', function () {
         // Fallback 1: use Auth BASE_PATH (root-relative, e.g. '/AlbEdu/')
         const authBase = window.Auth?.getBasePath?.();
         if (authBase) return authBase + 'src/profile/';
-        // Fallback 2: assume 2-level page depth (all pages that load
-        // navigasi.js are at pages/admin/*.html = 2 levels deep, v0.742.0+).
-        return '../../src/profile/';
+        // Fallback 2: assume 3-level page depth (all pages that load
+        // navigasi.js are at pages/admin/pages/*.html = 3 levels deep).
+        return '../../../src/profile/';
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -542,7 +545,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!window.ProfileEditorPanel) return;
             window.ProfileEditorPanel.init({
                 trigger:    [],
-                workerBase: 'https://edu.albyte-inc.workers.dev',
+                workerBase: 'https://albedu.examjuniorhighschool.workers.dev',
                 onSaved: function (user) {
                     const nameEl   = document.getElementById('sidebar-user-name');
                     const avatarEl = document.getElementById('sidebar-avatar');
@@ -612,7 +615,7 @@ document.addEventListener('DOMContentLoaded', function () {
             window.OptionProfile.init({
                 triggers:   userContent ? [userContent] : [],
                 context:    'sidebar',
-                workerBase: 'https://edu.albyte-inc.workers.dev',
+                workerBase: 'https://albedu.examjuniorhighschool.workers.dev',
             });
         };
 

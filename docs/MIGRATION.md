@@ -263,7 +263,7 @@ Setelah update, test berikut untuk verify semua feature work:
 - [ ] Publish ujian — kode_id ter-generate
 - [ ] Buka `pages/ujian/index.html` di incognito → masuk token
 - [ ] Kerjakan ujian: pilih kelas → pilih nama → jawab soal → submit
-- [ ] Cek `pages/admin/data-hasil.html` (redirects ke `results-analytics.html` di v0.742.0+) — hasil muncul di completed list
+- [ ] Cek `pages/admin/pages/data-hasil.html` — hasil muncul di completed list
 
 ### Build Test (3 menit)
 

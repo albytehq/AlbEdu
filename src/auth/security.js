@@ -175,172 +175,137 @@
     // API tetap sinkron di surface (tidak await) agar caller tidak perlu ubah banyak.
     // Write ke Firestore dilakukan secara fire-and-forget dengan error handling sendiri.
     //
-    // v1.0.0 SCHEMA MIGRATION:
-    //   Old `violations` collection (composite doc_id `{token}_{userKey}`) was DROPPED.
-    //   Replaced by:
-    //     - `violation_events`   : 1 row per violation event (UUID PK, no upsert)
-    //     - `assessment_sessions`: tracks per-user session status (active/paused/
-    //                              disconnected/submitted). Used by markSubmitted +
-    //                              isSubmitted.
-    //     - `assessment_view_peserta`: lookup view keyed by access_code (the `token`).
-    //
-    //   Methods kept on this object for backward-compat with legacy callers
-    //   (kerjakan-ujian.js, exam/logic.js). New v1.0.0 callers (take-assessment.js)
-    //   talk to the new tables directly via Edge Functions.
+    // Struktur dokumen: violations/{token}_{userKey}
+    //   { status: 'submitted'|'violation'|'active', updatedAt, violations: number }
 
     const ViolationStore = {
         _getDb() {
             return global.firebaseDb || null;
         },
 
-        // v1.0.0: violation_events uses UUID PK assigned server-side, so the
-        // legacy `{token}_{userKey}` composite ID is no longer meaningful.
-        // Kept for backward-compat — returns a random ID (callers that still
-        // use it should treat the result as opaque).
-        _docId(_token, _userKey) {
-            return (global.crypto?.randomUUID
-                ? global.crypto.randomUUID()
-                : 'id_' + Math.random().toString(36).slice(2) + Date.now().toString(36));
+        _docId(token, userKey) {
+            // Sanitize: Firestore doc ID tidak boleh mengandung /
+            return `${String(token).replace(/\//g, '_')}_${String(userKey).replace(/\//g, '_')}`;
         },
 
-        // v1.0.0: legacy `set()` wrote a status upsert to `violations/{docId}`.
-        // That table no longer exists. We retain the sessionStorage cache so
-        // local fast-path reads still work; the Firestore write is now a no-op.
-        // New code should call markWarning (events) or markSubmitted (sessions).
-        async set(token, userKey, status, _extra = {}) {
+        // Tulis status ke Firestore. Fire-and-forget — tidak block UI.
+        // Tetap tulis ke sessionStorage sebagai local cache untuk read cepat.
+        async set(token, userKey, status, extra = {}) {
             if (!token || !userKey) return;
+
             const cacheKey = `viol_${token}_${userKey}`;
             try { sessionStorage.setItem(cacheKey, status); } catch (_) {}
-        },
 
-        // v1.0.0: legacy `get()` fetched status from `violations/{docId}`.
-        // That table no longer exists — return only the sessionStorage cache.
-        // For real submitted-state checks, use isSubmitted() (queries
-        // assessment_sessions via assessment_view_peserta).
-        async get(token, userKey) {
-            if (!token || !userKey) return null;
-            const cacheKey = `viol_${token}_${userKey}`;
-            return sessionStorage.getItem(cacheKey);
-        },
-
-        // v1.0.0: update the matching assessment_sessions row to 'submitted'.
-        // token = access_code, userKey = user.uid. We look up the assessment
-        // by access_code via assessment_view_peserta (read-only view), then
-        // update the user's active/paused/disconnected session row.
-        async markSubmitted(token, userKey) {
-            if (!token || !userKey) return;
             const db = this._getDb();
-            if (!db) return;
-
-            // Cache locally so isSubmitted() returns fast on next check
-            const cacheKey = `viol_${token}_${userKey}`;
-            try { sessionStorage.setItem(cacheKey, 'submitted'); } catch (_) {}
+            if (!db) return; // offline / SDK belum siap — cache sudah cukup untuk sesi ini
 
             try {
-                const assessmentSnap = await db.collection('assessment_view_peserta').doc(token).get();
-                if (!assessmentSnap.exists) return;
-
-                const sessionSnap = await db.collection('assessment_sessions')
-                    .where('assessment_id', '==', assessmentSnap.id)
-                    .where('user_id', '==', userKey)
-                    .where('status', 'in', ['active', 'paused', 'disconnected'])
-                    .limit(1)
-                    .get();
-
-                if (!sessionSnap.empty) {
-                    await sessionSnap.docs[0].ref.update({
-                        status:       'submitted',
-                        submitted_at: new Date().toISOString(),
-                    });
-                }
-            } catch (err) {
-                const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-                if (isDev) console.warn('[ViolationStore] markSubmitted failed:', err?.message || err);
+                await db.collection('violations').doc(this._docId(token, userKey)).set({
+                    status,
+                    token,
+                    userKey,
+                    updatedAt: db.FieldValue?.serverTimestamp() ?? new Date().toISOString(),
+                    ...extra,
+                }, { merge: true }); // merge: true agar tidak timpa field lain
+            } catch (_) {
+                // Firestore write gagal (offline, rules) — sessionStorage jadi fallback.
+                // Ini bukan error fatal: data tetap tersimpan lokal sampai koneksi kembali.
             }
         },
 
-        // v1.0.0: insert a single row into `violation_events` (no upsert, no merge).
-        // assessment_id and session_id are unknown at the client at this point —
-        // the heartbeat Edge Function enriches them on its next tick. (The DB
-        // schema marks them NOT NULL, but writes from the peserta client go
-        // through the heartbeat Edge Function which fills them in.)
-        // signature: markWarning(token, userKey, warningNum, message, examTitle, userName)
-        //   (task spec names them violations/pesan/nama — same positions.)
+        // Baca dari sessionStorage dulu (fast path), Firestore sebagai source-of-truth.
+        async get(token, userKey) {
+            if (!token || !userKey) return null;
+
+            const cacheKey = `viol_${token}_${userKey}`;
+            const cached = sessionStorage.getItem(cacheKey);
+
+            const db = this._getDb();
+            if (!db) return cached; // tidak bisa verify ke Firestore
+
+            try {
+                const snap = await db.collection('violations').doc(this._docId(token, userKey)).get();
+                if (snap.exists) {
+                    const status = snap.data().status || null;
+                    try { sessionStorage.setItem(cacheKey, status); } catch (_) {}
+                    return status;
+                }
+                return cached; // doc belum ada (ujian baru), gunakan cache
+            } catch (_) {
+                return cached; // Firestore error, fallback ke cache
+            }
+        },
+
+        markSubmitted(token, userKey) {
+            return this.set(token, userKey, 'submitted');
+        },
+
+        markViolation(token, userKey, count) {
+            return this.set(token, userKey, 'violation', { violationCount: count });
+        },
+
+        // WHY a separate markWarning method?
+        // ExamGuardian fires per-warning callbacks with context (pesan, warningNum).
+        // We append each warning as an event to violationEvents[] so the admin panel
+        // can show the full violation timeline — not just a final count.
+        //
+        // NOTE: Firestore doesn't support serverTimestamp() inside array values,
+        // so we use ISO string for the event timestamp. updatedAt at doc level
+        // still uses serverTimestamp() via set() for accurate server time.
+        //
+        // userName and examTitle are denormalized onto the doc so the admin
+        // panel never needs to do extra Firestore reads to display them.
         async markWarning(token, userKey, warningNum, message, examTitle, userName) {
             if (!token || !userKey) return;
+
             const db = this._getDb();
             if (!db) return;
 
-            // Map the warning number to a severity tier for the new schema.
-            // 'warning' for normal strikes; 'critical' when reaching MAX (4).
-            const MAX_WARNINGS = 4;
-            const severity = (warningNum && warningNum >= MAX_WARNINGS) ? 'critical' : 'warning';
+            // Build the new event object.
+            // serverTimestamp() tidak bisa dipakai di dalam array item.
+            // ISO string adalah pendekatan yang benar.
+            const event = {
+                warningNum:  warningNum  || 1,
+                message:     String(message || '').slice(0, 300), // cap length
+                examTitle:   String(examTitle   || 'Ujian').slice(0, 100),
+                userName:  String(userName || 'Peserta').slice(0, 80),
+                ts:          new Date().toISOString(),
+            };
 
             try {
-                await db.collection('violation_events').add({
-                    assessment_id: null, // unknown — heartbeat Edge Function fills this
-                    session_id:    null, // unknown — heartbeat Edge Function fills this
-                    user_id:       userKey, // userKey is actually user.uid
-                    user_email:    null,
-                    user_name:     String(userName  || 'Peserta').slice(0, 80),
-                    exam_title:    String(examTitle || 'Ujian').slice(0, 100),
-                    event_type:    'keyboard_violation',
-                    message:       String(message || 'Pelanggaran terdeteksi').slice(0, 300),
-                    severity,
-                    ip_address:    null,
-                    user_agent:    (global.navigator?.userAgent) || null,
-                    device_id:     (() => { try { return localStorage.getItem('albedu_exam_device_id'); } catch (_) { return null; } })(),
-                });
+                // BUGFIX Q: Use Math.max to ensure violationCount only goes
+                // up, never down. Previously, if a stale warning fired
+                // with a lower number (e.g. after a partial reset), the
+                // merge would overwrite the count with the lower value.
+                const docRef = db.collection('violations').doc(this._docId(token, userKey));
+                const existingSnap = await docRef.get();
+                const existingCount = (existingSnap.exists && existingSnap.data()?.violationCount) || 0;
+                const finalCount = Math.max(existingCount, warningNum || 1);
+                await docRef.set({
+                    status:          'active',
+                    token,
+                    userKey,
+                    violationCount:  finalCount,
+                    userName:        String(userName || 'Peserta').slice(0, 80),
+                    examTitle:       String(examTitle   || 'Ujian').slice(0, 100),
+                    updatedAt:       db.FieldValue?.serverTimestamp()  ?? new Date().toISOString(),
+                    violationEvents: db.FieldValue?.arrayUnion(event)  ?? [event],
+                }, { merge: true });
 
-                // Local cache so isSubmitted() returns fast on subsequent checks
+                // Update local cache so isSubmitted() returns fast on next check
                 const cacheKey = `viol_${token}_${userKey}`;
                 try { sessionStorage.setItem(cacheKey, 'active'); } catch (_) {}
+
             } catch (err) {
+                // Write failed (offline / permissions / schema mismatch).
+                // Warning masih di-track di ExamLogic._state.violations — tidak hilang.
                 const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
                 if (isDev) console.warn('[ViolationStore] markWarning failed:', err?.message || err);
             }
         },
 
-        // v1.0.0: legacy `markViolation(token, userKey, count)` used to upsert
-        // a 'violation' status doc. Now routes through markWarning so each
-        // strike is recorded as a discrete violation_events row.
-        markViolation(token, userKey, count) {
-            return this.markWarning(token, userKey, count, 'Batas pelanggaran tercapai', null, null);
-        },
-
-        // v1.0.0: check assessment_sessions for a 'submitted' status row.
-        // token = access_code, userKey = user.uid.
         async isSubmitted(token, userKey) {
-            if (!token || !userKey) return false;
-
-            // Fast path: sessionStorage cache says submitted — trust it.
-            const cacheKey = `viol_${token}_${userKey}`;
-            const cached = sessionStorage.getItem(cacheKey);
-            if (cached === 'submitted') return true;
-
-            const db = this._getDb();
-            if (!db) return false;
-
-            try {
-                // Find assessment by access_code, then check session status.
-                const assessmentSnap = await db.collection('assessment_view_peserta').doc(token).get();
-                if (!assessmentSnap.exists) return false;
-
-                const sessionSnap = await db.collection('assessment_sessions')
-                    .where('assessment_id', '==', assessmentSnap.id)
-                    .where('user_id', '==', userKey)
-                    .where('status', '==', 'submitted')
-                    .limit(1)
-                    .get();
-
-                const submitted = !sessionSnap.empty;
-                if (submitted) {
-                    try { sessionStorage.setItem(cacheKey, 'submitted'); } catch (_) {}
-                }
-                return submitted;
-            } catch (_) {
-                return false;
-            }
+            return (await this.get(token, userKey)) === 'submitted';
         },
     };
 

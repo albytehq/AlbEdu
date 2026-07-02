@@ -7,7 +7,7 @@
 //  Usage:
 //    ProfileEditorPanel.init({
 //      trigger:    document.getElementById('btn-edit-profile'),
-//      workerBase: 'https://edu.albyte-inc.workers.dev',
+//      workerBase: 'https://albedu.examjuniorhighschool.workers.dev',
 //      onSaved:    (updatedUser) => { /* update UI avatar, name, dll */ }
 //    })
 //

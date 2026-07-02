@@ -20,6 +20,9 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
 
     <link rel="stylesheet" href="../styles/register-success.css">
+    <script src="../src/i18n/translations/id.js" defer></script>
+    <script src="../src/i18n/translations/en.js" defer></script>
+    <script src="../src/i18n/index.js" defer></script>
 </head>
 
 <body>
@@ -37,19 +40,19 @@
                         </svg>
                     </div>
 
-                    <h1 class="success-title" data-i18n="auth.register_success_title">Pendaftaran Berhasil!</h1>
-                    <p class="success-desc">
+                    <h1 class="success-title" data-i18n="auth.register_success.title">Pendaftaran Berhasil!</h1>
+                    <p class="success-desc" data-i18n-html="auth.register_success.desc">
                         Akun admin Anda telah dibuat dan siap digunakan.<br>
                         Silakan cek email Anda untuk verifikasi, lalu login untuk mulai mengelola sistem.
                     </p>
 
                     <!-- CTA -->
-                    <a href="login.html" class="btn-login" id="loginNowBtn">
+                    <a href="login.html" class="btn-login" id="loginNowBtn" data-i18n="auth.register_success.cta">
                         Ke Halaman Login
                     </a>
 
                     <!-- Countdown redirect -->
-                    <p class="redirect-notice" id="redirectNotice" aria-live="polite" aria-atomic="true">
+                    <p class="redirect-notice" id="redirectNotice" aria-live="polite" aria-atomic="true" data-i18n-html="auth.register_success.redirect">
                         Otomatis diarahkan dalam <strong id="countdownNum">8</strong> detik
                     </p>
 
@@ -70,8 +73,8 @@
                 <div class="branding-logo" aria-hidden="true">
                     <img src="../public/images/logo.svg" alt="" width="40" height="40">
                 </div>
-                <h2 class="branding-title">Selamat Datang!</h2>
-                <p class="branding-tagline">Akun administrator Anda sudah siap. Mulai kelola ujian dan pantau hasil peserta dengan mudah.</p>
+                <h2 class="branding-title" data-i18n="auth.register_success.branding.title">Selamat Datang!</h2>
+                <p class="branding-tagline" data-i18n="auth.register_success.branding.tagline">Akun administrator Anda sudah siap. Mulai kelola ujian dan pantau hasil peserta dengan mudah.</p>
             </div>
         </div>
     </div>
@@ -123,9 +126,6 @@
             });
         })();
     </script>
-    <!-- v0.742.9: i18n -->
-    <script type="module" src="../src/i18n/index.js"></script>
-    <script defer src="../src/i18n/lang-switcher.js"></script>
 </body>
 
 </html>

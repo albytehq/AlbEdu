@@ -10,7 +10,7 @@
   <link rel="icon" type="image/x-icon" href="../../../public/images/favicon/favicon.ico">
   <link rel="icon" type="image/svg+xml" href="../../../public/images/favicon/favicon.svg">
   <link rel="apple-touch-icon" sizes="180x180" href="../../../public/images/favicon/apple-touch-icon.png">
-  
+  <link rel="manifest" href="../../../public/images/favicon/site.webmanifest">
 
   <!-- Fonts -->
   
@@ -28,7 +28,6 @@
   <!-- style.css removed — tokens.css provides global reset, focus ring, skip-to-main -->
   <link rel="stylesheet" href="../../../styles/loading.css">
   <link rel="stylesheet" href="../../../styles/navigasi.css">
-  <link rel="stylesheet" href="../../../styles/albedu-v1.css">
   <link rel="stylesheet" href="../../../styles/daftar-nama.css">
   <link rel="stylesheet" href="../../../styles/notification-panel.css">
   <link rel="stylesheet" href="../../../public/QNotify/ui/notify.css">
@@ -64,9 +63,12 @@
     };
     window.dispatchEvent(new Event('qnotify-ready'));
   </script>
+    <script src="../../../src/i18n/translations/id.js" defer></script>
+    <script src="../../../src/i18n/translations/en.js" defer></script>
+    <script src="../../../src/i18n/index.js" defer></script>
 </head>
 <body>
-<a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
+<a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
 
 <!-- Page Load -->
 <div class="page-transition"></div>
@@ -76,16 +78,16 @@
   <aside class="sidebar">
     <div class="logo">
       <a class="logo-icon-link" href="../index.html" data-nav="logo"
-         aria-label="AlbEdu Creates — Ke beranda"
-         title="AlbEdu Creates — Klik untuk ke beranda">
+         data-i18n-aria-label="sidebar.brand_aria" aria-label="AlbEdu Creates — Ke beranda"
+         data-i18n-title="sidebar.brand_title" title="AlbEdu Creates — Klik untuk ke beranda">
         <span class="logo-icon-stack" aria-hidden="true">
           <img class="logo-icon logo-icon--default" src="../../../public/images/logo.svg" alt="">
           <i class="logo-icon logo-icon--reveal material-symbols-outlined">left_panel_open</i>
         </span>
       </a>
-      <span class="logo-text">AlbEdu Creates</span>
+      <span class="logo-text" data-i18n="sidebar.brand_text">AlbEdu Creates</span>
       <button class="sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button"
-              aria-label="Tutup sidebar" aria-expanded="true">
+              data-i18n-aria-label="sidebar.collapse_aria" aria-label="Tutup sidebar" aria-expanded="true">
         <i class="material-symbols-outlined">left_panel_close</i>
       </button>
     </div>
@@ -94,43 +96,43 @@
         <li class="menu-item sidebar-item" data-tab="profil">
           <a href="profile.html" class="menu-item-content">
             <i class="sidebar-icon material-symbols-outlined">account_circle</i>
-            <span class="sidebar-text">Profil Admin</span>
+            <span class="sidebar-text" data-i18n="sidebar.menu.profile">Profil Admin</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="buat-ujian">
           <a href="buat-ujian.html" class="menu-item-content">
             <i class="sidebar-icon material-symbols-outlined">edit_note</i>
-            <span class="sidebar-text">Buat Ujian</span>
+            <span class="sidebar-text" data-i18n="sidebar.menu.buat_ujian">Buat Ujian</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="data-hasil">
           <a href="data-hasil.html" class="menu-item-content">
             <i class="sidebar-icon material-symbols-outlined">bar_chart</i>
-            <span class="sidebar-text">Data Hasil Peserta</span>
+            <span class="sidebar-text" data-i18n="sidebar.menu.data_hasil">Data Hasil Peserta</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="ujian-peserta">
           <a href="ujian-peserta.html" class="menu-item-content">
             <i class="sidebar-icon material-symbols-outlined">menu_book</i>
-            <span class="sidebar-text">Ujian Peserta</span>
+            <span class="sidebar-text" data-i18n="sidebar.menu.ujian_peserta">Ujian Peserta</span>
           </a>
         </li>
         <li class="menu-item sidebar-item active" data-tab="daftar-nama">
           <a href="daftar-nama.html" class="menu-item-content">
             <i class="sidebar-icon material-symbols-outlined">list</i>
-            <span class="sidebar-text">Daftar Nama</span>
+            <span class="sidebar-text" data-i18n="sidebar.menu.daftar_nama">Daftar Nama</span>
           </a>
         </li>
       </ul>
     </nav>
     <div class="user-profile sidebar-item">
-      <button class="user-profile-content" aria-haspopup="true" aria-expanded="false" aria-label="Menu profil pengguna">
+      <button class="user-profile-content" aria-haspopup="true" aria-expanded="false" data-i18n-aria-label="sidebar.profile_aria" aria-label="Menu profil pengguna">
         <div class="avatar" id="sidebar-avatar">
           <i class="material-symbols-outlined">person</i>
         </div>
         <div class="user-info">
-          <h4 id="sidebar-user-name">Admin AlbEdu</h4>
-          <p id="sidebar-user-role">Administrator</p>
+          <h4 id="sidebar-user-name" data-i18n="sidebar.default_name">Admin AlbEdu</h4>
+          <p id="sidebar-user-role" data-i18n="sidebar.default_role">Administrator</p>
         </div>
       </button>
     </div>
@@ -143,13 +145,13 @@
   <main class="main-content" id="main-content">
     <header class="header">
       <div class="header-left">
-        <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+        <button class="menu-toggle" id="menu-toggle" data-i18n-aria-label="header.menu_toggle_alt_aria" aria-label="Toggle menu">
           <i class="material-symbols-outlined">menu</i>
         </button>
-        <h1 id="page-title">Daftar Nama</h1>
+        <h1 id="page-title" data-i18n="daftar_nama.page_title">Daftar Nama</h1>
       </div>
       <div class="header-right">
-        <button class="notification-btn" id="notification-btn" aria-label="Notifikasi">
+        <button class="notification-btn" id="notification-btn" data-i18n-aria-label="header.notif_aria" aria-label="Notifikasi">
           <i class="material-symbols-outlined">notifications</i>
           <span class="badge">3</span>
         </button>
@@ -158,8 +160,8 @@
 
     <div class="content-area">
       <div class="content-header">
-        <h2>Daftar Nama</h2>
-        <p>Kelola daftar nama yang digunakan saat pembuatan ujian</p>
+        <h2 data-i18n="daftar_nama.header.title">Daftar Nama</h2>
+        <p data-i18n="daftar_nama.header.desc">Kelola daftar nama yang digunakan saat pembuatan ujian</p>
       </div>
 
       <div class="dn-page" id="dnPage">
@@ -167,11 +169,11 @@
         <!-- Header -->
         <div class="dn-header">
           <div>
-            <h2><i style="color:var(--color-primary);margin-right:8px" class="material-symbols-outlined">list</i>Daftar Nama</h2>
-            <p>Kelola daftar nama yang digunakan saat pembuatan ujian. Maksimal 3 data daftar.</p>
+            <h2><i style="color:var(--color-primary);margin-right:8px" class="material-symbols-outlined">list</i><span data-i18n="daftar_nama.title">Daftar Nama</span></h2>
+            <p data-i18n="daftar_nama.desc">Kelola daftar nama yang digunakan saat pembuatan ujian. Maksimal 3 data daftar.</p>
           </div>
           <button class="dn-btn primary" id="btnBuatDaftar">
-            <i class="material-symbols-outlined">add</i> Buat Daftar
+            <i class="material-symbols-outlined">add</i> <span data-i18n="daftar_nama.btn_create">Buat Daftar</span>
           </button>
         </div>
 
@@ -200,7 +202,7 @@
 
     <footer class="footer">
       <p>&copy; 2024 AlbEdu. Semua hak dilindungi.</p>
-      <p>v0.741.5</p>
+      <p>v1.0.0</p>
     </footer>
   </main>
 </div>
@@ -209,10 +211,6 @@
 <script src="../../../src/utils/navigasi.js" defer></script>
 <!-- Notification Center -->
 <script src="../../../src/utils/admin-notification-center.js" defer></script>
-
-<!-- v0.741.5 Theme System + i18n -->
-<script type="module" src="../../../src/theme-system/index.js"></script>
-<script type="module" src="../../../src/i18n/index.js"></script>
 
 <!-- Main page logic -->
 <script>
@@ -857,10 +855,5 @@
 
 })();
 </script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('../../../public/service-worker.js').catch(() => {}));
-      }
-    </script>
 </body>
 </html>

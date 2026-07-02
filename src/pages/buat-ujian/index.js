@@ -1,7 +1,7 @@
 // =============================================================================
 // src/pages/buat-ujian/index.js — Barrel file for Buat Ujian v0.2.0 modules
 // =============================================================================
-// The HTML page (pages/admin/buat-ujian.html) loads each module as a
+// The HTML page (pages/admin/pages/buat-ujian.html) loads each module as a
 // separate <script defer> tag in dependency order. This barrel exists for
 // discoverability — it documents the modules that compose the Buat Ujian
 // page. It is NOT loaded as a runtime <script>; it's a pure ES module for
@@ -17,7 +17,7 @@
 //   7. wizard-controller.js    → window.WizardController   (depends on BuatUjian, PublishCard, ListView)
 //   8. list-view.js            → window.ListView           (depends on firebaseDb, firebaseAuth)
 //
-// Page controller (separate file): src/pages/create-assessment.js → window.CreateAssessment
+// Page controller (separate file): src/pages/buat-ujian.js → window.BuatUjian
 //
 // v0.2.0 changes:
 //   - Removed settings-card.js (Pengaturan Lanjutan card deleted)

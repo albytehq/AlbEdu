@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Panel Administrator — AlbEdu</title>
-    <meta name="description" content="Panel Administrator AlbEdu — pintu masuk ke AlbEdu Creates dan Halaman Asesmen.">
+    
+    <title data-i18n="admin.title">Panel Administrator - AlbEdu</title>
+    <meta name="description" content="Panel Administrator AlbEdu">
     <meta name="theme-color" content="#2563eb">
-
+    
     <!-- Mobile App Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="mobile-web-app-capable" content="yes">
+    
+    
+    
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="../../public/images/favicon/favicon.ico">
@@ -22,28 +25,29 @@
 
     <!-- Design System Tokens -->
     <link rel="stylesheet" href="../../styles/tokens.css">
-    <!-- F1+F2 fix: font loading strategy (preconnect + swap, no @import) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+  <!-- F1+F2 fix: font loading strategy (preconnect + swap, no @import) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
     <!-- QNotify Styles -->
     <link rel="stylesheet" href="../../public/QNotify/ui/notify.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/dialog.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/label.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/Readnote.css">
+    <!-- style.css removed — tokens.css provides skip-to-main, focus ring, and global reset -->
 
     <!-- Loading System -->
     <link rel="stylesheet" href="../../styles/loading.css">
     <link rel="stylesheet" href="../../styles/admin-panel.css">
     <link rel="stylesheet" href="../../styles/notification-panel.css">
-
+    
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
     <script src="../../src/utils/supabase-api.js" defer></script>
     <!-- Self Storage (v0.5.0) — auto-provisions storage on admin login -->
     <script src="../../src/utils/self-storage.js" defer></script>
-
+    
     <!-- Load module (URUTAN PENTING) -->
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
@@ -68,28 +72,21 @@
         };
         window.dispatchEvent(new Event('qnotify-ready'));
     </script>
-
-    <!-- v0.742.9 — Apply default theme on load (prevents FOUC) -->
-    <script>
-      (function () {
-        try {
-          var saved = localStorage.getItem('albedu-theme') || 'default';
-          document.documentElement.setAttribute('data-theme', saved);
-        } catch (e) { /* noop */ }
-      })();
-    </script>
+    <script src="../../src/i18n/translations/id.js" defer></script>
+    <script src="../../src/i18n/translations/en.js" defer></script>
+    <script src="../../src/i18n/index.js" defer></script>
 </head>
 <body>
-    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
+    <a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
     <div class="panel-container">
 
         <!-- Header -->
         <div class="mobile-header">
             <div class="header-top">
-                <div class="app-title">AlbEdu Admin</div>
+                <div class="app-title" data-i18n="admin.app_title">AlbEdu Admin</div>
                 <div style="display:flex;align-items:center;gap:8px;">
                     <button class="notification-btn" id="notification-btn-index"
-                            aria-label="Notifikasi pelanggaran ujian">
+                            data-i18n-aria-label="admin.notification_aria" aria-label="Notifikasi pelanggaran ujian">
                         <i class="material-symbols-outlined">notifications</i>
                         <span class="badge" id="anc-bell-badge"
                               style="position:absolute;top:-5px;right:-5px;width:15px;height:15px;
@@ -99,14 +96,14 @@
                     <div class="time-display" id="currentTime">--:--</div>
                 </div>
             </div>
-
+            
             <div id="userInfo" class="user-info-mobile">
                 <!-- Populated by panel.js -->
                 <div class="user-avatar-mobile">
                     <i class="material-symbols-outlined">manage_accounts</i>
                 </div>
                 <div class="user-details-mobile">
-                    <h3>Administrator</h3>
+                    <h3 data-i18n="admin.role.admin">Administrator</h3>
                     <p>admin@albedu.com</p>
                 </div>
             </div>
@@ -117,24 +114,24 @@
 
             <!-- Greeting -->
             <div class="greeting-section">
-                <h2 id="greeting">Panel Administrator</h2>
-                <p>Selamat datang kembali. Pilih ruang kerja Anda di bawah ini.</p>
+                <h2 id="greeting" data-i18n="admin.greeting">Panel Administrator</h2>
+                <p data-i18n="admin.greeting_desc">Pilih halaman yang ingin Anda kunjungi</p>
             </div>
 
-            <!-- Cards — v0.742.9: simplified to 2 entry points -->
+            <!-- Cards -->
             <div class="mobile-cards">
 
-                <!-- AlbEdu Creates (was: Profil Admin) -->
-                <div class="mobile-card mobile-card-primary" data-link="profile.html"
-                     role="button" tabindex="0" aria-label="Buka AlbEdu Creates">
+                <!-- AlbEdu Creates -->
+                <div class="mobile-card mobile-card-primary" data-link="pages/profile.html"
+                     role="button" tabindex="0" data-i18n-aria-label="admin.card.creates.aria" aria-label="Buka AlbEdu Creates">
                     <div class="card-icon-mobile">
                         <i class="material-symbols-outlined">auto_fix_high</i>
                     </div>
                     <div class="card-content-mobile">
-                        <span class="card-kicker-mobile">Workspace admin</span>
-                        <h3 class="card-title-mobile">AlbEdu Creates</h3>
-                        <p class="card-description-mobile">
-                            Pusat kendali administrator — kelola profil, preferensi, dan identitas akun AlbEdu Anda dari satu tempat.
+                        <span class="card-kicker-mobile" data-i18n="admin.card.creates.kicker">Workspace admin</span>
+                        <h3 class="card-title-mobile" data-i18n="admin.card.creates.title">AlbEdu Creates</h3>
+                        <p class="card-description-mobile" data-i18n="admin.card.creates.desc">
+                            Buat dan kelola konten pembelajaran untuk platform AlbEdu.
                         </p>
                     </div>
                     <div class="card-arrow-mobile">
@@ -142,17 +139,16 @@
                     </div>
                 </div>
 
-                <!-- Halaman Asesmen (was: Halaman Ujian) -->
+                <!-- Halaman Ujian -->
                 <div class="mobile-card" data-link="../ujian/index.html"
-                     role="button" tabindex="0" aria-label="Buka Halaman Asesmen">
+                     role="button" tabindex="0" data-i18n-aria-label="admin.card.ujian.aria" aria-label="Buka Halaman Ujian">
                     <div class="card-icon-mobile">
                         <i class="material-symbols-outlined">assignment_turned_in</i>
                     </div>
                     <div class="card-content-mobile">
-                        <span class="card-kicker-mobile">Sisi peserta</span>
-                        <h3 class="card-title-mobile">Halaman Asesmen</h3>
-                        <p class="card-description-mobile">
-                            Buka halaman input kode akses peserta untuk uji coba, inspeksi alur, atau pemantauan sesi asesmen.
+                        <h3 class="card-title-mobile" data-i18n="admin.card.ujian.title">Halaman Ujian</h3>
+                        <p class="card-description-mobile" data-i18n="admin.card.ujian.desc">
+                            Kelola sistem ujian online dan pantau hasil ujian peserta.
                         </p>
                     </div>
                     <div class="card-arrow-mobile">
@@ -164,8 +160,8 @@
         </div>
 
         <!-- Status Bar -->
-        <div class="mobile-status">
-            AlbEdu Admin Panel · v0.742.9
+        <div class="mobile-status" data-i18n="admin.status_bar">
+            AlbEdu Admin Panel
         </div>
     </div>
 
@@ -184,13 +180,6 @@
                 });
             }
         });
-    </script>
-
-    <!-- Service Worker -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('../../public/service-worker.js').catch(() => {}));
-      }
     </script>
 </body>
 </html>

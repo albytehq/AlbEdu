@@ -13,28 +13,7 @@ verify_jwt = false
 [functions.user-auth-complete]
 verify_jwt = false
 
-[functions.access-code-attempt]
-verify_jwt = false
-
-[functions.submit-assessment]
-verify_jwt = false
-
-[functions.heartbeat]
-verify_jwt = false
-
-[functions.block-participant]
-verify_jwt = false
-
-[functions.assessment-lifecycle]
-verify_jwt = false
-
-[functions.cleanup-assessment]
-verify_jwt = false
-
-[functions.data-export]
-verify_jwt = false
-
-[functions.dsr-handler]
+[functions.exam-token-attempt]
 verify_jwt = false
 
 [api]

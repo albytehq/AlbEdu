@@ -1,2 +1,352 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><meta http-equiv="refresh" content="0; url=active-assessments.html"></head><body>Redirecting...</body></html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="ujian_peserta.page_title">Ujian Peserta - AlbEdu</title>
+    <meta name="description" content="AlbEdu - Panel Admin Ujian Peserta">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="../../../public/images/favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="../../../public/images/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="96x96" href="../../../public/images/favicon/favicon-96x96.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../../public/images/favicon/apple-touch-icon.png">
+    <link rel="manifest" href="../../../public/images/favicon/site.webmanifest">
+
+    <!-- Design System Tokens -->
+    <link rel="stylesheet" href="../../../styles/tokens.css">
+  <!-- F1+F2 fix: font loading strategy (preconnect + swap, no @import) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Scheherazade+New:wght@400;700&display=swap">
+    <!-- style.css removed — tokens.css provides global reset, focus ring, skip-to-main -->
+    <!-- Loading System (Block Bounce Loader) -->
+    <link rel="stylesheet" href="../../../styles/loading.css">
+    <link rel="stylesheet" href="../../../styles/navigasi.css">
+    <!-- Page CSS -->
+    <link rel="stylesheet" href="../../../styles/ujian-peserta.css">
+    <!-- QNotify -->
+    <link rel="stylesheet" href="../../../public/QNotify/ui/notify.css">
+    <link rel="stylesheet" href="../../../public/QNotify/ui/dialog.css">
+    <link rel="stylesheet" href="../../../public/QNotify/ui/label.css">
+    <link rel="stylesheet" href="../../../public/QNotify/ui/Readnote.css">
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+    <script src="../../../src/utils/supabase-api.js" defer></script>
+    <script src="../../../src/utils/self-storage.js" defer></script>
+
+    <!-- Global JS -->
+    <script src="../../../src/auth/security.js" defer></script>
+    <script src="../../../src/utils/ui.js" defer></script>
+    <script src="../../../src/auth/errors.js" defer></script>
+    <script src="../../../src/auth/user-helpers.js" defer></script>
+    <script src="../../../src/auth/main.js" defer></script>
+    <script src="../../../src/auth/byteward.js" defer></script>
+
+    <!-- Controller -->
+    <script src="../../../src/exam/expiry-manager.js" defer></script>
+    <script src="../../../src/utils/image-cleanup.js" defer></script>
+    <script src="../../../src/exam/admin-controller.js" defer></script>
+
+    <!-- Icons & Fonts -->
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
+    <!-- F4: KaTeX math rendering -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+          crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+            crossorigin="anonymous"
+            onload="window.__katexReady=true;window.dispatchEvent(new Event('katex-ready'))"></script>
+    <style>
+      /* F5: RTL / Arab / CJK support */
+      .question-text,.option-value,.soal-card-body,.detail-pertanyaan,.catatan-text,.modal-body p,.preview-soal-text{unicode-bidi:plaintext;overflow-wrap:break-word;word-break:break-word}
+      .lang-ar{font-family:'Amiri','Scheherazade New','Times New Roman',serif;direction:rtl;text-align:right;font-size:1.15em;line-height:2.2;letter-spacing:0}
+      .lang-cjk{font-family:'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif;word-break:break-all}
+      /* F3: Edit modal form styles */
+      .edit-modal-body{display:flex;flex-direction:column;gap:16px;padding:20px}
+      .edit-field-group{display:flex;flex-direction:column;gap:6px}
+      .edit-field-row{display:flex;gap:16px;flex-wrap:wrap}
+      .edit-field-row .edit-field-group{flex:1;min-width:180px}
+      .edit-label{font-size:13px;font-weight:600;color:var(--color-text-2, #374151)}
+      .edit-required{color:var(--color-destructive, #ef4444)}
+      .edit-input,.edit-select,.edit-textarea{width:100%;padding:9px 12px;border:1.5px solid var(--color-border, #e5e7eb);border-radius:8px;font-size:14px;font-family:inherit;transition:border-color .15s}
+      .edit-input:focus,.edit-select:focus,.edit-textarea:focus{border-color:var(--color-primary);outline:none;box-shadow:0 0 0 3px var(--color-primary-ring, rgba(37,99,235,0.15))}
+      .edit-textarea{resize:vertical;min-height:72px}
+      .edit-input-with-unit{display:flex;align-items:center;gap:8px}
+      .edit-input-with-unit .edit-input{flex:1}
+      .edit-unit{font-size:13px;color:var(--color-text-muted, #6b7280);white-space:nowrap}
+      .edit-checkboxes{display:flex;gap:12px;flex-wrap:wrap}
+      .edit-checkbox-label{display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--color-border, #e5e7eb);border-radius:8px;transition:all .15s}
+      .edit-checkbox-label:has(input:checked){border-color:var(--color-primary);background:var(--color-primary-light)}
+      .edit-error{font-size:12px;color:var(--color-destructive, #ef4444);font-weight:500;margin-top:2px}
+      .edit-error.hidden{display:none}
+      .btn-modal{padding:9px 18px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;min-height:44px;min-width:44px}
+      .btn-modal-secondary{background:var(--color-surface-2, #f3f4f6);color:var(--color-text-2, #374151)}
+      .btn-modal-secondary:hover{background:var(--color-border, #e5e7eb)}
+      .btn-modal-primary{background:var(--color-primary);color:#fff}
+      .btn-modal-primary:hover{background:var(--color-primary-hover);transform:translateY(-1px)}
+      .btn-modal-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    </style>
+    <!-- Notification Center -->
+    <link rel="stylesheet" href="../../../styles/notification-panel.css">
+    <script src="../../../src/i18n/translations/id.js" defer></script>
+    <script src="../../../src/i18n/translations/en.js" defer></script>
+    <script src="../../../src/i18n/index.js" defer></script>
+</head>
+
+<body>
+    <a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
+    <!-- Page Load Animation -->
+    <div class="page-transition">
+        
+    </div>
+
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <a class="logo-icon-link" href="../index.html" data-nav="logo"
+                   data-i18n-aria-label="sidebar.brand_aria" aria-label="AlbEdu Creates — Ke beranda"
+                   data-i18n-title="sidebar.brand_title" title="AlbEdu Creates — Klik untuk ke beranda">
+                    <span class="logo-icon-stack" aria-hidden="true">
+                        <img class="logo-icon logo-icon--default" src="../../../public/images/logo.svg" alt="">
+                        <i class="logo-icon logo-icon--reveal material-symbols-outlined">left_panel_open</i>
+                    </span>
+                </a>
+                <span class="logo-text" data-i18n="sidebar.brand_text">AlbEdu Creates</span>
+                <button class="sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button"
+                        data-i18n-aria-label="sidebar.collapse_aria" aria-label="Tutup sidebar" aria-expanded="true">
+                    <i class="material-symbols-outlined">left_panel_close</i>
+                </button>
+            </div>
+            <nav class="menu">
+                <ul>
+                    <li class="menu-item sidebar-item" data-tab="profil">
+                        <a href="profile.html" class="menu-item-content">
+                            <i class="sidebar-icon material-symbols-outlined">account_circle</i>
+                            <span class="sidebar-text" data-i18n="sidebar.menu.profile">Profil Admin</span>
+                        </a>
+                    </li>
+                    <li class="menu-item sidebar-item" data-tab="buat-ujian">
+                        <a href="buat-ujian.html" class="menu-item-content">
+                            <i class="sidebar-icon material-symbols-outlined">edit_note</i>
+                            <span class="sidebar-text" data-i18n="sidebar.menu.buat_ujian">Buat Ujian</span>
+                        </a>
+                    </li>
+                    <li class="menu-item sidebar-item" data-tab="data-hasil">
+                        <a href="data-hasil.html" class="menu-item-content">
+                            <i class="sidebar-icon material-symbols-outlined">bar_chart</i>
+                            <span class="sidebar-text" data-i18n="sidebar.menu.data_hasil">Data Hasil Peserta</span>
+                        </a>
+                    </li>
+                    <li class="menu-item sidebar-item active" data-tab="ujian-peserta">
+                        <a href="ujian-peserta.html" class="menu-item-content">
+                            <i class="sidebar-icon material-symbols-outlined">menu_book</i>
+                            <span class="sidebar-text" data-i18n="sidebar.menu.ujian_peserta">Ujian Peserta</span>
+                        </a>
+                    </li>
+                    <li class="menu-item sidebar-item" data-tab="daftar-nama">
+                        <a href="daftar-nama.html" class="menu-item-content">
+                            <i class="sidebar-icon material-symbols-outlined">list</i>
+                            <span class="sidebar-text" data-i18n="sidebar.menu.daftar_nama">Daftar Nama</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="user-profile sidebar-item">
+                <button class="user-profile-content" aria-haspopup="true" aria-expanded="false" data-i18n-aria-label="sidebar.profile_aria" aria-label="Menu profil pengguna">
+                    <div class="avatar" id="sidebar-avatar">
+                        <i class="material-symbols-outlined">person</i>
+                    </div>
+                    <div class="user-info">
+                        <h4 id="sidebar-user-name" data-i18n="sidebar.default_name">Admin AlbEdu</h4>
+                        <p id="sidebar-user-role" data-i18n="sidebar.default_role">Administrator</p>
+                    </div>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Sidebar Overlay (mobile) -->
+        <div class="sidebar-overlay"></div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+                        <i class="material-symbols-outlined">menu</i>
+                    </button>
+                    <h1 id="page-title">Ujian Peserta</h1>
+                </div>
+                <div class="header-right">
+                    <button class="notification-btn" id="notification-btn" aria-label="Notifikasi">
+                        <i class="material-symbols-outlined">notifications</i>
+                        <span class="badge">3</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="content-area">
+
+                <!-- Page Header -->
+                <div class="content-header">
+                    <div class="content-header-text">
+                        <h2>Kelola Ujian Peserta</h2>
+                        <p>Pantau dan kelola seluruh ujian peserta dari satu tempat</p>
+                    </div>
+                </div>
+
+                <!-- Stats Row — simplified to 3 key cards -->
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="material-symbols-outlined">assignment</i></div>
+                        <div class="stat-body">
+                            <div class="stat-value" id="stat-total">0</div>
+                            <div class="stat-label">Total Ujian</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i class="material-symbols-outlined">play_circle</i></div>
+                        <div class="stat-body">
+                            <div class="stat-value" id="stat-running">0</div>
+                            <div class="stat-label">Sedang Berjalan</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red"><i class="material-symbols-outlined">check_circle</i></div>
+                        <div class="stat-body">
+                            <div class="stat-value" id="stat-finished">0</div>
+                            <div class="stat-label">Selesai</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search -->
+                <div class="search-container" role="search">
+                    <div class="search-box">
+                        <i aria-hidden="true" class="material-symbols-outlined search-icon">search</i>
+                        <input
+                            type="text"
+                            id="search-exam"
+                            placeholder="Cari ujian — judul, mata pelajaran, ID..."
+                            autocomplete="off"
+                            aria-label="Cari ujian"
+                        >
+                        <button class="search-clear" id="search-clear" aria-label="Hapus pencarian">
+                            <i class="material-symbols-outlined">close</i>
+                        </button>
+                    </div>
+                    <div class="search-results-hint" id="search-results-hint" aria-live="polite"></div>
+                </div>
+
+                <!-- Exams Management -->
+                <div class="exams-management-container" role="region" aria-label="Daftar ujian">
+                    <div class="exams-header">
+                        <div class="exams-header-left">
+                            <h3>Daftar Ujian</h3>
+                        </div>
+                        <div class="exams-summary">
+                            <span class="summary-item">
+                                <i class="material-symbols-outlined">assignment</i>
+                                Total: <strong id="total-exams">0</strong>
+                            </span>
+                            <span class="summary-item">
+                                <i class="material-symbols-outlined">play_circle</i>
+                                Aktif: <strong id="active-exams">0</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Exam cards injected here by JS -->
+                    <div class="exams-grid" id="exams-grid" role="list" aria-label="Kartu ujian"></div>
+
+                    <!-- Empty state — shown by JS -->
+                    <div class="no-exams-message" id="no-exams-message" aria-live="polite">
+                        <div class="message-icon"><i class="material-symbols-outlined">menu_book</i></div>
+                        <h3>Tidak Ada Ujian</h3>
+                        <p>Belum ada ujian yang dibuat.</p>
+                        <a href="buat-ujian.html" class="btn-create-exam">
+                            <i class="material-symbols-outlined">add_circle</i> Buat Ujian
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Notification Sections -->
+                <div class="notifications-container">
+                    <!-- Completed Users -->
+                    <div class="notification-section">
+                        <div class="notification-header">
+                            <h3>
+                                <i class="material-symbols-outlined icon-success">how_to_reg</i>
+                                Peserta Selesai Ujian
+                            </h3>
+                            <span class="notification-count" id="completed-count">0</span>
+                        </div>
+                        <div class="notification-list" id="completed-users-list" role="list"></div>
+                        <div class="notification-empty show" id="no-completed-users">
+                            <i class="material-symbols-outlined">check_circle</i>
+                            <p>Belum ada peserta yang menyelesaikan ujian</p>
+                        </div>
+                    </div>
+
+                    <!-- Cheating Detection -->
+                    <div class="notification-section">
+                        <div class="notification-header">
+                            <h3>
+                                <i class="material-symbols-outlined icon-warning">person_cancel</i>
+                                Deteksi Kecurangan
+                            </h3>
+                            <span class="notification-count warning" id="cheating-count">0</span>
+                        </div>
+                        <div class="notification-list" id="cheating-users-list" role="list"></div>
+                        <div class="notification-empty show" id="no-cheating-users">
+                            <i class="material-symbols-outlined">mood</i>
+                            <p>Tidak ada indikasi kecurangan</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /.content-area -->
+
+            <footer class="footer">
+                <p>&copy; 2024 AlbEdu. Semua hak dilindungi.</p>
+                <p>v4.0.0-Beta</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Global Navigation JS -->
+    <script src="../../../src/utils/navigasi.js" defer></script>
+<!-- Notification Center -->
+    <script src="../../../src/utils/admin-notification-center.js" defer></script>
+    <!-- Page JS -->
+    <script src="../../../src/utils/math-renderer.js" defer></script>
+    <script src="../../../src/utils/math-paste-converter.js" defer></script>
+    <script src="../../../src/pages/ujian-peserta.js" defer></script>
+
+    <!-- QNotify Module -->
+    <script type="module">
+        import QNotify from '../../../public/QNotify/api/index.js';
+        window.QNotify = QNotify;
+        window.show    = QNotify;
+        window.notify  = {
+            success:          (t, m, d) => QNotify.notify.success(t, m, d),
+            error:            (t, m, d) => QNotify.notify.error(t, m, d),
+            warning:          (t, m, d) => QNotify.notify.warning(t, m, d),
+            info:             (t, m, d) => QNotify.notify.info(t, m, d),
+            confirm:          (opts)    => QNotify.dialog.confirm(opts),
+            holdConfirmAsync: (opts)    => QNotify.dialog.holdAsync(opts),
+        };
+    </script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daftar Administrator — AlbEdu</title>
+    <title data-i18n="auth.register.title">Daftar Administrator — AlbEdu</title>
     <meta name="description" content="Daftarkan akun administrator AlbEdu.">
     <meta name="theme-color" content="#1E40AF">
     <link rel="icon" type="image/x-icon" href="../public/images/favicon/favicon.ico">
@@ -26,6 +26,9 @@
     <script src="../src/utils/supabase-api.js" defer></script>
     <script src="../src/auth/device-fingerprint.js" defer></script>
     <script type="module"src="../src/auth/admin-onboarding.js" defer></script>
+    <script src="../src/i18n/translations/id.js" defer></script>
+    <script src="../src/i18n/translations/en.js" defer></script>
+    <script src="../src/i18n/index.js" defer></script>
 </head>
 
 <body>
@@ -41,24 +44,24 @@
                         <img src="../public/images/logo.svg" alt="AlbEdu" width="36" height="36">
                         <span class="form-logo-name">AlbEdu</span>
                     </div>
-                    <h1 class="form-title" data-i18n="auth.register_title">Buat Akun Administrator</h1>
-                    <p class="form-subtitle" data-i18n="auth.register_subtitle">Kelola sistem pendidikan dengan akses penuh</p>
+                    <h1 class="form-title" data-i18n="auth.register.title">Buat Akun Administrator</h1>
+                    <p class="form-subtitle" data-i18n="auth.register.subtitle">Kelola sistem pendidikan dengan akses penuh</p>
                 </div>
 
                 <!-- Registration form — IDs preserved for AdminOnboarding.js -->
                 <form id="adminRegisterForm" novalidate>
                     <div class="field">
-                        <label for="email">Email</label>
+                        <label for="email" data-i18n="auth.register.email_label">Email</label>
                         <input id="email" name="email" type="email" autocomplete="email"
                             class="input" placeholder="nama@sekolah.sch.id" required>
                     </div>
 
                     <div class="field field-password">
-                        <label for="password">Kata Sandi</label>
+                        <label for="password" data-i18n="auth.register.password_label">Kata Sandi</label>
                         <input id="password" name="password" type="password" autocomplete="new-password" minlength="8"
-                            class="input" placeholder="Minimal 8 karakter" required>
+                            class="input" placeholder="Minimal 8 karakter" data-i18n-placeholder="auth.register.password_placeholder" required>
                         <button type="button" class="toggle-visibility" data-target="password"
-                            aria-label="Tampilkan kata sandi">
+                            data-i18n-aria-label="auth.login.show_password" aria-label="Tampilkan kata sandi">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 class="icon-eye">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -81,11 +84,11 @@
                     </div>
 
                     <div class="field field-password">
-                        <label for="confirmPassword">Konfirmasi Kata Sandi</label>
+                        <label for="confirmPassword" data-i18n="auth.register.confirm_label">Konfirmasi Kata Sandi</label>
                         <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password"
-                            minlength="8" class="input" placeholder="Ulangi kata sandi" required>
+                            minlength="8" class="input" placeholder="Ulangi kata sandi" data-i18n-placeholder="auth.register.confirm_placeholder" required>
                         <button type="button" class="toggle-visibility" data-target="confirmPassword"
-                            aria-label="Tampilkan kata sandi">
+                            data-i18n-aria-label="auth.login.show_password" aria-label="Tampilkan kata sandi">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 class="icon-eye">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -101,11 +104,11 @@
 
                     <!-- Turnstile widget -->
                     <div class="turnstile-wrap">
-                        <div class="cf-turnstile" data-sitekey="0x4AAAAAADtSMQt5KNMPWBzW"></div>
+                        <div class="cf-turnstile" data-sitekey="0x4AAAAAADf1nq5nQwB729CG"></div>
                     </div>
 
                     <!-- Submit button -->
-                    <button id="registerBtn" type="submit" aria-busy="false">
+                    <button id="registerBtn" type="submit" aria-busy="false" data-i18n="auth.register.submit">
                         Daftar Sekarang
                     </button>
 
@@ -119,7 +122,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
-                        Kembali ke Login
+                        <span data-i18n="auth.register.back_login">Kembali ke Login</span>
                     </a>
                 </div>
 
@@ -135,8 +138,8 @@
                 <div class="branding-logo" aria-hidden="true">
                     <img src="../public/images/logo.svg" alt="" width="40" height="40">
                 </div>
-                <h2 class="branding-title">Bergabung dengan AlbEdu</h2>
-                <p class="branding-tagline">Daftarkan diri Anda sebagai administrator dan mulai kelola sistem pendidikan secara digital.</p>
+                <h2 class="branding-title" data-i18n="auth.register.branding.title">Bergabung dengan AlbEdu</h2>
+                <p class="branding-tagline" data-i18n="auth.register.branding.tagline">Daftarkan diri Anda sebagai administrator dan mulai kelola sistem pendidikan secara digital.</p>
 
                 <div class="feature-list">
                     <div class="feature-item">
@@ -149,8 +152,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Akses Penuh</span>
-                            <span class="feature-desc">Kelola peserta, ujian, dan seluruh sistem</span>
+                            <span class="feature-label" data-i18n="auth.register.feature.1.label">Akses Penuh</span>
+                            <span class="feature-desc" data-i18n="auth.register.feature.1.desc">Kelola peserta, ujian, dan seluruh sistem</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -161,8 +164,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Keamanan Terjamin</span>
-                            <span class="feature-desc">Verifikasi email & proteksi perangkat</span>
+                            <span class="feature-label" data-i18n="auth.register.feature.2.label">Keamanan Terjamin</span>
+                            <span class="feature-desc" data-i18n="auth.register.feature.2.desc">Verifikasi email & proteksi perangkat</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -172,8 +175,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Siap dalam Hitungan Menit</span>
-                            <span class="feature-desc">Pendaftaran cepat, langsung aktif</span>
+                            <span class="feature-label" data-i18n="auth.register.feature.3.label">Siap dalam Hitungan Menit</span>
+                            <span class="feature-desc" data-i18n="auth.register.feature.3.desc">Pendaftaran cepat, langsung aktif</span>
                         </div>
                     </div>
                 </div>
@@ -202,9 +205,6 @@
             });
         });
     </script>
-    <!-- v0.742.9: i18n -->
-    <script type="module" src="../src/i18n/index.js"></script>
-    <script defer src="../src/i18n/lang-switcher.js"></script>
 </body>
 
 </html>

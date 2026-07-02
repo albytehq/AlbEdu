@@ -499,6 +499,83 @@
         }
       }
 
+      /* ── Language item + inline switcher panel ── */
+      /* v4.0: language item is a regular .op-item but with extra styling */
+      .op-item.op-language-item {
+        /* same as default */
+      }
+      .op-item.op-language-expanded .op-item-chevron {
+        transform: rotate(180deg);
+      }
+
+      /* Inline panel — sits below the language item */
+      .op-lang-panel {
+        padding: 4px 12px 8px;
+        animation: op-lang-in 220ms ${ANIM_SPRING} forwards;
+      }
+      .op-lang-panel[hidden] {
+        display: none !important;
+      }
+      @keyframes op-lang-in {
+        0%   { opacity: 0; transform: translateY(-4px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+
+      .op-lang-switcher {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 6px;
+        border: 1px solid #e2e8f0;
+      }
+      .op-lang-pill {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 8px 10px;
+        background: transparent;
+        border: 0;
+        border-radius: 8px;
+        color: #1e293b;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        text-align: left;
+        transition: background 140ms ease, color 140ms ease;
+        font-family: inherit;
+      }
+      .op-lang-pill:hover {
+        background: #e2e8f0;
+      }
+      .op-lang-pill:focus-visible {
+        outline: 2px solid #2563eb;
+        outline-offset: -2px;
+      }
+      .op-lang-pill.op-lang-active {
+        background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+        color: #2563eb;
+      }
+      .op-lang-flag {
+        font-size: 18px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .op-lang-name {
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .op-lang-check {
+        font-size: 14px;
+        color: #2563eb;
+        flex-shrink: 0;
+      }
+
       /* ── Reduced motion: collapse all animations ── */
       @media (prefers-reduced-motion: reduce) {
         .op-dropdown,
@@ -687,6 +764,74 @@
     setTimeout(() => ripple.remove(), 520);
   }
 
+  // ── i18n helper (safe wrapper) ───────────────────────────
+  // Returns translated string. Falls back to default text if I18n not loaded
+  // (e.g. during initial page load before i18n/index.js finishes).
+  function _t(key, vars, fallback) {
+    if (window.I18n && typeof window.I18n.t === 'function') {
+      return window.I18n.t(key, vars);
+    }
+    return fallback || key;
+  }
+
+  // ── Language switcher inline sub-panel ─────────────────────────
+  // Renders a compact horizontal row of language pills inside the dropdown.
+  // Clicking a pill switches language instantly (no reload) and updates
+  // the active state. Updates are propagated via I18n.onChanged event.
+  function _renderLangSwitcherInline() {
+    const currentLang = window.I18n?.getLang() || 'id';
+    const allowedLangs = window.I18n?.ALLOWED_LANGS || ['id', 'en'];
+    const langNames = { id: 'Bahasa Indonesia', en: 'English' };
+    const flags = { id: '🇮🇩', en: '🇬🇧' };
+
+    return `
+      <div class="op-lang-switcher" role="group" aria-label="${_esc(_t('lang.switch', null, 'Switch Language'))}">
+        ${allowedLangs.map((lang) => {
+          const isActive = lang === currentLang;
+          return `
+            <button type="button"
+                    class="op-lang-pill ${isActive ? 'op-lang-active' : ''}"
+                    data-lang="${_esc(lang)}"
+                    role="option"
+                    aria-selected="${isActive}"
+                    aria-pressed="${isActive}">
+              <span class="op-lang-flag" aria-hidden="true">${flags[lang] || ''}</span>
+              <span class="op-lang-name">${_esc(langNames[lang] || lang)}</span>
+              ${isActive ? '<i class="material-symbols-outlined op-lang-check" aria-hidden="true">check</i>' : ''}
+            </button>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // ── Wire language switcher pill clicks ──────────────────────────
+  // Called after _populate() to attach click handlers to .op-lang-pill.
+  // Switches language via I18n.setLang (which handles DOM rescan + event
+  // dispatch + Supabase sync).
+  function _wireLangSwitcher() {
+    if (!_dropdown) return;
+    _dropdown.querySelectorAll('.op-lang-pill').forEach((pill) => {
+      pill.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const lang = pill.getAttribute('data-lang');
+        if (!lang || !window.I18n) return;
+
+        // Visual feedback: blur immediately to avoid stuck hover
+        pill.blur();
+
+        // Switch language (instant, no reload)
+        await window.I18n.setLang(lang);
+
+        // Re-populate dropdown to reflect new language in labels + active state
+        // The _populate() will re-render the entire dropdown including the
+        // lang switcher with updated active state.
+        _populate();
+        _position(false);
+      });
+    });
+  }
+
   // ── Populate dropdown content ─────────────────────────────
   function _populate() {
     // Invalidate height cache — content may have changed
@@ -694,28 +839,28 @@
 
     const user = window.Auth?.userData || {};
 
-    const name       = user.nama || user.displayName || 'Pengguna';
+    const name       = user.nama || user.displayName || _t('common.loading', null, 'Pengguna');
     const email      = user.email || '';
     const avatarUrl  = user.foto_profil || user.fotoProfil || '';
     const role       = user.peran || 'peserta';
     const isAdmin    = role === 'admin';
     const incomplete = user.profilLengkap === false || user.profil_lengkap === false;
-    const roleLabel  = isAdmin ? 'Administrator' : 'Peserta';
+    const roleLabel  = isAdmin ? _t('op.role.admin', null, 'Administrator') : _t('op.role.peserta', null, 'Peserta');
     const roleClass  = isAdmin ? 'op-role-admin' : 'op-role-peserta';
     const roleIcon   = isAdmin ? 'shield' : 'school';
 
     const avatarSrc = _safeUrl(avatarUrl) || _initialsAvatar(name || email);
 
     // Build menu items array for stagger calculation
-    // v0.742.9: use i18n for menu titles/subtitles
-    const ti18n = (k, fallback) => window.i18n?.t?.(k) || fallback;
+    // Items now use i18n keys instead of hardcoded Indonesian strings.
+    // Fallbacks ensure dropdown still works if I18n module not yet loaded.
     const items = [
       {
         op: 'edit-profile',
         iconClass: 'op-icon-blue',
         icon: 'person_edit',
-        title: ti18n('peserta.profile_edit', 'Edit Profil'),
-        subtitle: 'Ubah nama dan foto profil',
+        title: _t('op.item.edit_profile', null, 'Edit Profil'),
+        subtitle: _t('op.item.edit_profile_sub', null, 'Ubah nama dan foto profil'),
         danger: false,
       },
     ];
@@ -725,27 +870,45 @@
         op: 'admin-panel',
         iconClass: 'op-icon-amber',
         icon: 'view_column',
-        title: ti18n('peserta.profile_admin_panel', 'Panel Admin'),
-        subtitle: 'Kembali ke dashboard',
+        title: _t('op.item.admin_panel', null, 'Panel Admin'),
+        subtitle: _t('op.item.admin_panel_sub', null, 'Kembali ke dashboard'),
         danger: false,
       });
     }
+
+    // Language item — special: clicking it expands the inline switcher
+    // instead of navigating. We mark it with op='language' so _handleAction
+    // can detect it and toggle the inline panel.
+    const currentLang = window.I18n?.getLang() || 'id';
+    const langNames = { id: 'Bahasa Indonesia', en: 'English' };
+    items.push({
+      op: 'language',
+      iconClass: 'op-icon-green',
+      icon: 'language',
+      title: _t('op.item.language', null, 'Bahasa'),
+      subtitle: _t('op.item.language_sub_dynamic', { lang: langNames[currentLang] || currentLang }, langNames[currentLang] || 'Bahasa Indonesia'),
+      danger: false,
+      isLanguage: true,
+    });
 
     items.push({
       op: 'logout',
       iconClass: 'op-icon-red',
       icon: 'logout',
-      title: ti18n('peserta.profile_logout', 'Keluar'),
-      subtitle: 'Logout dari akun',
+      title: _t('op.item.logout', null, 'Keluar'),
+      subtitle: _t('op.item.logout_sub', null, 'Logout dari akun'),
       danger: true,
     });
 
     // Render items with stagger delay
     const itemsHtml = items.map((item, i) => {
       const delay = STAGGER_BASE_MS + (i * STAGGER_DELAY_MS);
+      const sepBefore = (i > 0 && items[i].op === 'logout') ? '<div class="op-sep" style="margin:4px 12px;"></div>' : '';
+      // Language item: add chevron-down (expand indicator) instead of right chevron
+      const chevronIcon = item.isLanguage ? 'expand_more' : 'chevron_right';
       return `
-        ${i > 0 && (items[i].op === 'logout') ? '<div class="op-sep" style="margin:4px 12px;"></div>' : ''}
-        <button class="op-item ${item.danger ? 'op-danger' : ''}" data-op="${item.op}" role="menuitem" style="--op-delay: ${delay}ms;">
+        ${sepBefore}
+        <button class="op-item ${item.danger ? 'op-danger' : ''} ${item.isLanguage ? 'op-language-item' : ''}" data-op="${item.op}" role="menuitem" style="--op-delay: ${delay}ms;">
           <div class="op-item-icon ${item.iconClass}">
             <i class="material-symbols-outlined">${item.icon}</i>
           </div>
@@ -753,24 +916,29 @@
             ${_esc(item.title)}
             <span>${_esc(item.subtitle)}</span>
           </div>
-          <i class="material-symbols-outlined op-item-chevron">chevron_right</i>
+          <i class="material-symbols-outlined op-item-chevron">${chevronIcon}</i>
         </button>
+        ${item.isLanguage ? `
+          <div class="op-lang-panel" data-op-lang-panel hidden>
+            ${_renderLangSwitcherInline()}
+          </div>
+        ` : ''}
       `;
     }).join('');
 
     _dropdown.innerHTML = `
       <div class="op-header">
         <div class="op-avatar">
-          <img src="${_esc(avatarSrc)}" alt="Avatar ${_esc(name)}" data-op-avatar>
+          <img src="${_esc(avatarSrc)}" alt="${_esc(_t('op.avatar_alt', { name }, 'Avatar ' + name))}" data-op-avatar>
         </div>
         <div class="op-user-info">
           <div class="op-user-name">${_esc(name)}</div>
           ${email ? `<div class="op-user-email">${_esc(email)}</div>` : ''}
           <div class="op-chips">
             <span class="op-role-chip ${roleClass}">
-              <i class="material-symbols-outlined">${roleIcon}</i> ${roleLabel}
+              <i class="material-symbols-outlined">${roleIcon}</i> ${_esc(roleLabel)}
             </span>
-            ${incomplete ? '<span class="op-incomplete-chip"><i class="material-symbols-outlined">error</i> Belum lengkap</span>' : ''}
+            ${incomplete ? `<span class="op-incomplete-chip"><i class="material-symbols-outlined">error</i> ${_esc(_t('op.incomplete', null, 'Belum lengkap'))}</span>` : ''}
           </div>
         </div>
       </div>
@@ -781,7 +949,7 @@
         ${itemsHtml}
       </div>
 
-      <div class="op-footer">AlbEdu v0.8.0</div>
+      <div class="op-footer">${_esc(_t('op.version', null, 'AlbEdu v0.8.0'))}</div>
     `;
 
     // Attach onerror via event listener (CSP-friendly)
@@ -796,6 +964,9 @@
       }, { once: true });
     }
 
+    // Wire language switcher pills (inline panel)
+    _wireLangSwitcher();
+
     // Wire click handlers + ripple effect + mouseleave blur (v3.1 fix)
     _dropdown.querySelectorAll('[data-op]').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -804,7 +975,7 @@
         // looks like a stuck hover) is removed BEFORE the close animation
         // starts. Otherwise the ring stays visible during the 200ms close.
         btn.blur();
-        _handleAction(btn.dataset.op);
+        _handleAction(btn.dataset.op, btn);
       });
       // v3.1 FIX: On mouseleave, blur the item. This catches the edge
       // case where focus was set programmatically (e.g., via keyboard
@@ -826,8 +997,19 @@
   }
 
   // ── _handleAction (async — awaits close before executing action) ──
-  async function _handleAction(action) {
+  //
+  // v4.0 NEW: 'language' action does NOT close the dropdown. Instead it
+  // toggles the inline language switcher panel (visible right below the
+  // language item). This keeps the dropdown open so the user can pick
+  // a language without losing context.
+  async function _handleAction(action, sourceBtn) {
     const trigger = _activeTrigger;
+
+    // Language action: toggle inline panel, do NOT close dropdown
+    if (action === 'language') {
+      _toggleLanguagePanel(sourceBtn);
+      return;
+    }
 
     await close();
 
@@ -851,6 +1033,37 @@
         }
         break;
     }
+  }
+
+  // ── Toggle inline language panel ──────────────────────────
+  // Shows/hides the .op-lang-panel sibling of the language item.
+  // Rotates the chevron icon to indicate expand/collapse state.
+  // Repositions the dropdown since height changed.
+  function _toggleLanguagePanel(langBtn) {
+    if (!langBtn) return;
+    const panel = langBtn.nextElementSibling?.querySelector?.('.op-lang-switcher')
+                || langBtn.parentElement?.querySelector('[data-op-lang-panel]');
+    // Find the panel that is a sibling of this button
+    const panelEl = langBtn.closest('.op-menu')?.querySelector('[data-op-lang-panel]');
+    if (!panelEl) return;
+
+    const isHidden = panelEl.hasAttribute('hidden');
+    if (isHidden) {
+      panelEl.removeAttribute('hidden');
+      langBtn.classList.add('op-language-expanded');
+      // Rotate chevron 180deg (icon changes from expand_more to expand_less via CSS)
+      const chevron = langBtn.querySelector('.op-item-chevron');
+      if (chevron) chevron.textContent = 'expand_less';
+    } else {
+      panelEl.setAttribute('hidden', '');
+      langBtn.classList.remove('op-language-expanded');
+      const chevron = langBtn.querySelector('.op-item-chevron');
+      if (chevron) chevron.textContent = 'expand_more';
+    }
+
+    // Invalidate height cache + reposition (height changed)
+    _cachedHeight = null;
+    _position(false);
   }
 
   // ── Profile editor ─────────────────────────────────────────
@@ -922,10 +1135,7 @@
   // ── Navigate ───────────────────────────────────────────────
   function _navigateToAdmin() {
     const basePath = window.Auth?.getBasePath?.() || '/';
-    // v0.742.3 FIX: admin panel lives at /pages/admin/index.html, not
-    // /admin/index.html. Old code used the pre-v0.741.5 path structure,
-    // so clicking "Panel Admin" in the option-profile dropdown 404'd.
-    const target = basePath + 'pages/admin/index.html';
+    const target = basePath + 'admin/index.html';
     window.location.replace(target);
   }
 

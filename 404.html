@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>404 Tidak Ditemukan | AlbEdu</title>
+<title data-i18n="error404.title">404 Tidak Ditemukan | AlbEdu</title>
 
 <!-- SEO Meta Tags -->
 <meta name="description" content="Halaman tidak ditemukan. Kembali ke halaman utama AlbEdu untuk mengakses platform pembelajaran online.">
@@ -45,55 +45,24 @@
 -->
 
 <!-- Favicon Links -->
-<script>
-  // Favicon paths — use dynamic base
-  document.write('<link rel="icon" type="image/x-icon" href="' + window.__ALBEDU_BASE__ + 'public/images/favicon/favicon.ico">');
-  document.write('<link rel="icon" type="image/svg+xml" href="' + window.__ALBEDU_BASE__ + 'public/images/favicon/favicon.svg">');
-  document.write('<link rel="apple-touch-icon" href="' + window.__ALBEDU_BASE__ + 'public/images/favicon/apple-touch-icon.png">');
-  document.write('<link rel="icon" type="image/png" sizes="96x96" href="' + window.__ALBEDU_BASE__ + 'public/images/favicon/favicon-96x96.png">');
-  document.write('<link rel="manifest" href="' + window.__ALBEDU_BASE__ + 'public/images/favicon/site.webmanifest">');
-</script>
+<link rel="icon" type="image/x-icon" href="public/images/favicon/favicon.ico">
+<link rel="icon" type="image/svg+xml" href="public/images/favicon/favicon.svg">
+<link rel="apple-touch-icon" href="public/images/favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="96x96" href="public/images/favicon/favicon-96x96.png">
+<link rel="manifest" href="public/images/favicon/site.webmanifest">
 
-<!-- Dynamic base path detection — works on localhost + GitHub Pages subpath -->
-<script>
-  // Detect BASE_PATH: /AlbEdu/ on GitHub Pages, / on localhost
-  (function() {
-    var p = window.location.pathname;
-    // Walk up past known app subfolders.
-    // v0.742.0: `/pages/admin/pages/` and `/admin/pages/` are kept as legacy
-    // patterns — old bookmarked URLs to the pre-flatten structure will hit
-    // this 404 page, and the base path detection must still work so the
-    // "Kembali ke Beranda" CTA resolves to the correct BASE_PATH.
-    var subs = ['/pages/admin/pages/', '/pages/assessment/', '/pages/admin/', '/pages/ujian/', '/admin/pages/', '/ujian/', '/admin/', '/pages/'];
-    var base = '/';
-    for (var i = 0; i < subs.length; i++) {
-      var idx = p.indexOf(subs[i]);
-      if (idx !== -1) { base = p.substring(0, idx + 1); break; }
-    }
-    // If no subfolder match, check if we're in /AlbEdu/ by looking at pathname segments
-    if (base === '/' && p.split('/').length > 2 && p.split('/')[1] !== '') {
-      // e.g. /AlbEdu/404.html → base = /AlbEdu/
-      var segments = p.split('/').filter(Boolean);
-      if (segments.length > 1) base = '/' + segments[0] + '/';
-    }
-    window.__ALBEDU_BASE__ = base;
+<!-- Design System Tokens -->
+<link rel="stylesheet" href="styles/tokens.css">
+  <!-- F1+F2 fix: font loading strategy (preconnect + swap, no @import) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
 
-    // Dynamically inject CSS with correct base path
-    var cssFiles = ['styles/tokens.css', 'styles/albedu-v1.css', 'styles/404.css'];
-    for (var i = 0; i < cssFiles.length; i++) {
-      var link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = base + cssFiles[i];
-      document.head.appendChild(link);
-    }
-  })();
-</script>
-
-<!-- Fonts (CDN — always works regardless of base path) -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+<link rel="stylesheet" href="styles/404.css">
+    <script src="src/i18n/translations/id.js" defer></script>
+    <script src="src/i18n/translations/en.js" defer></script>
+    <script src="src/i18n/index.js" defer></script>
 </head>
 <body>
 
@@ -101,14 +70,14 @@
 <div class="dot-grid" aria-hidden="true"></div>
 
 <div class="wrapper">
-    <div class="error" role="img" aria-label="404 error — halaman tidak ditemukan">
+    <div class="error" role="img" data-i18n-aria-label="error404.face_aria" aria-label="404 error — halaman tidak ditemukan">
         <!-- Left "4" -->
         <svg class="num-svg num-left" viewBox="0 0 100 130" aria-hidden="true">
             <path fill-rule="evenodd" clip-rule="evenodd" d="M75 0H55L0 80V95H55V115H40V130H90V115H75V95H95V80H75V0ZM55 75V28L22 75H55Z" />
         </svg>
 
         <!-- Character between the 4s -->
-        <div class="face-wrap" id="faceWrap" title="Klik saya!">
+        <div class="face-wrap" id="faceWrap" data-i18n-title="error404.face_title" title="Klik saya!">
             <div class="bg-circle"></div>
             <div class="head">
                 <div class="cut"></div>
@@ -130,7 +99,7 @@
         </svg>
     </div>
 
-    <p class="message">Ups. Halaman yang kamu cari tidak ditemukan.</p>
+    <p class="message" data-i18n="error404.message">Ups. Halaman yang kamu cari tidak ditemukan.</p>
 
     <!--
       CTA link: href="./" resolves relative to current path.
@@ -139,9 +108,9 @@
       like /AlbEdu/some/random/path (the browser keeps that path as the
       base, and "./" would resolve to /AlbEdu/some/random/ — wrong).
     -->
-    <a href="./" id="ctaHome" class="cta-btn">Kembali ke Beranda</a>
+    <a href="./" id="ctaHome" class="cta-btn" data-i18n="error404.cta_home">Kembali ke Beranda</a>
 
-    <p class="alt-link">atau coba <a href="./" id="altHome">cari yang lain</a></p>
+    <p class="alt-link" data-i18n-html="error404.alt_text">atau coba <a href="./" id="altHome">cari yang lain</a></p>
 </div>
 
 <script>
@@ -158,27 +127,14 @@
    * Algorithm (identical to src/auth/main.js):
    *   1. Take window.location.pathname
    *   2. Strip everything after the last '/'
-   *   3. Walk up past known app subfolders (admin/pages legacy, ujian, admin)
+   *   3. Walk up past known app subfolders (admin/pages, ujian, admin)
    *   4. Whatever is left is BASE_PATH (e.g. '/AlbEdu/')
-   *
-   * v0.742.0: `/admin/pages/` retained as legacy pattern for old bookmarks.
-   * v0.742.2: Added `/pages/`, `/pages/admin/`, `/pages/assessment/`,
-   *           `/pages/ujian/`, `/pages/admin/pages/` to mirror the
-   *           AUTH_CONFIG.BASE_PATH logic in src/auth/main.js exactly.
-   *           Previously this 404 CTA rewriter could return `/pages/`
-   *           instead of `/` when the 404 was served from a `/pages/`
-   *           URL — sending the user to `/pages/` (no index.html there).
    */
   function computeBasePath() {
     var p    = window.location.pathname;
     var base = p.substring(0, p.lastIndexOf('/') + 1);
 
-    // Order matters: longer paths first.
-    var APP_SUBFOLDERS = [
-      '/pages/admin/pages/', '/pages/assessment/',
-      '/pages/admin/', '/pages/ujian/', '/pages/',
-      '/admin/pages/', '/ujian/', '/admin/',
-    ];
+    var APP_SUBFOLDERS = ['/admin/pages/', '/ujian/', '/admin/'];
     for (var i = 0; i < APP_SUBFOLDERS.length; i++) {
       var idx = base.indexOf(APP_SUBFOLDERS[i]);
       if (idx !== -1) return base.substring(0, idx + 1);

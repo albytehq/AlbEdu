@@ -96,12 +96,8 @@ export default { ArchiveController, ArchiveViewer };
 #### Step 3: Bikin HTML page
 
 ```
-pages/admin/exam-archive.html
+pages/admin/pages/exam-archive.html
 ```
-
-> **v0.742.0+:** Admin HTML pages live directly under `pages/admin/` — the
-> old `pages/admin/pages/` subfolder has been flattened. Use `../../` for
-> asset paths (`../../styles/...`, `../../src/...`) from any admin page.
 
 ```html
 <!DOCTYPE html>
@@ -109,16 +105,16 @@ pages/admin/exam-archive.html
 <head>
     <meta charset="UTF-8">
     <title>Exam Archive — AlbEdu Admin</title>
-    <link rel="stylesheet" href="../../styles/tokens.css">
-    <link rel="stylesheet" href="../../styles/navigasi.css">
-    <link rel="stylesheet" href="../../styles/exam-archive.css">
+    <link rel="stylesheet" href="../../../styles/tokens.css">
+    <link rel="stylesheet" href="../../../styles/navigasi.css">
+    <link rel="stylesheet" href="../../../styles/exam-archive.css">
 </head>
 <body>
     <!-- Page content -->
-    <script src="../../src/utils/supabase-api.js" defer></script>
-    <script src="../../src/auth/main.js" defer></script>
-    <script src="../../src/exam-archive/archive-controller.js" defer></script>
-    <script src="../../src/exam-archive/archive-viewer.js" defer></script>
+    <script src="../../../src/utils/supabase-api.js" defer></script>
+    <script src="../../../src/auth/main.js" defer></script>
+    <script src="../../../src/exam-archive/archive-controller.js" defer></script>
+    <script src="../../../src/exam-archive/archive-viewer.js" defer></script>
 </body>
 </html>
 ```

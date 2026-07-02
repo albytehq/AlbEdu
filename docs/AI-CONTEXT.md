@@ -3,7 +3,7 @@
 > File ini buat AI assistant (Claude, GPT, Copilot, dst.) cepat onboard ke project AlbEdu.
 > **READ THIS FIRST** sebelum edit code apapun.
 
-**Last verified:** 2026-07-02 (v0.742.9)
+**Last verified:** 2026-06-28 (v2.0.0)
 
 ---
 
@@ -26,7 +26,7 @@
 | Add new exam question type | `src/exam/logic.js`, `src/exam/viewer.js`, `src/identity/form-builder.js` |
 | Change Buat Ujian v0.2.0 page behavior | `src/pages/buat-ujian.js`, `src/pages/buat-ujian/*.js` (modules), `styles/buat-ujian-v2.css`, `styles/buat-ujian-modal.css` |
 | Update navigation menu | `src/utils/navigasi.js`, `pages/admin/index.html` |
-| Add new admin page | Bikin `pages/admin/{name}.html`, `src/pages/{name}.js`, `styles/{name}.css` (v0.742.0+: flat structure, no more `pages/admin/pages/` subfolder) |
+| Add new admin page | Bikin `pages/admin/pages/{name}.html`, `src/pages/{name}.js`, `styles/{name}.css` |
 | Fix notification styling | `public/QNotify/ui/*.css` |
 | Update Supabase schema | `supabase/migrations/{date}_{name}.sql` |
 | Change auth redirect logic | `src/auth/main.js` (cari `_redirectToLogin`, `_redirectForRole`, `authLogout`) — **read [`rule-url-albedu.md`](../rule-url-albedu.md) FIRST** |
@@ -35,7 +35,7 @@
 | Change post-login redirect | `src/auth/main.js` `AUTH_CONFIG.pathForRole()` |
 | Change BASE_PATH detection | `src/auth/main.js` `AUTH_CONFIG.BASE_PATH` IIFE + `404.html` inline script + `src/utils/supabase-api.js` `_resolveRedirectUrl()` |
 | Fix any "logo navigates to wrong page" bug | Check for `href="/"` in HTML files — NEVER use it. Use `./`, `../`, or `../../` depending on file location. See `rule-url-albedu.md §5` |
-| Add new profile field | `src/auth/user-helpers.js` (`normalizeUserDoc`), `src/profile/editor-panel.js`, `pages/admin/profile.html` |
+| Add new profile field | `src/auth/user-helpers.js` (`normalizeUserDoc`), `src/profile/editor-panel.js`, `pages/admin/pages/profile.html` |
 | Fix exam anti-cheat | `src/exam/guardian.js` |
 | Change Turnstile config | `src/auth/constants.js` (`AUTH_CONFIG.TURNSTILE_SITE_KEY`) |
 | Fix error message mapping | `src/auth/error-mapper.js` |
@@ -45,7 +45,7 @@
 | Update favicon/logo | `public/images/favicon/`, `public/images/logo.svg` |
 | Change rate limit config | `src/auth/constants.js` (`RATE_LIMITS`) |
 | Fix exam draft autosave | `src/exam/logic.js` (cari `_saveDraft`) |
-| Add new Buat Ujian v0.2.0 module | `src/pages/buat-ujian/{module-name}.js`, register in `src/pages/buat-ujian/index.js`, load via `<script defer>` in `pages/admin/buat-ujian.html`, init from `src/pages/buat-ujian.js` DOMContentLoaded |
+| Add new Buat Ujian v0.2.0 module | `src/pages/buat-ujian/{module-name}.js`, register in `src/pages/buat-ujian/index.js`, load via `<script defer>` in `pages/admin/pages/buat-ujian.html`, init from `src/pages/buat-ujian.js` DOMContentLoaded |
 | Update QNotify XSS sanitize | `public/QNotify/security/sanitize.js` |
 | Change logout behavior | `src/auth/main.js` (cari `authLogout`, `_confirmLogout`) |
 

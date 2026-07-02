@@ -12,7 +12,7 @@
 
 class AdminPanel {
     constructor() {
-        this.workerBase = 'https://edu.albyte-inc.workers.dev';
+        this.workerBase = 'https://albedu.examjuniorhighschool.workers.dev';
         this._profilePanelReady = false;
 
         if (document.readyState === 'loading') {
@@ -39,6 +39,19 @@ class AdminPanel {
             if (e.detail && window.Auth) window.Auth.userData = e.detail;
             this._renderUserInfo();
         });
+
+        // i18n: re-render greeting + user info when language changes
+        // (so salutation like "Selamat Pagi" → "Good Morning" updates instantly)
+        if (window.I18n && typeof window.I18n.onChanged === 'function') {
+            window.I18n.onChanged(() => {
+                this._renderUserInfo();
+            });
+        } else {
+            // I18n not yet loaded — listen for it
+            document.addEventListener('albedu:language-changed', () => {
+                this._renderUserInfo();
+            });
+        }
     }
 
     _renderUserInfo() {
@@ -53,19 +66,30 @@ class AdminPanel {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;'));
 
+        // i18n helper — falls back to Indonesian string if I18n not loaded
+        const t = (key, vars, fallback) => {
+            if (window.I18n && typeof window.I18n.t === 'function') {
+                return window.I18n.t(key, vars);
+            }
+            return fallback;
+        };
+
         if (user || data.email || data.nama) {
-            const rawName = data.nama || user?.displayName || user?.email?.split('@')[0] || 'Administrator';
+            const rawName = data.nama || user?.displayName || user?.email?.split('@')[0] || t('admin.role.admin', null, 'Administrator');
             const rawEmail = data.email || user?.email || '';
             const name = escape(rawName);
             const email = escape(rawEmail);
             const avatarUrl = data.foto_profil || data.fotoProfil || '';
-            const role = data.peran === 'admin' ? 'Administrator' : 'Admin AlbEdu';
+            const role = data.peran === 'admin' ? t('admin.role.admin', null, 'Administrator') : t('admin.role.admin_alt', null, 'Admin AlbEdu');
             const incomplete = data.profilLengkap === false || data.profil_lengkap === false;
 
             // BUGFIX M: Validate avatar URL scheme (only allow https:) and
             // remove the inline onerror handler -- it bypasses security.js
             // sanitization. Use a data-attribute + event listener instead.
             const safeAvatarUrl = (avatarUrl && /^https:/.test(avatarUrl)) ? avatarUrl : '';
+            const incompleteBadge = incomplete
+                ? `<span class="profile-status-mobile">${escape(t('admin.profile_incomplete', null, 'Profil belum lengkap'))}</span>`
+                : '';
             container.innerHTML = `
                 <div class="user-avatar-mobile" id="admin-index-avatar" aria-hidden="true">
                     ${safeAvatarUrl
@@ -75,7 +99,7 @@ class AdminPanel {
                 <div class="user-details-mobile">
                     <h3>${name}</h3>
                     <p>${email || role}</p>
-                    ${incomplete ? '<span class="profile-status-mobile">Profil belum lengkap</span>' : ''}
+                    ${incompleteBadge}
                 </div>
             `;
 
@@ -100,8 +124,8 @@ class AdminPanel {
                 <i class="material-symbols-outlined">manage_accounts</i>
             </div>
             <div class="user-details-mobile">
-                <h3>Administrator</h3>
-                <p class="loading-text" aria-label="Memuat profil">Memuat profil...</p>
+                <h3>${escape(t('admin.role.admin', null, 'Administrator'))}</h3>
+                <p class="loading-text" aria-label="${escape(t('admin.loading_profile', null, 'Memuat profil...'))}">${escape(t('admin.loading_profile', null, 'Memuat profil...'))}</p>
             </div>
         `;
     }
@@ -211,14 +235,24 @@ class AdminPanel {
         const el = document.getElementById('greeting');
         if (!el) return;
 
-        const hour = new Date().getHours();
-        const salutation =
-            hour < 11 ? 'Selamat Pagi'  :
-            hour < 15 ? 'Selamat Siang' :
-            hour < 19 ? 'Selamat Sore'  :
-                        'Selamat Malam';
+        // i18n helper — falls back to Indonesian if I18n not loaded
+        const t = (key, vars, fallback) => {
+            if (window.I18n && typeof window.I18n.t === 'function') {
+                return window.I18n.t(key, vars);
+            }
+            return fallback;
+        };
 
-        el.textContent = `${salutation}, ${name}!`;
+        const hour = new Date().getHours();
+        let salutationKey;
+        let salutationFallback;
+        if (hour < 11)      { salutationKey = 'admin.greet.morning';   salutationFallback = 'Selamat Pagi'; }
+        else if (hour < 15) { salutationKey = 'admin.greet.afternoon'; salutationFallback = 'Selamat Siang'; }
+        else if (hour < 19) { salutationKey = 'admin.greet.evening';   salutationFallback = 'Selamat Sore'; }
+        else                { salutationKey = 'admin.greet.night';     salutationFallback = 'Selamat Malam'; }
+
+        const salutation = t(salutationKey, { name }, `${salutationFallback}, ${name}!`);
+        el.textContent = salutation;
     }
 
     _setupNavigation() {

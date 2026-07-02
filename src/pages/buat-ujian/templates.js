@@ -50,9 +50,9 @@
   // template's create() result pre-filled as the draft.
   const TemplatePicker = {
     init() {
-      this._overlay = document.getElementById('question-template-overlay');
-      this._body = document.getElementById('question-template-body');
-      this._close = document.getElementById('question-template-close');
+      this._overlay = document.getElementById('bu-template-overlay');
+      this._body = document.getElementById('bu-template-body');
+      this._close = document.getElementById('bu-template-close');
 
       if (!this._overlay) {
         console.warn('[TemplatePicker] overlay element missing — page not on buat-ujian?');
@@ -71,22 +71,22 @@
     open() {
       if (!this._overlay) return;
       this._body.innerHTML = `
-        <div class="albedu-template-grid">
+        <div class="bu-template-grid">
           ${TEMPLATES.map((t) => `
-            <button class="albedu-template-card" data-id="${t.id}" type="button">
-              <div class="albedu-template-icon"><i class="material-symbols-outlined">${t.icon}</i></div>
-              <div class="albedu-template-info">
-                <div class="albedu-template-name">${t.name}</div>
-                <div class="albedu-template-desc">${t.desc}</div>
+            <button class="bu-template-card" data-id="${t.id}" type="button">
+              <div class="bu-template-icon"><i class="material-symbols-outlined">${t.icon}</i></div>
+              <div class="bu-template-info">
+                <div class="bu-template-name">${t.name}</div>
+                <div class="bu-template-desc">${t.desc}</div>
               </div>
-              <i class="material-symbols-outlined albedu-template-arrow">arrow_forward</i>
+              <i class="material-symbols-outlined bu-template-arrow">arrow_forward</i>
             </button>
           `).join('')}
         </div>
-        <p class="albedu-template-hint">Template akan menambah soal ke bagian dengan tipe yang cocok. Jika belum ada, bagian baru akan dibuatkan otomatis.</p>
+        <p class="bu-template-hint">Template akan menambah soal ke bagian dengan tipe yang cocok. Jika belum ada, bagian baru akan dibuatkan otomatis.</p>
       `;
 
-      this._body.querySelectorAll('.albedu-template-card').forEach((card) => {
+      this._body.querySelectorAll('.bu-template-card').forEach((card) => {
         card.addEventListener('click', () => {
           const tpl = TEMPLATES.find((t) => t.id === card.dataset.id);
           if (!tpl) return;
@@ -95,26 +95,26 @@
       });
 
       this._overlay.hidden = false;
-      requestAnimationFrame(() => this._overlay.classList.add('albedu-modal-visible'));
+      requestAnimationFrame(() => this._overlay.classList.add('bu-modal-visible'));
     },
 
     close() {
       if (!this._overlay) return;
-      this._overlay.classList.remove('albedu-modal-visible');
+      this._overlay.classList.remove('bu-modal-visible');
       setTimeout(() => { this._overlay.hidden = true; }, 250);
     },
 
     _applyTemplate(tpl) {
-      const state = window.CreateAssessment.getState();
-      let targetSection = state.examData.sections.findIndex((s) => s.type_question === tpl.sectionType);
+      const state = window.BuatUjian.getState();
+      let targetSection = state.sections.findIndex((s) => s.type_question === tpl.sectionType);
 
       if (targetSection === -1) {
         // No matching section — create one if possible
-        if (state.examData.sections.length < 2) {
-          const sec = window.CreateAssessment.addSection();
+        if (state.sections.length < 2) {
+          const sec = window.BuatUjian.addSection();
           if (sec) {
-            window.CreateAssessment.updateSection(state.examData.sections.length - 1, { type_question: tpl.sectionType });
-            targetSection = state.examData.sections.length - 1;
+            window.BuatUjian.updateSection(state.sections.length - 1, { type_question: tpl.sectionType });
+            targetSection = state.sections.length - 1;
           }
         } else {
           window.notify?.error('Tidak bisa', `Tidak ada bagian dengan tipe ${tpl.sectionType}. Ubah tipe bagian existing.`);
