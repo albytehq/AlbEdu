@@ -21,6 +21,10 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
 
+    <!-- v0.742.9: i18n -->
+    <script type="module" src="../../src/i18n/index.js"></script>
+    <script defer src="../../src/i18n/lang-switcher.js"></script>
+
     <style>
       body {
         background:
@@ -162,19 +166,19 @@
         <div class="blocked-icon">
             <i class="material-symbols-outlined">block</i>
         </div>
-        <h1 class="blocked-title">Akses Diblokir</h1>
-        <p class="blocked-subtitle">
+        <h1 class="blocked-title" data-i18n="peserta.blocked_title">Akses Diblokir</h1>
+        <p class="blocked-subtitle" data-i18n="peserta.blocked_desc">
             Sesi Anda telah diblokir oleh admin.
         </p>
         <div id="reason-box" class="blocked-reason">
-            <strong>Alasan:</strong> <span id="reason-text"></span>
+            <strong data-i18n="peserta.blocked_reason_label">Alasan:</strong> <span id="reason-text"></span>
         </div>
-        <p class="blocked-hint">
+        <p class="blocked-hint" data-i18n="peserta.blocked_hint">
             Hubungi admin jika Anda merasa ini adalah kesalahan.
         </p>
         <a href="#" class="blocked-btn" id="back-btn">
             <i class="material-symbols-outlined">arrow_back</i>
-            Kembali ke Beranda
+            <span data-i18n="peserta.blocked_back">Kembali ke Beranda</span>
         </a>
     </div>
 

@@ -37,7 +37,7 @@
                         </svg>
                     </div>
 
-                    <h1 class="success-title">Pendaftaran Berhasil!</h1>
+                    <h1 class="success-title" data-i18n="auth.register_success_title">Pendaftaran Berhasil!</h1>
                     <p class="success-desc">
                         Akun admin Anda telah dibuat dan siap digunakan.<br>
                         Silakan cek email Anda untuk verifikasi, lalu login untuk mulai mengelola sistem.
@@ -123,6 +123,9 @@
             });
         })();
     </script>
+    <!-- v0.742.9: i18n -->
+    <script type="module" src="../src/i18n/index.js"></script>
+    <script defer src="../src/i18n/lang-switcher.js"></script>
 </body>
 
 </html>

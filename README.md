@@ -3,7 +3,7 @@
 > Production-grade exam platform untuk sekolah menengah.
 > Vanilla JS + Supabase + Cloudflare — zero framework, zero build runtime.
 
-[![Version](https://img.shields.io/badge/version-0.742.7-blue)]()
+[![Version](https://img.shields.io/badge/version-0.742.9-blue)]()
 [![Structure](https://img.shields.io/badge/structure-by--feature-green)]()
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)]()
 

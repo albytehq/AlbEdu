@@ -32,6 +32,10 @@
     <script src="../src/auth/main.js" defer></script>
     <script src="../src/auth/byteward.js" defer></script>
     <script type="module"src="../src/auth/user-auth-portal.js"></script>
+
+    <!-- v0.742.9: i18n — full multilingual support -->
+    <script type="module" src="../src/i18n/index.js"></script>
+    <script defer src="../src/i18n/lang-switcher.js"></script>
 </head>
 
 <body>
@@ -47,24 +51,37 @@
                         <img src="../public/images/logo.svg" alt="AlbEdu" width="36" height="36">
                         <span class="form-logo-name">AlbEdu</span>
                     </div>
-                    <h1 class="form-title">Masuk ke AlbEdu</h1>
-                    <p class="form-subtitle">Kelola ujian Anda dengan mudah</p>
+                    <h1 class="form-title" data-i18n="auth.login_title">Masuk ke AlbEdu</h1>
+                    <p class="form-subtitle" data-i18n="auth.login_subtitle">Kelola ujian Anda dengan mudah</p>
+                    <!-- v0.742.9: Language switcher (compact) -->
+                    <div class="albedu-lang-switcher" id="lang-switcher" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.72);backdrop-filter:blur(20px);border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:0.5px solid rgba(15,23,42,0.08);font-family:inherit;font-size:12px;font-weight:600;color:#0f172a;">
+                        <i class="material-symbols-outlined" style="font-size:14px">language</i>
+                        <span id="current-lang">🇮🇩 ID</span>
+                        <i class="material-symbols-outlined" style="font-size:14px">expand_more</i>
+                        <div class="albedu-lang-dropdown" id="lang-dropdown" hidden style="position:absolute;top:100%;right:0;margin-top:6px;background:#fff;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,0.12);padding:4px;min-width:160px;">
+                            <div class="albedu-lang-option albedu-active" data-locale="id" style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;">🇮🇩 Bahasa Indonesia</div>
+                            <div class="albedu-lang-option" data-locale="en" style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;">🇬🇧 English</div>
+                            <div class="albedu-lang-option" data-locale="ru" style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;">🇷🇺 Русский</div>
+                            <div class="albedu-lang-option" data-locale="es" style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;">🇪🇸 Español</div>
+                            <div class="albedu-lang-option" data-locale="zh" style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;">🇨🇳 中文</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Email + password form -->
                 <form id="emailLoginForm" class="auth-form" novalidate>
                     <div class="field">
-                        <label for="email">Email</label>
+                        <label for="email" data-i18n="auth.login_email_label">Email</label>
                         <input id="email" name="email" type="email" autocomplete="email"
-                            class="input" placeholder="nama@sekolah.sch.id" required>
+                            class="input" placeholder="nama@sekolah.sch.id" data-i18n-placeholder="auth.login_email_placeholder" required>
                     </div>
                     <div class="field field-password">
                         <div class="field-label-row">
-                            <label for="password">Kata Sandi</label>
-                            <a href="forgot-password.html" id="forgotPasswordLink">Lupa Kata Sandi?</a>
+                            <label for="password" data-i18n="auth.login_password_label">Kata Sandi</label>
+                            <a href="forgot-password.html" id="forgotPasswordLink" data-i18n="auth.login_forgot">Lupa Kata Sandi?</a>
                         </div>
                         <input id="password" name="password" type="password" autocomplete="current-password"
-                            class="input" placeholder="Masukkan kata sandi" required>
+                            class="input" placeholder="Masukkan kata sandi" data-i18n-placeholder="auth.login_password_placeholder" required>
                         <button type="button" class="toggle-visibility" data-target="password"
                             aria-label="Tampilkan kata sandi">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -81,7 +98,7 @@
                     </div>
 
                     <button id="emailLoginBtn" class="primary-login-btn" type="submit" aria-busy="false">
-                        <span class="btn-text">Masuk</span>
+                        <span class="btn-text" data-i18n="auth.login_btn">Masuk</span>
                     </button>
                 </form>
 
@@ -94,7 +111,7 @@
                      style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;"></div>
 
                 <!-- Divider + Google login -->
-                <div class="divider" style="margin: var(--sp-5) 0;" aria-hidden="true">atau</div>
+                <div class="divider" style="margin: var(--sp-5) 0;" aria-hidden="true" data-i18n="auth.login_or">atau</div>
 
                 <button id="userLoginBtn" class="google-login-btn" type="button" aria-busy="false">
                     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -104,13 +121,13 @@
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                     </svg>
                     <span class="btn-spinner"></span>
-                    <span class="btn-text" id="userLoginText">Masuk dengan Google</span>
+                    <span class="btn-text" id="userLoginText" data-i18n="auth.login_google">Masuk dengan Google</span>
                 </button>
 
                 <!-- Navigation links -->
                 <div class="footer-links">
-                    <span>Belum punya akun? <strong><a href="register-admin.html">Daftar sekarang</a></strong></span>
-                    <a href="../">&larr; Kembali ke halaman utama</a>
+                    <span><span data-i18n="auth.login_no_account">Belum punya akun?</span> <strong><a href="register-admin.html" data-i18n="auth.login_register_link">Daftar sekarang</a></strong></span>
+                    <a href="../" data-i18n="auth.login_back">&larr; Kembali ke halaman utama</a>
                 </div>
 
                 <p class="page-footer">
@@ -125,8 +142,8 @@
                 <div class="branding-logo" aria-hidden="true">
                     <img src="../public/images/logo.svg" alt="" width="40" height="40">
                 </div>
-                <h2 class="branding-title">Platform Ujian Online Terpercaya</h2>
-                <p class="branding-tagline">Kelola ujian, pantau hasil, dan tingkatkan kualitas pendidikan dengan platform yang aman dan mudah digunakan.</p>
+                <h2 class="branding-title" data-i18n="auth.login_feature_title">Platform Ujian Online Terpercaya</h2>
+                <p class="branding-tagline" data-i18n="auth.login_feature_desc">Kelola ujian, pantau hasil, dan tingkatkan kualitas pendidikan dengan platform yang aman dan mudah digunakan.</p>
 
                 <div class="feature-list">
                     <div class="feature-item">
@@ -137,8 +154,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Ujian Aman</span>
-                            <span class="feature-desc">Proktor berbasis AI & anti-cheating</span>
+                            <span class="feature-label" data-i18n="auth.login_feature1_title">Ujian Aman</span>
+                            <span class="feature-desc" data-i18n="auth.login_feature1_desc">Proktor berbasis AI & anti-cheating</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -150,8 +167,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Analitik Real-time</span>
-                            <span class="feature-desc">Dashboard hasil & statistik instan</span>
+                            <span class="feature-label" data-i18n="auth.login_feature2_title">Analitik Real-time</span>
+                            <span class="feature-desc" data-i18n="auth.login_feature2_desc">Dashboard hasil & statistik instan</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -163,8 +180,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Manajemen Mudah</span>
-                            <span class="feature-desc">Buat, jadwalkan, & kelola ujian dengan cepat</span>
+                            <span class="feature-label" data-i18n="auth.login_feature3_title">Manajemen Mudah</span>
+                            <span class="feature-desc" data-i18n="auth.login_feature3_desc">Buat, jadwalkan, & kelola ujian dengan cepat</span>
                         </div>
                     </div>
                 </div>

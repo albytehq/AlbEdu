@@ -205,6 +205,9 @@ export async function switchLocale(locale) {
   _listeners.forEach(fn => {
     try { fn(locale); } catch (e) { console.error('[i18n] listener error:', e); }
   });
+
+  // v0.742.9: Dispatch global event so lang-switcher.js can update UI
+  document.dispatchEvent(new CustomEvent('locale-changed', { detail: { locale } }));
 }
 
 // Get current locale
@@ -272,6 +275,8 @@ export async function initI18n() {
   document.documentElement.setAttribute('dir', SUPPORTED_LOCALES[_currentLocale].dir);
   updateDOM();
   console.info(`[i18n] Initialized: ${_currentLocale}`);
+  // v0.742.9: Signal that i18n is ready — lang-switcher.js listens for this
+  document.dispatchEvent(new CustomEvent('i18n-ready', { detail: { locale: _currentLocale } }));
 }
 
 // Expose to window for classic script access

@@ -232,7 +232,10 @@
     _setLoading(loading) {
       this._isValidating = loading;
       this._submitBtn.disabled = loading;
-      this._submitText.textContent = loading ? 'Memvalidasi...' : 'Masuk Asesmen';
+      // v0.742.9: use i18n for loading text
+      const submittingText = window.i18n?.t?.('peserta.entry_submitting') || 'Memvalidasi...';
+      const submitText = window.i18n?.t?.('peserta.entry_submit') || 'Masuk Asesmen';
+      this._submitText.textContent = loading ? submittingText : submitText;
       this._inputs.forEach((i) => (i.disabled = loading));
     },
 
@@ -267,7 +270,9 @@
           this._cooldownBanner.classList.remove('show');
           return;
         }
-        this._cooldownText.textContent = `Terlalu banyak percobaan. Coba lagi dalam ${seconds} detik.`;
+        // v0.742.9: use i18n for cooldown text with interpolation
+        const tmpl = window.i18n?.t?.('peserta.entry_cooldown') || 'Terlalu banyak percobaan. Coba lagi dalam {{seconds}} detik.';
+        this._cooldownText.textContent = tmpl.replace('{{seconds}}', seconds);
         seconds--;
         setTimeout(update, 1000);
       };

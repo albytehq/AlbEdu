@@ -63,8 +63,8 @@
         <div class="token-logo">
             <i class="material-symbols-outlined">quiz</i>
         </div>
-        <h1 class="token-title">Masuk Asesmen</h1>
-        <p class="token-subtitle">Masukkan 6-digit kode akses yang diberikan admin</p>
+        <h1 class="token-title" data-i18n="peserta.entry_title">Masuk Asesmen</h1>
+        <p class="token-subtitle" data-i18n="peserta.entry_subtitle">Masukkan 6-digit kode akses yang diberikan admin</p>
 
         <div class="cooldown-banner" id="cooldown-banner">
             <i class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle;">schedule</i>
@@ -85,11 +85,11 @@
         </div>
 
         <button class="token-submit" id="token-submit" type="button" disabled>
-            <span id="submit-text">Masuk Asesmen</span>
+            <span id="submit-text" data-i18n="peserta.entry_submit">Masuk Asesmen</span>
         </button>
 
         <div class="token-back">
-            <a href="../../index.html">← Kembali ke beranda</a>
+            <a href="../../index.html" data-i18n="peserta.entry_back">← Kembali ke beranda</a>
         </div>
     </div>
 
@@ -99,10 +99,11 @@
 
     <!-- Security modules -->
     <script src="../../src/security/consent.js" defer></script>
-    <!-- v0.742.7 Theme System + i18n -->
+    <!-- v0.742.8 Theme System + i18n -->
     <script type="module" src="../../src/theme-system/index.js"></script>
     <script type="module" src="../../src/i18n/index.js"></script>
-    <!-- v0.742.7: Floating profile button (triggers OptionProfile — gives peserta logout) -->
+    <script defer src="../../src/i18n/lang-switcher.js"></script>
+    <!-- v0.742.8: Floating profile button (triggers OptionProfile — gives peserta logout) -->
     <script src="../../src/profile/peserta-profile-fab.js" defer></script>
     <!-- Page controller -->
     <script src="../../src/pages/assessment-entry.js" defer></script>

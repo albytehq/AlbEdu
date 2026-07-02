@@ -707,12 +707,14 @@
     const avatarSrc = _safeUrl(avatarUrl) || _initialsAvatar(name || email);
 
     // Build menu items array for stagger calculation
+    // v0.742.9: use i18n for menu titles/subtitles
+    const ti18n = (k, fallback) => window.i18n?.t?.(k) || fallback;
     const items = [
       {
         op: 'edit-profile',
         iconClass: 'op-icon-blue',
         icon: 'person_edit',
-        title: 'Edit Profil',
+        title: ti18n('peserta.profile_edit', 'Edit Profil'),
         subtitle: 'Ubah nama dan foto profil',
         danger: false,
       },
@@ -723,7 +725,7 @@
         op: 'admin-panel',
         iconClass: 'op-icon-amber',
         icon: 'view_column',
-        title: 'Panel Admin',
+        title: ti18n('peserta.profile_admin_panel', 'Panel Admin'),
         subtitle: 'Kembali ke dashboard',
         danger: false,
       });
@@ -733,7 +735,7 @@
       op: 'logout',
       iconClass: 'op-icon-red',
       icon: 'logout',
-      title: 'Keluar',
+      title: ti18n('peserta.profile_logout', 'Keluar'),
       subtitle: 'Logout dari akun',
       danger: true,
     });

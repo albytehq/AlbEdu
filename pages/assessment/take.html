@@ -56,13 +56,9 @@
   <script src="../../src/auth/main.js" defer></script>
   <script src="../../src/auth/byteward.js" defer></script>
 
-  <!-- i18n -->
-  <script type="module">
-    import { initI18n, t } from '../../src/i18n/index.js';
-    window.i18n = { t, initI18n };
-    window.t = t;
-    initI18n().catch(err => console.warn('[i18n] init failed:', err));
-  </script>
+  <!-- v0.742.9: i18n — module load triggers auto-init + window.i18n exposure -->
+  <script type="module" src="../../src/i18n/index.js"></script>
+  <script defer src="../../src/i18n/lang-switcher.js"></script>
 
   <!-- Theme System -->
   <script type="module">
@@ -96,7 +92,7 @@
     });
   </script>
 
-  <!-- Security modules (v0.742.7 Phase 5 — Anti-Cheat Hardening) -->
+  <!-- Security modules (v0.742.8 Phase 5 — Anti-Cheat Hardening) -->
   <script src="../../src/security/consent.js" defer></script>
   <script src="../../src/exam/guardian.js" defer></script>
   <script src="../../src/security/devtools-detector.js" defer></script>
@@ -111,7 +107,7 @@
   <!-- Math renderer + language class helpers (KaTeX + RTL/CJK detection) -->
   <script src="../../src/utils/math-renderer.js" defer></script>
 
-  <!-- v0.742.7: Floating profile button (triggers OptionProfile — gives peserta logout) -->
+  <!-- v0.742.8: Floating profile button (triggers OptionProfile — gives peserta logout) -->
   <script src="../../src/profile/peserta-profile-fab.js" defer></script>
 
   <!-- Page controller -->
@@ -140,16 +136,16 @@
     <div class="status-icon" id="closed-icon">
       <i class="material-symbols-outlined">lock</i>
     </div>
-    <h1 class="status-title" id="closed-title">Asesmen Tidak Tersedia</h1>
-    <p class="status-message" id="closed-message">Asesmen belum dibuka atau sudah berakhir.</p>
+    <h1 class="status-title" id="closed-title" data-i18n="peserta.take_closed_title">Asesmen Tidak Tersedia</h1>
+    <p class="status-message" id="closed-message" data-i18n="peserta.take_closed_msg">Asesmen belum dibuka atau sudah berakhir.</p>
     <div class="status-actions">
       <button class="albedu-btn albedu-btn-secondary" type="button" onclick="window.location.href=(window.Auth?.getBasePath?.()||'/')+'pages/login.html'">
         <i class="material-symbols-outlined">logout</i>
-        <span>Kembali ke Login</span>
+        <span data-i18n="peserta.take_back_login">Kembali ke Login</span>
       </button>
       <button class="albedu-btn albedu-btn-ghost" type="button" id="closed-retry-btn">
         <i class="material-symbols-outlined">refresh</i>
-        <span>Coba Lagi</span>
+        <span data-i18n="peserta.take_retry">Coba Lagi</span>
       </button>
     </div>
   </div>
@@ -213,16 +209,16 @@
       <div class="exam-nav__inner">
         <button class="nav-btn" id="btn-prev" type="button" aria-label="Soal sebelumnya">
           <i class="material-symbols-outlined">arrow_back</i>
-          <span>Sebelumnya</span>
+          <span data-i18n="peserta.take_nav_prev">Sebelumnya</span>
         </button>
         <div class="exam-nav__progress" id="nav-progress" aria-live="polite" style="font-size:13px;color:var(--albedu-body,#64748b);font-weight:500;">0/0</div>
         <button class="nav-btn nav-btn--primary" id="btn-next" type="button" aria-label="Soal berikutnya">
-          <span>Selanjutnya</span>
+          <span data-i18n="peserta.take_nav_next">Selanjutnya</span>
           <i class="material-symbols-outlined">arrow_forward</i>
         </button>
         <button class="nav-btn nav-btn--primary nav-btn--submit-locked" id="btn-submit" type="button" disabled aria-label="Kumpulkan asesmen" title="Submit terkunci">
           <i class="material-symbols-outlined">lock</i>
-          <span>Kumpulkan</span>
+          <span data-i18n="peserta.take_submit">Kumpulkan</span>
         </button>
       </div>
     </nav>
@@ -237,8 +233,8 @@
         <div class="result-hero__icon" id="result-icon">
           <i class="material-symbols-outlined">task_alt</i>
         </div>
-        <h1 class="result-hero__title" id="result-title">Asesmen Selesai</h1>
-        <p class="result-hero__sub" id="result-sub">Berikut adalah hasil pengerjaan Anda.</p>
+        <h1 class="result-hero__title" id="result-title" data-i18n="peserta.take_result_title">Asesmen Selesai</h1>
+        <p class="result-hero__sub" id="result-sub" data-i18n="peserta.take_result_sub">Berikut adalah hasil pengerjaan Anda.</p>
         <div class="result-score" aria-live="polite">
           <span id="result-score">0</span><span class="result-score__max" id="result-score-max">/100</span>
         </div>
@@ -248,7 +244,7 @@
       <div class="result-actions">
         <button class="albedu-btn albedu-btn-secondary" type="button" id="btn-back-login">
           <i class="material-symbols-outlined">logout</i>
-          <span>Kembali ke Login</span>
+          <span data-i18n="peserta.take_back_login">Kembali ke Login</span>
         </button>
       </div>
     </div>
@@ -259,7 +255,7 @@
        ────────────────────────────────────────────────────────────────────── -->
   <div id="pause-banner" hidden role="alert" aria-live="assertive">
     <i class="material-symbols-outlined">pause_circle</i>
-    <span id="pause-text">Asesmen dijeda oleh admin. Mohon tunggu.</span>
+    <span id="pause-text" data-i18n="peserta.take_paused">Asesmen dijeda oleh admin. Mohon tunggu.</span>
   </div>
 
   <script>

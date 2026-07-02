@@ -23,11 +23,29 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
 
   <link rel="stylesheet" href="styles/landing.css">
+
+  <!-- v0.742.9: i18n — full multilingual support -->
+  <script type="module" src="src/i18n/index.js"></script>
+  <script defer src="src/i18n/lang-switcher.js"></script>
 </head>
 
 <body>
   <!-- Skip to main content -->
-  <a href="#main" class="skip-link">Langsung ke konten utama</a>
+  <a href="#main" class="skip-link" data-i18n="landing.skip_link">Langsung ke konten utama</a>
+
+  <!-- Language switcher (v0.742.9) -->
+  <div class="albedu-lang-switcher albedu-lang-switcher--floating" id="lang-switcher" style="position:fixed;top:16px;right:16px;z-index:9999;background:rgba(255,255,255,0.72);backdrop-filter:blur(20px);border-radius:999px;padding:6px 12px;display:flex;align-items:center;gap:6px;cursor:pointer;border:0.5px solid rgba(15,23,42,0.08);font-family:inherit;font-size:13px;font-weight:600;color:#0f172a;">
+    <i class="material-symbols-outlined" style="font-size:16px">language</i>
+    <span id="current-lang">🇮🇩 ID</span>
+    <i class="material-symbols-outlined" style="font-size:16px">expand_more</i>
+    <div class="albedu-lang-dropdown" id="lang-dropdown" hidden style="position:absolute;top:100%;right:0;margin-top:8px;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,0.12);padding:6px;min-width:180px;">
+      <div class="albedu-lang-option albedu-active" data-locale="id" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;">🇮🇩 Bahasa Indonesia</div>
+      <div class="albedu-lang-option" data-locale="en" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;">🇬🇧 English</div>
+      <div class="albedu-lang-option" data-locale="ru" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;">🇷🇺 Русский</div>
+      <div class="albedu-lang-option" data-locale="es" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;">🇪🇸 Español</div>
+      <div class="albedu-lang-option" data-locale="zh" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;">🇨🇳 中文</div>
+    </div>
+  </div>
 
   <!-- ═══ Navbar ═══ -->
   <header class="navbar" role="banner">
@@ -39,11 +57,11 @@
       <nav class="nav-actions" aria-label="Navigasi utama">
         <a href="pages/login.html" class="nav-btn-login" aria-label="Masuk ke akun">
           <i aria-hidden="true" class="material-symbols-outlined">login</i>
-          <span>Login</span>
+          <span data-i18n="landing.nav_login">Login</span>
         </a>
         <a href="pages/register-admin.html" class="nav-btn-primary" aria-label="Daftar akun admin baru">
           <i aria-hidden="true" class="material-symbols-outlined">person_add</i>
-          <span>Daftar Admin</span>
+          <span data-i18n="landing.nav_register">Daftar Admin</span>
         </a>
       </nav>
     </div>
@@ -58,22 +76,22 @@
       <div class="hero-content">
         <div class="hero-badge reveal">
           <i aria-hidden="true" class="material-symbols-outlined">science</i>
-          Akses Awal — Sudah Tersedia
+          <span data-i18n="landing.hero_badge">Akses Awal — Sudah Tersedia</span>
         </div>
         <h1 id="hero-title" class="hero-title reveal reveal-delay-1">
-          Kelola Ujian Online,<br><span class="text-primary">Tanpa Ribet</span>
+          <span data-i18n="landing.hero_title_1">Kelola Ujian Online,</span><br><span class="text-primary" data-i18n="landing.hero_title_2">Tanpa Ribet</span>
         </h1>
-        <p class="hero-subtitle reveal reveal-delay-2">
+        <p class="hero-subtitle reveal reveal-delay-2" data-i18n="landing.hero_subtitle">
           Buat ujian dalam hitungan menit, koreksi otomatis, dan pantau hasil peserta secara real-time. Semua dari satu platform.
         </p>
         <div class="hero-ctas reveal reveal-delay-3">
           <a href="pages/login.html" class="hero-cta-primary">
             <i aria-hidden="true" class="material-symbols-outlined">rocket_launch</i>
-            Mulai Sekarang
+            <span data-i18n="landing.hero_cta_primary">Mulai Sekarang</span>
           </a>
           <a href="#how" class="hero-cta-secondary">
             <i aria-hidden="true" class="material-symbols-outlined">play_circle</i>
-            Lihat Demo
+            <span data-i18n="landing.hero_cta_secondary">Lihat Demo</span>
           </a>
         </div>
       </div>
@@ -83,31 +101,31 @@
     <section class="section problem-section" aria-labelledby="problem-title">
       <div class="container">
         <div class="section-header reveal">
-          <span class="section-label">Masalah</span>
-          <h2 id="problem-title" class="section-title">Kendala yang Dihadapi Guru</h2>
-          <p class="section-desc">Proses ujian konvensional penuh hambatan yang membuang waktu dan energi.</p>
+          <span class="section-label" data-i18n="landing.problems_kicker">Masalah</span>
+          <h2 id="problem-title" class="section-title" data-i18n="landing.problems_title">Kendala yang Dihadapi Guru</h2>
+          <p class="section-desc" data-i18n="landing.problems_subtitle">Proses ujian konvensional penuh hambatan yang membuang waktu dan energi.</p>
         </div>
         <div class="problem-grid">
           <article class="problem-card reveal reveal-delay-1">
             <div class="problem-icon" aria-hidden="true">
               <i class="material-symbols-outlined">design_services</i>
             </div>
-            <h3>Pengerjaan Manual</h3>
-            <p>Menyusun soal satu per satu, mencetak kertas, dan membagikan ke peserta memakan waktu berjam-jam yang bisa dipakai untuk mengajar.</p>
+            <h3 data-i18n="landing.problem1_title">Pengerjaan Manual</h3>
+            <p data-i18n="landing.problem1_desc">Menyusun soal satu per satu, mencetak kertas, dan membagikan ke peserta memakan waktu berjam-jam yang bisa dipakai untuk mengajar.</p>
           </article>
           <article class="problem-card reveal reveal-delay-2">
             <div class="problem-icon" aria-hidden="true">
               <i class="material-symbols-outlined">history</i>
             </div>
-            <h3>Pengoreksian Lama</h3>
-            <p>Mengoreksi ratusan lembar jawaban manual berisiko kesalahan dan membutuhkan waktu berminggu-minggu sebelum hasil bisa diumumkan.</p>
+            <h3 data-i18n="landing.problem2_title">Pengoreksian Lama</h3>
+            <p data-i18n="landing.problem2_desc">Mengoreksi ratusan lembar jawaban manual berisiko kesalahan dan membutuhkan waktu berminggu-minggu sebelum hasil bisa diumumkan.</p>
           </article>
           <article class="problem-card reveal reveal-delay-3">
             <div class="problem-icon" aria-hidden="true">
               <i class="material-symbols-outlined">database</i>
             </div>
-            <h3>Data Terserak</h3>
-            <p>Hasil ujian tersebar di file Excel, kertas, dan folder berbeda — sulit dianalisis dan dijadikan dasar keputusan pembelajaran.</p>
+            <h3 data-i18n="landing.problem3_title">Data Terserak</h3>
+            <p data-i18n="landing.problem3_desc">Hasil ujian tersebar di file Excel, kertas, dan folder berbeda — sulit dianalisis dan dijadikan dasar keputusan pembelajaran.</p>
           </article>
         </div>
       </div>
@@ -117,31 +135,31 @@
     <section class="section solution-section" aria-labelledby="solution-title">
       <div class="container">
         <div class="section-header reveal">
-          <span class="section-label">Solusi</span>
+          <span class="section-label" data-i18n="landing.solution_kicker">Solusi</span>
           <h2 id="solution-title" class="section-title">AlbEdu Solusinya</h2>
-          <p class="section-desc">Satu platform yang menyelesaikan semua kebutuhan ujian Anda, dari pembuatan hingga analisis.</p>
+          <p class="section-desc" data-i18n="landing.solution_title">Satu platform yang menyelesaikan semua kebutuhan ujian Anda, dari pembuatan hingga analisis.</p>
         </div>
         <div class="solution-grid">
           <article class="solution-card reveal reveal-delay-1">
             <div class="solution-icon" aria-hidden="true">
               <i class="material-symbols-outlined">bolt</i>
             </div>
-            <h3>Buat Ujian dalam Hitungan Menit</h3>
-            <p>Wizard pembuatan ujian yang intuitif — tinggal pilih jenis soal, atur waktu, dan ujian siap dibagikan. Tidak perlu keahlian teknis.</p>
+            <h3 data-i18n="landing.solution1_title">Buat Ujian dalam Hitungan Menit</h3>
+            <p data-i18n="landing.solution1_desc">Wizard pembuatan ujian yang intuitif — tinggal pilih jenis soal, atur waktu, dan ujian siap dibagikan. Tidak perlu keahlian teknis.</p>
           </article>
           <article class="solution-card reveal reveal-delay-2">
             <div class="solution-icon" aria-hidden="true">
               <i class="material-symbols-outlined">smart_toy</i>
             </div>
-            <h3>Koreksi Otomatis</h3>
-            <p>Sistem mengoreksi jawaban pilihan ganda dan isian secara instan saat peserta selesai mengerjakan. Tanpa delay, tanpa kesalahan.</p>
+            <h3 data-i18n="landing.solution2_title">Koreksi Otomatis</h3>
+            <p data-i18n="landing.solution2_desc">Sistem mengoreksi jawaban pilihan ganda dan isian secara instan saat peserta selesai mengerjakan. Tanpa delay, tanpa kesalahan.</p>
           </article>
           <article class="solution-card reveal reveal-delay-3">
             <div class="solution-icon" aria-hidden="true">
               <i class="material-symbols-outlined">monitoring</i>
             </div>
-            <h3>Data Hasil Real-Time</h3>
-            <p>Pantau hasil ujian secara langsung — lihat skor, distribusi jawaban, dan analisis per soal segera setelah peserta submit.</p>
+            <h3 data-i18n="landing.solution3_title">Data Hasil Real-Time</h3>
+            <p data-i18n="landing.solution3_desc">Pantau hasil ujian secara langsung — lihat skor, distribusi jawaban, dan analisis per soal segera setelah peserta submit.</p>
           </article>
         </div>
       </div>
@@ -151,30 +169,30 @@
     <section id="how" class="section how-section" aria-labelledby="how-title">
       <div class="container">
         <div class="section-header reveal">
-          <span class="section-label">Cara Kerja</span>
-          <h2 id="how-title" class="section-title">Tiga Langkah Simpel</h2>
-          <p class="section-desc">Dari nol hingga hasil, hanya butuh 3 langkah mudah.</p>
+          <span class="section-label" data-i18n="landing.how_kicker">Cara Kerja</span>
+          <h2 id="how-title" class="section-title" data-i18n="landing.how_title">Tiga Langkah Simpel</h2>
+          <p class="section-desc" data-i18n="landing.how_subtitle">Dari nol hingga hasil, hanya butuh 3 langkah mudah.</p>
         </div>
         <div class="steps-container">
           <article class="step-card reveal reveal-delay-1">
             <div class="step-number" aria-hidden="true">1</div>
             <div class="step-body">
-              <h3>Buat Ujian</h3>
-              <p>Gunakan wizard untuk menyusun soal, atur durasi dan opsi pengerjaan. Selesai dalam beberapa menit.</p>
+              <h3 data-i18n="landing.how_step1_title">Buat Ujian</h3>
+              <p data-i18n="landing.how_step1_desc">Gunakan wizard untuk menyusun soal, atur durasi dan opsi pengerjaan. Selesai dalam beberapa menit.</p>
             </div>
           </article>
           <article class="step-card reveal reveal-delay-2">
             <div class="step-number" aria-hidden="true">2</div>
             <div class="step-body">
-              <h3>Bagikan Token</h3>
-              <p>Dapatkan token unik yang bisa dibagikan ke peserta. Mereka langsung mengerjakan tanpa perlu registrasi.</p>
+              <h3 data-i18n="landing.how_step2_title">Bagikan Token</h3>
+              <p data-i18n="landing.how_step2_desc">Dapatkan token unik yang bisa dibagikan ke peserta. Mereka langsung mengerjakan tanpa perlu registrasi.</p>
             </div>
           </article>
           <article class="step-card reveal reveal-delay-3">
             <div class="step-number" aria-hidden="true">3</div>
             <div class="step-body">
-              <h3>Lihat Hasil</h3>
-              <p>Hasil muncul secara real-time di dashboard. Analisis skor, waktu pengerjaan, dan distribusi jawaban.</p>
+              <h3 data-i18n="landing.how_step3_title">Lihat Hasil</h3>
+              <p data-i18n="landing.how_step3_desc">Hasil muncul secara real-time di dashboard. Analisis skor, waktu pengerjaan, dan distribusi jawaban.</p>
             </div>
           </article>
         </div>
@@ -192,18 +210,18 @@
         <div class="stats-grid reveal">
           <div class="stat-item">
             <div class="stat-icon" aria-hidden="true"><i class="material-symbols-outlined">rocket_launch</i></div>
-            <div class="stat-number">Akses Awal</div>
-            <div class="stat-label">Tersedia Sekarang</div>
+            <div class="stat-number" data-i18n="landing.cta_badge">Akses Awal</div>
+            <div class="stat-label" data-i18n="landing.cta_badge">Tersedia Sekarang</div>
           </div>
           <div class="stat-item">
             <div class="stat-icon" aria-hidden="true"><i class="material-symbols-outlined">chat_bubble</i></div>
-            <div class="stat-number">Masukanmu</div>
+            <div class="stat-number" data-i18n="landing.cta_feedback">Masukanmu</div>
             <div class="stat-label">Bentuk Masa Depan AlbEdu</div>
           </div>
           <div class="stat-item">
             <div class="stat-icon" aria-hidden="true"><i class="material-symbols-outlined">bolt</i></div>
-            <div class="stat-number">Gratis</div>
-            <div class="stat-label">Selama Masa Akses Awal</div>
+            <div class="stat-number" data-i18n="landing.cta_free">Gratis</div>
+            <div class="stat-label" data-i18n="landing.cta_free">Selama Masa Akses Awal</div>
           </div>
         </div>
       </div>
@@ -214,11 +232,11 @@
       <div class="container">
         <div class="cta-card reveal">
           <div class="cta-content">
-            <h2 id="cta-title" class="cta-title">Siap Jadi Yang Pertama?</h2>
+            <h2 id="cta-title" class="cta-title" data-i18n="landing.cta_title">Siap Jadi Yang Pertama?</h2>
             <p class="cta-desc">Akses awal AlbEdu sudah tersedia. Daftar sekarang dan jadilah pengguna pertama yang membentuk platform ini.</p>
             <a href="pages/register-admin.html" class="cta-btn">
               <i aria-hidden="true" class="material-symbols-outlined">person_add</i>
-              Daftar Sekarang
+              <span data-i18n="landing.cta_register">Daftar Sekarang</span>
             </a>
           </div>
         </div>
@@ -237,9 +255,9 @@
         </a>
         <nav aria-label="Footer navigasi">
           <ul class="footer-links">
-            <li><a href="pages/login.html">Login</a></li>
-            <li><a href="pages/register-admin.html">Daftar</a></li>
-            <li><a href="mailto:support@albedu.id">Bantuan</a></li>
+            <li><a href="pages/login.html" data-i18n="landing.cta_login">Login</a></li>
+            <li><a href="pages/register-admin.html" data-i18n="landing.cta_register">Daftar</a></li>
+            <li><a href="mailto:support@albedu.id" data-i18n="landing.footer_help">Bantuan</a></li>
           </ul>
         </nav>
         <p class="footer-copy">&copy; 2026 AlbEdu. Hak cipta dilindungi.</p>

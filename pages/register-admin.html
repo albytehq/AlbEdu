@@ -41,8 +41,8 @@
                         <img src="../public/images/logo.svg" alt="AlbEdu" width="36" height="36">
                         <span class="form-logo-name">AlbEdu</span>
                     </div>
-                    <h1 class="form-title">Buat Akun Administrator</h1>
-                    <p class="form-subtitle">Kelola sistem pendidikan dengan akses penuh</p>
+                    <h1 class="form-title" data-i18n="auth.register_title">Buat Akun Administrator</h1>
+                    <p class="form-subtitle" data-i18n="auth.register_subtitle">Kelola sistem pendidikan dengan akses penuh</p>
                 </div>
 
                 <!-- Registration form — IDs preserved for AdminOnboarding.js -->
@@ -202,6 +202,9 @@
             });
         });
     </script>
+    <!-- v0.742.9: i18n -->
+    <script type="module" src="../src/i18n/index.js"></script>
+    <script defer src="../src/i18n/lang-switcher.js"></script>
 </body>
 
 </html>
