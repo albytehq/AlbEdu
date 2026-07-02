@@ -168,7 +168,51 @@
     "validation_identity_name": "At least 1 field with label \"name\"",
     "validation_daftar_required": "Select a name list",
     "step1_label": "Information",
-    "publish": "Publish"
+    "publish": "Publish",
+    "captcha_question": "What is 7 × 8?",
+    "theme_preset_default": "Default",
+    "theme_preset_dark": "Gelap",
+    "theme_preset_focus": "Fokus",
+    "theme_preset_school": "Sekolah",
+    "theme_reset_aria": "Reset color",
+    "token_copy_aria": "Copy code",
+    "question_label": "Question",
+    "question_placeholder": "Type question...",
+    "question_hint": "Supports basic HTML. Min. 3 characters after tags stripped.",
+    "answer_options_label": "Answer Options",
+    "answer_options_hint": "Click radio to mark correct answer",
+    "correct_answer_aria": "Correct answer: {{letter}}",
+    "option_placeholder": "Option {{letter}}",
+    "media_label": "Media (optional)",
+    "include_youtube": "Include YouTube video",
+    "video_url_hint": "URL must start with http:// or https://",
+    "soal_unit": "questions",
+    "pick_type": "pick type",
+    "select_type_placeholder": "— Select type —",
+    "soal_button": "Question",
+    "no_questions_yet": "No questions yet. Click \"Question\" to add.",
+    "empty_question_text": "Empty question",
+    "points_unit": "points",
+    "err_title_required": "Assessment title is required",
+    "err_title_min": "Title must be at least 5 characters",
+    "err_subject_required": "Subject is required",
+    "err_identity_mode_required": "Identity mode must be selected",
+    "err_manual_min_field": "Manual: at least 1 field required",
+    "err_manual_name_field": "At least 1 field with \"name\" label required",
+    "err_daftar_required": "Select a name list",
+    "err_duration_range": "Duration 1-120 minutes",
+    "err_note_required": "Fill in note if note is enabled",
+    "err_scheduled_start_required": "Start time is required",
+    "err_min_sections": "At least 1 section required",
+    "err_section_type": "Section {{n}}: select question type",
+    "err_section_min_questions": "Section {{n}}: at least 3 questions (currently {{count}})",
+    "err_question_required": "Section {{sec}} Question {{q}}: question is required",
+    "err_question_too_short": "Section {{sec}} Question {{q}}: question too short",
+    "err_correct_answer": "Section {{sec}} Question {{q}}: select correct answer",
+    "err_option_required": "Section {{sec}} Question {{q}}: option {{k}} is required",
+    "wcag_pass": "Contrast OK (Pass)",
+    "wcag_fail": "This color may be hard to read. Try a darker color.",
+    "judul_hint": "Min. 5 characters (currently {{count}})"
   },
   "active": {
     "page_title": "Active Assessments",
@@ -214,7 +258,8 @@
     "filter_all": "All",
     "no_results_title": "No Questions Found",
     "no_results_desc": "No questions match the current filter. Try adjusting your search.",
-    "filter_tags_placeholder": "Filter by tag..."
+    "filter_tags_placeholder": "Filter by tag...",
+    "subject_math": "Mathematics"
   },
   "monitoring": {
     "page_title": "Real-time Monitoring",
@@ -399,7 +444,9 @@
     "tab_name_too_long": "Tab name \"{{name}}\" exceeds {{max}} characters.",
     "empty_tab": "Empty tab: {{names}}. Each tab must have at least 1 name.",
     "total_too_many": "Total names exceed limit of {{max}} (current: {{current}}).",
-    "params_incomplete": "Incomplete parameters."
+    "params_incomplete": "Incomplete parameters.",
+    "empty_state": "No list data yet",
+    "create_new": "Create New"
   },
   "landing": {
     "skip_link": "Skip to main content",
@@ -450,7 +497,13 @@
     "cta_desc": "AlbEdu early access is now available. Sign up now and be the first user to shape this platform.",
     "solution_heading": "AlbEdu is the Solution",
     "solution_subtitle": "One platform that handles all your exam needs, from creation to analysis.",
-    "title": "AlbEdu — Manage Online Exams, Hassle-Free"
+    "title": "AlbEdu — Manage Online Exams, Hassle-Free",
+    "proof_stat1_num": "Early Access",
+    "proof_stat1_label": "Available Now",
+    "proof_stat2_num": "Your Feedback",
+    "proof_stat2_label": "Shape AlbEdu's Future",
+    "proof_stat3_num": "Free",
+    "proof_stat3_label": "During Early Access"
   },
   "auth": {
     "login_title": "Sign in to AlbEdu",
@@ -544,7 +597,10 @@
       "email_invalid": "Please enter a valid email format.",
       "back_to_login": "Back to Login",
       "footer": "AlbEdu — Restricted access for administrators.",
-      "subtitle": "Enter your email and we will send you a link to reset your password."
+      "subtitle": "Enter your email and we will send you a link to reset your password.",
+      "email_label": "Email",
+      "success_title": "Email Sent",
+      "branding_title": "Reset Password"
     },
     "reset": {
       "error_title": "Invalid Link",
@@ -579,7 +635,9 @@
       "feature_2_label": "Guaranteed Security",
       "feature_2_desc": "Email verification & device protection",
       "feature_3_label": "Ready in Minutes",
-      "feature_3_desc": "Fast registration, instantly active"
+      "feature_3_desc": "Fast registration, instantly active",
+      "email_label": "Email",
+      "password_label": "Password"
     },
     "login": {
       "footer": "AlbEdu — Restricted access for administrators."
@@ -746,7 +804,10 @@
     "saved_title": "Saved",
     "saved_msg": "Question {{action}}",
     "saved_added": "added",
-    "saved_updated": "updated"
+    "saved_updated": "updated",
+    "delete_section_aria": "Delete section",
+    "edit_question_aria": "Edit question",
+    "delete_question_aria": "Delete question"
   },
   "assessment": {
     "loading_auth": "Loading authentication...",

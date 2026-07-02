@@ -13,6 +13,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   // ─── Constants ──────────────────────────────────────────────────────────
   const SCHEMA_VERSION = '1.0.0';
   const GLOBAL_SKOR = 100;
@@ -230,69 +239,69 @@
       const u = _state.examData;
 
       if (!u.title) {
-        errors.push({ field: 'title', message: 'Judul asesmen harus diisi' });
+        errors.push({ field: 'title', message: t('create.err_title_required', null, 'Judul asesmen harus diisi') });
       } else if (u.title.trim().length < 5) {
-        errors.push({ field: 'title', message: 'Judul min. 5 karakter' });
+        errors.push({ field: 'title', message: t('create.err_title_min', null, 'Judul min. 5 karakter') });
       }
 
       if (!u.subject) {
-        errors.push({ field: 'subject', message: 'Mata pelajaran harus diisi' });
+        errors.push({ field: 'subject', message: t('create.err_subject_required', null, 'Mata pelajaran harus diisi') });
       }
 
       const mode = u.identity_mode;
       if (!mode || (mode !== 'manual' && mode !== 'daftar')) {
-        errors.push({ field: 'identity_mode', message: 'Mode identitas harus dipilih' });
+        errors.push({ field: 'identity_mode', message: t('create.err_identity_mode_required', null, 'Mode identitas harus dipilih') });
       } else if (mode === 'manual') {
         const fields = u.identity_config?.fields || [];
         if (!fields.length) {
-          errors.push({ field: 'identity_fields', message: 'Manual: minimal 1 field' });
+          errors.push({ field: 'identity_fields', message: t('create.err_manual_min_field', null, 'Manual: minimal 1 field') });
         } else if (!fields.some((f) => (f.label || '').toLowerCase().includes('nama'))) {
-          errors.push({ field: 'identity_fields', message: 'Minimal 1 field dengan label "nama"' });
+          errors.push({ field: 'identity_fields', message: t('create.err_manual_name_field', null, 'Minimal 1 field dengan label "nama"') });
         }
       } else if (mode === 'daftar') {
         if (!u.identity_config?.daftar_id) {
-          errors.push({ field: 'identity_daftar', message: 'Pilih daftar nama' });
+          errors.push({ field: 'identity_daftar', message: t('create.err_daftar_required', null, 'Pilih daftar nama') });
         }
       }
 
       const durasi = parseInt(u.duration_minutes, 10);
       if (isNaN(durasi) || durasi < 1 || durasi > 120) {
-        errors.push({ field: 'duration_minutes', message: 'Durasi 1-120 menit' });
+        errors.push({ field: 'duration_minutes', message: t('create.err_duration_range', null, 'Durasi 1-120 menit') });
       }
 
       if (u.note_enabled && (!u.note_text || !u.note_text.trim())) {
-        errors.push({ field: 'note_text', message: 'Isi catatan jika catatan aktif' });
+        errors.push({ field: 'note_text', message: t('create.err_note_required', null, 'Isi catatan jika catatan aktif') });
       }
 
       if (u.access_mode === 'scheduled' && !_state.scheduled_start) {
-        errors.push({ field: 'scheduled_start', message: 'Waktu mulai harus diisi' });
+        errors.push({ field: 'scheduled_start', message: t('create.err_scheduled_start_required', null, 'Waktu mulai harus diisi') });
       }
 
       if (_state.examData.sections.length === 0) {
-        errors.push({ field: 'sections', message: 'Minimal 1 bagian soal' });
+        errors.push({ field: 'sections', message: t('create.err_min_sections', null, 'Minimal 1 bagian soal') });
       } else {
         _state.examData.sections.forEach((sec, idx) => {
           if (!sec.type_question) {
-            errors.push({ field: `section[${idx}].type`, message: `Bagian ${idx + 1}: pilih tipe soal` });
+            errors.push({ field: `section[${idx}].type`, message: t('create.err_section_type', { n: idx + 1 }, `Bagian ${idx + 1}: pilih tipe soal`) });
             return;
           }
           if (sec.questions.length < 3) {
-            errors.push({ field: `section[${idx}].questions`, message: `Bagian ${idx + 1}: minimal 3 soal (saat ini ${sec.questions.length})` });
+            errors.push({ field: `section[${idx}].questions`, message: t('create.err_section_min_questions', { n: idx + 1, count: sec.questions.length }, `Bagian ${idx + 1}: minimal 3 soal (saat ini ${sec.questions.length})`) });
           }
           sec.questions.forEach((q, qIdx) => {
             const cleanQ = (q.pertanyaan || '').replace(/<[^>]*>/g, '').trim();
             if (!cleanQ) {
-              errors.push({ field: `q[${idx}][${qIdx}]`, message: `Bagian ${idx + 1} Soal ${qIdx + 1}: pertanyaan harus diisi` });
+              errors.push({ field: `q[${idx}][${qIdx}]`, message: t('create.err_question_required', { sec: idx + 1, q: qIdx + 1 }, `Bagian ${idx + 1} Soal ${qIdx + 1}: pertanyaan harus diisi`) });
             } else if (cleanQ.length < 3) {
-              errors.push({ field: `q[${idx}][${qIdx}]`, message: `Bagian ${idx + 1} Soal ${qIdx + 1}: pertanyaan terlalu pendek` });
+              errors.push({ field: `q[${idx}][${qIdx}]`, message: t('create.err_question_too_short', { sec: idx + 1, q: qIdx + 1 }, `Bagian ${idx + 1} Soal ${qIdx + 1}: pertanyaan terlalu pendek`) });
             }
             if (sec.type_question === 'PG') {
               if (!q.jawaban_benar) {
-                errors.push({ field: `q[${idx}][${qIdx}]`, message: `Bagian ${idx + 1} Soal ${qIdx + 1}: pilih jawaban benar` });
+                errors.push({ field: `q[${idx}][${qIdx}]`, message: t('create.err_correct_answer', { sec: idx + 1, q: qIdx + 1 }, `Bagian ${idx + 1} Soal ${qIdx + 1}: pilih jawaban benar`) });
               }
               ['A', 'B', 'C', 'D'].forEach((k) => {
                 if (!q.pilihan?.[k]?.trim()) {
-                  errors.push({ field: `q[${idx}][${qIdx}]`, message: `Bagian ${idx + 1} Soal ${qIdx + 1}: opsi ${k} harus diisi` });
+                  errors.push({ field: `q[${idx}][${qIdx}]`, message: t('create.err_option_required', { sec: idx + 1, q: qIdx + 1, k }, `Bagian ${idx + 1} Soal ${qIdx + 1}: opsi ${k} harus diisi`) });
                 }
               });
             }
@@ -504,10 +513,10 @@
       const validation = window.ThemeSystem.validate(theme.primary);
       if (validation.allPass) {
         wcagStatus.className = 'albedu-wcag-status albedu-wcag-pass';
-        wcagStatus.innerHTML = '<i class="material-symbols-outlined" style="font-size: 14px;">check_circle</i><span>Contrast OK (Pass)</span>';
+        wcagStatus.innerHTML = '<i class="material-symbols-outlined" style="font-size: 14px;">check_circle</i><span>' + t('create.wcag_pass', null, 'Contrast OK (Pass)') + '</span>';
       } else {
         wcagStatus.className = 'albedu-wcag-status albedu-wcag-fail';
-        wcagStatus.innerHTML = '<i class="material-symbols-outlined" style="font-size: 14px;">warning</i><span>Warna ini mungkin sulit dibaca. Coba warna lebih gelap.</span>';
+        wcagStatus.innerHTML = '<i class="material-symbols-outlined" style="font-size: 14px;">warning</i><span>' + t('create.wcag_fail', null, 'Warna ini mungkin sulit dibaca. Coba warna lebih gelap.') + '</span>';
       }
     }
 

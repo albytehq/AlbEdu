@@ -79,7 +79,7 @@
     </style>
 </head>
 <body>
-    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
+    <a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
     <div class="page-transition"></div>
 
     <div class="container">
@@ -96,7 +96,7 @@
                 </a>
                 <span class="logo-text">AlbEdu</span>
                 <button class="sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button"
-                        aria-label="Tutup sidebar" aria-expanded="true">
+                        data-i18n-aria-label="nav.close_sidebar" aria-label="Tutup sidebar" aria-expanded="true">
                     <i class="material-symbols-outlined">left_panel_close</i>
                 </button>
             </div>
@@ -154,8 +154,8 @@
                         <i class="material-symbols-outlined">person</i>
                     </div>
                     <div class="user-info">
-                        <h4 id="sidebar-user-name">Admin AlbEdu</h4>
-                        <p id="sidebar-user-role">Administrator</p>
+                        <h4 id="sidebar-user-name" data-i18n="nav.default_admin_name">Admin AlbEdu</h4>
+                        <p id="sidebar-user-role" data-i18n="nav.role_admin">Administrator</p>
                     </div>
                 </button>
             </div>
@@ -247,12 +247,12 @@
                         <div class="albedu-form-grid">
                             <div class="albedu-field albedu-field-full">
                                 <label for="assessment-title" data-i18n="create.title_label">Judul Asesmen</label>
-                                <input type="text" id="assessment-title" class="albedu-input" placeholder="e.g. Ujian Tengah Semester Matematika" maxlength="120" autocomplete="off">
+                                <input type="text" id="assessment-title" class="albedu-input" data-i18n-placeholder="create.title_placeholder" placeholder="e.g. Ujian Tengah Semester Matematika" maxlength="120" autocomplete="off">
                                 <span class="albedu-field-hint" id="title-hint"></span>
                             </div>
                             <div class="albedu-field">
                                 <label for="assessment-subject" data-i18n="create.subject_label">Mata Pelajaran</label>
-                                <input type="text" id="assessment-subject" class="albedu-input" placeholder="e.g. Matematika" list="subject-list" autocomplete="off">
+                                <input type="text" id="assessment-subject" class="albedu-input" data-i18n-placeholder="create.subject_placeholder" placeholder="e.g. Matematika" list="subject-list" autocomplete="off">
                                 <datalist id="subject-list">
                                     <option value="Matematika"></option>
                                     <option value="Bahasa Indonesia"></option>
@@ -340,7 +340,7 @@
                                 </div>
                                 <div class="albedu-field" id="note-text-field" hidden>
                                     <label for="note-text" data-i18n="create.note_text_label">Isi Catatan</label>
-                                    <textarea id="note-text" class="albedu-textarea" maxlength="500" placeholder="Catatan untuk peserta..." rows="2"></textarea>
+                                    <textarea id="note-text" class="albedu-textarea" maxlength="500" data-i18n-placeholder="create.note_placeholder" placeholder="Catatan untuk peserta..." rows="2"></textarea>
                                 </div>
                             </div>
                         </div>

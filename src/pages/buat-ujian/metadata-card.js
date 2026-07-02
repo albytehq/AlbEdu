@@ -13,6 +13,15 @@
 (function () {
   'use strict';
 
+  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
+  const t = (key, vars, fallback) => {
+    if (window.i18n && typeof window.i18n.t === 'function') {
+      const v = window.i18n.t(key, vars);
+      return v !== undefined ? v : fallback;
+    }
+    return fallback;
+  };
+
   const MetadataCard = {
     init() {
       this._judul = document.getElementById('assessment-title');
@@ -230,7 +239,7 @@
         this._judulHint.classList.remove('albedu-hint-error');
         this._judul.classList.remove('albedu-field-error');
       } else if (val.length < 5) {
-        this._judulHint.textContent = `Min. 5 karakter (saat ini ${val.length})`;
+        this._judulHint.textContent = t('create.judul_hint', { count: val.length }, `Min. 5 karakter (saat ini ${val.length})`);
         this._judulHint.classList.add('albedu-hint-error');
         this._judul.classList.add('albedu-field-error');
       } else {

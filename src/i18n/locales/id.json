@@ -168,7 +168,51 @@
     "validation_identity_name": "Minimal 1 field dengan label \"nama\"",
     "validation_daftar_required": "Pilih daftar nama",
     "step1_label": "Informasi",
-    "publish": "Publish Asesmen"
+    "publish": "Publish Asesmen",
+    "captcha_question": "Berapakah hasil dari 7 × 8?",
+    "theme_preset_default": "Default",
+    "theme_preset_dark": "Dark",
+    "theme_preset_focus": "Focus",
+    "theme_preset_school": "School",
+    "theme_reset_aria": "Reset warna",
+    "token_copy_aria": "Salin kode",
+    "question_label": "Pertanyaan",
+    "question_placeholder": "Tulis pertanyaan...",
+    "question_hint": "Mendukung HTML sederhana. Min. 3 karakter setelah tag di-strip.",
+    "answer_options_label": "Opsi Jawaban",
+    "answer_options_hint": "Klik radio untuk menandai jawaban benar",
+    "correct_answer_aria": "Jawaban benar: {{letter}}",
+    "option_placeholder": "Opsi {{letter}}",
+    "media_label": "Media (opsional)",
+    "include_youtube": "Sertakan video YouTube",
+    "video_url_hint": "URL harus diawali http:// atau https://",
+    "soal_unit": "soal",
+    "pick_type": "pilih tipe",
+    "select_type_placeholder": "— Pilih tipe —",
+    "soal_button": "Soal",
+    "no_questions_yet": "Belum ada soal. Klik \"Soal\" untuk menambah.",
+    "empty_question_text": "Soal kosong",
+    "points_unit": "poin",
+    "err_title_required": "Judul asesmen harus diisi",
+    "err_title_min": "Judul min. 5 karakter",
+    "err_subject_required": "Mata pelajaran harus diisi",
+    "err_identity_mode_required": "Mode identitas harus dipilih",
+    "err_manual_min_field": "Manual: minimal 1 field",
+    "err_manual_name_field": "Minimal 1 field dengan label \"nama\"",
+    "err_daftar_required": "Pilih daftar nama",
+    "err_duration_range": "Durasi 1-120 menit",
+    "err_note_required": "Isi catatan jika catatan aktif",
+    "err_scheduled_start_required": "Waktu mulai harus diisi",
+    "err_min_sections": "Minimal 1 bagian soal",
+    "err_section_type": "Bagian {{n}}: pilih tipe soal",
+    "err_section_min_questions": "Bagian {{n}}: minimal 3 soal (saat ini {{count}})",
+    "err_question_required": "Bagian {{sec}} Soal {{q}}: pertanyaan harus diisi",
+    "err_question_too_short": "Bagian {{sec}} Soal {{q}}: pertanyaan terlalu pendek",
+    "err_correct_answer": "Bagian {{sec}} Soal {{q}}: pilih jawaban benar",
+    "err_option_required": "Bagian {{sec}} Soal {{q}}: opsi {{k}} harus diisi",
+    "wcag_pass": "Contrast OK (Pass)",
+    "wcag_fail": "Warna ini mungkin sulit dibaca. Coba warna lebih gelap.",
+    "judul_hint": "Min. 5 karakter (saat ini {{count}})"
   },
   "active": {
     "page_title": "Asesmen Aktif",
@@ -214,7 +258,8 @@
     "filter_all": "Semua",
     "no_results_title": "Tidak Ditemukan",
     "no_results_desc": "Coba kata kunci atau filter lain.",
-    "filter_tags_placeholder": "Filter berdasarkan tag..."
+    "filter_tags_placeholder": "Filter berdasarkan tag...",
+    "subject_math": "Matematika"
   },
   "monitoring": {
     "page_title": "Monitoring Real-time",
@@ -399,7 +444,9 @@
     "tab_name_too_long": "Nama tab \"{{name}}\" melebihi {{max}} karakter.",
     "empty_tab": "Tab kosong: {{names}}. Setiap tab harus berisi minimal 1 nama.",
     "total_too_many": "Total nama melebihi batas {{max}} (sekarang: {{current}}).",
-    "params_incomplete": "Parameter tidak lengkap."
+    "params_incomplete": "Parameter tidak lengkap.",
+    "empty_state": "Belum ada data daftar",
+    "create_new": "Buat Baru"
   },
   "landing": {
     "skip_link": "Langsung ke konten utama",
@@ -450,7 +497,13 @@
     "cta_desc": "Akses awal AlbEdu sudah tersedia. Daftar sekarang dan jadilah pengguna pertama yang membentuk platform ini.",
     "solution_heading": "AlbEdu Solusinya",
     "solution_subtitle": "Satu platform yang menyelesaikan semua kebutuhan ujian Anda, dari pembuatan hingga analisis.",
-    "title": "AlbEdu — Kelola Ujian Online, Tanpa Ribet"
+    "title": "AlbEdu — Kelola Ujian Online, Tanpa Ribet",
+    "proof_stat1_num": "Akses Awal",
+    "proof_stat1_label": "Tersedia Sekarang",
+    "proof_stat2_num": "Masukanmu",
+    "proof_stat2_label": "Bentuk Masa Depan AlbEdu",
+    "proof_stat3_num": "Gratis",
+    "proof_stat3_label": "Selama Masa Akses Awal"
   },
   "auth": {
     "login_title": "Masuk ke AlbEdu",
@@ -544,7 +597,10 @@
       "email_invalid": "Masukkan format email yang valid.",
       "back_to_login": "Kembali ke Login",
       "footer": "AlbEdu — Akses terbatas untuk administrator.",
-      "subtitle": "Masukkan email Anda dan kami akan mengirimkan link untuk mengatur ulang kata sandi."
+      "subtitle": "Masukkan email Anda dan kami akan mengirimkan link untuk mengatur ulang kata sandi.",
+      "email_label": "Email",
+      "success_title": "Email Terkirim",
+      "branding_title": "Reset Kata Sandi"
     },
     "reset": {
       "error_title": "Link Tidak Valid",
@@ -579,7 +635,9 @@
       "feature_2_label": "Keamanan Terjamin",
       "feature_2_desc": "Verifikasi email & proteksi perangkat",
       "feature_3_label": "Siap dalam Hitungan Menit",
-      "feature_3_desc": "Pendaftaran cepat, langsung aktif"
+      "feature_3_desc": "Pendaftaran cepat, langsung aktif",
+      "email_label": "Email",
+      "password_label": "Kata Sandi"
     },
     "login": {
       "footer": "AlbEdu — Akses terbatas untuk administrator."
@@ -746,7 +804,10 @@
     "saved_title": "Tersimpan",
     "saved_msg": "Soal {{action}}",
     "saved_added": "ditambahkan",
-    "saved_updated": "diperbarui"
+    "saved_updated": "diperbarui",
+    "delete_section_aria": "Hapus bagian",
+    "edit_question_aria": "Edit soal",
+    "delete_question_aria": "Hapus soal"
   },
   "assessment": {
     "loading_auth": "Memuat autentikasi...",

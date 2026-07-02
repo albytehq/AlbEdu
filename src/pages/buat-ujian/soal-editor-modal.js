@@ -101,21 +101,21 @@
       this._body.innerHTML = `
         <div class="albedu-soal-editor">
           <div class="albedu-soal-editor-section">
-            <label class="albedu-soal-editor-label" for="q-pertanyaan">Pertanyaan <span class="albedu-required">*</span></label>
-            <textarea id="q-pertanyaan" class="albedu-soal-textarea" placeholder="Tulis pertanyaan...">${this._esc(this._draft.pertanyaan || '')}</textarea>
-            <span class="albedu-field-hint">Mendukung HTML sederhana. Min. 3 karakter setelah tag di-strip.</span>
+            <label class="albedu-soal-editor-label" for="q-pertanyaan">${t('create.question_label', null, 'Pertanyaan')} <span class="albedu-required">*</span></label>
+            <textarea id="q-pertanyaan" class="albedu-soal-textarea" placeholder="${t('create.question_placeholder', null, 'Tulis pertanyaan...')}">${this._esc(this._draft.pertanyaan || '')}</textarea>
+            <span class="albedu-field-hint">${t('create.question_hint', null, 'Mendukung HTML sederhana. Min. 3 karakter setelah tag di-strip.')}</span>
           </div>
 
           ${isPG ? `
             <div class="albedu-soal-editor-section">
-              <label class="albedu-soal-editor-label">Opsi Jawaban <span class="albedu-required">*</span></label>
-              <p class="albedu-field-hint" style="margin-bottom:8px;">Klik radio untuk menandai jawaban benar</p>
+              <label class="albedu-soal-editor-label">${t('create.answer_options_label', null, 'Opsi Jawaban')} <span class="albedu-required">*</span></label>
+              <p class="albedu-field-hint" style="margin-bottom:8px;">${t('create.answer_options_hint', null, 'Klik radio untuk menandai jawaban benar')}</p>
               <div class="albedu-soal-options">
                 ${['A', 'B', 'C', 'D'].map((letter) => `
                   <div class="albedu-soal-option ${this._draft.jawaban_benar === letter ? 'albedu-option-correct' : ''}" data-letter="${letter}">
-                    <input type="radio" name="jawaban-benar" value="${letter}" ${this._draft.jawaban_benar === letter ? 'checked' : ''} aria-label="Jawaban benar: ${letter}">
+                    <input type="radio" name="jawaban-benar" value="${letter}" ${this._draft.jawaban_benar === letter ? 'checked' : ''} aria-label="${t('create.correct_answer_aria', { letter }, 'Jawaban benar: ' + letter)}">
                     <span class="albedu-soal-option-letter">${letter}</span>
-                    <input type="text" class="albedu-soal-option-input" data-letter="${letter}" value="${this._esc(this._draft.pilihan[letter] || '')}" placeholder="Opsi ${letter}">
+                    <input type="text" class="albedu-soal-option-input" data-letter="${letter}" value="${this._esc(this._draft.pilihan[letter] || '')}" placeholder="${t('create.option_placeholder', { letter }, 'Opsi ' + letter)}">
                   </div>
                 `).join('')}
               </div>
@@ -123,15 +123,15 @@
           ` : ''}
 
           <div class="albedu-soal-editor-section">
-            <label class="albedu-soal-editor-label">Media (opsional)</label>
+            <label class="albedu-soal-editor-label">${t('create.media_label', null, 'Media (opsional)')}</label>
             <label class="albedu-toggle albedu-toggle-sm">
               <input type="checkbox" id="q-video-enabled" ${this._draft.media?.video?.enabled ? 'checked' : ''}>
               <span class="albedu-toggle-track"></span>
-              <span class="albedu-toggle-label">Sertakan video YouTube</span>
+              <span class="albedu-toggle-label">${t('create.include_youtube', null, 'Sertakan video YouTube')}</span>
             </label>
             <div id="q-video-url-field" ${!this._draft.media?.video?.enabled ? 'hidden' : ''}>
               <input type="url" id="q-video-url" class="albedu-field-input" value="${this._esc(this._draft.media?.video?.src || '')}" placeholder="https://youtube.com/watch?v=...">
-              <span class="albedu-field-hint">URL harus diawali http:// atau https://</span>
+              <span class="albedu-field-hint">${t('create.video_url_hint', null, 'URL harus diawali http:// atau https://')}</span>
             </div>
           </div>
         </div>

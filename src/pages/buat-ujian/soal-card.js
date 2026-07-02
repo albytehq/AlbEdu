@@ -79,33 +79,33 @@
         <div class="albedu-section-block" data-section-index="${sIdx}">
           <header class="albedu-section-header">
             <div class="albedu-section-info">
-              <h3 class="albedu-section-name">Bagian ${sIdx + 1}</h3>
-              <span class="albedu-section-meta">${sec.questions.length} soal • ${sec.type_question === 'PG' ? 'Pilihan Ganda' : sec.type_question === 'esai' ? 'Esai' : 'pilih tipe'}</span>
+              <h3 class="albedu-section-name">${t('wizard.section_label', { n: sIdx + 1 }, 'Bagian ' + (sIdx + 1))}</h3>
+              <span class="albedu-section-meta">${sec.questions.length} ${t('create.soal_unit', null, 'soal')} • ${sec.type_question === 'PG' ? t('wizard.type_pg', null, 'Pilihan Ganda') : sec.type_question === 'esai' ? t('wizard.type_essay', null, 'Esai') : t('create.pick_type', null, 'pilih tipe')}</span>
             </div>
             <div class="albedu-section-actions">
               <select class="albedu-section-type" data-index="${sIdx}" ${sec.questions.length > 0 ? 'disabled' : ''}>
-                <option value="">— Pilih tipe —</option>
-                <option value="PG" ${sec.type_question === 'PG' ? 'selected' : ''}>Pilihan Ganda</option>
-                <option value="esai" ${sec.type_question === 'esai' ? 'selected' : ''}>Esai</option>
+                <option value="">${t('create.select_type_placeholder', null, '— Pilih tipe —')}</option>
+                <option value="PG" ${sec.type_question === 'PG' ? 'selected' : ''}>${t('wizard.type_pg', null, 'Pilihan Ganda')}</option>
+                <option value="esai" ${sec.type_question === 'esai' ? 'selected' : ''}>${t('wizard.type_essay', null, 'Esai')}</option>
               </select>
               <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-add-question" data-index="${sIdx}" type="button" ${!sec.type_question ? 'disabled' : ''}>
-                <i class="material-symbols-outlined">add</i> Soal
+                <i class="material-symbols-outlined">add</i> ${t('create.soal_button', null, 'Soal')}
               </button>
-              ${sections.length > 1 ? `<button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-delete-section" data-index="${sIdx}" type="button" aria-label="Hapus bagian"><i class="material-symbols-outlined">delete</i></button>` : ''}
+              ${sections.length > 1 ? `<button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-delete-section" data-index="${sIdx}" type="button" aria-label="${t('wizard.delete_section_aria', null, 'Hapus bagian')}"><i class="material-symbols-outlined">delete</i></button>` : ''}
             </div>
           </header>
           <div class="albedu-section-questions" data-section-index="${sIdx}">
             ${sec.questions.length === 0
-              ? `<div class="albedu-questions-empty"><p>Belum ada soal. Klik "Soal" untuk menambah.</p></div>`
+              ? `<div class="albedu-questions-empty"><p>${t('create.no_questions_yet', null, 'Belum ada soal. Klik "Soal" untuk menambah.')}</p></div>`
               : sec.questions.map((q, qIdx) => `
                 <div class="albedu-question-row" data-section="${sIdx}" data-question="${qIdx}" tabindex="0" role="button">
                   <span class="albedu-question-num">${qIdx + 1}</span>
-                  <span class="albedu-question-type albedu-q-type-${sec.type_question === 'PG' ? 'PG' : 'esai'}">${sec.type_question === 'PG' ? 'PG' : 'Esai'}</span>
-                  <span class="albedu-question-text">${this._esc((q.pertanyaan || '').replace(/<[^>]*>/g, '').slice(0, 80)) || 'Soal kosong'}</span>
-                  <span class="albedu-question-score">${q.skor || 0}p</span>
+                  <span class="albedu-question-type albedu-q-type-${sec.type_question === 'PG' ? 'PG' : 'esai'}">${sec.type_question === 'PG' ? 'PG' : t('wizard.type_essay', null, 'Esai')}</span>
+                  <span class="albedu-question-text">${this._esc((q.pertanyaan || '').replace(/<[^>]*>/g, '').slice(0, 80)) || t('create.empty_question_text', null, 'Soal kosong')}</span>
+                  <span class="albedu-question-score">${q.skor || 0} ${t('create.points_unit', null, 'poin')}</span>
                   <div class="albedu-question-actions">
-                    <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-edit-question" data-section="${sIdx}" data-question="${qIdx}" type="button" aria-label="Edit soal"><i class="material-symbols-outlined">edit</i></button>
-                    <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-delete-question" data-section="${sIdx}" data-question="${qIdx}" type="button" aria-label="Hapus soal"><i class="material-symbols-outlined">delete</i></button>
+                    <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-edit-question" data-section="${sIdx}" data-question="${qIdx}" type="button" aria-label="${t('wizard.edit_question_aria', null, 'Edit soal')}"><i class="material-symbols-outlined">edit</i></button>
+                    <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-delete-question" data-section="${sIdx}" data-question="${qIdx}" type="button" aria-label="${t('wizard.delete_question_aria', null, 'Hapus soal')}"><i class="material-symbols-outlined">delete</i></button>
                   </div>
                 </div>
               `).join('')

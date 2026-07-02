@@ -65,7 +65,7 @@
   </script>
 </head>
 <body>
-<a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
+<a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
 
 <!-- Page Load -->
 <div class="page-transition"></div>
@@ -140,8 +140,8 @@
           <i class="material-symbols-outlined">person</i>
         </div>
         <div class="user-info">
-          <h4 id="sidebar-user-name">Admin AlbEdu</h4>
-          <p id="sidebar-user-role">Administrator</p>
+          <h4 id="sidebar-user-name" data-i18n="nav.default_admin_name">Admin AlbEdu</h4>
+          <p id="sidebar-user-role" data-i18n="nav.role_admin">Administrator</p>
         </div>
       </button>
     </div>
@@ -341,7 +341,7 @@
       list.innerHTML = `
         <div class="dn-empty">
           <i class="material-symbols-outlined">folder_open</i>
-          <h3>Belum ada data daftar</h3>
+          <h3><span data-i18n="daftar_nama.empty_state">Belum ada data daftar</span></h3>
           <p>Klik "Buat Daftar" untuk membuat data daftar pertamamu.</p>
         </div>
       `;
@@ -475,7 +475,7 @@
           </div>
         </div>
         <div class="dn-action-bar">
-          <button class="dn-btn ghost" id="dnCreateCancel" type="button">Batal</button>
+          <button class="dn-btn ghost" id="dnCreateCancel" type="button" data-i18n="common.cancel_btn">Batal</button>
           <button class="dn-btn primary" id="dnCreateSave" type="button">
             <i class="material-symbols-outlined" style="font-size:16px;">add</i>
             Buat Daftar
@@ -656,7 +656,7 @@
             <i class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">info</i>
             Total ${anggotaCount} nama di tab ini
           </span>
-          <button class="dn-btn ghost" id="dnEditorCancel" type="button">Tutup</button>
+          <button class="dn-btn ghost" id="dnEditorCancel" type="button" data-i18n="common.close">Tutup</button>
           <button class="dn-btn primary" id="dnEditorSave" type="button">
             <i class="material-symbols-outlined" style="font-size:16px;">save</i>
             Simpan Perubahan
