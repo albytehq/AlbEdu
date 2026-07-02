@@ -3,492 +3,219 @@
 > **Single source of truth** for URL routing, navigation, and redirect logic in AlbEdu.
 > Read this BEFORE editing any HTML link, any `window.location.*` call, or any auth redirect.
 >
-> **Version:** 2.1.0  |  **Last updated:** 2026-06-29  |  **Owner:** AlbEdu Core
+> **Version:** 0.742.9  |  **Last updated:** 2026-07-02  |  **Owner:** Albi Fahriza (albytehq)
 
 ---
 
 ## 0. TL;DR — The 7 Rules You Must Never Break
 
-1. **Base path is `/AlbEdu/`** in production. Locally it's `/`. Never hardcode either — always derive from `AUTH_CONFIG.BASE_PATH`.
-2. **Never use `href="/"`** anywhere. It jumps to `https://albedu-id.github.io/` (the GitHub user's profile page), not the AlbEdu app. Use `href="./"` from root, `href="../"` from `pages/`, `href="../../"` from `pages/admin/pages/` and `pages/ujian/`.
+1. **Base path is `/AlbEdu/`** in production (GitHub Pages: `albytehq.github.io/AlbEdu/`). Locally it's `/`. Never hardcode either — always derive from `AUTH_CONFIG.BASE_PATH`.
+2. **Never use `href="/"`** anywhere. It jumps to `https://albytehq.github.io/` (the user's GitHub profile page), not the AlbEdu app. Use `href="./"` from root, `href="../"` from `pages/`, `href="../../"` from `pages/admin/` and `pages/assessment/` (v0.742.0+ flattened structure).
 3. **Logout redirects to the LANDING PAGE** (root `index.html`), not `login.html`. Use `AUTH_CONFIG.landingUrl()` — never `AUTH_CONFIG.loginUrl()` for logout.
-4. **Unauthenticated-on-protected-page redirects to LOGIN** (`login.html`). Use `_redirectToLogin()` → `AUTH_CONFIG.loginUrl()`. (Different from logout.)
-5. **The auto-404 page lives at project root** (`AlbEdu/404.html`). `pages/404.html` is legacy and only reachable by direct link. Both must use root-relative asset paths that match their location.
+4. **Unauthenticated-on-protected-page redirects to LOGIN** (`pages/login.html`). Use `_redirectToLogin()` → `AUTH_CONFIG.loginUrl()`. (Different from logout.)
+5. **The auto-404 page lives at project root** (`AlbEdu/404.html`). `pages/404.html` is a redirect stub. Root 404 uses dynamic base path detection for CSS.
 6. **All auth redirects go through `window.Auth`** (`getBasePath()`, `getLandingPath()`, `getRoleRedirectPath()`, `navigateTo()`). Never write raw `window.location.replace('../some-page.html')` from a subfolder.
-7. **Asset paths in HTML are page-relative** (`../styles/x.css` from `pages/foo.html`, `../../styles/x.css` from `pages/admin/pages/foo.html`). The root `index.html` and root `404.html` use bare paths (`styles/x.css`).
+7. **Asset paths in HTML are page-relative** (`../styles/x.css` from `pages/foo.html`, `../../styles/x.css` from `pages/admin/foo.html` (v0.742.0+) or `pages/assessment/foo.html`). The root `index.html` and root `404.html` use bare paths (`styles/x.css`).
 
 ---
 
 ## 1. Production URL Anatomy
 
 ```
-https://albedu-id.github.io/AlbEdu/pages/admin/pages/buat-ujian.html
-└───────────┬───────────────┘└────┬────┘└────┬─────────────────────┘
+https://albytehq.github.io/AlbEdu/pages/admin/create-assessment.html
+└───────────┬───────────────┘└────┬────┘└────┬───────────────────┘
        GitHub Pages origin     BASE_PATH   page-relative path
 ```
 
 | Segment | Value (production) | Value (localhost) | How to read it |
 |---|---|---|---|
-| Origin | `https://albedu-id.github.io` | `http://127.0.0.1:8765` | `window.location.origin` |
-| BASE_PATH | `/AlbEdu/` | `/` | `AUTH_CONFIG.BASE_PATH` |
-| Page path | `pages/admin/pages/buat-ujian.html` | same | `window.location.pathname.slice(BASE_PATH.length)` |
-
-**Critical implication:** any link that starts with `/` (e.g. `href="/"`) resolves against the **origin**, not against BASE_PATH. So `href="/"` jumps to `https://albedu-id.github.io/` — the GitHub user profile page, NOT the AlbEdu landing page at `/AlbEdu/`.
+| Origin | `https://albytehq.github.io` | `http://127.0.0.1:8765` | `window.location.origin` |
+| BASE_PATH | `/AlbEdu/` | `/` | `AUTH_CONFIG.BASE_PATH` (auto-detected) |
+| Page path | `pages/admin/create-assessment.html` | same | `window.location.pathname` minus BASE_PATH |
 
 ---
 
 ## 2. The `AUTH_CONFIG` Object (`src/auth/main.js`)
 
-This is the **single source of truth** for all auth-related URLs. Every redirect in AlbEdu goes through it.
-
 ```javascript
-const AUTH_CONFIG = {
-    // ── Resolved once at page load ──────────────────────────────────
-    // Walks up from current pathname past known app subfolders.
-    // Examples:
-    //   /AlbEdu/login.html              → '/AlbEdu/'
-    //   /AlbEdu/ujian/index.html        → '/AlbEdu/'
-    //   /AlbEdu/admin/pages/buat-ujian  → '/AlbEdu/'
-    //   /login.html (localhost)         → '/'
-    BASE_PATH: (function () { /* subfolder walker */ })(),
+AUTH_CONFIG = {
+  BASE_PATH: (function () {
+    const p = window.location.pathname;
+    const base = p.substring(0, p.lastIndexOf('/') + 1);
+    const APP_SUBFOLDERS = [
+      '/pages/admin/pages/', '/pages/assessment/', '/pages/admin/',
+      '/pages/ujian/', '/pages/', '/admin/pages/', '/ujian/', '/admin/',
+      // v0.742.0: '/pages/admin/pages/' and '/admin/pages/' are kept as
+      // legacy patterns for old bookmarked URLs that 404 — base path
+      // detection must still work on the 404 page.
+      // v0.742.2: '/pages/' added — without it, BASE_PATH returned
+      // '/pages/' (not '/') when on /pages/login.html, causing
+      // pathForRole() to emit '/pages/pages/admin/index.html' (doubled).
+    ];
+    for (const sub of APP_SUBFOLDERS) {
+      const idx = base.indexOf(sub);
+      if (idx !== -1) return base.substring(0, idx + 1);
+    }
+    return base || '/';
+  })(),
 
-    LANDING_PAGE: '',       // root index.html — server resolves it
-    LOGIN_PAGE:   'login.html',
-
-    // ── Role → dashboard path map ───────────────────────────────────
-    // Unknown roles fall back to loginUrl() so they can never reach a
-    // protected page by accident.
-    pathForRole(role) {
-        const map = { peserta: 'ujian/index.html', admin: 'admin/index.html' };
-        if (!(role in map)) return this.loginUrl();
-        return this.BASE_PATH + map[role];
-    },
-
-    // ── URL builders (always return absolute path from origin) ─────
-    landingUrl() { return this.BASE_PATH + this.LANDING_PAGE; },  // '/AlbEdu/'
-    loginUrl()   { return this.BASE_PATH + this.LOGIN_PAGE; },    // '/AlbEdu/login.html'
+  pathForRole(role) {
+    const map = {
+      peserta: 'pages/assessment/index.html',
+      admin: 'pages/admin/index.html',
+    };
+    return this.BASE_PATH + (map[role] ?? this.loginUrl());
+  },
 };
 ```
-
-### Exposed on `window.Auth`
-
-| Method | Returns | Used for |
-|---|---|---|
-| `Auth.getBasePath()` | `'/AlbEdu/'` | Building custom URLs |
-| `Auth.getLandingPath()` | `'/AlbEdu/'` | **Logout destination** (v2.1+) |
-| `Auth.getRoleRedirectPath(role)` | `'/AlbEdu/admin/index.html'` | Post-login redirect |
-| `Auth.navigateTo(path, reason)` | `void` | All auth-driven redirects (uses `location.replace`) |
-| `Auth.redirectToLogin()` | `void` | Unauthenticated → login |
 
 ---
 
 ## 3. The 4 Redirect Primitives
 
-Every `window.location.*` call in AlbEdu MUST use one of these four primitives. Never write `window.location.href = '...'` directly.
-
-### 3.1 `_navigateTo(path, reason, delay)` — Generic
-- Uses `location.replace()` (no history entry — user can't press Back to return to a protected page).
-- Trailing-slash-aware: `/foo/` and `/foo` are treated as equal (prevents redirect loops).
-- Dev-only logging with `[AuthRedirect]` prefix.
-- Located in: `src/auth/main.js` AND `src/auth/byteward.js` (mirror).
-
-### 3.2 `_redirectToLogin()` — Unauthenticated → Login
-- Calls `_navigateTo(AUTH_CONFIG.loginUrl(), 'unauthenticated → login')`.
-- Skips redirect if user is already on a public page (login, landing, 404).
-- Used by: `_handleAuthStateChange(user=null)` in main.js, `checkPageAccess()` in byteward.js.
-
-### 3.3 `_redirectForRole(role)` — Post-Login → Dashboard
-- Calls `_navigateTo(AUTH_CONFIG.pathForRole(role))`.
-- Used by: `_handleAuthStateChange(user=valid)` when user is on a login-type page.
-- Admin → `/AlbEdu/admin/index.html`, Peserta → `/AlbEdu/ujian/index.html`.
-
-### 3.4 `authLogout()` → `AUTH_CONFIG.landingUrl()` — Logout → Landing (v2.1+)
-- **Before v2.1:** logout went to `loginUrl()` → `login.html`.
-- **v2.1 (current):** logout goes to `landingUrl()` → root `index.html` (the public landing page).
-- User sees marketing content and can choose to log in again from the navbar.
-- The `auth-logout-started` event fires before signOut so UI can clean up.
-- `signOut()` failure is non-fatal — client state is already clean, redirect still happens.
-
-> ⚠️ **DO NOT** change `authLogout()` to redirect to `loginUrl()`. The user explicitly chose landing page as the logout destination. See git history of `src/auth/main.js` Step 11 for context.
+| Function | Destination | When to use |
+|---|---|---|
+| `_navigateTo(path, reason, delay)` | Generic `location.replace()` | Internal navigation |
+| `_redirectToLogin()` | `AUTH_CONFIG.loginUrl()` → `/AlbEdu/pages/login.html` | Unauthenticated user on protected page |
+| `_redirectForRole(role)` | `AUTH_CONFIG.pathForRole(role)` | Post-login redirect based on role |
+| `authLogout()` | `AUTH_CONFIG.landingUrl()` → `/AlbEdu/` (root) | Logout — NEVER to login.html |
 
 ---
 
 ## 4. Page Classification (Scope-Based)
 
-`byteward.js` and `main.js` classify every page into one of three **route scopes**. This is folder-based, not filename-based, because `index.html` is ambiguous (it appears at root, `/admin/`, and `/ujian/`).
-
-### `_getRouteScope()` algorithm
-```
-1. Strip BASE_PATH prefix from pathname
-2. Take first path segment (the immediate subfolder)
-3. Map: 'ujian' → 'ujian' | 'admin' → 'admin' | anything else → 'public'
-```
-
-### Scope Policy
-| Role | Allowed scopes | Effect |
-|---|---|---|
-| `admin` | (all) | Admin can access every route |
-| `peserta` | `ujian`, `public` | Peserta CANNOT access `/admin/*` (gets 403) |
-| (no role) | `public` only | Unauthenticated on protected page → redirect to login |
-
-### Page Classifications
-| Page | Scope | Type |
-|---|---|---|
-| `/AlbEdu/` (root `index.html`) | public | Landing (login-type page) |
-| `/AlbEdu/login.html` | public | Login (login-type page) |
-| `/AlbEdu/register-admin.html` | public | Login-type page |
-| `/AlbEdu/404.html` | public | 404 (special) |
-| `/AlbEdu/forgot-password.html` | public | Auth-flow (NOT login-type — no auto-redirect) |
-| `/AlbEdu/reset-password.html` | public | Auth-flow (NOT login-type) |
-| `/AlbEdu/register-success.html` | public | Auth-flow (NOT login-type) |
-| `/AlbEdu/admin/index.html` | admin | Protected dashboard |
-| `/AlbEdu/admin/pages/*.html` | admin | Protected sub-page |
-| `/AlbEdu/ujian/index.html` | ujian | Protected peserta entry |
-| `/AlbEdu/ujian/kerjakan-ujian.html` | ujian | Protected exam runtime |
-
-### Login-type page behavior
-A **login-type page** is a public page where an authenticated user is auto-redirected to their dashboard. The set is: `{ login.html, index.html (root only), register-admin.html }`.
-
-Auth-flow pages (`forgot-password.html`, `reset-password.html`, `register-success.html`) are explicitly **excluded** — an authenticated user mid-flow should NOT be yanked to the dashboard.
+| Page | URL | Scope | Type |
+|---|---|---|---|
+| Landing | `/AlbEdu/` (index.html) | public | login-type |
+| Login | `/AlbEdu/pages/login.html` | public | login-type |
+| Register admin | `/AlbEdu/pages/register-admin.html` | public | login-type |
+| Privacy policy | `/AlbEdu/pages/privacy-policy.html` | public | public |
+| 404 | `/AlbEdu/404.html` | public | 404 |
+| Admin dashboard | `/AlbEdu/pages/admin/index.html` | admin | protected |
+| Create assessment | `/AlbEdu/pages/admin/create-assessment.html` | admin | protected |
+| Active assessments | `/AlbEdu/pages/admin/active-assessments.html` | admin | protected |
+| Question bank | `/AlbEdu/pages/admin/question-bank.html` | admin | protected |
+| Monitoring | `/AlbEdu/pages/admin/monitoring.html` | admin | protected |
+| Results analytics | `/AlbEdu/pages/admin/results-analytics.html` | admin | protected |
+| Token entry | `/AlbEdu/pages/assessment/index.html` | ujian | protected (peserta) |
+| Take assessment | `/AlbEdu/pages/assessment/take.html` | ujian | protected (peserta) |
 
 ---
 
 ## 5. HTML Link Rules — Per Page Location
 
-### 5.1 From Root (`/AlbEdu/index.html`, `/AlbEdu/404.html`)
-
-| Want to go to | Use |
-|---|---|
-| Landing page | `href="./"` |
-| Login | `href="pages/login.html"` |
-| Register | `href="pages/register-admin.html"` |
-| CSS | `href="styles/x.css"` |
-| Image | `href="public/images/x.svg"` |
-| Favicon | `href="public/images/favicon/x.ico"` |
-
-### 5.2 From `pages/*.html` (login, register-admin, forgot-password, reset-password, register-success, 404)
-
-| Want to go to | Use |
-|---|---|
-| Landing page | `href="../"` |
-| Login | `href="login.html"` (same folder) |
-| Register | `href="register-admin.html"` (same folder) |
-| Forgot password | `href="forgot-password.html"` (same folder) |
-| CSS | `href="../styles/x.css"` |
-| Image | `href="../public/images/x.svg"` |
-
-### 5.3 From `pages/admin/index.html` and `pages/ujian/index.html`
-
-| Want to go to | Use |
-|---|---|
-| Landing page | `href="../../"` |
-| Admin dashboard | `href="../admin/index.html"` (from ujian) or `href="index.html"` (from admin) |
-| Ujian entry | `href="../ujian/index.html"` (from admin) or `href="index.html"` (from ujian) |
-| Admin sub-page | `href="pages/buat-ujian.html"` (from admin/index.html) |
-| CSS | `href="../../styles/x.css"` |
-| Image | `href="../../public/images/x.svg"` |
-
-### 5.4 From `pages/admin/pages/*.html` (buat-ujian, profile, daftar-nama, ujian-peserta, data-hasil)
-
-| Want to go to | Use |
-|---|---|
-| Admin dashboard (sidebar logo) | `href="../index.html"` (resolves to `pages/admin/index.html`) |
-| Landing page (PUBLIC) | `href="../../"` |
-| Another admin sub-page | `href="profile.html"` (same folder) |
-| Ujian entry | `href="../../ujian/index.html"` |
-| CSS | `href="../../../styles/x.css"` |
-| Image | `href="../../../public/images/x.svg"` |
-
-### 5.5 From `pages/ujian/kerjakan-ujian.html`
-
-| Want to go to | Use |
-|---|---|
-| Ujian entry (token form) | `href="./index.html"` or `href="index.html"` |
-| Landing page | `href="../../"` |
-| CSS | `href="../../styles/x.css"` |
-| Image | `href="../../public/images/x.svg"` |
+| Page location | CSS/JS path | Link to admin | Link to peserta |
+|---|---|---|---|
+| Root (`index.html`, `404.html`) | `styles/...`, `src/...` | `pages/admin/index.html` | `pages/assessment/index.html` |
+| `pages/` (`login.html`, etc.) | `../styles/...`, `../src/...` | `../pages/admin/index.html` | `../pages/assessment/index.html` |
+| `pages/admin/` | `../../styles/...`, `../../src/...` | `../index.html` (admin home) | N/A |
+| `pages/assessment/` | `../../styles/...`, `../../src/...` | N/A | `index.html` |
 
 ---
 
 ## 6. 404 Page Rules
 
-### 6.1 Two 404 files (intentional)
-
-| File | Purpose | Auto-served by GitHub Pages? |
-|---|---|---|
-| `AlbEdu/404.html` (root) | **Canonical 404** — auto-served for any unmatched URL | ✅ YES |
-| `AlbEdu/pages/404.html` (legacy) | Only reachable by direct link | ❌ No (kept for backward compat) |
-
-> ⚠️ **GitHub Pages, Cloudflare Pages, Netlify, and Vercel all serve ONLY the root-level `404.html` as the auto-404.** A `404.html` inside `pages/` is just a regular page — visiting a non-existent URL will NOT show it.
-
-### 6.2 Asset path rules
-
-- **Root `404.html`:** use bare paths (`styles/404.css`, `public/images/favicon/...`). Same as root `index.html`.
-- **`pages/404.html`:** use `../`-prefixed paths (`../styles/404.css`, `../public/images/...`). Same as other `pages/*.html`.
-
-### 6.3 The CTA link
-
-Both 404 pages have a "Kembali ke Beranda" button. The correct `href`:
-
-| File | CTA href | Why |
-|---|---|---|
-| Root `404.html` | `href="./"` (then JS rewrites to absolute `BASE_PATH`) | `./` is too fragile when served from a deep missing path |
-| `pages/404.html` | `href="../"` | Resolves to landing page from `pages/` |
-
-The root 404 has an inline `<script>` that computes `BASE_PATH` (same algorithm as `AUTH_CONFIG.BASE_PATH`) and rewrites both CTAs to the absolute path. This handles the case where GitHub Pages serves `/AlbEdu/some/deep/missing-path` — the browser keeps that path as the document base, so a relative `./` would resolve to `/AlbEdu/some/deep/` (wrong).
-
-> ❌ **NEVER use `href="/"` in any 404 page.** It jumps to `https://albedu-id.github.io/` instead of `/AlbEdu/`.
-
-### 6.4 404 + authenticated user behavior
-
-If a logged-in user lands on the 404 page, `_handle404Redirect()` in `main.js` shows a "Halaman tidak ditemukan. Kamu akan diarahkan ke halaman sebelumnya dalam 5 detik." toast and calls `window.history.back()` after 5 seconds (with fallback to role dashboard if no history).
+- **Root `404.html`** — dynamic CSS loading via inline `<script>` that detects `__ALBEDU_BASE__`
+- **`pages/404.html`** — redirect stub (`<meta http-equiv="refresh" content="0; url=../404.html">`)
 
 ---
 
-## 7. The `navigasi.js` Sidebar Logo — Two-State Behavior
+## 7. Edge Function URLs
 
-The admin sidebar logo (`.logo-icon-link[data-nav="logo"]`) has TWO states:
-
-### 7.1 EXPANDED state (sidebar visible)
-- Logo is a normal `<a>` link to admin dashboard (`../index.html` from `pages/admin/pages/*.html`).
-- `navigasi.js` sets `href` to `logoLink.dataset.href || '../index.html'`.
-- Click → navigate to admin dashboard.
-
-### 7.2 COLLAPSED state (desktop only, sidebar collapsed)
-- Logo becomes a BUTTON that expands the sidebar.
-- `navigasi.js` removes `href` attribute (defensive — `<a>` without href can't navigate).
-- Click → `expand()` (no navigation).
-- Spacebar / Enter also triggers expand (matches native `<button>` semantics).
-
-### 7.3 Mobile (always expanded conceptually)
-- Sidebar is an off-canvas drawer, "collapsed" doesn't apply.
-- Logo is always a normal link to admin dashboard.
-- State is cleared from `localStorage` on mobile.
-
-> **Note:** The sidebar logo NEVER goes to the public landing page. It goes to the admin dashboard. To go to the public landing page, the user clicks "Logout" (which now goes to landing per §3.4).
-
----
-
-## 8. The `option-profile.js` Logout Flow
-
-The user-profile dropdown in the sidebar (`.user-profile-content`) opens a menu with a "Logout" option. The flow:
+All Edge Function calls use **absolute Supabase URLs** (not relative paths):
 
 ```
-User clicks "Logout" in dropdown
-        ↓
-OptionProfile._doLogout() calls window.Auth.authLogout()
-        ↓
-authLogout() shows confirmation dialog
-        ↓ (user confirms)
-Step 1-10: cleanup (state, listeners, sessionStorage, Supabase channels, signOut)
-        ↓
-Step 11: window.location.replace(AUTH_CONFIG.landingUrl())  ← LANDING PAGE (v2.1+)
-        ↓
-Browser navigates to /AlbEdu/ (root index.html)
+https://kzsrerxhhrtsxnpnmqgl.supabase.co/functions/v1/{function-name}
 ```
 
-If `authLogout()` fails for any reason, the catch block also redirects to `landingUrl()` after `LOGOUT_REDIRECT_DELAY_MS` (500ms).
+**NEVER use `window.location.origin` or relative `/functions/v1/...` paths.**
+
+Functions: `submit-assessment`, `heartbeat`, `block-participant`, `assessment-lifecycle`, `cleanup-assessment`, `data-export`, `dsr-handler`, `access-code-attempt`, `register-admin`, `user-auth-preflight`, `user-auth-complete`
 
 ---
 
-## 9. The `byteward.js` Auto-Enforce Bootstrap
+## 8. i18n Locale Loading
 
-`byteward.js` runs on every page that includes it. On page load:
-
-1. Check if current page is a **public page** (login-type or 404). If yes → skip enforcement.
-2. Wait for `auth-ready` event (or use fast-path if `Auth.authReady` is already true).
-3. Call `checkPageAccess()`:
-   - No user + protected page → `_navigateTo(basePath + 'login.html')`
-   - User on login-type page → `_navigateTo(role dashboard)`
-   - User on 404 → let `_handle404Redirect()` in main.js handle it
-   - User accessing disallowed scope (e.g. peserta on `/admin/*`) → `_showAccessDenied()` (403 page)
-
-> **Note:** `byteward.js` uses `Auth.getBasePath()` for its URL construction (not a hardcopy of `BASE_PATH`). This ensures consistency if `AUTH_CONFIG` ever changes.
-
----
-
-## 10. The OAuth Redirect URL (`supabase-api.js`)
-
-When a user clicks "Login dengan Google", Supabase needs to know where to redirect after Google approves. The redirect URL is computed by `_resolveRedirectUrl()`:
+Uses `_getBasePath()` (via `import.meta.url`) to construct correct fetch URL:
 
 ```javascript
-// Localhost: return current URL (Supabase needs the exact URL registered)
-if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return window.location.href;
-}
-// Production: derive BASE_PATH (same subfolder walker as AUTH_CONFIG)
-// and return origin + pathname (the page user is currently on).
-return window.location.origin + window.location.pathname;
+const basePath = _getBasePath(); // e.g. /AlbEdu/
+const res = await fetch(`${basePath}src/i18n/locales/${locale}.json`);
 ```
 
-**Registered redirect URLs in Supabase dashboard must include:**
-- `http://localhost:8765/pages/login.html`
-- `http://127.0.0.1:8765/pages/login.html`
-- `https://albedu-id.github.io/AlbEdu/pages/login.html`
-- (Same for `index.html` if peserta OAuth flow is enabled from landing page)
+**NEVER use `/src/i18n/locales/...` (absolute path).**
 
-After Google redirects back, Supabase appends `?code=...` (PKCE) or `#access_token=...` (implicit) to the URL. `onAuthStateChanged` fires SIGNED_IN, `_handleAuthStateChange` runs, role is fetched, and `_redirectForRole(role)` sends the user to their dashboard.
+---
+
+## 9. Cloudflare Worker
+
+| Item | Value |
+|---|---|
+| URL | `https://edu.albyte-inc.workers.dev` |
+| Endpoints | `/api/supabase-config`, `/api/health`, `/upload`, `/release` |
+| Cron | `0 * * * *` (every hour — sweep expired assessments) |
+| Format | Module Worker (`export default { fetch, scheduled }`) |
+
+### Worker Environment Variables
+
+> **IMPORTANT — FOR AI ASSISTANTS:**
+> Do NOT write actual secret values in any file that will be committed to the repository.
+> If you need the actual values, ask the user to provide them directly or check the local
+> gitignored `.env.local` file. The values below are placeholders.
+
+| Variable | Description |
+|---|---|
+| `SUPABASE_URL` | Supabase project URL (ask user or check `.env.local`) |
+| `SUPABASE_ANON_KEY` | Supabase publishable/anon key (ask user) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase secret/service role key (ask user — **NEVER commit this**) |
+| `GITHUB_USERNAME` | `albytehq` |
+| `GITHUB_TOKEN` | GitHub Personal Access Token (ask user — **NEVER commit this**) |
+
+---
+
+## 10. Supabase Auth Configuration
+
+| Setting | Value |
+|---|---|
+| Site URL | `https://albytehq.github.io/AlbEdu` |
+| URI Allow List | `https://albytehq.github.io/AlbEdu/pages/login.html` + other auth-flow pages + localhost URLs |
+| Google OAuth | Enabled |
+| Email confirm | False (auto-confirm) |
+| Turnstile site key | `0x4AAAAAADtSMQt5KNMPWBzW` (public — safe to commit) |
+| Turnstile secret key | **Ask user for this value — NEVER commit to repo** |
 
 ---
 
 ## 11. Common Pitfalls (DO NOT)
 
-### 11.1 ❌ Hardcoded absolute paths
-```javascript
-// BAD — breaks on localhost AND on /AlbEdu/ deployment
-window.location.href = '/login.html';
-
-// BAD — works on localhost, breaks on /AlbEdu/
-window.location.href = '../login.html';
-
-// GOOD — BASE_PATH-aware
-window.location.replace(window.Auth.getBasePath() + 'login.html');
-```
-
-### 11.2 ❌ `href="/"` in HTML
-```html
-<!-- BAD — goes to https://albedu-id.github.io/ -->
-<a href="/">Home</a>
-
-<!-- GOOD (from root) — goes to /AlbEdu/ -->
-<a href="./">Home</a>
-
-<!-- GOOD (from pages/) — goes to /AlbEdu/ -->
-<a href="../">Home</a>
-```
-
-### 11.3 ❌ Logout redirecting to login
-```javascript
-// BAD — user has to log in again immediately
-window.location.replace(AUTH_CONFIG.loginUrl());
-
-// GOOD — user sees landing page, can choose to log in
-window.location.replace(AUTH_CONFIG.landingUrl());
-```
-
-### 11.4 ❌ Treating 404 as a way to redirect to dashboard
-The 404 page is for genuine "page not found" cases. Don't use `window.location.href = '/404.html'` as a way to bounce users — let `byteward.js` `_showAccessDenied()` handle authorization failures (403), and let `handle404Page()` in byteward handle genuine 404s.
-
-### 11.5 ❌ Using `innerHTML` for navigation
-All navigation in AlbEdu uses `setAttribute('href', ...)` or `window.location.replace()`. Never build navigation links via `innerHTML` — XSS risk if URL contains user input.
-
-### 11.6 ❌ Renaming `firebase-ready` event
-Despite the Supabase migration, the event name `firebase-ready` is preserved for backward compat. Many legacy scripts listen to it. Do NOT rename to `supabase-ready`.
-
-### 11.7 ❌ Wrong regex when deriving script base URL
-When dynamically loading another script based on the current script's `src`, you MUST account for which directory the current script lives in. The navigasi.js bug (v2.1 fix) is the canonical example:
-
-```javascript
-// BAD — navigasi.js is at src/utils/navigasi.js
-// This strips only 'navigasi.js', leaving 'src/utils/'.
-// Then appending 'editor-panel.js' tries to load src/utils/editor-panel.js (404!).
-const navSrc = document.querySelector('script[src*="navigasi.js"]')?.src || '';
-const base   = navSrc.replace(/navigasi\.js.*$/, '');  // ❌ leaves 'src/utils/'
-s.src = base + 'editor-panel.js';                       // ❌ src/utils/editor-panel.js
-
-// GOOD — strip 'utils/navigasi.js' and replace with 'profile/'
-// to land in the correct directory.
-const base = navSrc.replace(/utils\/navigasi\.js.*$/, 'profile/');  // ✅ 'src/profile/'
-s.src = base + 'editor-panel.js';                                   // ✅ src/profile/editor-panel.js
-```
-
-The general rule: **if the current script is in directory A and the target script is in directory B, the regex must strip A's name AND the filename, then append B's name.** Just stripping the filename leaves you in A, which is wrong if A ≠ B.
-
-The cleanest pattern is in `src/utils/navigasi.js` `_resolveProfileScriptBase()` (v2.1+) — read it as the reference implementation.
+- ❌ **Jangan** gunakan `href="/"` — lompat ke profile GitHub, bukan app
+- ❌ **Jangan** gunakan `fetch('/functions/v1/...')` — 404 di GitHub Pages
+- ❌ **Jangan** gunakan `fetch('/src/i18n/...')` — 404 di GitHub Pages
+- ❌ **Jangan** gunakan `window.location.origin` di fetch — resolve ke GitHub Pages origin
+- ❌ **Jangan** hardcode `/AlbEdu/` di JS — pakai `AUTH_CONFIG.BASE_PATH`
+- ❌ **Jangan** commit secret keys (Supabase service role, GitHub token, Turnstile secret) ke repo
+- ❌ **Jangan** gunakan URL lama `albedu-id.github.io` — pakai `albytehq.github.io`
+- ❌ **Jangan** gunakan URL worker lama `albedu.examjuniorhighschool.workers.dev`
+- ❌ **Jangan** gunakan path lama `admin/index.html` atau `ujian/index.html` di `pathForRole`
 
 ---
 
-## 12. Quick Lookup — "I Want To..."
-
-| Task | File(s) to edit |
-|---|---|
-| Change logout destination | `src/auth/main.js` (`AUTH_CONFIG.landingUrl()`, `authLogout()` Step 11) |
-| Change post-login redirect per role | `src/auth/main.js` (`AUTH_CONFIG.pathForRole()`) |
-| Add a new admin page | Create `pages/admin/pages/{name}.html`, `src/pages/{name}.js`, `styles/{name}.css`. Use 3-level-deep paths (`../../../`). |
-| Add a new public page | Create `pages/{name}.html`. Use 2-level-deep paths (`../`). Add filename to `_PUBLIC_ENTRY_FILES` in main.js if it should auto-redirect logged-in users. |
-| Change 404 behavior | `404.html` (canonical), `pages/404.html` (legacy), `src/auth/main.js` (`_handle404Redirect`), `src/auth/byteward.js` (`handle404Page`) |
-| Change sidebar logo target | `src/utils/navigasi.js` (`syncAriaLabels()`, the `logoLink.dataset.href || '../index.html'` line) |
-| Add a new role | `AUTH_CONFIG.pathForRole()` (add to map), `byteward.js SCOPE_POLICY` (add allowed scopes), `src/auth/main.js` `_PUBLIC_ENTRY_FILES` (no change usually) |
-| Change BASE_PATH detection | `AUTH_CONFIG.BASE_PATH` IIFE in `src/auth/main.js`. Also update `404.html` inline script. Also update `supabase-api.js` `_resolveRedirectUrl()`. |
-| Debug a redirect loop | Open DevTools, filter Console by `[AuthRedirect]` or `[ByteWard]`. Check `Auth.debugByteWard()` output. |
-| Verify all links work after deployment | Run `npm run verify`, then crawl with a link checker (e.g. `lychee` against the deployed URL). |
-
----
-
-## 13. Deployment Checklist
-
-Before pushing to `main` (which auto-deploys to GitHub Pages):
-
-- [ ] `npm run verify` passes (structure integrity check)
-- [ ] `npm run build` produces `dist/` with no errors
-- [ ] Root `404.html` is present at project root (NOT just in `pages/`)
-- [ ] All HTML files use page-relative asset paths (no `href="/"`)
-- [ ] All JS redirects go through `window.Auth` helpers
-- [ ] Logout goes to landing page (test: log in → log out → verify URL is `/AlbEdu/`)
-- [ ] Login page after authed visit auto-redirects to dashboard
-- [ ] Unauthenticated visit to `/AlbEdu/admin/index.html` redirects to `/AlbEdu/pages/login.html`
-- [ ] Visiting a non-existent URL (e.g. `/AlbEdu/foo/bar`) shows the root 404 page
-- [ ] Supabase dashboard has all redirect URLs registered (see §10)
-
----
-
-## 14. Version History
+## 12. Version History
 
 | Version | Date | Change |
 |---|---|---|
-| 0.2.0 | 2026-06-30 | **Version reset by owner Albi Fahriza.** Redesigned `pages/admin/pages/buat-ujian.html` again — reverted from 4-card dashboard back to step-based wizard (3 steps: Informasi+Identitas+Tema, Soal, Publish) per owner preference. List view is now default; clicking "Buat Ujian Baru" button reveals the wizard. Hybrid: tema color pickers (CU/HJ/TW) moved INTO Step 1, replacing the old `theme.tema` dropdown. Pengaturan Lanjutan card DELETED (max_halaman hardcoded to 3, never user-editable). localStorage draft system DELETED (publish is the only save action). Custom-styled all form controls (no default Chrome UI): custom select arrows, radio/checkbox, datetime picker, number spinner (hidden), focus ring (AlbEdu blue), autofill background override, scrollbar. Replaced Vercel black/white palette with AlbEdu white-blue (`--bu-accent: #2563eb`). Header switched from custom `.bu-header` to standard `.header` (consistent with other admin pages). Added `wizard-controller.js` (step nav + view toggle) and `list-view.js` (live exam list from Supabase via onSnapshot). Deleted `settings-card.js` + `draft-storage.js`. Keyboard shortcuts simplified: Cmd+S removed, Cmd+Enter (publish/next), Cmd+N (new question). After publish, returns to list view (no longer redirects to ujian-peserta.html). |
-| 2.2.0 | 2026-06-30 | Redesigned `pages/admin/pages/buat-ujian.html` — replaced modal-wizard flow with full-page Vercel-style dashboard (4 stacked cards). Deleted `src/wizard/` entirely (controller.js, state.js, dom.js, validation.js, index.js — 3622 LOC) and `styles/wizard.css` + `styles/buat-ujian.css` (2906 LOC). Added `src/pages/buat-ujian/` folder with 9 new modules: `metadata-card.js`, `soal-card.js`, `soal-editor-modal.js`, `settings-card.js`, `publish-card.js`, `templates.js`, `keyboard-shortcuts.js`, `draft-storage.js`, `index.js`. New page controller `src/pages/buat-ujian.js` exposes `window.BuatUjian` (central state + schema-accurate validation + score auto-distribution). Schema unchanged (table `ujian`, PK `kode_id`, pilihan `{A,B,C,D}` object, `identity_mode`+`identity_config` replacing dropped `kelas`). Save strategy: localStorage draft auto-save (1500ms debounce) + Supabase publish via runTransaction (INSERT-only, no update). Added `--bu-*` design tokens to `tokens.css`. Added `styles/buat-ujian-v2.css` + `styles/buat-ujian-modal.css`. Updated `scripts/verify-structure.mjs` (removed `src/wizard/*` from CRITICAL_JS, added `src/pages/buat-ujian/*`). Keyboard shortcuts: Cmd+S (save draft), Cmd+Enter (publish), Cmd+N (add question). |
-| 2.1.3 | 2026-06-29 | CRITICAL: IIFE-wrapped `errors.js`, `user-helpers.js`, `byteward.js`. Top-level `const`/`class`/`function` declarations were leaking into the global lexical environment (classic scripts share it), causing `SyntaxError: Identifier 'CompletionError' has already been declared` when `main.js` tried `const CompletionError = window.CompletionError;`. Same issue affected 9 constants + 6 functions in `user-helpers.js` and 5 functions in `byteward.js`. Bug existed since v2.0.0 by-feature restructure. Added Check 9c to verify-structure.mjs (catches top-level name conflicts across classic scripts). |
-| 2.1.2 | 2026-06-29 | CRITICAL: Added `errors.js` + `user-helpers.js` `<script>` tags to all 9 HTML pages that load `main.js`. Bug existed since v2.0.0 — `main.js` reads `window.AuthHelpers.isDev` at eval time, but `user-helpers.js` was never loaded in any HTML file → `TypeError: Cannot read properties of undefined` → `window.Auth` never defined → ALL auth flows broken. Added Check 9b to verify-structure.mjs (regression prevention). |
-| 2.1.1 | 2026-06-29 | Auth critical fix: defined `_createUserDocViaServer()` in `src/auth/main.js` (was called in 3 places but NEVER defined — broke ALL new user logins silently with a ReferenceError caught by the outer try/catch → force signOut). Added `_extractFunctionErrorCode()` helper for parsing Supabase FunctionsHttpError. |
-| 2.1.0 | 2026-06-29 | Added `landingUrl()`, logout now goes to landing page (was login). Created root `404.html`. Fixed landing page `href="/"` bug. Added this file. Fixed navigasi.js `_resolveProfileScriptBase()` — ProfileEditorPanel + OptionProfile were silently 404ing on 4 of 5 admin pages due to wrong regex (stripped filename but not `utils/` directory). Added §11.7 pitfall. |
-| 2.0.0 | 2026-06-28 | By-feature structure, auth.js split, CSS consolidation. |
-| 1.0.5 | 2026-06-26 | Performance optimization, 27 bugs fixed, XSS hardening. |
-| 1.0.0 | 2026-Q1 | Initial Supabase migration from Firebase. |
-
----
-
-## 15. Related Files
-
-| File | Role in routing |
-|---|---|
-| `src/auth/main.js` | `AUTH_CONFIG`, `_navigateTo`, `_redirectToLogin`, `_redirectForRole`, `authLogout`, `_handleAuthStateChange`, `_handle404Redirect`, `_getRouteScope` |
-| `src/auth/byteward.js` | `_getRouteScope`, `checkPageAccess`, `handle404Page`, `_showAccessDenied`, auto-enforce bootstrap |
-| `src/auth/user-helpers.js` | Timing constants (`REDIRECT_DELAY_MS`, `LOGOUT_REDIRECT_DELAY_MS`, `PAGE_404_REDIRECT_DELAY_MS`) |
-| `src/utils/navigasi.js` | Sidebar logo two-state behavior, mobile drawer, profile panel bootstrap |
-| `src/profile/option-profile.js` | User dropdown menu (logout trigger) → calls `Auth.authLogout()` |
-| `src/utils/supabase-api.js` | OAuth redirect URL resolution (`_resolveRedirectUrl`) |
-| `src/auth/forgot-password.js` | Forgot-password redirect URL (preserves BASE_PATH via `pathname.replace`) |
-| `src/auth/reset-password.js` | Post-reset redirect to `login.html` (same folder, relative) |
-| `src/auth/admin-onboarding.js` | Post-register redirect to `register-success.html` (same folder, relative) |
-| `src/pages/panel.js` | Admin dashboard nav card click → `data-link` href navigation |
-| `src/pages/kerjakan-ujian.js` | Exam runtime: back-to-token-entry (`./index.html`), login fallback (BASE_PATH-aware) |
-| `404.html` (root) | Canonical 404 page (auto-served by GitHub Pages) |
-| `pages/404.html` | Legacy 404 (only reachable by direct link) |
-| `index.html` | Landing page (root, public) |
-| `pages/login.html` | Admin login (public, login-type) |
-| `pages/admin/index.html` | Admin dashboard (protected, scope=admin) |
-| `pages/ujian/index.html` | Peserta token entry (protected, scope=ujian) |
-
----
-
-## 16. AI Assistant Quick-Start
-
-If you're an AI assistant (Claude, GPT, Copilot, etc.) editing AlbEdu routing:
-
-1. **READ THIS FILE FIRST** (you're here — good).
-2. **READ `docs/AI-CONTEXT.md`** for the broader "where is X" lookup table.
-3. **RUN `npm run dev`** before and after edits to verify no console errors.
-4. **TEST IN 3 LOCATIONS** if you change routing:
-   - `http://127.0.0.1:8765/` (localhost, BASE_PATH = `/`)
-   - Open the deployed `/AlbEdu/` URL after push (BASE_PATH = `/AlbEdu/`)
-   - Test a deep URL like `/AlbEdu/admin/pages/buat-ujian.html` to verify subfolder paths
-5. **USE `window.Auth` HELPERS** for any redirect — never raw `window.location.*`.
-6. **NEVER USE `href="/"`** — it's the #1 cause of "logo goes to wrong page" bugs.
-7. **NEVER HARDCODE `/AlbEdu/`** — `BASE_PATH` is environment-agnostic for a reason.
-
-When in doubt, search the codebase:
-```bash
-rg "href=['\"]\/['\"]" --type html  # find any absolute-path href (should be ZERO matches)
-rg "location\.replace\(['\"]" src/  # find raw redirects (should ALL go through Auth helpers)
-```
+| 0.742.9 | 2026-07-02 | **Full i18n coverage across ALL pages**: Extended i18n to every page that was missing it — landing, login, register-admin, forgot-password, reset-password, register-success, assessment/submitted, assessment/blocked, assessment/take (already had partial). Added 3 new i18n namespaces (136 keys × 5 locales = 680 new translations): `landing` (37 keys — hero, problems, solutions, how-it-works, CTA, footer), `auth` (40 keys — login/register/forgot/reset/success), `peserta` (35 keys — entry, take, submitted, blocked, consent, profile menu). New file `src/i18n/lang-switcher.js` — universal language switcher bootstrap that auto-wires any `.albedu-lang-switcher` element on the page (click to toggle dropdown, click locale to switch, click-outside/ESC to close, auto-updates UI on locale change via `locale-changed` event). `i18n/index.js` now dispatches `locale-changed` and `i18n-ready` events so lang-switcher can sync. Landing page got a floating frosted-glass language switcher (top-right). Login page got a compact language switcher in form header. Consent popup, assessment-entry cooldown/submit text, option-profile menu items all now use i18n. take.html fixed: was using inline ES module import that bypassed auto-init — replaced with `<script type="module" src>` that triggers auto-init properly. |
+| 0.742.8 | 2026-07-02 | **Update daftar-nama.html to match other admin pages**: `pages/admin/daftar-nama.html` was the only admin page still using the old header layout (no language switcher, no `data-i18n` attributes, hardcoded notification badge "3", `menu-toggle` without `type="button"`). Updated to match the v0.742.7 admin page template: added `.albedu-lang-switcher` with 5-locale dropdown (id/en/ru/es/zh), added `data-i18n` attributes to page title + content header + dn-header + loading text + limit notice + "Buat Daftar" button, set notification badge to "0", added `type="button"` to menu-toggle, added full QNotify bridge (was missing `show`, `holdConfirmAsync`, `readNote`), added theme FOUC-prevention script, added site.webmanifest link, added favicon 96x96 + manifest, added meta description. Also added `daftar_nama` i18n namespace (46 keys) to all 5 locale files (id/en/ru/es/zh) — covers page title, content header, button labels, loading/empty/limit states, editor panel labels, delete confirm dialog, validation messages. |
+| 0.742.7 | 2026-07-02 | **Peserta-side overhaul — floating profile button + iOS-feel UI + invisible Turnstile**: Three participant-experience fixes. (1) **Floating profile button**: New `src/profile/peserta-profile-fab.js` + `styles/peserta-floating-profile.css`. Adds a `position:fixed` circular avatar button (top-right, iOS-feel frosted glass + spring animation) to ALL participant pages (`assessment/index`, `take`, `submitted`, `blocked`). Clicking it triggers `OptionProfile` dropdown — giving peserta a way to **logout** (was previously impossible — no profile button existed on peserta pages). The FAB bootstraps `OptionProfile` + `ProfileEditorPanel` itself (since peserta pages don't load `navigasi.js`). Avatar populates from `Auth.userData` (foto_profil or initials). Presence dot if `profilLengkap === false`. Safe-area-inset aware (iPhone notch). Dark-mode aware. Reduced-motion aware. (2) **Invisible Turnstile on peserta pages**: `styles/pages/assessment-entry.css` now hides `.turnstile-wrap` via `clip:rect(0 0 0 0)` + `clip-path:inset(50%)` (same technique as `login.html`). The widget still renders and captures a token (sent to rate-limit Edge Function), but the user sees no visible challenge — matching login page behavior. `assessment-entry.js _renderTurnstile()` comment updated to explain this. (3) **iOS-feel beautification (10x)**: `assessment/index.html` now has a frosted-glass card container, spring-animated inputs (cubic-bezier(0.34, 1.56, 0.64, 1)), system font stack (`-apple-system, BlinkMacSystemFont, 'SF Pro Display'`), `safe-area-inset` padding, refined shadows, dark-mode support. `submitted.html` + `blocked.html` rebuilt with same iOS-feel scaffold (frosted card, pop-in icon animation, gradient buttons). Also fixed: `assessment-entry.js _waitForAuth()` redirect was using old `../login.html` path (404) — now uses `basePath + 'pages/login.html'`. `take.html` closed-screen button had same `../login.html` 404 — now uses inline `window.Auth.getBasePath()` expression. `submitted.html` + `blocked.html` "Kembali ke Login" buttons now go to landing page (`basePath`) instead of `../login.html`. |
+| 0.742.6 | 2026-07-02 | **Fix raw i18n keys "spreading" across all pages**: The v0.742.4 auto-init fix was necessary but not sufficient — i18n init was still failing silently on most pages because `_getBasePath()`'s fallback regex (`/^(\/[^\/]+\/)/`) returned `/pages/` for `/pages/admin/profile.html` → fetch URL became `/pages/src/i18n/locales/id.json` → 404 → `_translations` stayed empty → `t(key)` returned the raw key → `updateDOM()` overwrote every `<span data-i18n="...">` with the key. Fix A: rewrote `_getBasePath()` fallback to mirror `AUTH_CONFIG.BASE_PATH` logic exactly — walks up past known app subfolders (`/pages/admin/`, `/pages/assessment/`, `/pages/`, etc.). Now resolves to `/` on localhost and `/AlbEdu/` on GitHub Pages, regardless of which page loaded the module. Fix B: `t()` no longer returns the raw KEY when translation is missing — returns `undefined` instead. `updateDOM()` now SKIPS elements whose translation is missing, preserving the HTML fallback text (e.g. `<span data-i18n="nav.profile">Profil Admin</span>` keeps "Profil Admin"). This is the "defense in depth" — even if locale fetch fails, users see the Indonesian fallback text baked into the HTML, never raw keys. Fix C: `_autoInit()` now retries up to 3 times with 200ms backoff on failure (handles transient network issues). Fix D: `results-analytics.js` and `question-bank.js` `_t()` helpers updated to handle `t()` returning `undefined` (fall back to key string for JS string ops, but DOM is handled by updateDOM). Console logging is now verbose — every step (basePath, fetch URL, locale loaded, DOM updated) is logged for debugging. |
+| 0.742.5 | 2026-07-02 | **Fix consent gate Supabase errors (400 + .add not a function)**: Two bugs in `src/security/consent.js` v1.0.0 that surfaced when an admin opened `/pages/assessment/index.html`. (1) `.where('revoked_at', '==', null)` was translated by the Firestore-compat shim to PostgREST `?revoked_at=eq.null` — the STRING "null", not SQL NULL. Supabase returned HTTP 400: "invalid input syntax for type timestamp with time zone: 'null'". (2) `.add()` was never implemented on the shim's collection ref, so granting consent threw `db.collection(...).add is not a function`. Fix A: rewrote `consent.js` to v1.1.0 — bypasses the shim entirely and uses native `window.sb.from('consents')` with `.eq/.is/.order/.limit/.insert`. NULL comparisons now use `.is('revoked_at', null)`. Fix B (defensive): patched the Firestore-compat shim in `supabase-api.js` — `_buildQuery()` now routes NULL `==`/`!=` comparisons through `.is()`/`.not.is()` instead of `.eq()`/`.neq()`, and collection refs gained a real `.add(doc)` implementation that delegates to `sb.from(table).insert(_translateKeys(doc)).select().single()`. Both fixes are layered so any other caller still using the shim's Firestore-style API also benefits. |
+| 0.742.4 | 2026-07-02 | **Fix raw i18n keys showing instead of translated text**: `src/i18n/index.js` exported `initI18n()` but never called it. Every page that loaded `<script type="module" src=".../i18n/index.js">` saw raw keys like `nav.profile`, `create.page_title`, `create.list_title` instead of "Profil Admin", "Buat Asesmen", "Daftar Asesmen". Root cause: `updateDOM()` was called but `_translations` was empty (no locale JSON loaded), so `t(key)` fell back to returning the key itself. Fix: added `_autoInit()` that calls `initI18n()` on DOMContentLoaded (or immediately if DOM is already ready). Idempotent — safe to call from multiple pages. The 9 pages affected: `pages/admin/{create-assessment,active-assessments,question-bank,monitoring,results-analytics,daftar-nama,profile}.html` + `pages/assessment/{index,take}.html`. |
+| 0.742.3 | 2026-07-02 | **Fix "kicked out on admin entry" + option-profile navigation**: Three intertwined routing bugs. (1) `LOGIN_PAGE` constant was `'login.html'` but the login page actually lives at `/pages/login.html` — so `loginUrl()` returned `/login.html` (404) and any auth-state-change to `user=null` (token refresh, race condition) redirected the user to a non-existent page, appearing as "dikeluarkan saat mau masuk". Fixed to `'pages/login.html'`. (2) `_getRouteScope()` in `src/auth/main.js` only checked the first path segment against `{ujian, admin}` — for `/pages/admin/index.html`, firstSegment is `'pages'`, so scope was mis-returned as `'public'`, causing `_isLoginPage()` to return TRUE for the admin dashboard (since `'index.html'` is in `_PUBLIC_ENTRY_FILES` and scope==='public'). This triggered spurious "already logged in" redirects. Fixed to mirror `byteward.js` exactly: check second segment when firstSegment is `'pages'`. (3) `option-profile.js _navigateToAdmin()` used `basePath + 'admin/index.html'` (pre-v0.741.5 path) instead of `basePath + 'pages/admin/index.html'` — clicking "Panel Admin" in the option-profile dropdown 404'd. Fixed. Also: `byteward.js` `handle404Page()` and `_showAccessDenied()` now use `auth.loginUrl()` instead of hardcoded `+ 'login.html'`. Admin home (`pages/admin/index.html`) simplified to 2 cards: "AlbEdu Creates" (was "Profil Admin") and "Halaman Asesmen" (was "Halaman Ujian"). |
+| 0.742.2 | 2026-07-02 | **Fix post-login double `/pages/` 404**: Added `/pages/` to the `APP_SUBFOLDERS` list in `AUTH_CONFIG.BASE_PATH` (`src/auth/main.js`). Previously, when a user was on `/pages/login.html`, `BASE_PATH` returned `/pages/` instead of `/`, so `pathForRole('admin')` produced `/pages/pages/admin/index.html` — a doubled `/pages/` segment that 404'd after login. Same fix applied to `404.html computeBasePath()` (CTA rewriter) and `src/utils/supabase-api.js _resolveRedirectUrl()` for consistency. The bug was latent for a long time because most testing happened from root `index.html` (which already had `BASE_PATH = '/'`), not from `/pages/login.html`. |
+| 0.742.1 | 2026-07-02 | **Fix navigation flash**: `.page-transition` overlay changed from visible-by-default to hidden-by-default (CSS). `navigasi.js` no longer waits for `window.load` + 300ms to hide the overlay — it starts hidden, eliminating the solid-color flash on every admin page navigation. Admin home (`pages/admin/index.html`) enhanced with 8 navigation cards covering all admin pages (was 2 cards). Legacy redirect stubs (`buat-ujian.html`, `data-hasil.html`, `ujian-peserta.html`) now have empty `<body>` — no visible "Mengalihkan" text if hit via old bookmark. Service worker cache version bumped to invalidate stale browser caches that may still hold pre-v0.742.0 sidebar HTML. |
+| 0.742.0 | 2026-07-01 | **Flatten admin structure**: moved `pages/admin/pages/*.html` up one level to `pages/admin/*.html`, deleted the empty `pages/admin/pages/` folder. All relative asset paths updated from `../../../` → `../../`. `navigasi.js` pageMapping extended to cover all admin pages (incl. legacy redirect stubs). Legacy subfolder patterns kept in `APP_SUBFOLDERS` for old bookmark 404 base-path detection. |
+| 0.741.5 | 2026-07-01 | Final release. All routing fixed for v0.741.5 structure. Secrets removed from documentation. |
+| 2.2.0 | 2026-06-30 | Dashboard cards redesign. |
+| 0.2.0 | 2026-06-30 | Step-based wizard, theme color pickers. |
+| 2.1.0 | 2026-06-29 | Landing URL, root 404, fixed href=/ bug. |
+| 2.0.0 | 2026-06-28 | By-feature structure, auth.js split. |

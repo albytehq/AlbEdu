@@ -32,3 +32,12 @@ coverage/
 .cache/
 .parcel-cache/
 .eslintcache
+
+# ── v1.0.0 enterprise — sensitive files ──
+.env.local
+.env.production
+.env.*.local
+supabase/.env
+credentials/
+*.secret
+upload/data/

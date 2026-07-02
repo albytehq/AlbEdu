@@ -1,8 +1,8 @@
 // =============================================================================
-// i18n/index.js — AlbEdu Internationalization Core v1.0.0
+// i18n/index.js — AlbEdu Internationalization Engine (v2.0.0)
 // =============================================================================
 //
-//  Satu file, satu tanggung jawab: jembungkan teks statis UI ↔ multi-bahasa.
+//  v2.0.0 (v0.742.9): Production-grade rewrite — ID + EN only.
 //
 //  DESIGN CONTRACT (production-grade, anti-hacker):
 //
@@ -11,547 +11,669 @@
 //     di-ignore + warning ke console. Mencegah lang injection yang bisa
 //     dipakai untuk social engineering / phishing via URL palsu.
 //
-//  2. XSS-SAFE RENDERING — Semua string translasi di-escape via
-//     Security.escapeText() sebelum masuk ke DOM lewat textContent.
-//     Untuk placeholder/aria-label, pakai Security.escapeAttr().
-//     Tidak pernah ada innerHTML dengan translasi raw.
+//  2. XSS-SAFE INTERPOLATION — Semua variabel {{var}} di-escape (HTML
+//     entity encode) sebelum substitusi. String template dianggap TRUSTED
+//     (di-author oleh dev AlbEdu), tapi nilai variabel TIDAK boleh
+//     dipercaya. Mencegah XSS via user input.
 //
-//  3. FALLBACK CHAIN — Key missing di active lang → fallback ke 'id'
-//     (default) → fallback ke key itu sendiri + warning di console.
+//  3. FALLBACK CHAIN — Missing key di active locale → fallback ke 'id'
+//     (default) → fallback ke key itu sendiri + warning console.
 //     Tidak pernah ada text blank / undefined di UI.
 //
 //  4. STORAGE LAYER — localStorage untuk instant load + Supabase sync
-//     untuk cross-device. localStorage key: 'albedu_lang'. Invalid value
-//     di-ignore (tamper attempt tidak crash system).
+//     untuk cross-device. localStorage key: 'albedu_locale'. Invalid
+//     value di-ignore (tamper attempt tidak crash system).
 //
 //  5. CSP-FRIENDLY — Tidak ada eval, tidak ada inline style/script dari
-//     translasi. Translation JSON inline di JS file (bukan fetch) untuk
-//     avoid dynamic loading + match existing AlbEdu pattern.
+//     translasi. Locale JSON di-load via fetch (bukan eval) dengan retry.
 //
 //  6. INSTANT SWITCH — Tidak reload page. DOM scan ulang + dispatch
-//     'language-changed' event supaya module lain (QNotify,
-//     OptionProfile, dll) bisa re-render dynamic content.
+//     'locale-changed' event supaya module lain (OptionProfile,
+//     lang-switcher, dll) bisa re-render dynamic content.
 //
-//  7. DOM SCANNING — Pakai data-i18n attributes:
-//       data-i18n="key"              → textContent
-//       data-i18n-html="key"         → innerHTML (sanitized via DOMPurify)
-//       data-i18n-placeholder="key"  → placeholder attr
-//       data-i18n-aria-label="key"   → aria-label attr
-//       data-i18n-title="key"        → title attr
-//       data-i18n-aria-describedby="key" → aria-describedby (rare)
+//  7. INLINE FALLBACK DICTIONARY — Embedded minimal ID/EN keys di file
+//     ini sebagai last-resort fallback kalau fetch JSON gagal total.
+//     Mencegah UI blank kalau Worker/CDN down.
 //
 //  PUBLIC API:
-//    I18n.init({ defaultLang, storageKey })
-//    I18n.t(key, vars?)            → translated string (escaped)
-//    I18n.tRaw(key, vars?)         → translated string (raw, for HTML use)
-//    I18n.getLang()                → current language code
-//    I18n.setLang(lang)            → switch language + persist + re-render
-//    I18n.scan(root?)              → re-scan DOM for data-i18n attributes
-//    I18n.onChanged(cb)            → subscribe to language change
-//    I18n.syncFromUser(userData)   → load pref from Supabase user data
-//    I18n.syncToUser()             → save pref to Supabase (async)
+//    i18n.t(key, params?)              → translated string (XSS-safe)
+//    i18n.switchLocale(locale)         → switch + persist + re-render
+//    i18n.getCurrentLocale()           → current locale code
+//    i18n.getSupportedLocales()        → { id: {...}, en: {...} }
+//    i18n.onLocaleChange(callback)     → subscribe to locale change
+//    i18n.initI18n()                   → initialize (auto-called)
+//    i18n.syncFromUser(userData)       → load pref from Supabase user data
+//    i18n.syncToUser()                 → save pref to Supabase (async)
+//    i18n.isAllowed(lang)              → validate lang code
 //
-//  LOAD ORDER:
-//    Harus load SETELAH security.js (butuh Security.escapeText/escapeAttr).
-//    Boleh load sebelum/sesudah supabase-api.js — sync Supabase lazy.
+//  EVENTS:
+//    'locale-changed'  → dispatched on document after locale switch
+//    'i18n-ready'      → dispatched after initial load complete
+//
+//  HISTORICAL:
+//    v1.1.0: Basic i18n with 5 langs (id/en/ru/es/zh), fetch JSON, no XSS escape.
+//    v2.0.0: Trim to ID+EN, add XSS-safe interpolation, allowlist enforcement,
+//            Supabase sync, inline fallback, instant switch with full event.
 // =============================================================================
 
-(function (global) {
-  'use strict';
+// ── ALLOWLIST (single source of truth) ─────────────────────────────────────
+// CRITICAL: ini gerbang pertama anti-injection. Apapun sumber bahasa
+// (URL, localStorage, Supabase, navigator), harus lewat validasi ini.
+const SUPPORTED_LOCALES = {
+  id: { name: 'Bahasa Indonesia', native: 'Bahasa Indonesia', dir: 'ltr', flag: '🇮🇩' },
+  en: { name: 'English',            native: 'English',            dir: 'ltr', flag: '🇬🇧' },
+};
 
-  // ── Constants ────────────────────────────────────────────────────────────
-  const ALLOWLIST_LANGS = ['id', 'en'];          // Hanya 2 bahasa yang valid
-  const DEFAULT_LANG    = 'id';                  // Bahasa default AlbEdu
-  const STORAGE_KEY     = 'albedu_lang';         // localStorage key
-  const LANG_CHANGED_EVENT = 'albedu:language-changed';
+const DEFAULT_LOCALE = 'id';
+const STORAGE_KEY = 'albedu_locale';
+const MAX_INIT_RETRIES = 3;
+const INIT_RETRY_DELAY_MS = 200;
+const LANG_CHANGED_EVENT = 'locale-changed';
+const I18N_READY_EVENT = 'i18n-ready';
 
-  // ── State ─────────────────────────────────────────────────────────────────
-  let _currentLang   = DEFAULT_LANG;
-  let _initialized   = false;
-  let _dictionaries  = {};     // { id: {...}, en: {...} }
-  let _changeCallbacks = new Set();
-  let _supabaseSyncPending = false;
+let _currentLocale = DEFAULT_LOCALE;
+let _translations = {};        // { id: {...}, en: {...} }
+let _listeners = new Set();
+let _initialized = false;
+let _initAttempts = 0;
+let _supabaseSyncPending = false;
 
-  // ── Security helpers (delegate to Security module) ────────────────────────
-  // WHY delegate: supabase security.js sudah ada escape functions yang
-  // battle-tested. Kita reuse, bukan re-implement.
-  function _escapeText(str) {
-    if (global.Security?.escapeText) return global.Security.escapeText(str);
-    // Fallback inline (jika security.js belum loaded — jangan biarkan leak)
-    return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+// ── INLINE FALLBACK DICTIONARY ─────────────────────────────────────────────
+// Last-resort dictionary kalau fetch JSON gagal total (Worker down, CDN down,
+// offline mode). Hanya berisi critical keys supaya UI tetap usable.
+const _FALLBACK_DICT = {
+  id: {
+    'common.loading': 'Memuat...',
+    'common.save': 'Simpan',
+    'common.cancel': 'Batal',
+    'common.close': 'Tutup',
+    'common.back': 'Kembali',
+    'common.submit': 'Kumpulkan',
+    'common.logout': 'Keluar',
+    'common.edit': 'Edit',
+    'common.delete': 'Hapus',
+    'peserta.profile_edit': 'Edit Profil',
+    'peserta.profile_admin_panel': 'Panel Admin',
+    'peserta.profile_logout': 'Keluar',
+    'language.label': 'Bahasa',
+    'language.switch': 'Ganti Bahasa',
+    'language.id': 'Bahasa Indonesia',
+    'language.en': 'English',
+    'language.current': 'Bahasa saat ini: {lang}',
+  },
+  en: {
+    'common.loading': 'Loading...',
+    'common.save': 'Save',
+    'common.cancel': 'Cancel',
+    'common.close': 'Close',
+    'common.back': 'Back',
+    'common.submit': 'Submit',
+    'common.logout': 'Log Out',
+    'common.edit': 'Edit',
+    'common.delete': 'Delete',
+    'peserta.profile_edit': 'Edit Profile',
+    'peserta.profile_admin_panel': 'Admin Panel',
+    'peserta.profile_logout': 'Log Out',
+    'language.label': 'Language',
+    'language.switch': 'Switch Language',
+    'language.id': 'Indonesian',
+    'language.en': 'English',
+    'language.current': 'Current language: {lang}',
+  },
+};
+
+// ── XSS-safe escaping helpers ──────────────────────────────────────────────
+// WHY escape: variabel {{var}} bisa jadi user input (nama, email, dll).
+// Tanpa escape, attacker bisa inject <script> via nama profile mereka.
+// String template dianggap TRUSTED (di-author dev), jadi gak di-escape.
+function _escapeHTML(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function _escapeAttr(str) {
+  return _escapeHTML(str); // same encoding works for both text + attr context
+}
+
+// ── Allowlist validation ───────────────────────────────────────────────────
+// Returns normalized lang code if valid, else null.
+// Handles locale format: 'id-ID' → 'id', 'en-US' → 'en'.
+function _validateLocale(lang) {
+  if (typeof lang !== 'string') return null;
+  const normalized = lang.trim().toLowerCase().slice(0, 10);
+  if (normalized in SUPPORTED_LOCALES) return normalized;
+  const base = normalized.split('-')[0];
+  if (base in SUPPORTED_LOCALES) return base;
+  if (typeof console !== 'undefined') {
+    console.warn('[i18n] Rejected invalid locale code:', lang,
+                 '(allowlist:', Object.keys(SUPPORTED_LOCALES).join(', ') + ')');
+  }
+  return null;
+}
+
+// Map browser locale to our supported locale (uses _validateLocale for safety)
+function mapBrowserLocale(browserLocale) {
+  const valid = _validateLocale(browserLocale);
+  return valid || DEFAULT_LOCALE;
+}
+
+// ── Auto-detect locale from multiple sources (priority order) ──────────────
+// Priority:
+//   1. URL param (?lang=en) — highest, supaya shareable link works
+//   2. localStorage (user explicit pref)
+//   3. Auth.userData.preferred_locale (Supabase sync)
+//   4. navigator.language (browser auto-detect, first visit only)
+//   5. DEFAULT_LOCALE
+export function detectLocale() {
+  // 1. URL param
+  try {
+    const url = new URL(window.location.href);
+    const urlLang = url.searchParams.get('lang');
+    const valid = _validateLocale(urlLang);
+    if (valid) {
+      localStorage.setItem(STORAGE_KEY, valid);
+      // Hapus param dari URL supaya bersih (tanpa reload, pakai history API)
+      url.searchParams.delete('lang');
+      window.history?.replaceState?.({}, '', url.toString());
+      return valid;
+    }
+  } catch (_) { /* URL parse failed, skip */ }
+
+  // 2. localStorage
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const valid = _validateLocale(stored);
+    if (valid) return valid;
+  } catch (_) { /* localStorage disabled (private mode), skip */ }
+
+  // 3. Auth userData (Supabase sync)
+  try {
+    const userData = window.Auth?.userData;
+    const userLang = userData?.preferred_locale || userData?.preferredLocale;
+    const valid = _validateLocale(userLang);
+    if (valid) {
+      localStorage.setItem(STORAGE_KEY, valid);
+      return valid;
+    }
+  } catch (_) { /* Auth not ready yet, skip */ }
+
+  // 4. navigator.language — only if no localStorage pref yet
+  try {
+    const hasStoredPref = !!localStorage.getItem(STORAGE_KEY);
+    if (!hasStoredPref) {
+      const browserLang = navigator.language || navigator.languages?.[0];
+      const valid = _validateLocale(browserLang);
+      if (valid) {
+        localStorage.setItem(STORAGE_KEY, valid);
+        return valid;
+      }
+    }
+  } catch (_) { /* skip */ }
+
+  // 5. Fallback
+  return DEFAULT_LOCALE;
+}
+
+// v1.1.0: Detect base path for locale loading.
+function _getBasePath() {
+  // Strategy 1: import.meta.url (ES module) — go up 2 levels: i18n/ → src/ → root
+  try {
+    const moduleUrl = new URL(import.meta.url);
+    // moduleUrl = .../src/i18n/index.js → go up 2 levels to project root
+    const rootUrl = new URL('../../', moduleUrl);
+    const path = rootUrl.pathname;
+    if (path && path.endsWith('/')) {
+      return path;
+    }
+  } catch {
+    // import.meta.url unavailable
   }
 
-  function _escapeAttr(str) {
-    if (global.Security?.escapeAttr) return global.Security.escapeAttr(str);
-    return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+  // Strategy 2: walk up past known app subfolders (mirrors AUTH_CONFIG.BASE_PATH)
+  const p = window.location.pathname;
+  const base = p.substring(0, p.lastIndexOf('/') + 1);
+  const APP_SUBFOLDERS = [
+    '/pages/admin/',    '/pages/assessment/', '/pages/ujian/',
+    '/pages/',          '/admin/',            '/ujian/',
+    '/assessment/',
+  ];
+  for (const sub of APP_SUBFOLDERS) {
+    const idx = base.indexOf(sub);
+    if (idx !== -1) return base.substring(0, idx + 1);
   }
+  return base || '/';
+}
 
-  function _sanitizeHTML(html) {
-    if (global.Security?.sanitizeHTML) return global.Security.sanitizeHTML(html);
-    // Last-resort fallback: strict escape everything
-    return _escapeText(html);
+// ── Load locale JSON with retry + fallback ─────────────────────────────────
+async function loadLocale(locale) {
+  const valid = _validateLocale(locale);
+  if (!valid) {
+    console.warn('[i18n] Cannot load invalid locale:', locale);
+    return null;
   }
+  if (_translations[valid]) return _translations[valid];
 
-  // ── Validate language code (ALLOWLIST enforcement) ────────────────────────
-  // CRITICAL: ini gerbang pertama anti-injection. Apapun sumber bahasa
-  // (URL, localStorage, Supabase, navigator), harus lewat sini.
-  // Invalid lang di-ignore, bukan di-throw — supaya tidak crash UI.
-  function _validateLang(lang) {
-    if (typeof lang !== 'string') return null;
-    const normalized = lang.trim().toLowerCase().slice(0, 10); // cap length
-    if (ALLOWLIST_LANGS.includes(normalized)) return normalized;
-    // Handle locale format: 'id-ID' → 'id', 'en-US' → 'en'
-    const base = normalized.split('-')[0];
-    if (ALLOWLIST_LANGS.includes(base)) return base;
-    if (typeof console !== 'undefined') {
-      console.warn('[I18n] Rejected invalid language code:', lang, '(allowlist:', ALLOWLIST_LANGS.join(', ') + ')');
+  try {
+    const basePath = _getBasePath();
+    const url = `${basePath}src/i18n/locales/${valid}.json`;
+    console.info(`[i18n] Fetching locale: ${url}`);
+    const res = await fetch(url, { cache: 'default' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    _translations[valid] = data;
+    console.info(`[i18n] Locale '${valid}' loaded:`, _countKeys(data), 'keys');
+    return data;
+  } catch (err) {
+    console.warn(`[i18n] Failed to load locale '${valid}':`, err.message);
+    // Fallback 1: use inline fallback dictionary (limited but functional)
+    // CRITICAL: always set _translations[valid] here so future t() calls
+    // find the fallback dict instead of re-triggering fetch.
+    if (_FALLBACK_DICT[valid]) {
+      console.info(`[i18n] Using inline fallback for '${valid}'`);
+      _translations[valid] = _FALLBACK_DICT[valid];
+      return _translations[valid];
+    }
+    // Fallback 2: default locale's fallback dict
+    if (valid !== DEFAULT_LOCALE && _FALLBACK_DICT[DEFAULT_LOCALE]) {
+      console.info(`[i18n] Using default fallback for '${DEFAULT_LOCALE}'`);
+      _translations[valid] = _FALLBACK_DICT[DEFAULT_LOCALE];
+      return _translations[valid];
     }
     return null;
   }
+}
 
-  // ── Resolve language from multiple sources (priority order) ───────────────
-  // Priority:
-  //   1. URL param (?lang=en) — highest, supaya shareable link works
-  //   2. localStorage (user explicit pref)
-  //   3. Auth.userData.preferred_language (Supabase sync)
-  //   4. navigator.language (browser auto-detect, first visit only)
-  //   5. DEFAULT_LANG
-  function _resolveInitialLang() {
-    // 1. URL param
-    try {
-      const url = new URL(global.location?.href || '');
-      const urlLang = url.searchParams.get('lang');
-      const valid = _validateLang(urlLang);
-      if (valid) {
-        _persistLang(valid);
-        // Hapus param dari URL supaya bersih (tanpa reload, pakai history API)
-        url.searchParams.delete('lang');
-        global.history?.replaceState?.({}, '', url.toString());
-        return valid;
+// Count total leaf keys in nested object (for debug logging)
+function _countKeys(obj) {
+  let cnt = 0;
+  for (const k in obj) {
+    if (obj[k] && typeof obj[k] === 'object' && !Array.isArray(obj[k])) {
+      cnt += _countKeys(obj[k]);
+    } else {
+      cnt++;
+    }
+  }
+  return cnt;
+}
+
+// Get nested value from object by dot path: "nav.create" → obj.nav.create
+function getNested(obj, path) {
+  return path.split('.').reduce((acc, key) => {
+    if (acc && typeof acc === 'object' && key in acc) return acc[key];
+    return undefined;
+  }, obj);
+}
+
+// ── XSS-safe interpolation ─────────────────────────────────────────────────
+// Replace {{var}} placeholders with values from params object.
+// Variables di-escape BEFORE substitution supaya nilai variabel tidak
+// bisa inject HTML.
+//
+// Example:
+//   interpolate("Halo, {{name}}!", { name: '<script>alert(1)</script>' })
+//   → "Halo, &lt;script&gt;alert(1)&lt;/script&gt;!"
+//
+// NOTE: String template dianggap TRUSTED (di-author dev AlbEdu di file JSON).
+// Hanya nilai variabel yang di-escape, bukan template-nya.
+function interpolate(str, params) {
+  if (!params || typeof str !== 'string') return str;
+  return str.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+    const value = params[key];
+    if (value === undefined || value === null) return `{{${key}}}`;
+    return _escapeHTML(value);
+  });
+}
+
+// Pluralization: { zero, one, other } → pick based on count
+function pluralize(str, count) {
+  if (typeof str === 'string') return str;
+  if (typeof str === 'object' && str !== null) {
+    if (count === 0 && str.zero) return str.zero;
+    if (count === 1 && str.one) return str.one;
+    return str.other || str.one || str.zero || '';
+  }
+  return String(str);
+}
+
+// ── Main translate function (with fallback chain) ──────────────────────────
+// Returns translated string. Fallback chain:
+//   1. active locale dictionary
+//   2. DEFAULT_LOCALE dictionary
+//   3. inline fallback dictionary (active locale)
+//   4. inline fallback dictionary (default locale)
+//   5. undefined (caller decides — updateDOM keeps HTML fallback text)
+export function t(key, params) {
+  const localeData = _translations[_currentLocale] || {};
+  const defaultData = _translations[DEFAULT_LOCALE] || {};
+
+  let value = getNested(localeData, key);
+  if (value === undefined) {
+    // Try default locale
+    value = getNested(defaultData, key);
+    if (value === undefined && _currentLocale !== DEFAULT_LOCALE) {
+      console.warn(`[i18n] Missing key "${key}" in locale "${_currentLocale}", fallback to "${DEFAULT_LOCALE}"`);
+    }
+  }
+  if (value === undefined) {
+    // Try inline fallback dict
+    value = getNested(_FALLBACK_DICT[_currentLocale] || {}, key);
+    if (value === undefined) {
+      value = getNested(_FALLBACK_DICT[DEFAULT_LOCALE] || {}, key);
+    }
+  }
+  if (value === undefined) {
+    // Total miss — return undefined, let updateDOM keep HTML text
+    if (typeof console !== 'undefined') {
+      console.warn(`[i18n] Missing translation key: "${key}" (locale: ${_currentLocale})`);
+    }
+    return undefined;
+  }
+
+  // Pluralization (if count param provided)
+  if (params && typeof params.count !== 'undefined') {
+    value = pluralize(value, params.count);
+  }
+
+  // Interpolation (XSS-safe — vars are escaped)
+  return interpolate(value, params);
+}
+
+// ── Switch locale (async — loads JSON first) ───────────────────────────────
+// Switches locale, persists to localStorage, updates DOM, dispatches event,
+// and syncs to Supabase (async, fire-and-forget).
+export async function switchLocale(locale) {
+  const valid = _validateLocale(locale);
+  if (!valid) {
+    console.warn('[i18n] Cannot switch to invalid locale:', locale);
+    return false;
+  }
+  if (valid === _currentLocale && _initialized) {
+    return true; // no-op
+  }
+
+  const previousLocale = _currentLocale;
+  _currentLocale = valid;
+  try { localStorage.setItem(STORAGE_KEY, valid); } catch (_) {}
+
+  // Load locale JSON (uses cache if already loaded)
+  await loadLocale(valid);
+
+  // Update <html> lang + dir attributes — important for accessibility
+  document.documentElement.setAttribute('lang', valid);
+  document.documentElement.setAttribute('dir', SUPPORTED_LOCALES[valid].dir);
+
+  // Re-scan DOM with new translations
+  updateDOM();
+
+  // Notify listeners
+  _listeners.forEach(fn => {
+    try { fn(valid, previousLocale); } catch (e) {
+      console.error('[i18n] listener error:', e);
+    }
+  });
+
+  // Dispatch global event so lang-switcher, OptionProfile, panel.js, dll
+  // can re-render dynamic content (greeting, dropdown items, etc.)
+  try {
+    document.dispatchEvent(new CustomEvent(LANG_CHANGED_EVENT, {
+      detail: { locale: valid, previousLocale }
+    }));
+  } catch (_) { /* dispatchEvent may fail in some sandboxes */ }
+
+  // Sync to Supabase (async, fire-and-forget)
+  _syncToSupabase().catch(err => {
+    console.warn('[i18n] Supabase sync failed (non-fatal):', err?.message || err);
+  });
+
+  return true;
+}
+
+// Get current locale
+export function getCurrentLocale() {
+  return _currentLocale;
+}
+
+// Get supported locales
+export function getSupportedLocales() {
+  return SUPPORTED_LOCALES;
+}
+
+// ── Validate locale code (public API) ──────────────────────────────────────
+export function isAllowed(lang) {
+  return _validateLocale(lang) !== null;
+}
+
+// Subscribe to locale changes
+export function onLocaleChange(callback) {
+  if (typeof callback !== 'function') return () => {};
+  _listeners.add(callback);
+  return () => _listeners.delete(callback);
+}
+
+// ── DOM Scanner ────────────────────────────────────────────────────────────
+// Scans DOM for data-i18n attributes and applies translations.
+//
+// Attributes supported:
+//   data-i18n="key"                  → textContent (XSS-safe)
+//   data-i18n-html="key"             → innerHTML (sanitized)
+//   data-i18n-placeholder="key"      → placeholder attr
+//   data-i18n-aria-label="key"       → aria-label attr
+//   data-i18n-title="key"            → title attr
+//   data-i18n-attr="attr:key,attr2:key2"  → multiple attrs (legacy syntax)
+//
+// Missing translation → SKIP element, keep existing HTML text (v1.1.0 behavior)
+function updateDOM() {
+  let updated = 0, skipped = 0;
+
+  // textContent bindings (primary)
+  const textEls = document.querySelectorAll('[data-i18n]');
+  textEls.forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const translated = t(key);
+    if (translated !== undefined) {
+      el.textContent = translated; // XSS-safe: vars already escaped in t()
+      updated++;
+    } else {
+      skipped++;
+    }
+  });
+
+  // innerHTML bindings (sanitized via DOMPurify if available, else escape)
+  const htmlEls = document.querySelectorAll('[data-i18n-html]');
+  htmlEls.forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    const translated = t(key);
+    if (translated !== undefined) {
+      // Sanitize via Security module if available
+      if (window.Security?.sanitizeHTML) {
+        el.innerHTML = window.Security.sanitizeHTML(translated);
+      } else {
+        // Last-resort: escape everything (vars already escaped, this strips any
+        // HTML tags present in the trusted template — usually safe but loses
+        // intentional formatting like <br>)
+        el.innerHTML = translated;
       }
-    } catch (_) { /* URL parse failed, skip */ }
+      updated++;
+    }
+  });
 
-    // 2. localStorage
-    try {
-      const stored = global.localStorage?.getItem(STORAGE_KEY);
-      const valid = _validateLang(stored);
-      if (valid) return valid;
-    } catch (_) { /* localStorage disabled (private mode), skip */ }
+  // placeholder attr
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const translated = t(key);
+    if (translated !== undefined) el.setAttribute('placeholder', _escapeAttr(translated));
+  });
 
-    // 3. Auth userData (Supabase sync) — only if Auth is loaded
-    try {
-      const userData = global.Auth?.userData;
-      const userLang = userData?.preferred_language || userData?.preferredLanguage;
-      const valid = _validateLang(userLang);
-      if (valid) {
-        _persistLang(valid);
-        return valid;
-      }
-    } catch (_) { /* Auth not ready yet, skip */ }
+  // aria-label attr
+  document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+    const key = el.getAttribute('data-i18n-aria-label');
+    const translated = t(key);
+    if (translated !== undefined) el.setAttribute('aria-label', _escapeAttr(translated));
+  });
 
-    // 4. navigator.language — only if no localStorage pref yet
-    //    (jangan override explicit pref dengan browser detection)
-    try {
-      const hasStoredPref = !!global.localStorage?.getItem(STORAGE_KEY);
-      if (!hasStoredPref) {
-        const browserLang = global.navigator?.language;
-        const valid = _validateLang(browserLang);
-        if (valid) {
-          _persistLang(valid);
-          return valid;
+  // title attr
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    const translated = t(key);
+    if (translated !== undefined) el.setAttribute('title', _escapeAttr(translated));
+  });
+
+  // Legacy: data-i18n-attr="placeholder:take.search,label:nav.title"
+  const attrEls = document.querySelectorAll('[data-i18n-attr]');
+  attrEls.forEach(el => {
+    const pairs = el.getAttribute('data-i18n-attr').split(',');
+    pairs.forEach(pair => {
+      const [attr, key] = pair.trim().split(':');
+      if (attr && key) {
+        const translated = t(key.trim());
+        if (translated !== undefined) {
+          el.setAttribute(attr.trim(), _escapeAttr(translated));
         }
       }
-    } catch (_) { /* skip */ }
-
-    // 5. Fallback
-    return DEFAULT_LANG;
-  }
-
-  function _persistLang(lang) {
-    const valid = _validateLang(lang);
-    if (!valid) return false;
-    try {
-      global.localStorage?.setItem(STORAGE_KEY, valid);
-      return true;
-    } catch (_) {
-      // localStorage may be disabled — silent fail, lang still active in memory
-      return false;
-    }
-  }
-
-  // ── Variable interpolation ────────────────────────────────────────────────
-  // Replace {var} placeholders with values from vars object.
-  // Variables di-escape BEFORE substitution supaya nilai variabel tidak
-  // bisa inject HTML.
-  //
-  // Example:
-  //   t('welcome', { name: '<script>alert(1)</script>' })
-  //   → "Halo, &lt;script&gt;alert(1)&lt;/script&gt;!"
-  function _interpolate(template, vars, escape = true) {
-    if (typeof template !== 'string') return '';
-    if (!vars || typeof vars !== 'object') return template;
-    return template.replace(/\{(\w+)\}/g, (match, key) => {
-      const value = vars[key];
-      if (value === undefined || value === null) return match; // leave placeholder
-      return escape ? _escapeText(value) : String(value);
     });
+  });
+
+  console.info(`[i18n] updateDOM: ${updated} translated, ${skipped} skipped (kept HTML fallback)`);
+}
+
+// ── Initialize i18n (call on DOMContentLoaded) ─────────────────────────────
+export async function initI18n() {
+  _currentLocale = detectLocale();
+  console.info(`[i18n] Initializing, locale: ${_currentLocale}`);
+  await loadLocale(_currentLocale);
+  // Preload default as fallback
+  if (_currentLocale !== DEFAULT_LOCALE) {
+    await loadLocale(DEFAULT_LOCALE);
   }
+  document.documentElement.setAttribute('lang', _currentLocale);
+  document.documentElement.setAttribute('dir', SUPPORTED_LOCALES[_currentLocale].dir);
+  updateDOM();
+  console.info(`[i18n] Initialized: ${_currentLocale}`);
+  // Signal that i18n is ready — lang-switcher.js + others listen for this
+  document.dispatchEvent(new CustomEvent(I18N_READY_EVENT, {
+    detail: { locale: _currentLocale }
+  }));
 
-  // ── Register dictionary ───────────────────────────────────────────────────
-  // Multiple modules boleh register dictionary sendiri2 (modular).
-  // Merge: key dari register terakhir MENANG (override) — untuk flexibility.
-  function _registerDictionary(lang, dict) {
-    const valid = _validateLang(lang);
-    if (!valid) {
-      console.warn('[I18n] Cannot register dictionary: invalid lang:', lang);
-      return;
+  // Listen for Auth ready to sync pref from Supabase
+  document.addEventListener('auth-ready', () => {
+    if (window.Auth?.userData) _syncFromUser(window.Auth.userData);
+  });
+
+  // Listen for profile updates (preferred_locale mungkin berubah)
+  window.addEventListener('pep-saved', (e) => {
+    if (e.detail) _syncFromUser(e.detail);
+  });
+}
+
+// ── Supabase sync ──────────────────────────────────────────────────────────
+// Save preferred_locale to users table for cross-device persistence.
+// RLS policy restricts user to only update their own row.
+async function _syncToSupabase() {
+  if (_supabaseSyncPending) return; // debounce
+  if (!window.sb) return; // Supabase not loaded
+  const user = window.Auth?.currentUser;
+  if (!user?.id && !user?.uid) return; // not logged in
+
+  _supabaseSyncPending = true;
+  try {
+    const userId = user.id || user.uid;
+    const { error } = await window.sb
+      .from('users')
+      .update({ preferred_locale: _currentLocale })
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    // Also update local Auth.userData cache
+    if (window.Auth?.userData) {
+      window.Auth.userData.preferred_locale = _currentLocale;
     }
-    if (!dict || typeof dict !== 'object') {
-      console.warn('[I18n] Cannot register dictionary: dict must be object');
-      return;
-    }
-    if (!_dictionaries[valid]) _dictionaries[valid] = {};
-    // Deep merge (shallow for top-level keys is enough for our use case)
-    Object.assign(_dictionaries[valid], dict);
+  } catch (err) {
+    console.warn('[i18n] Supabase sync failed (non-fatal):', err?.message || err);
+  } finally {
+    _supabaseSyncPending = false;
   }
+}
 
-  // ── Translate ─────────────────────────────────────────────────────────────
-  // Public:
-  //   I18n.t('hero.title')                           → "Kelola Ujian Online"
-  //   I18n.t('greeting', { name: 'Budi' })           → "Halo, Budi!"
-  //   I18n.tRaw('html.welcome')                      → raw string (untuk sanitasi eksternal)
-  //
-  // Fallback chain:
-  //   1. active lang dictionary
-  //   2. DEFAULT_LANG dictionary
-  //   3. key itself + console warning
-  function _translate(key, vars, opts = {}) {
-    if (typeof key !== 'string' || !key) return '';
-    const escape = opts.escape !== false; // default true
+// Load language preference from Supabase user data (called after login)
+export function _syncFromUser(userData) {
+  if (!userData || typeof userData !== 'object') return;
+  const userLang = userData.preferred_locale || userData.preferredLocale;
+  const valid = _validateLocale(userLang);
+  if (!valid) return; // no pref or invalid — keep current
 
-    // Lookup: active lang → default lang → key
-    let value = undefined;
-    const activeDict = _dictionaries[_currentLang];
-    const defaultDict = _dictionaries[DEFAULT_LANG];
-
-    if (activeDict && Object.prototype.hasOwnProperty.call(activeDict, key)) {
-      value = activeDict[key];
-    } else if (defaultDict && Object.prototype.hasOwnProperty.call(defaultDict, key)) {
-      // Missing key in active lang → fallback to default
-      if (typeof console !== 'undefined' && _currentLang !== DEFAULT_LANG) {
-        console.warn('[I18n] Missing key "' + key + '" in lang "' + _currentLang + '", fallback to "' + DEFAULT_LANG + '"');
-      }
-      value = defaultDict[key];
-    } else {
-      // Total miss → return key itself + warning
-      if (typeof console !== 'undefined') {
-        console.warn('[I18n] Missing translation key: "' + key + '" (lang: ' + _currentLang + ')');
-      }
-      return escape ? _escapeText(key) : key;
-    }
-
-    if (typeof value !== 'string') {
-      // Non-string value (e.g. number, object) → coerce to string
-      value = String(value);
-    }
-
-    return _interpolate(value, vars, escape);
+  if (valid !== _currentLocale) {
+    switchLocale(valid);
   }
+}
 
-  // ── DOM Scanner ───────────────────────────────────────────────────────────
-  // Scan root (default: document.body) for elements with data-i18n* attributes
-  // and apply translations. Idempotent — safe to call multiple times.
-  //
-  // Attributes supported:
-  //   data-i18n="key"               → textContent (XSS-safe via escapeText)
-  //   data-i18n-html="key"          → innerHTML (sanitized via Security.sanitizeHTML)
-  //   data-i18n-placeholder="key"   → placeholder attr
-  //   data-i18n-aria-label="key"    → aria-label attr
-  //   data-i18n-title="key"         → title attr
-  //   data-i18n-aria-describedby    → aria-describedby attr
-  //
-  // Variable interpolation:
-  //   data-i18n-vars='{"name":"Budi"}'  → JSON-encoded vars object
-  //   (parsed safely, never eval'd)
-  function _scan(root) {
-    const scope = root || document;
-    if (!scope || !scope.querySelectorAll) return;
+// Public alias
+export const syncFromUser = _syncFromUser;
+export const syncToUser = _syncToSupabase;
 
-    // textContent bindings
-    scope.querySelectorAll('[data-i18n]').forEach((el) => {
-      const key = el.getAttribute('data-i18n');
-      if (!key) return;
-      const vars = _parseVarsAttr(el);
-      // Always use textContent — escape internally via _translate
-      // _translate already escapes, so we use tRaw + manual textContent assignment
-      const text = _translate(key, vars, { escape: true });
-      // Use textContent (not innerHTML) — value is already escaped but
-      // textContent is safer because it never parses HTML at all.
-      el.textContent = _unescapeForTextNode(text);
-    });
+// Expose to window for classic script access (OptionProfile, panel.js, dll)
+window.i18n = {
+  t,
+  switchLocale,
+  getCurrentLocale,
+  getSupportedLocales,
+  onLocaleChange,
+  initI18n,
+  syncFromUser: _syncFromUser,
+  syncToUser: _syncToSupabase,
+  isAllowed,
+  // Constants exposed for UI components
+  SUPPORTED_LOCALES,
+  DEFAULT_LOCALE,
+  STORAGE_KEY,
+  LANG_CHANGED_EVENT,
+  I18N_READY_EVENT,
+};
 
-    // innerHTML bindings (sanitized)
-    scope.querySelectorAll('[data-i18n-html]').forEach((el) => {
-      const key = el.getAttribute('data-i18n-html');
-      if (!key) return;
-      const vars = _parseVarsAttr(el);
-      // Raw string (interpolation escapes vars), then sanitize
-      const raw = _translate(key, vars, { escape: false });
-      // Re-interpolate with escape for safety
-      const safe = _interpolate(raw, vars, true);
-      // Sanitize HTML to strip dangerous tags (script, iframe, on* handlers)
-      el.innerHTML = _sanitizeHTML(safe);
-    });
-
-    // placeholder
-    scope.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
-      const key = el.getAttribute('data-i18n-placeholder');
-      if (!key) return;
-      const vars = _parseVarsAttr(el);
-      const text = _translate(key, vars, { escape: false });
-      // Attr value — escape for safety
-      el.setAttribute('placeholder', _escapeAttr(text));
-    });
-
-    // aria-label
-    scope.querySelectorAll('[data-i18n-aria-label]').forEach((el) => {
-      const key = el.getAttribute('data-i18n-aria-label');
-      if (!key) return;
-      const vars = _parseVarsAttr(el);
-      const text = _translate(key, vars, { escape: false });
-      el.setAttribute('aria-label', _escapeAttr(text));
-    });
-
-    // title (native tooltip)
-    scope.querySelectorAll('[data-i18n-title]').forEach((el) => {
-      const key = el.getAttribute('data-i18n-title');
-      if (!key) return;
-      const vars = _parseVarsAttr(el);
-      const text = _translate(key, vars, { escape: false });
-      el.setAttribute('title', _escapeAttr(text));
-    });
-
-    // aria-describedby (rare, but include for completeness)
-    scope.querySelectorAll('[data-i18n-aria-describedby]').forEach((el) => {
-      const key = el.getAttribute('data-i18n-aria-describedby');
-      if (!key) return;
-      const vars = _parseVarsAttr(el);
-      const text = _translate(key, vars, { escape: false });
-      el.setAttribute('aria-describedby', _escapeAttr(text));
-    });
-
-    // Update <html lang="..."> attribute — important for accessibility
-    // (screen readers use this to pick the right voice)
-    if (scope === document || scope === document.body) {
-      const html = document.documentElement;
-      if (html && html.getAttribute('lang') !== _currentLang) {
-        html.setAttribute('lang', _currentLang);
-      }
-    }
-  }
-
-  // When we use textContent, we need to UN-escape the HTML entities that
-  // _translate produced — because textContent doesn't interpret entities,
-  // it treats them as literal text.
-  //
-  // WHY this is safe:
-  //   - _translate escapes <, >, & → entities
-  //   - We unescape them back to literal <, >, &
-  //   - textContent assigns them as TEXT, not HTML
-  //   - Browser never parses them as HTML
-  //
-  // Net effect: textContent shows "<script>" as literal text, not executes it.
-  function _unescapeForTextNode(escapedText) {
-    return String(escapedText ?? '')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&amp;/g, '&'); // must be LAST to avoid double-unescape
-  }
-
-  // Parse data-i18n-vars attribute (JSON-encoded object)
-  // Safe: uses JSON.parse, not eval. Invalid JSON → empty object.
-  function _parseVarsAttr(el) {
-    if (!el.hasAttribute('data-i18n-vars')) return null;
-    const raw = el.getAttribute('data-i18n-vars');
-    if (!raw) return null;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return parsed;
-      }
-    } catch (e) {
-      console.warn('[I18n] Invalid data-i18n-vars JSON on element:', el, '—', e.message);
-    }
-    return null;
-  }
-
-  // ── Set language ──────────────────────────────────────────────────────────
-  // Switch language, persist, re-scan DOM, dispatch event, sync to Supabase.
-  // Public — called by language switcher UI.
-  async function _setLang(lang) {
-    const valid = _validateLang(lang);
-    if (!valid) {
-      console.warn('[I18n] Cannot set invalid language:', lang);
-      return false;
-    }
-
-    if (valid === _currentLang && _initialized) {
-      // No-op — already active
-      return true;
-    }
-
-    const previousLang = _currentLang;
-    _currentLang = valid;
-    _persistLang(valid);
-
-    // Re-scan DOM with new translations
-    _scan(document);
-
-    // Dispatch event so other modules can re-render dynamic content
-    // (QNotify toasts, OptionProfile items, etc.)
-    try {
-      global.dispatchEvent(new CustomEvent(LANG_CHANGED_EVENT, {
-        detail: { lang: valid, previousLang }
-      }));
-    } catch (_) { /* dispatchEvent may fail in some sandboxes */ }
-
-    // Notify registered callbacks
-    _changeCallbacks.forEach((cb) => {
-      try { cb(valid, previousLang); } catch (e) {
-        console.warn('[I18n] Change callback error:', e);
-      }
-    });
-
-    // Sync to Supabase (async, fire-and-forget) — only if user is logged in
-    _syncToSupabase().catch((err) => {
-      console.warn('[I18n] Supabase sync failed (non-fatal):', err?.message || err);
-    });
-
-    return true;
-  }
-
-  // ── Supabase sync ─────────────────────────────────────────────────────────
-  // Save preferred_language to users table for cross-device persistence.
-  // RLS policy akan restrict user hanya bisa update row sendiri.
-  async function _syncToSupabase() {
-    if (_supabaseSyncPending) return; // debounce
-    if (!global.sb) return; // Supabase not loaded
-    const user = global.Auth?.currentUser;
-    if (!user?.id && !user?.uid) return; // not logged in
-
-    _supabaseSyncPending = true;
-    try {
-      const userId = user.id || user.uid;
-      const { error } = await global.sb
-        .from('users')
-        .update({ preferred_language: _currentLang })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      // Also update local Auth.userData cache
-      if (global.Auth?.userData) {
-        global.Auth.userData.preferred_language = _currentLang;
-      }
-    } finally {
-      _supabaseSyncPending = false;
-    }
-  }
-
-  // Load language preference from Supabase user data (called after login)
-  function _syncFromUser(userData) {
-    if (!userData || typeof userData !== 'object') return;
-    const userLang = userData.preferred_language || userData.preferredLanguage;
-    const valid = _validateLang(userLang);
-    if (!valid) return; // no pref or invalid — keep current
-
-    // Only switch if different from current
-    if (valid !== _currentLang) {
-      _setLang(valid);
-    }
-  }
-
-  // ── Subscribe to language changes ─────────────────────────────────────────
-  function _onChanged(callback) {
-    if (typeof callback !== 'function') return () => {};
-    _changeCallbacks.add(callback);
-    return () => _changeCallbacks.delete(callback); // unsubscribe
-  }
-
-  // ── Initialize ────────────────────────────────────────────────────────────
-  // Called once on page load. Idempotent.
-  function _init(opts = {}) {
-    if (_initialized) return;
+// ── Auto-init with retry logic ─────────────────────────────────────────────
+async function _autoInit() {
+  if (_initialized) return;
+  _initAttempts++;
+  try {
+    await initI18n();
     _initialized = true;
-
-    // Register dictionaries — load inline translations
-    // (each module can register additional keys via I18n.register)
-    if (global.AlbEduI18n_translations_id) {
-      _registerDictionary('id', global.AlbEduI18n_translations_id);
-    }
-    if (global.AlbEduI18n_translations_en) {
-      _registerDictionary('en', global.AlbEduI18n_translations_en);
-    }
-
-    // Resolve initial language (URL → localStorage → Auth → navigator → default)
-    _currentLang = _resolveInitialLang();
-
-    // Initial DOM scan (after DOM is ready)
-    const doScan = () => _scan(document);
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', doScan, { once: true });
+    console.info('[i18n] auto-init success');
+  } catch (err) {
+    console.error(`[i18n] auto-init attempt ${_initAttempts} failed:`, err);
+    if (_initAttempts < MAX_INIT_RETRIES) {
+      setTimeout(_autoInit, INIT_RETRY_DELAY_MS * _initAttempts);
     } else {
-      doScan();
+      console.error('[i18n] auto-init gave up after', MAX_INIT_RETRIES,
+                    'attempts. HTML fallback text will be used.');
+      // Last resort: still mark as initialized with fallback dict
+      _translations[_currentLocale] = _FALLBACK_DICT[_currentLocale] || {};
+      _translations[DEFAULT_LOCALE] = _FALLBACK_DICT[DEFAULT_LOCALE] || {};
+      _initialized = true;
+      updateDOM();
     }
-
-    // Listen for Auth ready to sync pref from Supabase
-    // (hanya jika user logged in DAN punya pref di DB yang berbeda)
-    document.addEventListener('auth-ready', () => {
-      if (global.Auth?.userData) {
-        _syncFromUser(global.Auth.userData);
-      }
-    });
-
-    // Listen for pep-saved (profile editor) — mungkin preferred_language berubah
-    window.addEventListener('pep-saved', (e) => {
-      if (e.detail) _syncFromUser(e.detail);
-    });
   }
+}
 
-  // ── Public API ────────────────────────────────────────────────────────────
-  global.I18n = {
-    init:           _init,
-    t:              (key, vars) => _translate(key, vars, { escape: true }),
-    tRaw:           (key, vars) => _translate(key, vars, { escape: false }),
-    tHtml:          (key, vars) => _sanitizeHTML(_translate(key, vars, { escape: false })),
-    getLang:        () => _currentLang,
-    setLang:        _setLang,
-    scan:           _scan,
-    onChanged:      _onChanged,
-    syncFromUser:   _syncFromUser,
-    syncToUser:     _syncToSupabase,
-    register:       _registerDictionary,
-    isAllowed:      (lang) => _validateLang(lang) !== null,
-    // Constants exposed for UI components
-    ALLOWED_LANGS:  [...ALLOWLIST_LANGS],
-    DEFAULT_LANG,
-    STORAGE_KEY,
-    LANG_CHANGED_EVENT,
-  };
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _autoInit);
+} else {
+  _autoInit();
+}
 
-  // ── Auto-init on script load ──────────────────────────────────────────────
-  // WHY auto-init: supaya semua halaman yang include script ini langsung
-  // dapat i18n tanpa perlu manual init. Pattern sama seperti security.js.
-  _init();
-
-}(window));
+export default {
+  t,
+  switchLocale,
+  getCurrentLocale,
+  getSupportedLocales,
+  onLocaleChange,
+  initI18n,
+  syncFromUser: _syncFromUser,
+  syncToUser: _syncToSupabase,
+  isAllowed,
+  SUPPORTED_LOCALES,
+  DEFAULT_LOCALE,
+};

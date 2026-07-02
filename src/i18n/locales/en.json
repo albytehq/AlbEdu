@@ -6,7 +6,28 @@
     "question_bank": "Question Bank",
     "monitoring": "Monitoring",
     "profile": "Admin Profile",
-    "daftar_nama": "Name List"
+    "daftar_nama": "Name List",
+    "admin_panel": "Administrator Panel",
+    "admin_app": "AlbEdu Admin",
+    "admin_greeting": "Administrator Panel",
+    "admin_greeting_desc": "Select a page to visit",
+    "admin_status_bar": "AlbEdu Admin Panel",
+    "admin_notification_aria": "Exam violation notifications",
+    "admin_card_creates_kicker": "Admin workspace",
+    "admin_card_creates_title": "AlbEdu Creates",
+    "admin_card_creates_desc": "Create and manage learning content for the AlbEdu platform.",
+    "admin_card_creates_aria": "Open AlbEdu Creates",
+    "admin_card_ujian_title": "Exams Page",
+    "admin_card_ujian_desc": "Manage the online exam system and monitor participant exam results.",
+    "admin_card_ujian_aria": "Open Exams Page",
+    "greet_morning": "Good Morning, {{name}}!",
+    "greet_afternoon": "Good Afternoon, {{name}}!",
+    "greet_evening": "Good Evening, {{name}}!",
+    "greet_night": "Good Night, {{name}}!",
+    "role_admin": "Administrator",
+    "role_admin_alt": "AlbEdu Admin",
+    "profile_incomplete": "Profile incomplete",
+    "loading_profile": "Loading profile..."
   },
   "common": {
     "save": "Save",
@@ -29,7 +50,10 @@
     "copy": "Copy",
     "copied": "Copied",
     "reset": "Reset",
-    "export": "Export"
+    "export": "Export",
+    "skip_to_main": "Skip to main content",
+    "or": "or",
+    "year_copyright": "&copy; {{year}} AlbEdu. All rights reserved."
   },
   "create": {
     "page_title": "Create Assessment",
@@ -208,7 +232,13 @@
   },
   "language": {
     "label": "Language",
-    "switch": "Switch Language"
+    "switch": "Switch Language",
+    "id_native": "Indonesian",
+    "en_native": "English",
+    "id_short": "ID",
+    "en_short": "EN",
+    "current": "Current language: {{lang}}",
+    "menu_aria": "Select language"
   },
   "daftar_nama": {
     "page_title": "Name Lists",
@@ -398,6 +428,46 @@
     "consent_reject": "Decline",
     "consent_accept": "Accept",
     "consent_updated": "Privacy Policy has been updated (v{{old}} → v{{new}}). Please accept again.",
-    "consent_saving": "Saving..."
+    "consent_saving": "Saving...",
+    "profile_language": "Language",
+    "profile_language_sub": "Change display language",
+    "profile_language_id": "Indonesian",
+    "profile_language_en": "English",
+    "profile_language_current": "Current: {{lang}}",
+    "token_page_title": "Exam - AlbEdu",
+    "exam_title": "AlbEdu Exam",
+    "token_title": "Enter Exam Token",
+    "token_subtitle": "Enter the 5-digit token provided by your teacher",
+    "token_submit": "Enter Exam",
+    "token_back": "Back",
+    "profile_incomplete_badge": "Profile incomplete"
+  },
+  "profile": {
+    "desc": "Manage your administrator profile information",
+    "section_info": "Personal Information",
+    "field_uuid": "Admin UUID",
+    "field_last_login": "Last Login",
+    "btn_change_photo": "Change Photo",
+    "btn_change_photo_aria": "Change profile photo",
+    "role_badge": "Administrator"
+  },
+  "exam": {
+    "loading": "Preparing Exam...",
+    "error_title": "Failed to Load Exam",
+    "error_default": "An error occurred. Check your connection and try again.",
+    "closed_title": "Exam Not Open Yet",
+    "closed_desc": "This exam session has not been opened by the teacher. Please wait and try again later.",
+    "submitted_title": "Exam Already Submitted",
+    "submitted_desc": "You have already submitted this exam and cannot retake it. Contact your teacher if there is an error.",
+    "default_subject": "Exam",
+    "answered": "Answered",
+    "not_answered": "Not yet"
+  },
+  "error": {
+    "404_title": "404 Not Found | AlbEdu",
+    "404_message": "Oops. The page you're looking for was not found.",
+    "404_cta": "Back to Home",
+    "404_alt": "or try something else",
+    "404_face_title": "Click me!"
   }
 }

@@ -17,7 +17,7 @@ const ImageCleanup = (() => {
   // ── Config ────────────────────────────────────────────────
 
   const getWorkerBase = () =>
-    (window.ALBYTE_WORKER_URL || 'https://albedu.examjuniorhighschool.workers.dev/upload')
+    (window.ALBYTE_WORKER_URL || 'https://edu.albyte-inc.workers.dev/upload')
       .replace(/\/upload$/, '');
 
   const getLegacyBase = () =>

@@ -19,7 +19,7 @@
 
         if (key === 'enter') {
           // Only fire if wizard view is visible
-          const wizard = document.getElementById('bu-wizard-view');
+          const wizard = document.getElementById('wizard-view');
           if (!wizard || wizard.hidden) return;
           e.preventDefault();
           e.stopPropagation();
@@ -35,7 +35,7 @@
 
         if (key === 'n') {
           // Only fire if wizard view is on step 2 (soal)
-          const wizard = document.getElementById('bu-wizard-view');
+          const wizard = document.getElementById('wizard-view');
           if (!wizard || wizard.hidden) return;
           const currentStep = window.WizardController?._currentStep;
           if (currentStep !== 2) return;
@@ -50,13 +50,13 @@
     },
 
     _addQuestion() {
-      const state = window.BuatUjian.getState();
-      const sec = state.sections.find((s) => s.type_question);
+      const state = window.CreateAssessment.getState();
+      const sec = state.examData.sections.find((s) => s.type_question);
       if (!sec) {
         window.notify?.warning('Tambah bagian dulu', 'Buat bagian dan pilih tipe soal sebelum menambah soal', 3000);
         return;
       }
-      const sIdx = state.sections.indexOf(sec);
+      const sIdx = state.examData.sections.indexOf(sec);
       window.SoalEditorModal.open({ mode: 'new', sectionIndex: sIdx, questionType: sec.type_question });
     },
   };

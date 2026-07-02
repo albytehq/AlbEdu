@@ -39,7 +39,7 @@
 
 // Worker yang sama dengan upload/release — sekarang juga serve /api/supabase-config.
 // Ganti nilai ini jika Worker URL berubah (custom domain, staging, dll).
-const WORKER_BASE        = 'https://albedu.examjuniorhighschool.workers.dev';
+const WORKER_BASE        = 'https://edu.albyte-inc.workers.dev';
 const FETCH_RETRY_COUNT  = 3;
 const FETCH_RETRY_DELAY  = 1_500; // ms — base delay, doubled each attempt
 
@@ -353,9 +353,11 @@ function _buildAuthShim(sb) {
           return window.location.href;
         }
         // Derive BASE_PATH from current pathname (same logic as auth.js)
+        // v0.742.2: sync subfolder list with src/auth/main.js — added
+        // `/pages/` family so BASE_PATH is consistent everywhere.
         const p = window.location.pathname;
         const base = p.substring(0, p.lastIndexOf('/') + 1);
-        const subfolders = ['/admin/pages/', '/ujian/', '/admin/'];
+        const subfolders = ['/pages/admin/pages/', '/pages/assessment/', '/pages/admin/', '/pages/ujian/', '/pages/', '/admin/pages/', '/ujian/', '/admin/'];
         let basePath = base || '/';
         for (const sub of subfolders) {
           const idx = base.indexOf(sub);
@@ -397,16 +399,16 @@ function _buildAuthShim(sb) {
 // ── Firestore DB Shim ──────────────────────────────────────────
 //
 // Emulate Firestore chained query API:
-//   db.collection('ujian').doc('abc').get()
-//   db.collection('ujian').orderBy('createdAt', 'desc').onSnapshot(cb)
-//   db.collection('violations').where('token', '==', 'X').get()
+//   db.collection('assessments').doc('abc').get()
+//   db.collection('assessments').orderBy('created_at', 'desc').onSnapshot(cb)
+//   db.collection('violation_events').where('access_code', '==', 'X').get()
 //   db.runTransaction(fn)
 //   db.batch()
 //   db.FieldValue.serverTimestamp()
 //   db.FieldValue.arrayUnion(item)
 //
 // Di balik layar semua translate ke Supabase .from(table) query.
-// onSnapshot: violations pakai Supabase Realtime; tabel lain polling.
+// onSnapshot: violation_events pakai Supabase Realtime; tabel lain polling.
 function _buildDbShim(sb) {
   // Track active Realtime channels agar bisa unsubscribe
   const _channels = new Map();
@@ -992,7 +994,18 @@ function _buildDbShim(sb) {
         if (f.op === 'array-contains') {
           q = q.contains(col, [f.val]);
         } else if (op) {
-          q = q[op](col, f.val);
+          // v0.742.5 FIX: NULL comparisons must use .is() / .not.is(),
+          // NOT .eq() / .neq(). PostgREST translates .eq(col, null) to
+          // ?col=eq.null — the STRING "null", not SQL NULL — which causes
+          // HTTP 400 "invalid input syntax for type timestamp with time
+          // zone: 'null'" on timestamptz columns.
+          if (f.val === null) {
+            if (f.op === '==')      q = q.is(col, null);
+            else if (f.op === '!=') q = q.not.is(col, null);
+            else                    q = q[op](col, f.val); // <, <=, >, >= with null → no-op
+          } else {
+            q = q[op](col, f.val);
+          }
         }
       }
 
@@ -1037,6 +1050,19 @@ function _buildDbShim(sb) {
         const { data, error } = await _buildQuery();
         if (error) throw new Error(`[Supabase] ${table}.get: ${error.message}`);
         return _toQuerySnap(data, table, null);
+      },
+
+      // ── INSERT (v0.742.5) ───────────────────────────────────
+      // Firestore's collection.add(doc) ≈ Supabase's from(table).insert(doc).
+      // Returns a doc-ref-like object with .id + .get() for parity.
+      // Previously .add() was not implemented on the shim, so callers
+      // (e.g. consent.js v1.0.0) threw "db.collection(...).add is not a
+      // function". Now implemented as a thin wrapper.
+      async add(doc) {
+        const insertPayload = _translateKeys(doc);
+        const { data, error } = await sb.from(table).insert(insertPayload).select().single();
+        if (error) throw new Error(`[Supabase] ${table}.add: ${error.message}`);
+        return _docRef(table, data?.id ?? null);
       },
 
       // ── REALTIME / POLLING ────────────────────────────────────

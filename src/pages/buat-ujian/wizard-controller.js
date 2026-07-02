@@ -32,19 +32,19 @@
 
   const WizardController = {
     init() {
-      this._listView = document.getElementById('bu-list-view');
-      this._wizardView = document.getElementById('bu-wizard-view');
-      this._btnNewExam = document.getElementById('bu-btn-new-exam');
-      this._btnCancel = document.getElementById('bu-btn-cancel');
-      this._btnPrev = document.getElementById('bu-btn-prev');
-      this._btnNext = document.getElementById('bu-btn-next');
-      this._btnPublishFinal = document.getElementById('bu-btn-publish-final');
+      this._listView = document.getElementById('list-view');
+      this._wizardView = document.getElementById('wizard-view');
+      this._btnNewExam = document.getElementById('btn-new-assessment');
+      this._btnCancel = document.getElementById('btn-cancel');
+      this._btnPrev = document.getElementById('btn-prev');
+      this._btnNext = document.getElementById('btn-next');
+      this._btnPublishFinal = document.getElementById('btn-publish-final');
       this._stepContents = [
-        document.getElementById('bu-step-1'),
-        document.getElementById('bu-step-2'),
-        document.getElementById('bu-step-3'),
+        document.getElementById('step-1'),
+        document.getElementById('step-2'),
+        document.getElementById('step-3'),
       ];
-      this._stepIndicators = document.querySelectorAll('.bu-step');
+      this._stepIndicators = document.querySelectorAll('.albedu-step');
 
       if (!this._wizardView) {
         console.warn('[WizardController] wizard view element missing');
@@ -113,8 +113,8 @@
       // Update step indicator states
       this._stepIndicators.forEach((el) => {
         const s = parseInt(el.dataset.step, 10);
-        el.classList.toggle('bu-step-active', s === step);
-        el.classList.toggle('bu-step-complete', this._completedSteps.has(s) && s !== step);
+        el.classList.toggle('albedu-step-active', s === step);
+        el.classList.toggle('albedu-step-complete', this._completedSteps.has(s) && s !== step);
         // Clickable if completed and not current
         el.dataset.clickable = (this._completedSteps.has(s) && s !== step) ? 'true' : 'false';
         el.setAttribute('aria-selected', s === step ? 'true' : 'false');
@@ -127,14 +127,14 @@
 
       // Trigger publish card render when entering step 3
       if (step === 3) {
-        const state = window.BuatUjian?.getState?.();
+        const state = window.CreateAssessment?.getState?.();
         if (state) window.PublishCard?._render?.(state);
       }
 
       // Auto-generate token when entering step 3 (if not yet generated)
       if (step === 3) {
-        if (!window.BuatUjian?.getToken?.()) {
-          window.BuatUjian.generateToken();
+        if (!window.CreateAssessment?.getToken?.()) {
+          window.CreateAssessment.generateToken();
         }
       }
 
@@ -145,7 +145,7 @@
       if (this._currentStep >= TOTAL_STEPS) return;
 
       // Validate current step
-      const { valid, errors } = window.BuatUjian.validate();
+      const { valid, errors } = window.CreateAssessment.validate();
       if (!valid) {
         const stepErrors = this._filterErrorsForStep(errors, this._currentStep);
         if (stepErrors.length) {

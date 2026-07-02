@@ -163,7 +163,7 @@ pages/admin/index.html
 
 ### Exam Creation Flow (Admin)
 
-1. Admin buka `pages/admin/pages/buat-ujian.html`
+1. Admin buka `pages/admin/buat-ujian.html` (v0.742.0+: flat path)
 2. Klik "Buat Ujian Baru" → wizard modal muncul
 3. `src/wizard/controller.js` orchestrate 4-step wizard:
    - Step 1: Metadata (judul, mata pelajaran, kelas, mode, waktu)

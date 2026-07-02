@@ -6,7 +6,28 @@
     "question_bank": "Bank Soal",
     "monitoring": "Monitoring",
     "profile": "Profil Admin",
-    "daftar_nama": "Daftar Nama"
+    "daftar_nama": "Daftar Nama",
+    "admin_panel": "Panel Administrator",
+    "admin_app": "AlbEdu Admin",
+    "admin_greeting": "Panel Administrator",
+    "admin_greeting_desc": "Pilih halaman yang ingin Anda kunjungi",
+    "admin_status_bar": "AlbEdu Admin Panel",
+    "admin_notification_aria": "Notifikasi pelanggaran ujian",
+    "admin_card_creates_kicker": "Workspace admin",
+    "admin_card_creates_title": "AlbEdu Creates",
+    "admin_card_creates_desc": "Buat dan kelola konten pembelajaran untuk platform AlbEdu.",
+    "admin_card_creates_aria": "Buka AlbEdu Creates",
+    "admin_card_ujian_title": "Halaman Ujian",
+    "admin_card_ujian_desc": "Kelola sistem ujian online dan pantau hasil ujian peserta.",
+    "admin_card_ujian_aria": "Buka Halaman Ujian",
+    "greet_morning": "Selamat Pagi, {{name}}!",
+    "greet_afternoon": "Selamat Siang, {{name}}!",
+    "greet_evening": "Selamat Sore, {{name}}!",
+    "greet_night": "Selamat Malam, {{name}}!",
+    "role_admin": "Administrator",
+    "role_admin_alt": "Admin AlbEdu",
+    "profile_incomplete": "Profil belum lengkap",
+    "loading_profile": "Memuat profil..."
   },
   "common": {
     "save": "Simpan",
@@ -29,7 +50,10 @@
     "copy": "Salin",
     "copied": "Tersalin",
     "reset": "Reset",
-    "export": "Export"
+    "export": "Export",
+    "skip_to_main": "Langsung ke konten utama",
+    "or": "atau",
+    "year_copyright": "&copy; {{year}} AlbEdu. Hak cipta dilindungi."
   },
   "create": {
     "page_title": "Buat Asesmen",
@@ -208,7 +232,13 @@
   },
   "language": {
     "label": "Bahasa",
-    "switch": "Ganti Bahasa"
+    "switch": "Ganti Bahasa",
+    "id_native": "Bahasa Indonesia",
+    "en_native": "English",
+    "id_short": "ID",
+    "en_short": "EN",
+    "current": "Bahasa saat ini: {{lang}}",
+    "menu_aria": "Pilih bahasa"
   },
   "daftar_nama": {
     "page_title": "Daftar Nama",
@@ -398,6 +428,46 @@
     "consent_reject": "Tidak Setuju",
     "consent_accept": "Setuju",
     "consent_updated": "Kebijakan Privasi telah diperbarui (v{{old}} → v{{new}}). Mohon setujui kembali.",
-    "consent_saving": "Menyimpan..."
+    "consent_saving": "Menyimpan...",
+    "profile_language": "Bahasa",
+    "profile_language_sub": "Ganti bahasa tampilan",
+    "profile_language_id": "Bahasa Indonesia",
+    "profile_language_en": "English",
+    "profile_language_current": "Aktif: {{lang}}",
+    "token_page_title": "Ujian - AlbEdu",
+    "exam_title": "AlbEdu Exam",
+    "token_title": "Masukkan Token Ujian",
+    "token_subtitle": "Masukkan token, 5 digit yang diberikan oleh guru",
+    "token_submit": "Masuk Ujian",
+    "token_back": "Kembali",
+    "profile_incomplete_badge": "Profil belum lengkap"
+  },
+  "profile": {
+    "desc": "Kelola informasi profil administrator Anda",
+    "section_info": "Informasi Pribadi",
+    "field_uuid": "UUID Admin",
+    "field_last_login": "Terakhir Login",
+    "btn_change_photo": "Ganti Foto",
+    "btn_change_photo_aria": "Ganti foto profil",
+    "role_badge": "Administrator"
+  },
+  "exam": {
+    "loading": "Sedang Menyiapkan Ujian...",
+    "error_title": "Gagal Memuat Ujian",
+    "error_default": "Terjadi kesalahan. Periksa koneksi dan coba lagi.",
+    "closed_title": "Ujian Belum Dibuka",
+    "closed_desc": "Sesi ujian ini belum dibuka oleh pengajar. Silakan tunggu dan coba lagi nanti.",
+    "submitted_title": "Ujian Sudah Dikumpulkan",
+    "submitted_desc": "Kamu sudah mengumpulkan ujian ini sebelumnya dan tidak dapat mengerjakan ulang. Hubungi guru jika ada kesalahan.",
+    "default_subject": "Ujian",
+    "answered": "Dijawab",
+    "not_answered": "Belum"
+  },
+  "error": {
+    "404_title": "404 Tidak Ditemukan | AlbEdu",
+    "404_message": "Ups. Halaman yang kamu cari tidak ditemukan.",
+    "404_cta": "Kembali ke Beranda",
+    "404_alt": "atau coba cari yang lain",
+    "404_face_title": "Klik saya!"
   }
 }

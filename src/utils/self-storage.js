@@ -179,8 +179,12 @@ window.SelfStorage = (() => {
     if (!sb) return 0;
 
     try {
+      // v1.0.0: 'ujian' table was renamed to 'assessments' (snake_case schema).
+      // Filter on `created_by` (was `createdBy`) and status in {draft, active}
+      // — 'expired' was removed; archived assessments live in `archived` status now
+      // and don't count against the active limit.
       const { count, error } = await sb
-        .from('ujian')
+        .from('assessments')
         .select('*', { count: 'exact', head: true })
         .eq('created_by', adminId)
         .in('status', ['draft', 'active']);

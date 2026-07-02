@@ -1,12 +1,19 @@
 // =============================================================================
-// list-view.js — Exam list view for Buat Ujian page (v0.2.0)
+// list-view.js — Assessment list view for create-assessment page (v1.0.0)
 // =============================================================================
-// Default view when user opens buat-ujian.html. Shows existing exams owned
-// by the current admin, loaded from Supabase table `ujian`. Read-only — all
-// exam management (start/stop/delete) lives on ujian-peserta.html.
+// Default view when user opens create-assessment.html. Shows existing
+// assessments owned by the current admin, loaded from Supabase table
+// `assessments` (was `ujian` in v0.2.0). Read-only — all assessment
+// management (start/stop/delete) lives on ujian-peserta.html.
 //
-// Subscription via onSnapshot keeps the list live: when a new exam is
+// Subscription via onSnapshot keeps the list live: when a new assessment is
 // published from the wizard view, the list refreshes automatically.
+//
+// Field mappings (v0.2.0 → v1.0.0):
+//   ujian.judul            → assessments.title
+//   ujian.mata_pelajaran   → assessments.subject
+//   ujian.time             → assessments.duration_minutes
+//   ujian.kode_id          → assessments.access_code
 //
 // Loaded as classic <script defer>. Exposes window.ListView.
 // =============================================================================
@@ -16,11 +23,11 @@
 
   const ListView = {
     init() {
-      this._grid = document.getElementById('bu-exams-grid');
-      this._empty = document.getElementById('bu-empty-state');
+      this._grid = document.getElementById('assessments-grid');
+      this._empty = document.getElementById('empty-state');
 
       if (!this._grid) {
-        console.warn('[ListView] grid element missing — not on buat-ujian list view');
+        console.warn('[ListView] grid element missing — not on create-assessment list view');
         return;
       }
 
@@ -54,18 +61,18 @@
         if (!db || !user) return;
 
         // Initial fetch
-        const snap = await db.collection('ujian')
-          .where('createdBy', '==', user.uid)
-          .orderBy('createdAt', 'desc')
+        const snap = await db.collection('assessments')
+          .where('created_by', '==', user.uid)
+          .orderBy('created_at', 'desc')
           .limit(50)
           .get();
         const exams = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         this._render(exams);
 
         // Subscribe to changes (live update)
-        db.collection('ujian')
-          .where('createdBy', '==', user.uid)
-          .orderBy('createdAt', 'desc')
+        db.collection('assessments')
+          .where('created_by', '==', user.uid)
+          .orderBy('created_at', 'desc')
           .limit(50)
           .onSnapshot(
             (snap) => {
@@ -75,7 +82,7 @@
             (err) => console.warn('[ListView] snapshot error:', err)
           );
       } catch (err) {
-        console.warn('[ListView] failed to load exams:', err);
+        console.warn('[ListView] failed to load assessments:', err);
         // Show empty state on error
         this._render([]);
       }
@@ -92,25 +99,25 @@
       this._empty.hidden = true;
 
       this._grid.innerHTML = exams.map((e) => {
-        const u = e.ujian || {};
-        const judul = u.judul || e.judul || 'Tanpa Judul';
-        const mapel = u.mata_pelajaran || e.mata_pelajaran || '-';
-        const durasi = u.time || '0';
-        const token = u.kode_id || e.id;
-        const tanggal = this._formatDate(e.createdAt);
+        // v1.0.0 — fields are flat on the assessment doc (no nested `ujian` object)
+        const judul = e.title || 'Tanpa Judul';
+        const mapel = e.subject || '-';
+        const durasi = e.duration_minutes || 0;
+        const token = e.access_code || e.id;
+        const tanggal = this._formatDate(e.created_at || e.createdAt);
 
         return `
-          <article class="bu-exam-card">
-            <div class="bu-exam-card-header">
-              <h3 class="bu-exam-card-title">${this._esc(judul)}</h3>
-              <span class="bu-exam-card-token">#${this._esc(token)}</span>
+          <article class="albedu-exam-card">
+            <div class="albedu-exam-card-header">
+              <h3 class="albedu-exam-card-title">${this._esc(judul)}</h3>
+              <span class="albedu-exam-card-token">#${this._esc(token)}</span>
             </div>
-            <div class="bu-exam-card-meta">
+            <div class="albedu-exam-card-meta">
               <span><i class="material-symbols-outlined">book</i> ${this._esc(mapel)}</span>
               <span><i class="material-symbols-outlined">schedule</i> ${this._esc(durasi)}m</span>
               ${e.identity_mode ? `<span><i class="material-symbols-outlined">badge</i> ${e.identity_mode === 'daftar' ? 'Daftar' : 'Manual'}</span>` : ''}
             </div>
-            <div class="bu-exam-card-date">Dibuat: ${tanggal}</div>
+            <div class="albedu-exam-card-date">Dibuat: ${tanggal}</div>
           </article>
         `;
       }).join('');

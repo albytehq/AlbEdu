@@ -1973,3 +1973,49 @@ body::before {
                 transition-duration: 0.01ms !important;
             }
         }
+/* REMOVE pill morph — replace with clean status text */
+.google-login-btn.authenticating {
+    background: #f8fafc;
+    color: var(--text);
+    border: 2px solid var(--blue);
+    width: 100%;
+    margin: 0;
+    border-radius: 6px;
+    pointer-events: none;
+}
+
+/* SHOW text (not hide) — display status text */
+.google-login-btn.authenticating svg {
+    opacity: 0.3;
+    transition: .25s ease;
+}
+
+.google-login-btn.authenticating span {
+    opacity: 1;
+    transform: none;
+    transition: .25s ease;
+}
+
+/* Remove progress bar animation */
+.google-login-btn.authenticating::after {
+    display: none;
+}
+
+/* Spinner */
+.google-login-btn .btn-spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--blue);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: btnSpin 0.8s linear infinite;
+}
+
+.google-login-btn.authenticating .btn-spinner {
+    display: inline-block;
+}
+
+@keyframes btnSpin {
+    to { transform: rotate(360deg); }
+}

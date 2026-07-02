@@ -499,10 +499,9 @@
         }
       }
 
-      /* ── Language item + inline switcher panel ── */
-      /* v4.0: language item is a regular .op-item but with extra styling */
+      /* ── Language item + inline switcher panel (v2.0.0) ── */
       .op-item.op-language-item {
-        /* same as default */
+        /* same as default .op-item */
       }
       .op-item.op-language-expanded .op-item-chevron {
         transform: rotate(180deg);
@@ -586,7 +585,9 @@
         .op-item,
         .op-item-icon,
         .op-item-chevron,
-        .op-ripple {
+        .op-ripple,
+        .op-lang-panel,
+        .op-lang-pill {
           transition-duration: 0.01ms !important;
           animation-duration: 0.01ms !important;
           animation-iteration-count: 1 !important;
@@ -764,74 +765,6 @@
     setTimeout(() => ripple.remove(), 520);
   }
 
-  // ── i18n helper (safe wrapper) ───────────────────────────
-  // Returns translated string. Falls back to default text if I18n not loaded
-  // (e.g. during initial page load before i18n/index.js finishes).
-  function _t(key, vars, fallback) {
-    if (window.I18n && typeof window.I18n.t === 'function') {
-      return window.I18n.t(key, vars);
-    }
-    return fallback || key;
-  }
-
-  // ── Language switcher inline sub-panel ─────────────────────────
-  // Renders a compact horizontal row of language pills inside the dropdown.
-  // Clicking a pill switches language instantly (no reload) and updates
-  // the active state. Updates are propagated via I18n.onChanged event.
-  function _renderLangSwitcherInline() {
-    const currentLang = window.I18n?.getLang() || 'id';
-    const allowedLangs = window.I18n?.ALLOWED_LANGS || ['id', 'en'];
-    const langNames = { id: 'Bahasa Indonesia', en: 'English' };
-    const flags = { id: '🇮🇩', en: '🇬🇧' };
-
-    return `
-      <div class="op-lang-switcher" role="group" aria-label="${_esc(_t('lang.switch', null, 'Switch Language'))}">
-        ${allowedLangs.map((lang) => {
-          const isActive = lang === currentLang;
-          return `
-            <button type="button"
-                    class="op-lang-pill ${isActive ? 'op-lang-active' : ''}"
-                    data-lang="${_esc(lang)}"
-                    role="option"
-                    aria-selected="${isActive}"
-                    aria-pressed="${isActive}">
-              <span class="op-lang-flag" aria-hidden="true">${flags[lang] || ''}</span>
-              <span class="op-lang-name">${_esc(langNames[lang] || lang)}</span>
-              ${isActive ? '<i class="material-symbols-outlined op-lang-check" aria-hidden="true">check</i>' : ''}
-            </button>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  // ── Wire language switcher pill clicks ──────────────────────────
-  // Called after _populate() to attach click handlers to .op-lang-pill.
-  // Switches language via I18n.setLang (which handles DOM rescan + event
-  // dispatch + Supabase sync).
-  function _wireLangSwitcher() {
-    if (!_dropdown) return;
-    _dropdown.querySelectorAll('.op-lang-pill').forEach((pill) => {
-      pill.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const lang = pill.getAttribute('data-lang');
-        if (!lang || !window.I18n) return;
-
-        // Visual feedback: blur immediately to avoid stuck hover
-        pill.blur();
-
-        // Switch language (instant, no reload)
-        await window.I18n.setLang(lang);
-
-        // Re-populate dropdown to reflect new language in labels + active state
-        // The _populate() will re-render the entire dropdown including the
-        // lang switcher with updated active state.
-        _populate();
-        _position(false);
-      });
-    });
-  }
-
   // ── Populate dropdown content ─────────────────────────────
   function _populate() {
     // Invalidate height cache — content may have changed
@@ -839,28 +772,29 @@
 
     const user = window.Auth?.userData || {};
 
-    const name       = user.nama || user.displayName || _t('common.loading', null, 'Pengguna');
+    const name       = user.nama || user.displayName || 'Pengguna';
     const email      = user.email || '';
     const avatarUrl  = user.foto_profil || user.fotoProfil || '';
     const role       = user.peran || 'peserta';
     const isAdmin    = role === 'admin';
     const incomplete = user.profilLengkap === false || user.profil_lengkap === false;
-    const roleLabel  = isAdmin ? _t('op.role.admin', null, 'Administrator') : _t('op.role.peserta', null, 'Peserta');
+    const roleLabel  = isAdmin ? (window.i18n?.t?.('nav.role_admin') || 'Administrator') : (window.i18n?.t?.('peserta.role') || 'Peserta');
     const roleClass  = isAdmin ? 'op-role-admin' : 'op-role-peserta';
     const roleIcon   = isAdmin ? 'shield' : 'school';
 
     const avatarSrc = _safeUrl(avatarUrl) || _initialsAvatar(name || email);
 
     // Build menu items array for stagger calculation
-    // Items now use i18n keys instead of hardcoded Indonesian strings.
-    // Fallbacks ensure dropdown still works if I18n module not yet loaded.
+    // v2.0.0: use i18n for ALL menu titles/subtitles (was partial in v0.742.9)
+    // v2.0.0: tambah item 'language' dengan inline mini-switcher
+    const ti18n = (k, fallback) => window.i18n?.t?.(k) || fallback;
     const items = [
       {
         op: 'edit-profile',
         iconClass: 'op-icon-blue',
         icon: 'person_edit',
-        title: _t('op.item.edit_profile', null, 'Edit Profil'),
-        subtitle: _t('op.item.edit_profile_sub', null, 'Ubah nama dan foto profil'),
+        title: ti18n('peserta.profile_edit', 'Edit Profil'),
+        subtitle: ti18n('peserta.profile_edit_sub', 'Ubah nama dan foto profil'),
         danger: false,
       },
     ];
@@ -870,23 +804,24 @@
         op: 'admin-panel',
         iconClass: 'op-icon-amber',
         icon: 'view_column',
-        title: _t('op.item.admin_panel', null, 'Panel Admin'),
-        subtitle: _t('op.item.admin_panel_sub', null, 'Kembali ke dashboard'),
+        title: ti18n('peserta.profile_admin_panel', 'Panel Admin'),
+        subtitle: ti18n('peserta.profile_admin_panel_sub', 'Kembali ke dashboard'),
         danger: false,
       });
     }
 
-    // Language item — special: clicking it expands the inline switcher
-    // instead of navigating. We mark it with op='language' so _handleAction
+    // v2.0.0: Language item — special: clicking it expands inline switcher
+    // instead of navigating. Marked with op='language' so _handleAction
     // can detect it and toggle the inline panel.
-    const currentLang = window.I18n?.getLang() || 'id';
-    const langNames = { id: 'Bahasa Indonesia', en: 'English' };
+    const currentLocale = window.i18n?.getCurrentLocale?.() || 'id';
+    const langNames = { id: ti18n('language.id_native', 'Bahasa Indonesia'), en: ti18n('language.en_native', 'English') };
+    const currentLangName = langNames[currentLocale] || currentLocale;
     items.push({
       op: 'language',
       iconClass: 'op-icon-green',
       icon: 'language',
-      title: _t('op.item.language', null, 'Bahasa'),
-      subtitle: _t('op.item.language_sub_dynamic', { lang: langNames[currentLang] || currentLang }, langNames[currentLang] || 'Bahasa Indonesia'),
+      title: ti18n('peserta.profile_language', 'Bahasa'),
+      subtitle: ti18n('peserta.profile_language_current', { lang: currentLangName }, currentLangName),
       danger: false,
       isLanguage: true,
     });
@@ -895,8 +830,8 @@
       op: 'logout',
       iconClass: 'op-icon-red',
       icon: 'logout',
-      title: _t('op.item.logout', null, 'Keluar'),
-      subtitle: _t('op.item.logout_sub', null, 'Logout dari akun'),
+      title: ti18n('peserta.profile_logout', 'Keluar'),
+      subtitle: ti18n('peserta.profile_logout_sub', 'Logout dari akun'),
       danger: true,
     });
 
@@ -904,7 +839,7 @@
     const itemsHtml = items.map((item, i) => {
       const delay = STAGGER_BASE_MS + (i * STAGGER_DELAY_MS);
       const sepBefore = (i > 0 && items[i].op === 'logout') ? '<div class="op-sep" style="margin:4px 12px;"></div>' : '';
-      // Language item: add chevron-down (expand indicator) instead of right chevron
+      // Language item: use expand_more chevron (rotates on expand)
       const chevronIcon = item.isLanguage ? 'expand_more' : 'chevron_right';
       return `
         ${sepBefore}
@@ -929,7 +864,7 @@
     _dropdown.innerHTML = `
       <div class="op-header">
         <div class="op-avatar">
-          <img src="${_esc(avatarSrc)}" alt="${_esc(_t('op.avatar_alt', { name }, 'Avatar ' + name))}" data-op-avatar>
+          <img src="${_esc(avatarSrc)}" alt="Avatar ${_esc(name)}" data-op-avatar>
         </div>
         <div class="op-user-info">
           <div class="op-user-name">${_esc(name)}</div>
@@ -938,7 +873,7 @@
             <span class="op-role-chip ${roleClass}">
               <i class="material-symbols-outlined">${roleIcon}</i> ${_esc(roleLabel)}
             </span>
-            ${incomplete ? `<span class="op-incomplete-chip"><i class="material-symbols-outlined">error</i> ${_esc(_t('op.incomplete', null, 'Belum lengkap'))}</span>` : ''}
+            ${incomplete ? `<span class="op-incomplete-chip"><i class="material-symbols-outlined">error</i> ${_esc(ti18n('nav.profile_incomplete', 'Belum lengkap'))}</span>` : ''}
           </div>
         </div>
       </div>
@@ -949,7 +884,7 @@
         ${itemsHtml}
       </div>
 
-      <div class="op-footer">${_esc(_t('op.version', null, 'AlbEdu v0.8.0'))}</div>
+      <div class="op-footer">AlbEdu v0.8.0</div>
     `;
 
     // Attach onerror via event listener (CSP-friendly)
@@ -996,9 +931,92 @@
     });
   }
 
+  // ── Language switcher inline sub-panel ───────────────────────────
+  // Renders a compact vertical list of language pills inside the dropdown.
+  // Clicking a pill switches language instantly (no reload) via window.i18n.
+  // Updates are propagated via 'locale-changed' event from i18n module.
+  function _renderLangSwitcherInline() {
+    const currentLocale = window.i18n?.getCurrentLocale?.() || 'id';
+    const supported = window.i18n?.getSupportedLocales?.() || { id: {}, en: {} };
+    const flags = { id: '🇮🇩', en: '🇬🇧' };
+    const label = window.i18n?.t?.('language.menu_aria') || 'Select language';
+
+    return `
+      <div class="op-lang-switcher" role="group" aria-label="${_esc(label)}">
+        ${Object.keys(supported).map((locale) => {
+          const isActive = locale === currentLocale;
+          const name = supported[locale].native || locale;
+          return `
+            <button type="button"
+                    class="op-lang-pill ${isActive ? 'op-lang-active' : ''}"
+                    data-locale="${_esc(locale)}"
+                    role="option"
+                    aria-selected="${isActive}"
+                    aria-pressed="${isActive}">
+              <span class="op-lang-flag" aria-hidden="true">${flags[locale] || '🌐'}</span>
+              <span class="op-lang-name">${_esc(name)}</span>
+              ${isActive ? '<i class="material-symbols-outlined op-lang-check" aria-hidden="true">check</i>' : ''}
+            </button>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // ── Wire language switcher pill clicks ────────────────────────────
+  // Switches language via window.i18n.switchLocale (which handles DOM
+  // rescan + event dispatch + Supabase sync).
+  function _wireLangSwitcher() {
+    if (!_dropdown) return;
+    _dropdown.querySelectorAll('.op-lang-pill').forEach((pill) => {
+      pill.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const locale = pill.getAttribute('data-locale');
+        if (!locale || !window.i18n?.switchLocale) return;
+
+        // Visual feedback: blur immediately to avoid stuck hover
+        pill.blur();
+
+        // Switch locale (instant, no reload)
+        await window.i18n.switchLocale(locale);
+
+        // Re-populate dropdown to reflect new language in labels + active state
+        _populate();
+        _position(false);
+      });
+    });
+  }
+
+  // ── Toggle inline language panel ────────────────────────────
+  // Shows/hides the .op-lang-panel below the language item.
+  // Rotates the chevron icon to indicate expand/collapse state.
+  // Repositions the dropdown since height changed.
+  function _toggleLanguagePanel(langBtn) {
+    if (!langBtn) return;
+    const panelEl = langBtn.closest('.op-menu')?.querySelector('[data-op-lang-panel]');
+    if (!panelEl) return;
+
+    const isHidden = panelEl.hasAttribute('hidden');
+    if (isHidden) {
+      panelEl.removeAttribute('hidden');
+      langBtn.classList.add('op-language-expanded');
+      const chevron = langBtn.querySelector('.op-item-chevron');
+      if (chevron) chevron.textContent = 'expand_less';
+    } else {
+      panelEl.setAttribute('hidden', '');
+      langBtn.classList.remove('op-language-expanded');
+      const chevron = langBtn.querySelector('.op-item-chevron');
+      if (chevron) chevron.textContent = 'expand_more';
+    }
+
+    // Invalidate height cache + reposition (height changed)
+    _cachedHeight = null;
+    _position(false);
+  }
+
   // ── _handleAction (async — awaits close before executing action) ──
   //
-  // v4.0 NEW: 'language' action does NOT close the dropdown. Instead it
+  // v2.0.0 NEW: 'language' action does NOT close the dropdown. Instead it
   // toggles the inline language switcher panel (visible right below the
   // language item). This keeps the dropdown open so the user can pick
   // a language without losing context.
@@ -1033,37 +1051,6 @@
         }
         break;
     }
-  }
-
-  // ── Toggle inline language panel ──────────────────────────
-  // Shows/hides the .op-lang-panel sibling of the language item.
-  // Rotates the chevron icon to indicate expand/collapse state.
-  // Repositions the dropdown since height changed.
-  function _toggleLanguagePanel(langBtn) {
-    if (!langBtn) return;
-    const panel = langBtn.nextElementSibling?.querySelector?.('.op-lang-switcher')
-                || langBtn.parentElement?.querySelector('[data-op-lang-panel]');
-    // Find the panel that is a sibling of this button
-    const panelEl = langBtn.closest('.op-menu')?.querySelector('[data-op-lang-panel]');
-    if (!panelEl) return;
-
-    const isHidden = panelEl.hasAttribute('hidden');
-    if (isHidden) {
-      panelEl.removeAttribute('hidden');
-      langBtn.classList.add('op-language-expanded');
-      // Rotate chevron 180deg (icon changes from expand_more to expand_less via CSS)
-      const chevron = langBtn.querySelector('.op-item-chevron');
-      if (chevron) chevron.textContent = 'expand_less';
-    } else {
-      panelEl.setAttribute('hidden', '');
-      langBtn.classList.remove('op-language-expanded');
-      const chevron = langBtn.querySelector('.op-item-chevron');
-      if (chevron) chevron.textContent = 'expand_more';
-    }
-
-    // Invalidate height cache + reposition (height changed)
-    _cachedHeight = null;
-    _position(false);
   }
 
   // ── Profile editor ─────────────────────────────────────────
@@ -1135,7 +1122,10 @@
   // ── Navigate ───────────────────────────────────────────────
   function _navigateToAdmin() {
     const basePath = window.Auth?.getBasePath?.() || '/';
-    const target = basePath + 'admin/index.html';
+    // v0.742.3 FIX: admin panel lives at /pages/admin/index.html, not
+    // /admin/index.html. Old code used the pre-v0.741.5 path structure,
+    // so clicking "Panel Admin" in the option-profile dropdown 404'd.
+    const target = basePath + 'pages/admin/index.html';
     window.location.replace(target);
   }
 
@@ -1605,6 +1595,13 @@
       window.addEventListener('op-profile-updated', (e) => {
         if (e.detail && window.Auth) window.Auth.userData = e.detail;
         update();
+      });
+
+      // v2.0.0: Listen for locale changes from i18n module.
+      // Re-render dropdown content if open, so menu items + role labels +
+      // language item subtitle update to the new locale instantly.
+      document.addEventListener('locale-changed', () => {
+        if (_isOpen) update();
       });
 
       _initialized = true;

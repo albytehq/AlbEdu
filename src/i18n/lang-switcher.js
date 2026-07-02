@@ -1,9 +1,10 @@
 // =============================================================================
-// lang-switcher.js — Universal language switcher bootstrap (v0.742.9)
+// lang-switcher.js — Universal language switcher bootstrap (v2.0.0)
 // =============================================================================
-// Auto-wires any `.albedu-lang-switcher` element on the page to the i18n
-// system. Works on landing, admin pages, peserta pages, auth pages —
-// anywhere the i18n module is loaded and a lang-switcher element exists.
+//  v2.0.0: Trim to ID+EN only (was 5 langs in v1.0.0).
+//  Auto-wires any `.albedu-lang-switcher` element on the page to the i18n
+//  system. Works on landing, admin pages, peserta pages, auth pages —
+//  anywhere the i18n module is loaded and a lang-switcher element exists.
 //
 // Behavior:
 //   1. Click switcher → toggle dropdown visibility.
@@ -19,20 +20,16 @@
 (function () {
   'use strict';
 
+  // v2.0.0: Trimmed to ID+EN only (was 5 langs).
+  // Pulled dynamically from i18n module so we stay in sync with allowlist.
   const FLAG_MAP = {
     id: '🇮🇩',
     en: '🇬🇧',
-    ru: '🇷🇺',
-    es: '🇪🇸',
-    zh: '🇨🇳',
   };
 
   const NAME_MAP = {
     id: 'ID',
     en: 'EN',
-    ru: 'RU',
-    es: 'ES',
-    zh: 'ZH',
   };
 
   let _wired = false;

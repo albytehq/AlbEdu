@@ -103,15 +103,27 @@
   }
 
   // ── Firestore snapshot → state ─────────────────────────────────────────────
+  // v1.0.0 SCHEMA: each doc in `violation_events` is a SINGLE event
+  // (not an embedded array). One doc → one notification. The old
+  // `_docState` per-doc event-count tracking is no longer needed.
+  //
+  // Field map (new → notification):
+  //   event_type  → type (mapped: keyboard_violation → 'violation')
+  //   severity    → bumps type to 'max_violation' when severity === 'critical'
+  //   message     → message
+  //   user_name   → userName
+  //   exam_title  → examTitle
+  //   warning_num → warningNum
+  //   created_at  → ts (ISO string)
   function _handleSnapshot(snapshot) {
     let changed = false;
 
     snapshot.docChanges().forEach(change => {
-      const docSnap    = change.doc;
-      const data       = docSnap.data();
-      const docId      = docSnap.id;
+      const docSnap = change.doc;
+      const data    = docSnap.data() || {};
+      const docId   = docSnap.id;
 
-      // Doc dihapus (dari dismiss/clear all) → buang semua notif dari doc ini
+      // Doc dihapus (dari dismiss/clear all) → buang notif dari doc ini
       if (change.type === 'removed') {
         const before = _notifications.length;
         _notifications = _notifications.filter(n => n.docId !== docId);
@@ -120,67 +132,41 @@
         return;
       }
 
-      // Doc baru atau diupdate
-      const prev        = _docState.get(docId) || { eventCount: 0, status: null };
-      const events      = data.violationEvents || [];
-      const newStatus   = data.status || 'active';
-      const userName = data.userName || data.userKey || 'Peserta';
-      const examTitle   = data.examTitle   || data.token   || 'Ujian';
+      // Skip if we already have a notification for this doc id
+      // (modification events just re-flatten the same data).
+      const notifId = _makeId(docId, 'evt_0');
+      if (_notifications.some(n => n.id === notifId)) {
+        _docState.set(docId, { eventCount: 1, status: null });
+        return;
+      }
 
-      // Flatten violationEvents baru
-      const newEvents = events.slice(prev.eventCount);
-      newEvents.forEach((evt, i) => {
-        const idx     = prev.eventCount + i;
-        const notifId = _makeId(docId, `evt_${idx}`);
-        if (_notifications.some(n => n.id === notifId)) return;
-        _notifications.push({
-          id:          notifId,
-          docId,
-          type:        'violation',
-          userName: evt.userName || userName,
-          examTitle:   evt.examTitle   || examTitle,
-          message:     evt.message     || 'Pelanggaran terdeteksi',
-          warningNum:  evt.warningNum  || (idx + 1),
-          maxWarnings: 4,
-          ts:          evt.ts || new Date().toISOString(),
-          read:        false,
-        });
-        changed = true;
+      const userName   = data.user_name   || data.user_id   || 'Peserta';
+      const examTitle  = data.exam_title  || data.access_code || 'Ujian';
+      const severity   = data.severity    || 'warning';
+      // data.event_type (e.g. 'keyboard_violation', 'tab_switch') is available
+      // for future per-type rendering; currently all events render as 'violation'.
+      const ts         = (data.created_at instanceof Date)
+        ? data.created_at.toISOString()
+        : (typeof data.created_at === 'string' ? data.created_at : new Date().toISOString());
+
+      // severity=critical → render as max_violation (red chip + dangerous icon)
+      // otherwise → plain violation warning chip
+      const type = severity === 'critical' ? 'max_violation' : 'violation';
+
+      _notifications.push({
+        id:          notifId,
+        docId,
+        type,
+        userName,
+        examTitle,
+        message:     data.message || 'Pelanggaran terdeteksi',
+        warningNum:  data.warning_num || null,
+        maxWarnings: 4,
+        ts,
+        read:        false,
       });
-
-      // Status → submitted
-      if (newStatus === 'submitted' && prev.status !== 'submitted') {
-        const notifId = _makeId(docId, 'submitted');
-        if (!_notifications.some(n => n.id === notifId)) {
-          _notifications.push({
-            id: notifId, docId,
-            type: 'submitted', userName, examTitle,
-            message: 'Peserta telah mengumpulkan ujian',
-            warningNum: null, maxWarnings: null,
-            ts: data.updatedAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
-            read: false,
-          });
-          changed = true;
-        }
-      }
-
-      // Status → violation (batas max)
-      if (newStatus === 'violation' && prev.status !== 'violation') {
-        const notifId = _makeId(docId, 'maxviolation');
-        if (!_notifications.some(n => n.id === notifId)) {
-          _notifications.push({
-            id: notifId, docId,
-            type: 'max_violation', userName, examTitle,
-            message: 'Mencapai batas pelanggaran! Ujian direset dan diacak ulang.',
-            warningNum: data.violationCount || 4, maxWarnings: 4,
-            ts: data.updatedAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
-            read: false,
-          });
-          changed = true;
-        }
-      }
-
-      _docState.set(docId, { eventCount: events.length, status: newStatus });
+      _docState.set(docId, { eventCount: 1, status: null });
+      changed = true;
     });
 
     // Cap
@@ -207,17 +193,19 @@
   }
 
   // ── Firestore subscription ─────────────────────────────────────────────────
+  // v1.0.0: subscribe to `violation_events` (was `violations`). Each doc is
+  // one event; we order by `created_at` desc (was `updatedAt`).
   function _subscribeToViolations() {
     if (!_db) return;
     if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
     try {
       _unsubscribe = _db
-        .collection('violations')
-        .orderBy('updatedAt', 'desc') // shim _toSnakeCase() translate ke updated_at
+        .collection('violation_events')
+        .orderBy('created_at', 'desc')
         .limit(300)
         .onSnapshot(_handleSnapshot, (err) => {
           const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-          if (isDev) console.warn('[ANC] violations onSnapshot error:', err?.message || err);
+          if (isDev) console.warn('[ANC] violation_events onSnapshot error:', err?.message || err);
         });
     } catch (err) {
       const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -244,8 +232,9 @@
     if (_isPanelOpen) _renderPanelContent();
 
     // Delete doc Firestore → onSnapshot akan konfirmasi removal
+    // v1.0.0: delete from `violation_events` (was `violations`).
     try {
-      await _db.collection('violations').doc(notif.docId).delete();
+      await _db.collection('violation_events').doc(notif.docId).delete();
     } catch (err) {
       console.warn('[ANC] deleteDoc gagal:', err);
     }
@@ -276,12 +265,13 @@
     if (_isPanelOpen) _renderPanelContent();
 
     // Batch delete Firestore (max 500 per batch)
+    // v1.0.0: delete from `violation_events` (was `violations`).
     if (docIds.length > 0 && _db) {
       try {
         for (let i = 0; i < docIds.length; i += 500) {
           const chunk = docIds.slice(i, i + 500);
           const batch = _db.batch();
-          chunk.forEach(id => batch.delete(_db.collection('violations').doc(id)));
+          chunk.forEach(id => batch.delete(_db.collection('violation_events').doc(id)));
           await batch.commit();
         }
       } catch (err) {
