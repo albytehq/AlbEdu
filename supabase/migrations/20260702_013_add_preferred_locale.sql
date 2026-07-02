@@ -35,8 +35,16 @@
 
 -- ── 1. Tambah kolom preferred_locale ───────────────────────────────────────
 -- DEFAULT 'id' supaya user lama (yang belum pernah set bahasa) dapat Indonesian.
+-- CHECK constraint di-add terpisah (lebih aman + idempotent untuk re-run).
 ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS preferred_locale TEXT DEFAULT 'id'
+    ADD COLUMN IF NOT EXISTS preferred_locale TEXT DEFAULT 'id';
+
+-- Hapus CHECK constraint lama kalau ada (idempotent), lalu tambah yang baru
+ALTER TABLE users
+    DROP CONSTRAINT IF EXISTS users_preferred_locale_check;
+
+ALTER TABLE users
+    ADD CONSTRAINT users_preferred_locale_check
     CHECK (preferred_locale IN ('id', 'en'));
 
 -- ── 2. Index untuk performa (opsional, untuk analytics query) ──────────────
@@ -67,12 +75,18 @@ CREATE POLICY "Users update own preferred_locale"
     USING (id = auth.uid())
     WITH CHECK (id = auth.uid());
 
--- ── 4. Comment untuk dokumentasi ─────────────────────────────────────────────
-COMMENT ON COLUMN users.preferred_locale IS
-    'User language preference for AlbEdu i18n v2.0. Allowed: id, en. Default: id. Only the user themselves can update this column (RLS policy).';
-
-COMMENT ON POLICY "Users update own preferred_locale" IS
-    'Allows authenticated users to update ONLY their own preferred_locale column. Other columns are protected by separate GRANT/policy.';
+-- ── 4. Dokumentasi (SQL comments — compatible dengan semua versi PG/Supabase) ─
+-- Kolom users.preferred_locale:
+--   User language preference for AlbEdu i18n v2.0.
+--   Allowed values: 'id' (default), 'en'.
+--   Only the user themselves can update this column (RLS policy
+--   "Users update own preferred_locale").
+--
+-- Policy "Users update own preferred_locale":
+--   Allows authenticated users to update ONLY their own preferred_locale
+--   column. Other columns are protected by separate GRANT/policy
+--   (GRANT UPDATE hanya pada kolom preferred_locale, kolom lain
+--   seperti peran/email/nama di-protect via GRANT column-level).
 
 -- =============================================================================
 -- VERIFIKASI (jalankan setelah migration):
