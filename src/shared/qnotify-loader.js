@@ -5,34 +5,19 @@
 // install legacy compatibility shims (window.QNotify, window.show, window.notify),
 // and dispatch 'qnotify-ready' event exactly once.
 //
-// This REPLACES the 10 per-page inline <script type="module"> bootstraps
-// that previously existed on admin/assessment pages. Those had non-deterministic
-// timing (some dispatched qnotify-ready on DOMContentLoaded, some immediately).
+// This file MUST be loaded as <script type="module"> because it uses
+// dynamic import() to load QNotify's ES module entry point.
 //
 // Usage in HTML (canonical head, after boot.js):
-//   <script defer src="../../src/shared/qnotify-loader.js"></script>
+//   <script type="module" src="../../src/shared/qnotify-loader.js"></script>
 //
-// The loader uses dynamic import() which:
-//   - Is non-blocking (doesn't block HTML parse)
-//   - Loads QNotify asynchronously (parallel with other resources)
-//   - Resolves deterministically (no timing races)
-//
-// Consumers can either:
-//   1. Listen for 'qnotify-ready' event (legacy pattern, still works)
-//   2. Check window.QNotify synchronously (available after load)
-//   3. Use window.notify.* / window.show.* (legacy aliases, auto-installed)
-//
-// The QNotify CSS files (notify.css, dialog.css, label.css, Readnote.css)
-// are STILL loaded via <link> tags in <head> for now (Phase A focuses on
-// JS boot determinism only). Phase C will consolidate CSS loading.
 // =============================================================================
 
-(function () {
-  'use strict';
-
-  // Prevent double-load (idempotent)
-  if (window.__qnotifyLoaderStarted) return;
-  window.__qnotifyLoaderStarted = true;
+// Use export-scope (this is a module, not IIFE)
+if (window.__qnotifyLoaderStarted) {
+  // Already loaded — skip
+} else {
+window.__qnotifyLoaderStarted = true;
 
   // Compute the relative path to public/QNotify/api/index.js
   // based on the current page's location.
@@ -114,11 +99,10 @@
     })
     .catch(function (err) {
       console.error('[qnotify-loader] Failed to load QNotify:', err);
-      // Dispatch a 'qnotify-error' event so consumers can handle the failure
       try {
         window.dispatchEvent(new CustomEvent('qnotify-error', {
           detail: { error: err.message || 'QNotify load failed' }
         }));
       } catch (_) { /* silent */ }
     });
-})();
+} // end if (!__qnotifyLoaderStarted)

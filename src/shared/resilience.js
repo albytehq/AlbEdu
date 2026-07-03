@@ -26,11 +26,10 @@
 //   else { console.error(result.error); }
 // =============================================================================
 
-// Actly is ESM-only — we need to import it dynamically since AlbEdu uses
-// classic scripts (not ES modules) for most files.
-// This file is loaded as <script type="module"> so import works.
+// Actly is loaded from public/lib/actly/ (bundled dist).
+// Browser cannot resolve bare module specifiers like "actly" — must use relative path.
 
-import { act, sanitizeErrorMessage } from 'actly';
+import { act, sanitizeErrorMessage } from '../../public/lib/actly/index.js';
 
 // ── Policy Presets ──────────────────────────────────────────────────────
 

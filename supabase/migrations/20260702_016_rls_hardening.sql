@@ -74,15 +74,15 @@ CREATE POLICY "sessions_peserta_update_own_safe_fields"
 -- Old policy: peserta could INSERT violation_events with ANY user_id.
 -- New policy: user_id MUST match auth.uid().
 
-CREATE OR REPLACE POLICY "violations_peserta_insert_own"
+DROP POLICY IF EXISTS "violations_peserta_insert" ON public.violation_events;
+DROP POLICY IF EXISTS "violations_peserta_insert_own" ON public.violation_events;
+
+CREATE POLICY "violations_peserta_insert_own"
   ON public.violation_events FOR INSERT TO authenticated
   WITH CHECK (
     peran_user() = 'peserta'
     AND user_id = auth.uid()
   );
-
--- Drop the old permissive policy if it exists
-DROP POLICY IF EXISTS "violations_peserta_insert" ON public.violation_events;
 
 -- ── Fix 3: Explicit DENY on assessment_sessions DELETE for peserta ────
 -- (Admins can delete via service role key only — no RLS DELETE policy.)
