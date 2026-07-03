@@ -24,6 +24,7 @@
     <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
     <script defer src="../src/shared/head/fonts.js"></script>
     <script defer src="../src/shared/icons/icons.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script defer src="../src/platform/supabase-client.js"></script>
     <script type="module" src="../src/shared/resilience.js"></script>
     <script defer src="../src/platform/repository.js"></script>
@@ -43,11 +44,8 @@
     <link rel="stylesheet" href="../styles/login.css">
 
     <!-- ═══ Async third-party (Turnstile + Supabase SDK) — non-blocking ═══ -->
-    <script async src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>
-    <script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
-    <!-- ═══ i18n ═══ -->
-    <script defer src="../src/i18n/index.js"></script>
+    <script async src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script><!-- ═══ i18n ═══ -->
+    <script type="module" src="../src/i18n/index.js"></script>
     <script defer src="../src/i18n/lang-switcher.js"></script>
 </head>
 
