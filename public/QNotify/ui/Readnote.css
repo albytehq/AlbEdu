@@ -61,7 +61,12 @@
 .mobile-mode .qnotify-label.label-readnote.notification-item.active,
 .desktop-mode .qnotify-label.label-readnote.notification-item.active {
     opacity: 1      !important;
-    z-index: 10010  !important;
+    /* [v2.0 Anti-Glitch Hardening #5] Raised from 10010 to 10050
+     * Ensures ReadNote is NEVER covered by AlbEdu panels, admin sidebar,
+     * notification center, or any other UI element. AlbEdu panels typically
+     * use z-index in the 9000-9999 range; QNotify container is 10000;
+     * QNotify dialog is 10002. ReadNote at 10050 is above everything. */
+    z-index: 10050  !important;
 }
 
 

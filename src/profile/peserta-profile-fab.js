@@ -64,7 +64,7 @@
     btn.setAttribute('aria-expanded', 'false');
     btn.innerHTML = `
       <span class="albedu-profile-fab__avatar">
-        <i class="material-symbols-outlined">person</i>
+        <span data-albedu-icon="person"></span>
       </span>
     `;
     document.body.appendChild(btn);

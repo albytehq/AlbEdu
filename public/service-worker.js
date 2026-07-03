@@ -14,12 +14,13 @@
 //   7. Cache size → evict oldest entries if > 100 entries
 // =============================================================================
 
-const CACHE_VERSION = 'albedu-v0.742.9';
+const CACHE_VERSION = 'albedu-v2-hardened';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const MAX_CACHE_ENTRIES = 100;
 
 // Assets to precache on install
+// [v2.0 Hardening] Added critical shared modules + QNotify CSS + resilience
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -33,6 +34,18 @@ const PRECACHE_URLS = [
   '/public/images/favicon/favicon.ico',
   '/public/images/favicon/favicon-96x96.png',
   '/public/images/logo.svg',
+  '/src/shared/head/critical-css.js',
+  '/src/shared/head/fonts.js',
+  '/src/shared/icons/icons.js',
+  '/src/shared/boot.js',
+  '/src/shared/qnotify-loader.js',
+  '/src/shared/error-boundary.js',
+  '/src/shared/race-condition.js',
+  '/src/shared/observability.js',
+  '/src/platform/supabase-client.js',
+  '/src/platform/repository.js',
+  '/src/security/sanitize.js',
+  '/public/QNotify/ui/qnotify.css',
 ];
 
 // Patterns for stale-while-revalidate (static assets)
@@ -45,6 +58,7 @@ const STATIC_PATTERNS = [
   /fonts\.gstatic\.com/,
   /cdn\.jsdelivr\.net/,
   /\/public\/images\//,
+  /\/public\/QNotify\//,
 ];
 
 // Patterns for network-first (API calls)

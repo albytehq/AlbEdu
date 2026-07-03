@@ -596,6 +596,71 @@ const unlockScroll = hideBackdrop;
 
 
 /* ══════════════════════════════════════════════════════════════════════════════
+   [Phase B a11y] KEYBOARD ACCESSIBILITY — ESC + Focus Trap + Enter
+   ══════════════════════════════════════════════════════════════════════════════
+   Shared keyboard handler for all dialog types (confirm, async, hold, hold-async).
+   - ESC: cancel dialog (trigger handleNo)
+   - Tab: cycle between Yes/No buttons (focus trap)
+   - Shift+Tab: reverse cycle
+   - Enter: activate focused button (or default to No for safety)
+   ══════════════════════════════════════════════════════════════════════════════ */
+function _attachDialogKeyboard(notification, element, btnYes, btnNo, onNo) {
+    let _keyPending = false;
+
+    const handleKeydown = (e) => {
+        if (notification.isDead) return;
+        if (_keyPending) return;
+        _keyPending = true;
+        requestAnimationFrame(() => { _keyPending = false; });
+
+        // ESC → cancel
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            onNo();
+            return;
+        }
+
+        // Tab → focus trap (cycle between Yes and No only)
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            if (e.shiftKey) {
+                // Shift+Tab → go to Yes (or stay on Yes → go to No)
+                if (document.activeElement === btnYes) btnNo?.focus();
+                else btnYes?.focus();
+            } else {
+                // Tab → go to No (or stay on No → go to Yes)
+                if (document.activeElement === btnNo) btnYes?.focus();
+                else btnNo?.focus();
+            }
+            return;
+        }
+
+        // Enter → activate focused button
+        if (e.key === 'Enter') {
+            // Don't trigger hold buttons via Enter — hold requires pointer
+            if (btnYes && btnYes.classList.contains('hold-btn')) return;
+            e.preventDefault();
+            const focused = document.activeElement;
+            if (focused === btnYes && !btnYes?.disabled) {
+                btnYes.click();
+            } else if (focused === btnNo && !btnNo?.disabled) {
+                btnNo.click();
+            }
+            return;
+        }
+    };
+
+    document.addEventListener('keydown', handleKeydown);
+
+    // Return cleanup function to remove listener on dialog dismiss
+    return () => {
+        document.removeEventListener('keydown', handleKeydown);
+    };
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
    ASYNC STATE HANDLERS — Unified morphing v7.4.0
    ══════════════════════════════════════════════════════════════════════════════ */
 
@@ -709,6 +774,10 @@ export function createConfirmDialog({
         ],
     };
 
+    // [Phase B a11y] Keyboard accessibility — ESC, Tab trap, Enter
+    const _cleanupKeyboard = _attachDialogKeyboard(notification, element, yesBtn, noBtn, handleNo);
+    notification._cleanupKeyboard = _cleanupKeyboard;
+
     // [v8.0.0] Stamp BEFORE DOM insert — eliminates layout thrash in activateDialog()
     _stampDialogInitial(element);
     appendToContainer(container, element);
@@ -789,6 +858,10 @@ export function createAsyncConfirmDialog({
             { el: noBtn,  type: 'click', fn: handleNo  },
         ],
     };
+
+    // [Phase B a11y] Keyboard accessibility — ESC, Tab trap, Enter
+    const _cleanupKb = _attachDialogKeyboard(notification, element, yesBtn, noBtn, handleNo);
+    notification._cleanupKeyboard = _cleanupKb;
 
     // [v8.0.0] Stamp BEFORE DOM insert — eliminates layout thrash in activateDialog()
     _stampDialogInitial(element);
@@ -872,6 +945,10 @@ export function createHoldConfirmDialog({
 
     events.forEach(({ el, type, fn, options }) => el.addEventListener(type, fn, options));
     notification.handlers = { events };
+
+    // [Phase B a11y] Keyboard accessibility — ESC, Tab trap (Enter disabled for hold)
+    const _cleanupKb = _attachDialogKeyboard(notification, element, btnYes, btnNo, handleNo);
+    notification._cleanupKeyboard = _cleanupKb;
 
     // [v8.0.0] Stamp BEFORE DOM insert — eliminates layout thrash
     _stampDialogInitial(element);
@@ -992,6 +1069,10 @@ export function createHoldAsyncConfirmDialog({
 
     events.forEach(({ el, type, fn, options }) => el.addEventListener(type, fn, options));
     notification.handlers = { events };
+
+    // [Phase B a11y] Keyboard accessibility — ESC, Tab trap (Enter disabled for hold)
+    const _cleanupKb = _attachDialogKeyboard(notification, element, btnYes, btnNo, handleNo);
+    notification._cleanupKeyboard = _cleanupKb;
 
     // [v8.0.0] Stamp BEFORE DOM insert — eliminates layout thrash
     _stampDialogInitial(element);

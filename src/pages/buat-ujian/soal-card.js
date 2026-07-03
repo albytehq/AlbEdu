@@ -89,9 +89,9 @@
                 <option value="esai" ${sec.type_question === 'esai' ? 'selected' : ''}>${t('wizard.type_essay', null, 'Esai')}</option>
               </select>
               <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-add-question" data-index="${sIdx}" type="button" ${!sec.type_question ? 'disabled' : ''}>
-                <i class="material-symbols-outlined">add</i> ${t('create.soal_button', null, 'Soal')}
+                <span data-albedu-icon="add"></span> ${t('create.soal_button', null, 'Soal')}
               </button>
-              ${sections.length > 1 ? `<button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-delete-section" data-index="${sIdx}" type="button" aria-label="${t('wizard.delete_section_aria', null, 'Hapus bagian')}"><i class="material-symbols-outlined">delete</i></button>` : ''}
+              ${sections.length > 1 ? `<button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-delete-section" data-index="${sIdx}" type="button" aria-label="${t('wizard.delete_section_aria', null, 'Hapus bagian')}"><span data-albedu-icon="delete"></span></button>` : ''}
             </div>
           </header>
           <div class="albedu-section-questions" data-section-index="${sIdx}">
@@ -104,8 +104,8 @@
                   <span class="albedu-question-text">${this._esc((q.pertanyaan || '').replace(/<[^>]*>/g, '').slice(0, 80)) || t('create.empty_question_text', null, 'Soal kosong')}</span>
                   <span class="albedu-question-score">${q.skor || 0} ${t('create.points_unit', null, 'poin')}</span>
                   <div class="albedu-question-actions">
-                    <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-edit-question" data-section="${sIdx}" data-question="${qIdx}" type="button" aria-label="${t('wizard.edit_question_aria', null, 'Edit soal')}"><i class="material-symbols-outlined">edit</i></button>
-                    <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-delete-question" data-section="${sIdx}" data-question="${qIdx}" type="button" aria-label="${t('wizard.delete_question_aria', null, 'Hapus soal')}"><i class="material-symbols-outlined">delete</i></button>
+                    <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-edit-question" data-section="${sIdx}" data-question="${qIdx}" type="button" aria-label="${t('wizard.edit_question_aria', null, 'Edit soal')}"><span data-albedu-icon="edit"></span></button>
+                    <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-delete-question" data-section="${sIdx}" data-question="${qIdx}" type="button" aria-label="${t('wizard.delete_question_aria', null, 'Hapus soal')}"><span data-albedu-icon="delete"></span></button>
                   </div>
                 </div>
               `).join('')

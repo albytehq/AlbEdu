@@ -175,7 +175,7 @@ import {
                 : { device_id: null, browser_hash: null, device_info: null };
 
             // Call Edge Function anonymously (no auth header required for public registration)
-            let { data: payload, error: fnError } = await window.sb.functions.invoke('register-admin', {
+            let { data: payload, error: fnError } = await window.AlbEdu?.supabase?.client.functions.invoke('register-admin', {
                 headers: {
                     // Explicitly no Authorization header for public endpoint
                 },

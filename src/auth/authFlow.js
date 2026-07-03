@@ -12,41 +12,38 @@ import { TIMING_CONFIG } from './constants.js';
 import { getErrorMessage, logAuthError, LOADING_LABELS } from './errorMapper.js';
 
 /**
- * Tunggu hingga Supabase siap.
+ * Tunggu hingga platform layer Supabase siap.
+ * Migrated from window.AlbEdu?.supabase?.client / __firebaseReady / 'albedu:platform-ready' event to
+ * the native AlbEdu.supabase.ready Promise (which resolves on
+ * 'albedu:platform-ready' event).
  * @returns {Promise<void>}
  */
 export async function waitForSupabaseReady(timeout = TIMING_CONFIG.SUPABASE_READY_TIMEOUT_MS) {
-    // Cek cepat: Supabase sudah siap dan (jika ada) Auth juga siap
-    if (window.sb && window.__firebaseReady) {
+    // Fast path: platform layer already ready
+    if (window.AlbEdu?.supabase?.isReady?.()) {
         // Auth opsional — hanya tunggu jika memang ada (halaman login user)
         if (typeof window.Auth?.authLogin === 'function' || !document.getElementById('userLoginBtn')) {
             return;
         }
     }
 
-    // Delegasi ke window.waitForSupabase jika tersedia (didefinisikan di SupabaseApi.js)
-    if (window.waitForSupabase) {
-        await window.waitForSupabase();
-    } else {
-        // Fallback: tunggu event 'supabase-ready' dari SupabaseApi.js
-        if (!window.sb || !window.__firebaseReady) {
-            await new Promise((resolve, reject) => {
-                const timer = setTimeout(() => {
-                    reject(new Error('Koneksi ke server timeout. Periksa internet dan coba lagi.'));
-                }, timeout);
+    // Wait on the native platform-ready event with timeout
+    await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error('Koneksi ke server timeout. Periksa internet dan coba lagi.'));
+        }, timeout);
 
-                document.addEventListener('supabase-ready', () => {
-                    clearTimeout(timer);
-                    resolve();
-                }, { once: true });
+        document.addEventListener('albedu:platform-ready', () => {
+            clearTimeout(timer);
+            resolve();
+        }, { once: true });
 
-                document.addEventListener('firebase-error', (event) => {
-                    clearTimeout(timer);
-                    reject(new Error(event.detail?.error || 'Gagal terhubung ke server.'));
-                }, { once: true });
-            });
-        }
-    }
+        document.addEventListener('albedu:platform-error', (event) => {
+            clearTimeout(timer);
+            reject(new Error(event?.detail?.message || 'Gagal terhubung ke server.'));
+        }, { once: true });
+    });
+
 
     // Hanya tunggu window.Auth jika halaman ini memang butuhnya (index.html / login.html)
     // Di halaman lain (register-admin, ujian) window.Auth tidak dimuat — skip.
@@ -218,14 +215,15 @@ export async function setupGoogleProvider() {
 }
 
 /**
- * Execute Google sign-in popup.
- * @param {Object} provider - Auth provider
- * @returns {Promise<Object>} Result dari signInWithPopup
+ * Execute Google sign-in (redirect mode — Supabase native).
+ * The legacy `provider` argument is ignored — Supabase handles OAuth config
+ * server-side. Kept for backward compatibility with callers that pass one.
+ * @returns {Promise<Object>} Result from signInWithGoogle
  */
-export async function signInWithGoogle(provider) {
-    if (!window.firebaseAuth?.signInWithPopup) {
+export async function signInWithGoogle(_provider) {
+    const auth = window.AlbEdu?.supabase?.auth;
+    if (!auth?.signInWithGoogle) {
         throw new Error('Sistem login Google belum siap.');
     }
-    
-    return await window.firebaseAuth.signInWithPopup(provider);
+    return await auth.signInWithGoogle();
 }

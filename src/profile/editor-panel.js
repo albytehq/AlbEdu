@@ -2,7 +2,7 @@
 //  ProfileEditorPanel.js — AlbEdu Floating Profile Editor v1.0
 //
 //  Self-contained. Zero external dependencies.
-//  Integrates dengan: window.sb, window.firebaseAuth, Worker upload.
+//  Integrates dengan: window.AlbEdu?.supabase?.client, window.firebaseAuth, Worker upload.
 //
 //  Usage:
 //    ProfileEditorPanel.init({
@@ -427,14 +427,14 @@
 
   // ── Supabase update ────────────────────────────────────────
   async function _updateUserProfile(fields) {
-    // Pakai window.firebaseDb shim dari SupabaseApi.js
-    const db   = window.firebaseDb;
-    const auth = window.firebaseAuth;
+    // Native platform layer — replaces window.firebaseDb / window.firebaseAuth shim.
+    const repo = window.AlbEdu?.repository;
+    const auth = window.AlbEdu?.supabase?.auth;
 
-    if (!db || !auth) throw new Error('SupabaseApi belum siap.');
+    if (!repo || !auth) throw new Error('Platform layer belum siap.');
 
-    const uid = auth.currentUser?.uid;
-    if (!uid) throw new Error('User tidak login.');
+    const userId = auth.currentUser?.id;
+    if (!userId) throw new Error('User tidak login.');
 
     const payload = {
       ...fields,
@@ -444,7 +444,18 @@
       profil_lengkap: true,
     };
 
-    await db.collection('users').doc(uid).update(payload);
+    // [Production Hardening] Use Actly resilience for profile update
+    const resilience = window.AlbEdu?.resilience;
+    if (resilience) {
+      const result = await resilience.write(
+        `profile-update:${userId}`,
+        async () => { await repo.updateDoc('users', userId, payload); return true; }
+      );
+      if (!result.ok) throw result.error || new Error('Profile update failed');
+      resilience.invalidate(`profile-update:${userId}`);
+    } else {
+      await repo.updateDoc('users', userId, payload);
+    }
   }
 
   // ── Progress bar ───────────────────────────────────────────
@@ -526,14 +537,14 @@
 
   // ── Fetch user doc dari Supabase ───────────────────────────
   async function _fetchCurrentUser() {
-    const db   = window.firebaseDb;
-    const auth = window.firebaseAuth;
-    if (!db || !auth) throw new Error('SupabaseApi belum siap.');
+    const repo = window.AlbEdu?.repository;
+    const auth = window.AlbEdu?.supabase?.auth;
+    if (!repo || !auth) throw new Error('Platform layer belum siap.');
 
-    const uid = auth.currentUser?.uid;
-    if (!uid) throw new Error('User tidak login.');
+    const userId = auth.currentUser?.id;
+    if (!userId) throw new Error('User tidak login.');
 
-    const snap = await db.collection('users').doc(uid).get();
+    const snap = await repo.getDoc('users', userId);
     if (!snap.exists) throw new Error('Dokumen user tidak ditemukan.');
     return snap.data();
   }

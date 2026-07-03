@@ -574,14 +574,14 @@ export async function initI18n() {
 // RLS policy restricts user to only update their own row.
 async function _syncToSupabase() {
   if (_supabaseSyncPending) return; // debounce
-  if (!window.sb) return; // Supabase not loaded
+  if (!window.AlbEdu?.supabase?.client) return; // Supabase not loaded
   const user = window.Auth?.currentUser;
   if (!user?.id && !user?.uid) return; // not logged in
 
   _supabaseSyncPending = true;
   try {
     const userId = user.id || user.uid;
-    const { error } = await window.sb
+    const { error } = await window.AlbEdu?.supabase?.client
       .from('users')
       .update({ preferred_locale: _currentLocale })
       .eq('id', userId);

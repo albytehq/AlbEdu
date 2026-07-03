@@ -205,17 +205,31 @@
   // v1.0.0: subscribe to `violation_events` (was `violations`). Each doc is
   // one event; we order by `created_at` desc (was `updatedAt`).
   function _subscribeToViolations() {
-    if (!_db) return;
+    if (!window.AlbEdu?.repository) return;
     if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
     try {
-      _unsubscribe = _db
-        .collection('violation_events')
-        .orderBy('created_at', 'desc')
-        .limit(300)
-        .onSnapshot(_handleSnapshot, (err) => {
-          const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-          if (isDev) console.warn('[ANC] violation_events onSnapshot error:', err?.message || err);
-        });
+      // Native platform layer: subscribe to all changes on violation_events.
+      // The repository.subscribe() helper does an initial fetch + sets up a
+      // Supabase Realtime channel. Replaces _db.collection().onSnapshot().
+      const repo = window.AlbEdu.repository;
+      const channelName = 'admin-notification-center:violation_events';
+      _unsubscribe = repo.subscribe(
+        channelName,
+        'violation_events',
+        async () => {
+          // Re-fetch the latest 300 rows on any change
+          try {
+            const snap = await repo.getDocs('violation_events', {
+              order: { column: 'created_at', ascending: false },
+              limit: 300,
+            });
+            _handleSnapshot(snap);
+          } catch (err) {
+            const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            if (isDev) console.warn('[ANC] violation_events refetch error:', err?.message || err);
+          }
+        }
+      );
     } catch (err) {
       const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
       if (isDev) console.warn('[ANC] _subscribeToViolations setup error:', err?.message || err);
@@ -226,7 +240,7 @@
   // Langsung deleteDoc → onSnapshot 'removed' akan bersihin state otomatis
   async function _dismissOne(notifId) {
     const notif = _notifications.find(n => n.id === notifId);
-    if (!notif || !_db) return;
+    if (!notif || !window.AlbEdu?.repository) return;
 
     // Animasi keluar dulu
     const el = _panelEl && _panelEl.querySelector(`[data-notif-id="${CSS.escape(notifId)}"]`);
@@ -240,10 +254,9 @@
     _updateBadge();
     if (_isPanelOpen) _renderPanelContent();
 
-    // Delete doc Firestore → onSnapshot akan konfirmasi removal
-    // v1.0.0: delete from `violation_events` (was `violations`).
+    // Delete via native repository — replaces _db.collection().doc().delete()
     try {
-      await _db.collection('violation_events').doc(notif.docId).delete();
+      await window.AlbEdu?.repository?.deleteDoc('violation_events', notif.docId);
     } catch (err) {
       console.warn('[ANC] deleteDoc gagal:', err);
     }
@@ -275,13 +288,12 @@
 
     // Batch delete Firestore (max 500 per batch)
     // v1.0.0: delete from `violation_events` (was `violations`).
-    if (docIds.length > 0 && _db) {
+    if (docIds.length > 0) {
       try {
+        // Native bulk delete — replaces _db.batch().delete().commit()
         for (let i = 0; i < docIds.length; i += 500) {
           const chunk = docIds.slice(i, i + 500);
-          const batch = _db.batch();
-          chunk.forEach(id => batch.delete(_db.collection('violation_events').doc(id)));
-          await batch.commit();
+          await window.AlbEdu?.repository?.bulkDelete('violation_events', chunk);
         }
       } catch (err) {
         console.warn('[ANC] batch delete gagal:', err);
@@ -312,38 +324,38 @@
       <div class="anc-panel-header">
         <div class="anc-panel-header-row1">
           <div class="anc-panel-title">
-            <span class="anc-panel-icon"><i aria-hidden="true" class="material-symbols-outlined">notifications</i></span>
+            <span class="anc-panel-icon"><span aria-hidden="true" data-albedu-icon="notifications"></span></span>
             <div class="anc-panel-title-text">
               <h2 class="anc-panel-heading">${t('notif.panel_title', null, 'Notifikasi')}</h2>
               <p class="anc-panel-sub" id="anc-sub-text">${t('common.loading', null, 'Memuat...')}</p>
             </div>
           </div>
           <button class="anc-close-btn" id="anc-close-btn" aria-label="${t('notif.close_aria', null, 'Tutup panel notifikasi')}">
-            <i aria-hidden="true" class="material-symbols-outlined">close</i>
+            <span aria-hidden="true" data-albedu-icon="close"></span>
           </button>
         </div>
         <div class="anc-panel-header-row2">
           <button class="anc-mark-read-btn" id="anc-mark-all-btn" aria-label="${t('notif.mark_all_read_aria', null, 'Tandai semua dibaca')}">
-            <i aria-hidden="true" class="material-symbols-outlined">done_all</i>
+            <span aria-hidden="true" data-albedu-icon="done_all"></span>
             <span>${t('notif.mark_all_read', null, 'Baca Semua')}</span>
           </button>
           <button class="anc-clear-all-btn" id="anc-clear-all-btn" aria-label="${t('notif.clear_all_aria', null, 'Hapus semua notifikasi')}" disabled>
-            <i aria-hidden="true" class="material-symbols-outlined">delete</i>
+            <span aria-hidden="true" data-albedu-icon="delete"></span>
             <span>${t('notif.clear_all', null, 'Hapus Semua')}</span>
           </button>
         </div>
       </div>
       <div class="anc-tabs" role="tablist">
         <button class="anc-tab active" data-tab="all" role="tab" aria-selected="true">
-          <i aria-hidden="true" class="material-symbols-outlined">inbox</i> ${t('notif.tab_all', null, 'Semua')}
+          <span aria-hidden="true" data-albedu-icon="inbox"></span> ${t('notif.tab_all', null, 'Semua')}
           <span class="anc-tab-count" id="anc-tab-count-all">0</span>
         </button>
         <button class="anc-tab" data-tab="violation" role="tab" aria-selected="false">
-          <i aria-hidden="true" class="material-symbols-outlined">warning</i> ${t('notif.tab_violation', null, 'Kecurangan')}
+          <span aria-hidden="true" data-albedu-icon="warning"></span> ${t('notif.tab_violation', null, 'Kecurangan')}
           <span class="anc-tab-count anc-tab-count-red" id="anc-tab-count-violation">0</span>
         </button>
         <button class="anc-tab" data-tab="submitted" role="tab" aria-selected="false">
-          <i aria-hidden="true" class="material-symbols-outlined">check_circle</i> ${t('notif.tab_submitted', null, 'Selesai')}
+          <span aria-hidden="true" data-albedu-icon="check_circle"></span> ${t('notif.tab_submitted', null, 'Selesai')}
           <span class="anc-tab-count anc-tab-count-green" id="anc-tab-count-submitted">0</span>
         </button>
       </div>
@@ -374,7 +386,16 @@
     document.getElementById('anc-close-btn').addEventListener('click', closePanel);
     document.getElementById('anc-mark-all-btn').addEventListener('click', markAllRead);
     document.getElementById('anc-clear-all-btn').addEventListener('click', () => _clearAll());
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && _isPanelOpen) closePanel(); });
+
+    // [Item 2] Named keydown handler for cleanup
+    const _onKeydown = function (e) { if (e.key === 'Escape' && _isPanelOpen) closePanel(); };
+    document.addEventListener('keydown', _onKeydown);
+
+    // [Item 2] Cleanup on pagehide — remove document listener + unsubscribe realtime
+    window.addEventListener('pagehide', function () {
+      document.removeEventListener('keydown', _onKeydown);
+      if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+    }, { once: true });
   }
 
   // ── Render list ────────────────────────────────────────────────────────────
@@ -389,9 +410,9 @@
   }
 
   function _iconFor(type) {
-    if (type === 'submitted')     return '<i aria-hidden="true" class="material-symbols-outlined anc-icon-green">check_circle</i>';
-    if (type === 'max_violation') return '<i aria-hidden="true" class="material-symbols-outlined anc-icon-red">dangerous</i>';
-    return '<i aria-hidden="true" class="material-symbols-outlined anc-icon-orange">warning</i>';
+    if (type === 'submitted')     return '<span class="anc-icon-green" aria-hidden="true" data-albedu-icon="check_circle"></span>';
+    if (type === 'max_violation') return '<span class="anc-icon-red" aria-hidden="true" data-albedu-icon="dangerous"></span>';
+    return '<span class="anc-icon-orange" aria-hidden="true" data-albedu-icon="warning"></span>';
   }
 
   function _chipFor(type, warningNum, maxWarnings) {
@@ -443,7 +464,7 @@
       body.innerHTML = `
         <div class="anc-empty-state">
           <div class="anc-empty-icon">
-            <i class="material-symbols-outlined" aria-hidden="true">${emptyIcon}</i>
+            <span aria-hidden="true" data-albedu-icon="${emptyIcon}"></span>
           </div>
           <p class="anc-empty-title">${emptyTitle}</p>
           <p class="anc-empty-sub">${emptySub}</p>
@@ -474,12 +495,12 @@
             </div>
             <div class="anc-item-exam">${_sanitize(n.examTitle)}</div>
             <div class="anc-item-msg">${_sanitize(n.message)}</div>
-            <div class="anc-item-time"><i aria-hidden="true" class="material-symbols-outlined">schedule</i> ${_relativeTime(n.ts)}</div>
+            <div class="anc-item-time"><span aria-hidden="true" data-albedu-icon="schedule"></span> ${_relativeTime(n.ts)}</div>
           </div>
           <div class="anc-item-controls">
-            ${!n.read ? `<button class="anc-item-mark-btn" data-id="${_sanitize(n.id)}" title="${t('notif.mark_read', null, 'Tandai dibaca')}" aria-label="${t('notif.mark_read', null, 'Tandai dibaca')}"><i aria-hidden="true" class="material-symbols-outlined">check</i></button>` : ''}
+            ${!n.read ? `<button class="anc-item-mark-btn" data-id="${_sanitize(n.id)}" title="${t('notif.mark_read', null, 'Tandai dibaca')}" aria-label="${t('notif.mark_read', null, 'Tandai dibaca')}"><span aria-hidden="true" data-albedu-icon="check"></span></button>` : ''}
             <button class="anc-item-dismiss-btn" data-id="${_sanitize(n.id)}" title="${t('notif.dismiss', null, 'Hapus notifikasi')}" aria-label="${t('notif.dismiss_aria', { name: _sanitize(n.userName) }, 'Hapus notifikasi ' + _sanitize(n.userName))}">
-              <i aria-hidden="true" class="material-symbols-outlined">close</i>
+              <span aria-hidden="true" data-albedu-icon="close"></span>
             </button>
           </div>
         </div>`;
@@ -531,25 +552,24 @@
     _updateBadge();
     _createPanel();
 
-    function _waitForFirebase(ms) {
-      if (window.__firebaseReady) return Promise.resolve();
+    function _waitForPlatform(ms) {
+      if (window.AlbEdu?.supabase?.isReady?.()) return Promise.resolve();
       return new Promise((resolve, reject) => {
         const t = setTimeout(() => reject(new Error('Koneksi timeout')), ms);
-        document.addEventListener('firebase-ready', () => { clearTimeout(t); resolve(); }, { once: true });
-        document.addEventListener('firebase-error', () => { clearTimeout(t); resolve(); }, { once: true });
+        document.addEventListener('albedu:platform-ready', () => { clearTimeout(t); resolve(); }, { once: true });
+        document.addEventListener('albedu:platform-error', () => { clearTimeout(t); resolve(); }, { once: true });
       });
     }
 
     try {
-      await _waitForFirebase(10_000);
-      _db = window.firebaseDb || null;
-      if (!_db) return;
+      await _waitForPlatform(10_000);
+      // Native platform layer check — replaces _db = window.firebaseDb
+      if (!window.AlbEdu?.repository) return;
+      _db = true; // marker: platform ready (actual access via AlbEdu.repository)
 
-      window.firebaseAuth.onAuthStateChanged(user => {
+      window.AlbEdu.supabase.auth.onAuthStateChange((user) => {
         if (user) {
-          // Guard: _db mungkin belum di-set jika auth shim fire sebelum assignment selesai.
-          if (!_db) _db = window.firebaseDb || null;
-          if (_db) _subscribeToViolations();
+          _subscribeToViolations();
         } else if (_unsubscribe) {
           _unsubscribe();
           _unsubscribe = null;

@@ -356,11 +356,11 @@ window.ByteWard = {
 
 // ── Auto-enforcement bootstrap ────────────────────────────────────────────────
 //
-// WHY 'auth-ready' dan bukan 'firebase-ready':
-//   'firebase-ready' = Supabase SDK selesai init — role BELUM di-fetch.
+// WHY 'auth-ready' dan bukan 'albedu:platform-ready':
+//   'albedu:platform-ready' = Supabase SDK selesai init — role BELUM di-fetch.
 //   'auth-ready'     = di-dispatch auth.js SETELAH _syncUserDocument() selesai,
 //                      jadi Auth.userRole dijamin sudah terisi.
-//   Pakai 'firebase-ready' menyebabkan role=(none) karena byteward
+//   Pakai 'albedu:platform-ready' menyebabkan role=(none) karena byteward
 //   memanggil checkPageAccess() sebelum async profile fetch dari Supabase
 //   selesai — itulah yang muncul di console tadi.
 //

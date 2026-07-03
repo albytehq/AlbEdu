@@ -35,12 +35,18 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
   const ip = getClientIP(req);
   const deviceId = body.device_id || 'unknown';
 
-  // 1. Verify Turnstile (if secret key configured)
-  if (body.turnstile_token) {
+  // 1. Verify Turnstile — HARDENED: token is REQUIRED in production.
+  // The previous behavior (skip if missing) allowed attackers to bypass
+  // Turnstile entirely by simply omitting the field.
+  if (env.TURNSTILE_SECRET_KEY) {
+    if (!body.turnstile_token) {
+      throw new HTTPError(400, 'TURNSTILE_REQUIRED', 'Anti-abuse verification required');
+    }
     await verifyTurnstile(env, body.turnstile_token, ip);
+  } else if (env.SUPABASE_URL?.includes('supabase.co')) {
+    // Production without configured secret — fail closed (also enforced in turnstile.ts)
+    throw new HTTPError(500, 'TURNSTILE_NOT_CONFIGURED', 'Anti-abuse protection not configured');
   }
-  // If no turnstile_token provided, skip verification (client may not have loaded Turnstile yet)
-  // Brute-force protection is handled by rate limit below
 
   const db = new SupabaseDB(env);
 

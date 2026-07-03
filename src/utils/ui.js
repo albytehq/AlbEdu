@@ -561,11 +561,14 @@ UI.Profile = {
             const finalName   = updates.nama   || window.Auth.userData.nama || '';
             const finalAvatar = updates.foto_profil || window.Auth.userData.foto_profil || '';
             updates.profilLengkap = finalName.trim().length > 0 && finalAvatar.trim().length > 0;
-            updates.updatedAt = window.firebaseDb?.FieldValue?.serverTimestamp?.() || new Date().toISOString();
+            updates.updatedAt = new Date().toISOString();
 
             delete updates.email; delete updates.peran; delete updates.id; delete updates.createdAt;
 
-            await window.firebaseDb.collection('users').doc(window.Auth.currentUser.uid).update(updates);
+            // Native platform layer — replaces window.firebaseDb.collection('users').doc(uid).update().
+            // Note: user.id (Supabase native) replaces user.uid (Firebase-shaped legacy).
+            const userId = window.Auth.currentUser?.id || window.Auth.currentUser?.uid;
+            await window.AlbEdu?.repository?.updateDoc('users', userId, updates);
             window.Auth.userData = { ...window.Auth.userData, ...updates };
 
             state.hasChanges = false; state.tempAvatar = null; state.isLoading = false;
@@ -637,11 +640,20 @@ UI.Profile = {
     },
 
     _initKeyboard() {
-        document.addEventListener('keydown', e => {
+        // [Item 2] Named handler for cleanup on pagehide
+        const self = this;
+        this._onKeydown = function (e) {
             if (e.key !== 'Escape') return;
             const overlay = document.getElementById('profileOverlay');
-            if (overlay?.style.display === 'flex') { this.close(); e.preventDefault(); }
-        });
+            if (overlay?.style.display === 'flex') { self.close(); e.preventDefault(); }
+        };
+        document.addEventListener('keydown', this._onKeydown);
+
+        // [Item 2] Cleanup
+        window.addEventListener('pagehide', () => {
+            document.removeEventListener('keydown', this._onKeydown);
+            if (_statusInterval) { clearInterval(_statusInterval); _statusInterval = null; }
+        }, { once: true });
     },
 };
 

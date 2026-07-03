@@ -109,49 +109,45 @@
       };
 
       try {
-        const user = window.firebaseAuth?.currentUser;
+        const user = window.AlbEdu?.supabase?.auth?.currentUser;
         if (!user) {
           console.warn('[heartbeat] No auth user, skipping');
           return;
         }
 
-        const token = await user.getIdToken();
-        const res = await fetch(
-          'https://kzsrerxhhrtsxnpnmqgl.supabase.co/functions/v1/heartbeat',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify(body),
-          }
-        );
+        // [Production Hardening] Use Actly resilience wrapper for heartbeat.
+        // Circuit breaker: 5 fails → 15s cooldown. Retry: 2x exp backoff. Timeout: 5s.
+        let data;
+        const resilience = window.AlbEdu?.resilience;
 
-        if (!res.ok) {
-          if (res.status === 429) {
-            // Rate limited — backoff
-            console.warn('[heartbeat] Rate limited, backing off to 30s');
-            this._backoff();
-            return;
+        if (resilience) {
+          const result = await resilience.heartbeat(
+            `heartbeat:${this._sessionId}`,
+            async () => {
+              const { data, error } = await window.AlbEdu.supabase.rpc.invoke('heartbeat', body);
+              if (error) throw error;
+              return data;
+            }
+          );
+          if (!result.ok) {
+            throw result.error || new Error('Heartbeat failed after retries');
           }
-          if (res.status === 401) {
-            console.error('[heartbeat] Unauthorized, stopping');
-            this.stop();
-            return;
-          }
-          throw new Error(`HTTP ${res.status}`);
+          data = result.value;
+        } else {
+          // Fallback: raw call without resilience
+          const { data: rawData, error } = await window.AlbEdu.supabase.rpc.invoke('heartbeat', body);
+          if (error) throw error;
+          data = rawData;
         }
 
-        const data = await res.json();
+        const d = data?.data || data;
 
         // Reset retry count on success
         this._retryCount = 0;
         this._lastSyncAt = Date.now();
 
         // Check server signals
-        if (data.data) {
-          const d = data.data;
+        if (d) {
           if (d.blocked) {
             console.warn('[heartbeat] Server says BLOCKED:', d.blocked_reason);
             this.stop();
@@ -171,7 +167,19 @@
             return;
           }
         }
+
       } catch (err) {
+        const status = err?.status || err?.context?.status;
+        if (status === 429) {
+          console.warn('[heartbeat] Rate limited, backing off to 30s');
+          this._backoff();
+          return;
+        }
+        if (status === 401) {
+          console.error('[heartbeat] Unauthorized, stopping');
+          this.stop();
+          return;
+        }
         console.error('[heartbeat] Error:', err);
         this._retryCount++;
 

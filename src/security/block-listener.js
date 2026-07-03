@@ -29,8 +29,8 @@
       this._onBlocked = onBlocked;
       this._redirected = false;
 
-      // Try Supabase Realtime
-      const sb = window.sb; // Supabase native client (if available)
+      // Try Supabase Realtime (native platform layer)
+      const sb = window.AlbEdu?.supabase?.client;
       if (sb) {
         try {
           this._subscription = sb
@@ -93,12 +93,12 @@
       if (this._redirected || !this._sessionId) return;
 
       try {
-        const db = window.firebaseDb;
-        const user = window.firebaseAuth?.currentUser;
-        if (!db || !user) return;
+        const user = window.AlbEdu?.supabase?.auth?.currentUser;
+        if (!user) return;
 
-        const doc = await db.collection('assessment_sessions').doc(this._sessionId).get();
-        if (!doc.exists) return;
+        // Use native repository helper
+        const doc = await window.AlbEdu?.repository?.getDoc('assessment_sessions', this._sessionId);
+        if (!doc?.exists) return;
 
         const data = doc.data();
         if (data.status === 'blocked' && !this._redirected) {

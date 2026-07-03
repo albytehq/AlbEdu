@@ -20,7 +20,7 @@
 // window.Auth sebagai public API yang bisa dipercaya file lain.
 //
 // Urutan boot yang benar:
-//   1. SupabaseApi.js init Supabase, dispatch 'supabase-ready' + 'firebase-ready' (compat)
+//   1. supabase-client.js init Supabase, dispatch albedu:platform-ready
 //   2. auth.js (file ini) dengar event itu lalu pasang onAuthStateChanged
 //   3. Supabase panggil handler → fetch data user → update UI
 //
@@ -174,15 +174,24 @@ const PAGE_404_REDIRECT_DELAY_MS   = window.AuthHelpers.PAGE_404_REDIRECT_DELAY_
 const USER_PREFLIGHT_KEY           = window.AuthHelpers.USER_PREFLIGHT_KEY;
 const USER_PREFLIGHT_TTL_MS        = window.AuthHelpers.USER_PREFLIGHT_TTL_MS;
 
-// ── Firebase/Supabase instance guards ─────────────────────────────────────────
+// ── Native Supabase platform accessors ───────────────────────────────────────
+// All access goes through window.AlbEdu — no Firebase-shaped globals.
 function _getAuth() {
-    if (!window.firebaseAuth) throw new Error('[Auth] firebaseAuth not ready — is SupabaseApi.js loaded?');
-    return window.firebaseAuth;
+    const auth = window.AlbEdu?.supabase?.auth;
+    if (!auth) throw new Error('[Auth] AlbEdu.supabase.auth not ready — await AlbEdu.supabase.ready');
+    return auth;
 }
 
-function _getDb() {
-    if (!window.firebaseDb) throw new Error('[Auth] firebaseDb not ready — is SupabaseApi.js loaded?');
-    return window.firebaseDb;
+function _getRepo() {
+    const repo = window.AlbEdu?.repository;
+    if (!repo) throw new Error('[Auth] AlbEdu.repository not ready — await AlbEdu.supabase.ready');
+    return repo;
+}
+
+function _getSbClient() {
+    const client = window.AlbEdu?.supabase?.client;
+    if (!client) throw new Error('[Auth] AlbEdu.supabase.client not ready');
+    return client;
 }
 
 // ── Module state ──────────────────────────────────────────────────────────────
@@ -457,11 +466,11 @@ function _handle404Redirect() {
 //
 // v2.1.1 FIX: Implemented the function. It mirrors the pattern in
 // `src/auth/admin-onboarding.js` for `register-admin` and `src/auth/preflight.js`
-// for `user-auth-preflight` — both of which correctly use `window.sb.functions.invoke`.
+// for `user-auth-preflight` — both of which correctly use AlbEdu.supabase.rpc.invoke.
 //
 // Flow:
 //   1. Read preflight from sessionStorage (must be valid — created by executePreflightFlow)
-//   2. Get current Supabase access token from `window.sb.auth.getSession()`
+//   2. Get current Supabase access token from `window.AlbEdu?.supabase?.client.auth.getSession()`
 //   3. Invoke `user-auth-complete` Edge Function with:
 //        headers: { Authorization: Bearer <token> }  (server checks this)
 //        body: { preflightId, deviceId, browserHash, deviceInfo }
@@ -506,10 +515,10 @@ async function _createUserDocViaServer(userId) {
 
     // ── 2. Get current Supabase session for the access token ──────────────
     // The Edge Function requires a Bearer token to identify the user.
-    // window.sb.auth.getSession() returns the current session from storage.
+    // AlbEdu.supabase.auth.getSession() returns the current session from storage.
     let session;
     try {
-        const result = await window.sb.auth.getSession();
+        const result = await _getSbClient().auth.getSession();
         session = result?.data?.session;
     } catch (err) {
         console.error('[Auth] getSession failed:', err?.message || err);
@@ -528,7 +537,7 @@ async function _createUserDocViaServer(userId) {
     }
 
     // ── 3. Invoke the user-auth-complete Edge Function ────────────────────
-    const { data, error: fnError } = await window.sb.functions.invoke('user-auth-complete', {
+    const { data, error: fnError } = await _getSbClient().functions.invoke('user-auth-complete', {
         headers: {
             Authorization: `Bearer ${session.access_token}`,
         },
@@ -614,13 +623,28 @@ function _syncUserDocument(userId) {
         };
 
         const _attach = () => {
-            const ref = _getDb().collection('users').doc(userId);
-            _stopProfileListener = ref.onSnapshot(
-                async (snap) => {
+            // Native platform layer: subscribe to changes on the user's row.
+            // Replaces the legacy _getDb().collection('users').doc(userId).onSnapshot().
+            // The repository.subscribe() helper does an initial fetch + sets up
+            // a Supabase Realtime channel.
+            const repo = window.AlbEdu?.repository;
+            if (!repo) {
+                settle(reject, new Error('[Auth] repository not ready'));
+                return;
+            }
+            const channelName = `auth:user-profile:${userId}`;
+
+            // Initial fetch + subscribe to changes
+            const unsub = repo.subscribe(
+                channelName,
+                'users',
+                async () => {
+                    // Re-fetch on any change to the user's row
                     clearTimeout(firstTimer);
                     clearTimeout(retryTimer);
                     try {
-                        if (snap.exists) {
+                        const snap = await repo.getDoc('users', userId);
+                        if (snap?.exists) {
                             _applyUserSnapshot(snap.data(), userId);
                             settle(resolve, _userData);
                         } else if (!creating) {
@@ -632,12 +656,9 @@ function _syncUserDocument(userId) {
                         settle(reject, err);
                     }
                 },
-                (err) => {
-                    clearTimeout(firstTimer);
-                    clearTimeout(retryTimer);
-                    settle(reject, err);
-                }
+                `id=eq.${userId}`
             );
+            _stopProfileListener = unsub;
         };
 
         // First attempt — allow half the full timeout
@@ -674,24 +695,14 @@ async function _createUserDoc(userId) {
 
 // ── Login / Logout ────────────────────────────────────────────────────────────
 async function authLogin() {
-    // SupabaseApi.js expose GoogleAuthProvider stub via window.firebase.auth.GoogleAuthProvider
-    const GoogleAuthProvider = window.firebase?.auth?.GoogleAuthProvider;
-    if (!GoogleAuthProvider) throw new Error('[Auth] GoogleAuthProvider tidak tersedia');
-
-    const provider = new GoogleAuthProvider();
-    provider.addScope('profile');
-    provider.addScope('email');
-
+    // Native Supabase Google OAuth — uses signInWithGoogle redirect.
+    // The legacy GoogleAuthProvider stub is no longer needed.
     try {
-        const result = await _getAuth().signInWithPopup(provider);
-        // Supabase shim pakai redirect (bukan popup) — result adalah null,
-        // browser akan redirect ke Google dan kembali via onAuthStateChanged.
-        // Tidak perlu return result.user di sini.
+        const result = await _getAuth().signInWithGoogle();
+        // signInWithGoogle uses redirect mode — no immediate return value.
+        // onAuthStateChange fires when the user returns from Google.
         return result?.user ?? null;
     } catch (err) {
-        // BUGFIX G: Removed dead Firebase-style error mapping.
-        // These 'auth/popup-*' codes are Firebase popup-mode errors.
-        // Supabase uses redirect mode — these never fire.
         throw new Error(err.message || 'Login Google gagal.');
     }
 }
@@ -781,14 +792,10 @@ async function authLogout(options = {}) {
 
         // ── Step 5: Stop Supabase Realtime channels ─────────────────────────
         //    Prevent ghost listeners from firing after session is cleared.
+        //    Uses the native platform layer's unsubscribeAll() — replaces the
+        //    old window.firebaseDb._channels iteration.
         try {
-            if (window.firebaseDb?._channels) {
-                for (const [name, channel] of window.firebaseDb._channels) {
-                    if (typeof channel?.unsubscribe === 'function') channel.unsubscribe();
-                    if (typeof channel?.unsubscribe === 'function') channel.unsubscribe();
-                }
-                window.firebaseDb._channels.clear();
-            }
+            window.AlbEdu?.supabase?.realtime?.unsubscribeAll?.();
         } catch (_) { /* non-critical */ }
 
         // ── Step 6: Clear sensitive session data ─────────────────────────────
@@ -903,7 +910,7 @@ async function _handleAuthStateChange(user) {
             await _syncUserDocument(user.uid);
             _authReady = true;
             // 'auth-ready' fires AFTER role is confirmed — byteward listens to this,
-            // not 'firebase-ready' (which fires before async role fetch completes).
+            // not 'albedu:platform-ready' (which fires before async role fetch completes).
             document.dispatchEvent(new CustomEvent('auth-ready', { detail: { role: _userRole } }));
 
             if (_isLoginPage()) {
@@ -980,19 +987,20 @@ function _initializeSystem() {
     if (_initialized) return;
     _initialized = true;
 
-    // NOTE: Cek `typeof firebase` dihapus — SupabaseApi.js sudah pasang
-    // window.firebase stub + window.firebaseAuth shim sebelum dispatch 'firebase-ready'.
-    // Guard di sini dulu menyebabkan early return race condition saat fetch
-    // Supabase config belum selesai tapi DOMContentLoaded sudah fire.
-    if (!window.firebaseAuth) {
+    // Native Supabase platform layer check — replaces the old window.firebaseAuth guard.
+    // The platform layer (AlbEdu.supabase) is initialized by src/platform/supabase-client.js
+    // and dispatches 'albedu:platform-ready' when ready.
+    if (!window.AlbEdu?.supabase?.auth) {
         window.UI?.hideAuthLoading?.();
         return;
     }
 
     try {
-        _getAuth().onAuthStateChanged(_handleAuthStateChange);
+        // Native auth state subscription — replaces onAuthStateChanged.
+        // Callback signature: (user, event) => void. We only use user here.
+        _getAuth().onAuthStateChange((user) => _handleAuthStateChange(user));
 
-        // Safety net: if the auth shim resolved the session from cache before
+        // Safety net: if the platform layer resolved the session from cache before
         // this listener registered, _handleAuthStateChange may have already fired
         // and the user is sitting on the login page with a valid session.
         // Force-check after 1.5s to catch that race.
@@ -1070,11 +1078,13 @@ Object.defineProperties(window.Auth, {
 });
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
+// Migrated from firebase-ready / firebase-error events to the native
+// albedu:platform-ready / albedu:platform-error events.
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.__firebaseReady) {
+    if (window.AlbEdu?.supabase?.isReady?.()) {
         _initializeSystem();
     } else {
-        document.addEventListener('firebase-ready', _initializeSystem,                   { once: true });
-        document.addEventListener('firebase-error', () => window.UI?.hideAuthLoading?.(), { once: true });
+        document.addEventListener('albedu:platform-ready', _initializeSystem,             { once: true });
+        document.addEventListener('albedu:platform-error', () => window.UI?.hideAuthLoading?.(), { once: true });
     }
 });

@@ -7,8 +7,8 @@
 // distractor analysis, and per-class breakdown. Exports to PDF (print),
 // Excel (CSV), and JSON.
 //
-// DB access: window.firebaseDb (Firestore shim → Supabase).
-//            See /src/utils/supabase-api.js for shim coverage.
+// DB access: AlbEdu.repository (native Supabase).
+//            See /src/legacy/firebase-compat.js for the bridge layer.
 //
 // Schema (already exists):
 //   submissions(
@@ -31,8 +31,8 @@
 //   assessments(id, access_code, title, subject, sections jsonb, status)
 //
 // Depends on:
-//   - window.firebaseDb            (DB shim)
-//   - window.firebaseAuth          (auth shim)
+//   - AlbEdu.repository             (typed table access)
+//   - AlbEdu.supabase.auth          (native auth)
 //   - window.notify / .confirm     (QNotify bridge)
 //   - window.i18n.t                (translations — best-effort)
 // =============================================================================
@@ -146,7 +146,7 @@
   // ─── Firebase / Auth wait ───────────────────────────────────────────────
 
   async function _waitForFirebase(timeout) {
-    if (window.__firebaseReady) return true;
+    if (window.AlbEdu?.supabase?.isReady?.()) return true;
     if (typeof window.waitForFirebase === 'function') {
       try {
         await window.waitForFirebase(timeout);
@@ -159,18 +159,18 @@
       const t = setTimeout(() => { cleanup(); resolve(false); }, timeout);
       function cleanup() {
         clearTimeout(t);
-        document.removeEventListener('firebase-ready', onReady);
-        document.removeEventListener('firebase-error', onError);
+        document.removeEventListener('albedu:platform-ready', onReady);
+        document.removeEventListener('albedu:platform-error', onError);
       }
       function onReady() { cleanup(); resolve(true); }
       function onError() { cleanup(); resolve(false); }
-      document.addEventListener('firebase-ready', onReady, { once: true });
-      document.addEventListener('firebase-error', onError, { once: true });
+      document.addEventListener('albedu:platform-ready', onReady, { once: true });
+      document.addEventListener('albedu:platform-error', onError, { once: true });
     });
   }
 
   async function _waitForAuth(timeout) {
-    const auth = window.firebaseAuth;
+    const auth = window.AlbEdu?.supabase?.auth;
     if (auth && auth.currentUser) return auth.currentUser;
 
     return new Promise((resolve) => {
@@ -189,14 +189,14 @@
       const timer = setTimeout(() => done(null), timeout);
 
       try {
-        unsub = auth && typeof auth.onAuthStateChanged === 'function'
-          ? auth.onAuthStateChanged((u) => { if (u) done(u); })
+        unsub = auth && typeof auth.onAuthStateChange === 'function'
+          ? auth.onAuthStateChange((u) => { if (u) done(u); })
           : null;
       } catch (_) { /* noop */ }
 
       poll = setInterval(() => {
-        if (window.firebaseAuth && window.firebaseAuth.currentUser) {
-          done(window.firebaseAuth.currentUser);
+        if (window.AlbEdu?.supabase?.auth?.currentUser) {
+          done(window.AlbEdu.supabase.auth.currentUser);
         }
       }, 200);
     });
@@ -248,24 +248,27 @@
   // ─── Load assessments ───────────────────────────────────────────────────
 
   async function _loadAssessments() {
-    const db = window.firebaseDb;
-    if (!db) {
+    const repo = window.AlbEdu?.repository;
+    if (!repo) {
       window.notify?.error?.(
         t('results.db_not_available_title', null, 'DB Tidak Tersedia'),
-        t('results.db_not_available_msg', null, 'Firebase shim belum siap.')
+        t('results.db_not_available_msg', null, 'Platform layer belum siap.')
       );
       return;
     }
     try {
-      const snap = await db.collection(COLLECTION_ASSESSMENTS)
-        .where('status', 'in', ['active', 'archived'])
-        .orderBy('created_at', 'desc')
-        .get();
-
-      _state.assessments = (snap.docs || []).map((d) => {
-        const data = d.data() || {};
-        return _normalizeAssessment(d.id, data);
+      // Native repository — note: 'in' filter not directly supported in our helper,
+      // so we fetch all and filter client-side (small dataset: assessments per admin).
+      const snap = await repo.getDocs(COLLECTION_ASSESSMENTS, {
+        order: { column: 'created_at', ascending: false },
       });
+
+      _state.assessments = (snap.docs || [])
+        .map((d) => {
+          const data = d.data() || {};
+          return _normalizeAssessment(d.id, data);
+        })
+        .filter(a => a.status === 'active' || a.status === 'archived');
 
       _populateDropdown();
     } catch (err) {
@@ -318,15 +321,15 @@
   // ─── Load submissions ───────────────────────────────────────────────────
 
   async function _loadSubmissions() {
-    const db = window.firebaseDb;
-    if (!db || !_state.selectedAssessmentId) return;
+    const repo = window.AlbEdu?.repository;
+    if (!repo || !_state.selectedAssessmentId) return;
 
     _setBusy(true);
     try {
-      const snap = await db.collection(COLLECTION_SUBMISSIONS)
-        .where('assessment_id', '==', _state.selectedAssessmentId)
-        .orderBy('submitted_at', 'desc')
-        .get();
+      const snap = await repo.getDocs(COLLECTION_SUBMISSIONS, {
+        eq: { assessment_id: _state.selectedAssessmentId },
+        order: { column: 'submitted_at', ascending: false },
+      });
 
       _state.submissions = (snap.docs || []).map((d) => {
         const data = d.data() || {};

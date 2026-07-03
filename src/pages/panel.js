@@ -29,7 +29,7 @@ class AdminPanel {
         this._bootstrapOptionProfile();
         this._startClock();
 
-        document.addEventListener('firebase-ready', () => this._renderUserInfo(), { once: true });
+        document.addEventListener('albedu:platform-ready', () => this._renderUserInfo(), { once: true });
         document.addEventListener('auth-ready', () => this._renderUserInfo());
         window.addEventListener('pep-saved', (e) => {
             if (e.detail && window.Auth) window.Auth.userData = e.detail;
@@ -85,7 +85,7 @@ class AdminPanel {
                 <div class="user-avatar-mobile" id="admin-index-avatar" aria-hidden="true">
                     ${safeAvatarUrl
                         ? `<img src="${escape(safeAvatarUrl)}" alt="" data-avatar-fallback="true">`
-                        : '<i class="material-symbols-outlined">manage_accounts</i>'}
+                        : '<span data-albedu-icon="manage_accounts"></span>'}
                 </div>
                 <div class="user-details-mobile">
                     <h3>${name}</h3>
@@ -109,7 +109,7 @@ class AdminPanel {
 
         container.innerHTML = `
             <div class="user-avatar-mobile" aria-hidden="true">
-                <i class="material-symbols-outlined">manage_accounts</i>
+                <span data-albedu-icon="manage_accounts"></span>
             </div>
             <div class="user-details-mobile">
                 <h3>${escape(t('nav.role_admin', null, 'Administrator'))}</h3>

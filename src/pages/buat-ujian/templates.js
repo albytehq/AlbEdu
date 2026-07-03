@@ -83,12 +83,12 @@
         <div class="albedu-template-grid">
           ${TEMPLATES.map((t) => `
             <button class="albedu-template-card" data-id="${t.id}" type="button">
-              <div class="albedu-template-icon"><i class="material-symbols-outlined">${t.icon}</i></div>
+              <div class="albedu-template-icon"><span data-albedu-icon="${t.icon}"></span></div>
               <div class="albedu-template-info">
                 <div class="albedu-template-name">${t.name}</div>
                 <div class="albedu-template-desc">${t.desc}</div>
               </div>
-              <i class="material-symbols-outlined albedu-template-arrow">arrow_forward</i>
+              <span class="albedu-template-arrow" data-albedu-icon="arrow_forward"></span>
             </button>
           `).join('')}
         </div>

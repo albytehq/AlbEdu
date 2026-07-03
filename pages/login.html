@@ -7,40 +7,54 @@
     <title>Login Admin — AlbEdu</title>
     <meta name="description" content="Masuk ke AlbEdu sebagai administrator.">
     <meta name="theme-color" content="#1E40AF">
+
+    <!-- Favicon set (single source of truth) -->
     <link rel="icon" type="image/x-icon" href="../public/images/favicon/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="../public/images/favicon/favicon.svg">
     <link rel="icon" type="image/png" sizes="96x96" href="../public/images/favicon/favicon-96x96.png">
     <link rel="apple-touch-icon" sizes="180x180" href="../public/images/favicon/apple-touch-icon.png">
-    
-    <link rel="stylesheet" href="../styles/tokens.css">
-  <!-- F1+F2 fix: font loading strategy (preconnect + swap, no @import) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+    <link rel="manifest" href="../public/images/favicon/site.webmanifest">
 
+    <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
+    <script src="../src/shared/head/critical-css.js"></script>
+
+    <!-- ═══ Design tokens ═══ -->
+    <link rel="stylesheet" href="../styles/tokens.css">
+
+    <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
+    <script defer src="../src/shared/head/fonts.js"></script>
+    <script defer src="../src/shared/icons/icons.js"></script>
+    <script defer src="../src/platform/supabase-client.js"></script>
+    <script type="module" src="../src/shared/resilience.js"></script>
+    <script defer src="../src/platform/repository.js"></script>
+    <script defer src="../src/security/sanitize.js"></script>
+
+    <!-- ═══ Auth + UI (legacy modules — kept until migrated to platform layer) ═══ -->
+    <script defer src="../src/auth/security.js"></script>
+    <script defer src="../src/utils/ui.js"></script>
+    <script defer src="../src/auth/errors.js"></script>
+    <script defer src="../src/auth/user-helpers.js"></script>
+    <script defer src="../src/auth/main.js"></script>
+    <script defer src="../src/auth/byteward.js"></script>
+    <script defer src="../src/auth/user-auth-portal.js"></script>
+
+    <!-- ═══ Page CSS ═══ -->
     <link rel="stylesheet" href="../styles/loading.css">
     <link rel="stylesheet" href="../styles/login.css">
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
-    <script src="../src/utils/supabase-api.js" defer></script>
-    <script src="../src/auth/security.js" defer></script>
-    <script src="../src/utils/ui.js" defer></script>
-    <script src="../src/auth/device-fingerprint.js" defer></script>
-    <script src="../src/auth/errors.js" defer></script>
-    <script src="../src/auth/user-helpers.js" defer></script>
-    <script src="../src/auth/main.js" defer></script>
-    <script src="../src/auth/byteward.js" defer></script>
-    <script type="module"src="../src/auth/user-auth-portal.js"></script>
 
-    <!-- v0.742.9: i18n — full multilingual support -->
-    <script type="module" src="../src/i18n/index.js"></script>
+    <!-- ═══ Async third-party (Turnstile + Supabase SDK) — non-blocking ═══ -->
+    <script async src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+    <!-- ═══ i18n ═══ -->
+    <script defer src="../src/i18n/index.js"></script>
     <script defer src="../src/i18n/lang-switcher.js"></script>
 </head>
 
 <body>
 
-    <div class="split-screen">
+        <a href="#main-content" class="albedu-skip-link" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
+<div class="split-screen">
         <!-- ═══ LEFT PANEL — Form ═══ -->
         <div class="split-left">
             <div class="form-container login-card" role="main">
@@ -53,17 +67,16 @@
                     </div>
                     <h1 class="form-title" data-i18n="auth.login_title">Masuk ke AlbEdu</h1>
                     <p class="form-subtitle" data-i18n="auth.login_subtitle">Kelola ujian Anda dengan mudah</p>
-                    <!-- v0.742.9: Language switcher (compact) -->
-                    <div class="albedu-lang-switcher" id="lang-switcher" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.72);backdrop-filter:blur(20px);border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:0.5px solid rgba(15,23,42,0.08);font-family:inherit;font-size:12px;font-weight:600;color:#0f172a;">
-                        <i class="material-symbols-outlined" style="font-size:14px">language</i>
+
+                    <!-- Language switcher (SVG icons — no font flash) -->
+                    <div class="albedu-lang-switcher" id="lang-switcher">
+                        <span data-albedu-icon="language" class="albedu-icon--16" aria-hidden="true"></span>
                         <span id="current-lang">🇮🇩 ID</span>
-                        <i class="material-symbols-outlined" style="font-size:14px">expand_more</i>
-                        <div class="albedu-lang-dropdown" id="lang-dropdown" hidden style="position:absolute;top:100%;right:0;margin-top:6px;background:#fff;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,0.12);padding:4px;min-width:160px;">
-                            <div class="albedu-lang-option albedu-active" data-locale="id" style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;">🇮🇩 Bahasa Indonesia</div>
-                            <div class="albedu-lang-option" data-locale="en" style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;">🇬🇧 English</div>
-                            
-                            
-                            </div>
+                        <span data-albedu-icon="expand-more" class="albedu-icon--16" aria-hidden="true"></span>
+                        <div class="albedu-lang-dropdown" id="lang-dropdown" hidden>
+                            <div class="albedu-lang-option albedu-active" data-locale="id">🇮🇩 Bahasa Indonesia</div>
+                            <div class="albedu-lang-option" data-locale="en">🇬🇧 English</div>
+                        </div>
                     </div>
                 </div>
 
@@ -83,8 +96,7 @@
                             class="input" placeholder="Masukkan kata sandi" data-i18n-placeholder="auth.login_password_placeholder" required>
                         <button type="button" class="toggle-visibility" data-target="password"
                             aria-label="Tampilkan kata sandi">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                class="icon-eye">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-eye">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                                 <circle cx="12" cy="12" r="3" />
                             </svg>
@@ -209,7 +221,9 @@
     </script>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('../public/service-worker.js').catch(() => {}));
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('../public/service-worker.js').catch(function () {});
+        });
       }
     </script>
 </body>

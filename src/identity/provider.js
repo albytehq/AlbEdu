@@ -160,7 +160,7 @@ window.IdentityProvider = (() => {
     const header = document.createElement('div');
     header.className = 'ip-header';
     header.innerHTML = `
-      <i class="material-symbols-outlined ip-header__icon">person</i>
+      <span class="ip-header__icon" data-albedu-icon="person"></span>
       <div class="ip-header__text">
         <div class="ip-header__title">Isi Identitas Peserta</div>
         <div class="ip-header__sub">Lengkapi data berikut sebelum memulai ujian</div>
@@ -213,7 +213,7 @@ window.IdentityProvider = (() => {
     const header = document.createElement('div');
     header.className = 'ip-header';
     header.innerHTML = `
-      <i class="material-symbols-outlined ip-header__icon">format_list_bulleted</i>
+      <span class="ip-header__icon" data-albedu-icon="format_list_bulleted"></span>
       <div class="ip-header__text">
         <div class="ip-header__title">Pilih Identitas Peserta</div>
         <div class="ip-header__sub">Daftar: ${_escapeHtml(config.daftar_label || 'Tanpa nama')}</div>
@@ -374,7 +374,7 @@ window.IdentityProvider = (() => {
     const submitBtn = document.createElement('button');
     submitBtn.type = 'button';
     submitBtn.className = 'ip-btn ip-btn--primary';
-    submitBtn.innerHTML = '<i class="material-symbols-outlined" style="font-size:16px;margin-right:4px;">play_arrow</i> Mulai Ujian';
+    submitBtn.innerHTML = '<span style="font-size:16px;margin-right:4px;" data-albedu-icon="play_arrow"></span> Mulai Ujian';
     actions.appendChild(submitBtn);
 
     mount.appendChild(actions);
@@ -438,7 +438,7 @@ window.IdentityProvider = (() => {
     selected.className = 'ip-dropdown__selected';
     selected.innerHTML = `
       <span class="ip-dropdown__label">${_escapeHtml(placeholder)}</span>
-      <i class="material-symbols-outlined ip-dropdown__arrow">expand_more</i>
+      <span class="ip-dropdown__arrow" data-albedu-icon="expand_more"></span>
     `;
     wrap.appendChild(selected);
 

@@ -251,7 +251,7 @@ window.IdentityFormRenderer = (() => {
     selected.className = 'ifr-dropdown__selected';
     selected.innerHTML = `
       <span class="ifr-dropdown__label">${_escapeHtml(placeholder)}</span>
-      <i class="material-symbols-outlined ifr-dropdown__arrow">expand_more</i>
+      <span class="ifr-dropdown__arrow" data-albedu-icon="expand_more"></span>
     `;
     wrap.appendChild(selected);
 

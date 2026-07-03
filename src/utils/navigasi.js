@@ -79,6 +79,65 @@ document.addEventListener('DOMContentLoaded', function () {
     // Re-update tooltips when locale changes (so they reflect the new lang)
     document.addEventListener('locale-changed', _updateTooltips);
 
+    // [Item 2 Memory Leak Fix] Named handlers for document/window listeners
+    // so they can be removed on pagehide. Anonymous functions can't be removed.
+    const _onKeydown = function (e) {
+        if (e.key !== 'Escape') return;
+        if (!isMobile()) return;
+        if (!sidebar.classList.contains('active')) return;
+        closeSidebar();
+        if (menuToggle) menuToggle.focus();
+    };
+
+    let resizeTimer = null;
+    const _onResize = function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+            if (isMobile()) {
+                // Entering mobile: clear collapsed + close drawer +
+                // purge stale storage value
+                sidebar.classList.remove('collapsed');
+                closeSidebar();
+                try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+            } else {
+                // Entering desktop: restore persisted collapsed state,
+                // clear any drawer state.
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('visible');
+                setMenuIcon('menu');
+                try {
+                    if (localStorage.getItem(STORAGE_KEY) === 'true') {
+                        sidebar.classList.add('collapsed');
+                    } else {
+                        sidebar.classList.remove('collapsed');
+                    }
+                } catch (_) { /* ignore */ }
+            }
+            syncAriaLabels();
+        }, 150);
+    };
+
+    const _onOptionProfileReady = function () {
+        if (!window.OptionProfile || typeof window.OptionProfile.addTrigger !== 'function') return;
+        const userContent = document.querySelector('.user-profile-content');
+        if (userContent) {
+            window.OptionProfile.addTrigger(userContent);
+        }
+    };
+
+    document.addEventListener('keydown', _onKeydown);
+    window.addEventListener('resize', _onResize);
+
+    // [Item 2] Cleanup on page hide — prevents ghost listeners in bfcache
+    function _cleanup() {
+        document.removeEventListener('locale-changed', _updateTooltips);
+        document.removeEventListener('keydown', _onKeydown);
+        window.removeEventListener('resize', _onResize);
+        document.removeEventListener('option-profile-ready', _onOptionProfileReady);
+        if (resizeTimer) clearTimeout(resizeTimer);
+    }
+    window.addEventListener('pagehide', _cleanup, { once: true });
+
     /* ── State helpers ─────────────────────────────────────────── */
     function isMobile() {
         return window.innerWidth <= MOBILE_BREAKPOINT;
@@ -247,10 +306,12 @@ document.addEventListener('DOMContentLoaded', function () {
     /* ── Mobile sidebar drawer ─────────────────────────────────── */
     function setMenuIcon(name) {
         if (!menuToggle) return;
-        const icon = menuToggle.querySelector('i');
-        if (!icon) return;
-        icon.className = 'material-symbols-outlined';
-        icon.textContent = name;
+        // Use the SVG icon system (AlbEdu.icon) instead of font-based icons.
+        // The toggle button has a single icon span we update.
+        const iconHolder = menuToggle.querySelector('[data-albedu-icon]');
+        if (iconHolder) {
+            window.AlbEdu?.setIcon?.(iconHolder, name);
+        }
     }
 
     function openSidebar() {
@@ -276,16 +337,6 @@ document.addEventListener('DOMContentLoaded', function () {
      * (not on the overlay) because the overlay has tabindex=-1
      * and won't receive key events when the sidebar itself holds
      * focus. */
-    document.addEventListener('keydown', function (e) {
-        if (e.key !== 'Escape') return;
-        if (!isMobile()) return;
-        if (!sidebar.classList.contains('active')) return;
-        closeSidebar();
-        // Return focus to the menu-toggle button so keyboard users
-        // can re-open the drawer without tabbing back.
-        if (menuToggle) menuToggle.focus();
-    });
-
     /* ── Navigation click handler ─────────────────────────────────
      * FIX i1.3: v2 erroneously called e.preventDefault() unconditionally
      * in some branches, which blocked the default navigation to the
@@ -352,34 +403,7 @@ document.addEventListener('DOMContentLoaded', function () {
      * would unexpectedly see the sidebar collapsed even if they
      * had been on mobile for a while.
      */
-    let resizeTimer;
-    window.addEventListener('resize', function () {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(function () {
-            if (isMobile()) {
-                // Entering mobile: clear collapsed + close drawer +
-                // purge stale storage value (collapsed doesn't apply
-                // to drawer mode).
-                sidebar.classList.remove('collapsed');
-                closeSidebar();
-                try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-            } else {
-                // Entering desktop: restore persisted collapsed state,
-                // clear any drawer state.
-                sidebar.classList.remove('active');
-                sidebarOverlay.classList.remove('visible');
-                setMenuIcon('menu');
-                try {
-                    if (localStorage.getItem(STORAGE_KEY) === 'true') {
-                        sidebar.classList.add('collapsed');
-                    } else {
-                        sidebar.classList.remove('collapsed');
-                    }
-                } catch (_) { /* ignore */ }
-            }
-            syncAriaLabels();
-        }, 150);
-    });
+    // [Item 2] Old anonymous resize listener removed — merged into named _onResize above
 
     /* ── Page transition overlay — defensive cleanup ────────────
      * v0.742.1: loading.css was changed so `.page-transition` is
@@ -572,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             const img = avatarEl.querySelector('img[data-nav-avatar-saved]');
                             if (img) {
                                 img.addEventListener('error', function () {
-                                    this.parentElement.innerHTML = '<i class="material-symbols-outlined">person</i>';
+                                    this.parentElement.innerHTML = '<span data-albedu-icon="person"></span>';
                                 }, { once: true });
                             }
                         }
@@ -589,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             const img2 = adminAvatar.querySelector('img[data-nav-admin-avatar]');
                             if (img2) {
                                 img2.addEventListener('error', function () {
-                                    this.parentElement.innerHTML = '<i class="material-symbols-outlined">account_circle</i>';
+                                    this.parentElement.innerHTML = '<span data-albedu-icon="account_circle"></span>';
                                 }, { once: true });
                             }
                         }
@@ -634,13 +658,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.head.appendChild(s);
 
-        document.addEventListener('option-profile-ready', function () {
-            if (!window.OptionProfile || typeof window.OptionProfile.addTrigger !== 'function') return;
-            const userContent = document.querySelector('.user-profile-content');
-            if (userContent) {
-                window.OptionProfile.addTrigger(userContent);
-            }
-        });
+        // [Item 2] Use named handler — already registered above as _onOptionProfileReady
+        // Just fire it once if OptionProfile is already ready
+        _onOptionProfileReady();
     }());
 
 });

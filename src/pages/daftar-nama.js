@@ -36,7 +36,7 @@ window.DaftarNama = (() => {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  function _sb() { return window.sb; }
+  function _sb() { return window.AlbEdu?.supabase?.client; }
 
   async function _getStorageId() {
     await window.SelfStorage.ready();

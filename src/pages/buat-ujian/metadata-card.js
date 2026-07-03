@@ -152,7 +152,7 @@
                  value="${this._esc((f.options || []).join(', '))}"
                  placeholder="Opsi (pisah koma)" ${f.type !== 'select' ? 'hidden' : ''}>
           <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-field-delete" data-index="${i}" type="button" aria-label="Hapus field">
-            <i class="material-symbols-outlined">delete</i>
+            <span data-albedu-icon="delete"></span>
           </button>
         </div>
       `).join('');
@@ -218,12 +218,12 @@
       });
 
       try {
-        const db = window.firebaseDb;
-        if (!db) {
-          // No DB available — leave placeholder
+        const repo = window.AlbEdu?.repository;
+        if (!repo) {
+          // No platform layer — leave placeholder
           return;
         }
-        const snap = await db.collection('daftar_nama').get();
+        const snap = await repo.getDocs('daftar_nama');
         const daftarList = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         this._daftarSelect.innerHTML = '<option value="">— Pilih daftar —</option>' +
           daftarList.map((d) => `<option value="${this._esc(d.id)}">${this._esc(d.nama_daftar || d.id)}</option>`).join('');

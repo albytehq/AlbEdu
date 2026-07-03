@@ -7,43 +7,49 @@
   <title data-i18n="landing.title">AlbEdu — Kelola Ujian Online, Tanpa Ribet</title>
   <meta name="description" content="Platform ujian dan pengelolaan peserta untuk sekolah dan guru. Buat ujian dalam hitungan menit, koreksi otomatis, data hasil real-time.">
   <meta name="theme-color" content="#1E40AF">
+
+  <!-- Favicon set (single source of truth) -->
   <link rel="icon" type="image/x-icon" href="public/images/favicon/favicon.ico">
   <link rel="icon" type="image/svg+xml" href="public/images/favicon/favicon.svg">
   <link rel="icon" type="image/png" sizes="96x96" href="public/images/favicon/favicon-96x96.png">
   <link rel="apple-touch-icon" sizes="180x180" href="public/images/favicon/apple-touch-icon.png">
-  
+  <link rel="manifest" href="public/images/favicon/site.webmanifest">
 
+  <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
+  <script src="src/shared/head/critical-css.js"></script>
 
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- ═══ Design tokens (full system) ═══ -->
   <link rel="stylesheet" href="styles/tokens.css">
-  <!-- F1+F2 fix: font loading strategy (preconnect + swap, no @import) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
 
+  <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
+  <script defer src="src/shared/head/fonts.js"></script>
+  <script defer src="src/shared/icons/icons.js"></script>
+  <script defer src="src/platform/supabase-client.js"></script>
+    <script type="module" src="src/shared/resilience.js"></script>
+  <script defer src="src/platform/repository.js"></script>
+  <script defer src="src/security/sanitize.js"></script>
+
+    <!-- ═══ Page CSS ═══ -->
   <link rel="stylesheet" href="styles/landing.css">
 
-  <!-- v0.742.9: i18n — full multilingual support -->
-  <script type="module" src="src/i18n/index.js"></script>
+  <!-- ═══ i18n ═══ -->
+  <script defer src="src/i18n/index.js"></script>
   <script defer src="src/i18n/lang-switcher.js"></script>
 </head>
 
 <body>
   <!-- Skip to main content -->
-  <a href="#main" class="skip-link" data-i18n="landing.skip_link">Langsung ke konten utama</a>
+  <a href="#main" class="albedu-skip-link" data-i18n="landing.skip_link">Langsung ke konten utama</a>
 
-  <!-- Language switcher (v0.742.9) -->
-  <div class="albedu-lang-switcher albedu-lang-switcher--floating" id="lang-switcher" style="position:fixed;top:16px;right:16px;z-index:9999;background:rgba(255,255,255,0.72);backdrop-filter:blur(20px);border-radius:999px;padding:6px 12px;display:flex;align-items:center;gap:6px;cursor:pointer;border:0.5px solid rgba(15,23,42,0.08);font-family:inherit;font-size:13px;font-weight:600;color:#0f172a;">
-    <i class="material-symbols-outlined" style="font-size:16px">language</i>
+  <!-- Language switcher (SVG icons — no font flash) -->
+  <div class="albedu-lang-switcher albedu-lang-switcher--floating" id="lang-switcher">
+    <span data-albedu-icon="language" class="albedu-icon--16" aria-hidden="true"></span>
     <span id="current-lang">🇮🇩 ID</span>
-    <i class="material-symbols-outlined" style="font-size:16px">expand_more</i>
-    <div class="albedu-lang-dropdown" id="lang-dropdown" hidden style="position:absolute;top:100%;right:0;margin-top:8px;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,0.12);padding:6px;min-width:180px;">
-      <div class="albedu-lang-option albedu-active" data-locale="id" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;">🇮🇩 Bahasa Indonesia</div>
-      <div class="albedu-lang-option" data-locale="en" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;">🇬🇧 English</div>
-                            
-                            
-                            </div>
+    <span data-albedu-icon="expand-more" class="albedu-icon--16" aria-hidden="true"></span>
+    <div class="albedu-lang-dropdown" id="lang-dropdown" hidden>
+      <div class="albedu-lang-option albedu-active" data-locale="id">🇮🇩 Bahasa Indonesia</div>
+      <div class="albedu-lang-option" data-locale="en">🇬🇧 English</div>
+    </div>
   </div>
 
   <!-- ═══ Navbar ═══ -->
@@ -55,11 +61,11 @@
       </a>
       <nav class="nav-actions" aria-label="Navigasi utama">
         <a href="pages/login.html" class="nav-btn-login" aria-label="Masuk ke akun">
-          <i aria-hidden="true" class="material-symbols-outlined">login</i>
+          <span data-albedu-icon="login" class="albedu-icon--20" aria-hidden="true"></span>
           <span data-i18n="landing.nav_login">Login</span>
         </a>
         <a href="pages/register-admin.html" class="nav-btn-primary" aria-label="Daftar akun admin baru">
-          <i aria-hidden="true" class="material-symbols-outlined">person_add</i>
+          <span data-albedu-icon="person-add" class="albedu-icon--20" aria-hidden="true"></span>
           <span data-i18n="landing.nav_register">Daftar Admin</span>
         </a>
       </nav>
@@ -74,7 +80,7 @@
       <div class="hero-grid" aria-hidden="true"></div>
       <div class="hero-content">
         <div class="hero-badge reveal">
-          <i aria-hidden="true" class="material-symbols-outlined">science</i>
+          <span data-albedu-icon="science" class="albedu-icon--20" aria-hidden="true"></span>
           <span data-i18n="landing.hero_badge">Akses Awal — Sudah Tersedia</span>
         </div>
         <h1 id="hero-title" class="hero-title reveal reveal-delay-1">
@@ -85,11 +91,11 @@
         </p>
         <div class="hero-ctas reveal reveal-delay-3">
           <a href="pages/login.html" class="hero-cta-primary">
-            <i aria-hidden="true" class="material-symbols-outlined">rocket_launch</i>
+            <span data-albedu-icon="rocketLaunch" class="albedu-icon--20" aria-hidden="true"></span>
             <span data-i18n="landing.hero_cta_primary">Mulai Sekarang</span>
           </a>
           <a href="#how" class="hero-cta-secondary">
-            <i aria-hidden="true" class="material-symbols-outlined">play_circle</i>
+            <span data-albedu-icon="play-circle" class="albedu-icon--20" aria-hidden="true"></span>
             <span data-i18n="landing.hero_cta_secondary">Lihat Demo</span>
           </a>
         </div>
@@ -107,21 +113,21 @@
         <div class="problem-grid">
           <article class="problem-card reveal reveal-delay-1">
             <div class="problem-icon" aria-hidden="true">
-              <i class="material-symbols-outlined">design_services</i>
+              <span data-albedu-icon="design-services" class="albedu-icon--24"></span>
             </div>
             <h3 data-i18n="landing.problem1_title">Pengerjaan Manual</h3>
             <p data-i18n="landing.problem1_desc">Menyusun soal satu per satu, mencetak kertas, dan membagikan ke peserta memakan waktu berjam-jam yang bisa dipakai untuk mengajar.</p>
           </article>
           <article class="problem-card reveal reveal-delay-2">
             <div class="problem-icon" aria-hidden="true">
-              <i class="material-symbols-outlined">history</i>
+              <span data-albedu-icon="history" class="albedu-icon--24"></span>
             </div>
             <h3 data-i18n="landing.problem2_title">Pengoreksian Lama</h3>
             <p data-i18n="landing.problem2_desc">Mengoreksi ratusan lembar jawaban manual berisiko kesalahan dan membutuhkan waktu berminggu-minggu sebelum hasil bisa diumumkan.</p>
           </article>
           <article class="problem-card reveal reveal-delay-3">
             <div class="problem-icon" aria-hidden="true">
-              <i class="material-symbols-outlined">database</i>
+              <span data-albedu-icon="database" class="albedu-icon--24"></span>
             </div>
             <h3 data-i18n="landing.problem3_title">Data Terserak</h3>
             <p data-i18n="landing.problem3_desc">Hasil ujian tersebar di file Excel, kertas, dan folder berbeda — sulit dianalisis dan dijadikan dasar keputusan pembelajaran.</p>
@@ -141,21 +147,21 @@
         <div class="solution-grid">
           <article class="solution-card reveal reveal-delay-1">
             <div class="solution-icon" aria-hidden="true">
-              <i class="material-symbols-outlined">bolt</i>
+              <span data-albedu-icon="bolt" class="albedu-icon--24"></span>
             </div>
             <h3 data-i18n="landing.solution1_title">Buat Ujian dalam Hitungan Menit</h3>
             <p data-i18n="landing.solution1_desc">Wizard pembuatan ujian yang intuitif — tinggal pilih jenis soal, atur waktu, dan ujian siap dibagikan. Tidak perlu keahlian teknis.</p>
           </article>
           <article class="solution-card reveal reveal-delay-2">
             <div class="solution-icon" aria-hidden="true">
-              <i class="material-symbols-outlined">smart_toy</i>
+              <span data-albedu-icon="smart-toy" class="albedu-icon--24"></span>
             </div>
             <h3 data-i18n="landing.solution2_title">Koreksi Otomatis</h3>
             <p data-i18n="landing.solution2_desc">Sistem mengoreksi jawaban pilihan ganda dan isian secara instan saat peserta selesai mengerjakan. Tanpa delay, tanpa kesalahan.</p>
           </article>
           <article class="solution-card reveal reveal-delay-3">
             <div class="solution-icon" aria-hidden="true">
-              <i class="material-symbols-outlined">monitoring</i>
+              <span data-albedu-icon="monitoring" class="albedu-icon--24"></span>
             </div>
             <h3 data-i18n="landing.solution3_title">Data Hasil Real-Time</h3>
             <p data-i18n="landing.solution3_desc">Pantau hasil ujian secara langsung — lihat skor, distribusi jawaban, dan analisis per soal segera setelah peserta submit.</p>
@@ -208,17 +214,17 @@
         </div>
         <div class="stats-grid reveal">
           <div class="stat-item">
-            <div class="stat-icon" aria-hidden="true"><i class="material-symbols-outlined">rocket_launch</i></div>
+            <div class="stat-icon" aria-hidden="true"><span data-albedu-icon="rocketLaunch" class="albedu-icon--24"></span></div>
             <div class="stat-number" data-i18n="landing.proof_stat1_num">Akses Awal</div>
             <div class="stat-label" data-i18n="landing.proof_stat1_label">Tersedia Sekarang</div>
           </div>
           <div class="stat-item">
-            <div class="stat-icon" aria-hidden="true"><i class="material-symbols-outlined">chat_bubble</i></div>
+            <div class="stat-icon" aria-hidden="true"><span data-albedu-icon="chat-bubble" class="albedu-icon--24"></span></div>
             <div class="stat-number" data-i18n="landing.proof_stat2_num">Masukanmu</div>
             <div class="stat-label" data-i18n="landing.proof_stat2_label">Bentuk Masa Depan AlbEdu</div>
           </div>
           <div class="stat-item">
-            <div class="stat-icon" aria-hidden="true"><i class="material-symbols-outlined">bolt</i></div>
+            <div class="stat-icon" aria-hidden="true"><span data-albedu-icon="bolt" class="albedu-icon--24"></span></div>
             <div class="stat-number" data-i18n="landing.proof_stat3_num">Gratis</div>
             <div class="stat-label" data-i18n="landing.proof_stat3_label">Selama Masa Akses Awal</div>
           </div>
@@ -234,7 +240,7 @@
             <h2 id="cta-title" class="cta-title" data-i18n="landing.cta_title">Siap Jadi Yang Pertama?</h2>
             <p class="cta-desc" data-i18n="landing.cta_desc">Akses awal AlbEdu sudah tersedia. Daftar sekarang dan jadilah pengguna pertama yang membentuk platform ini.</p>
             <a href="pages/register-admin.html" class="cta-btn">
-              <i aria-hidden="true" class="material-symbols-outlined">person_add</i>
+              <span data-albedu-icon="person-add" class="albedu-icon--20" aria-hidden="true"></span>
               <span data-i18n="landing.cta_register">Daftar Sekarang</span>
             </a>
           </div>
@@ -269,94 +275,67 @@
     (function () {
       'use strict';
 
-      // ── Reduced Motion Check ─────────────────────────────────
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      // ── Scroll-triggered Reveal ──────────────────────────────
+      // Scroll-triggered Reveal
       if (!prefersReducedMotion) {
-        const revealEls = document.querySelectorAll('.reveal');
-        const revealObserver = new IntersectionObserver(function (entries) {
+        var revealObserver = new IntersectionObserver(function (entries) {
           entries.forEach(function (entry) {
             if (entry.isIntersecting) {
               entry.target.classList.add('revealed');
               revealObserver.unobserve(entry.target);
             }
           });
-        }, {
-          threshold: 0.12,
-          rootMargin: '0px 0px -40px 0px'
-        });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 
-        revealEls.forEach(function (el) {
-          revealObserver.observe(el);
-        });
+        document.querySelectorAll('.reveal').forEach(function (el) { revealObserver.observe(el); });
       } else {
-        // Immediately show all elements
-        document.querySelectorAll('.reveal').forEach(function (el) {
-          el.classList.add('revealed');
-        });
+        document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('revealed'); });
       }
 
-      // ── Navbar Scroll Shadow ─────────────────────────────────
+      // Navbar Scroll Shadow
       var navbar = document.querySelector('.navbar');
-      var lastScroll = 0;
-
       function onNavScroll() {
         var scrollY = window.scrollY || window.pageYOffset;
-        if (scrollY > 10) {
-          navbar.classList.add('scrolled');
-        } else {
-          navbar.classList.remove('scrolled');
-        }
-        lastScroll = scrollY;
+        if (scrollY > 10) navbar.classList.add('scrolled'); else navbar.classList.remove('scrolled');
       }
-
       window.addEventListener('scroll', onNavScroll, { passive: true });
       onNavScroll();
 
-      // ── Parallax Hero Background ─────────────────────────────
+      // Parallax Hero Background
       if (!prefersReducedMotion) {
         var heroBg = document.querySelector('.hero-bg');
         var ticking = false;
-
         function onParallaxScroll() {
           if (!ticking) {
             window.requestAnimationFrame(function () {
               var scrollY = window.scrollY || window.pageYOffset;
               var heroHeight = document.querySelector('.hero').offsetHeight;
-              if (scrollY < heroHeight) {
-                heroBg.style.transform = 'translateY(' + (scrollY * 0.3) + 'px)';
-              }
+              if (scrollY < heroHeight) heroBg.style.transform = 'translateY(' + (scrollY * 0.3) + 'px)';
               ticking = false;
             });
             ticking = true;
           }
         }
-
         window.addEventListener('scroll', onParallaxScroll, { passive: true });
       }
 
-      // ── Count-Up removed — Early Access stats are static text, no data-count needed
-
-      // ── Hero Content Staggered Fade-in ───────────────────────
+      // Hero Content Staggered Fade-in
       if (!prefersReducedMotion) {
-        var heroReveals = document.querySelectorAll('.hero-content .reveal');
-        // The IntersectionObserver handles it, but let's trigger immediately
-        // since hero is visible on load
         setTimeout(function () {
-          heroReveals.forEach(function (el) {
-            el.classList.add('revealed');
-          });
+          document.querySelectorAll('.hero-content .reveal').forEach(function (el) { el.classList.add('revealed'); });
         }, 150);
       }
-
     })();
   </script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('public/service-worker.js').catch(() => {}));
-      }
-    </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('public/service-worker.js').catch(function () {});
+      });
+    }
+  </script>
 </body>
 
 </html>

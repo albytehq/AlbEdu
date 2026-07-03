@@ -1,0 +1,91 @@
+<!--
+  ═══════════════════════════════════════════════════════════════════════
+  AlbEdu — Canonical Page Template
+  ═══════════════════════════════════════════════════════════════════════
+  Copy this exact <head> structure into every page. Do NOT add per-page
+  font <link> tags, per-page Material Symbols <link> tags, or per-page
+  <script src="...supabase-js..."> tags — the shared modules handle those.
+
+  Path prefixes:
+    - Root pages (index.html, 404.html):   use ""
+    - /pages/* pages:                       use ".."
+    - /pages/admin/* pages:                 use "../.."
+    - /pages/assessment/* pages:            use "../.."
+    - /pages/ujian/* pages:                 use "../.."
+
+  Replace ${REL} with the correct prefix.
+  ═══════════════════════════════════════════════════════════════════════
+-->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+  <!-- Page meta (fill in per page) -->
+  <title>PAGE TITLE — AlbEdu</title>
+  <meta name="description" content="PAGE DESCRIPTION">
+  <meta name="theme-color" content="#2563eb">
+
+  <!-- Favicon set (one source of truth, no per-page variation) -->
+  <link rel="icon" type="image/x-icon" href="${REL}/public/images/favicon/favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="${REL}/public/images/favicon/favicon.svg">
+  <link rel="icon" type="image/png" sizes="96x96" href="${REL}/public/images/favicon/favicon-96x96.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="${REL}/public/images/favicon/apple-touch-icon.png">
+  <link rel="manifest" href="${REL}/public/images/favicon/site.webmanifest">
+
+  <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
+  <script src="${REL}/src/shared/head/critical-css.js"></script>
+
+  <!-- ═══ Design tokens (full system, async — deferred) ═══ -->
+  <link rel="stylesheet" href="${REL}/styles/tokens.css" media="all">
+
+  <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
+  <script defer src="${REL}/src/shared/head/fonts.js"></script>
+  <script defer src="${REL}/src/shared/icons/icons.js"></script>
+  <script defer src="${REL}/src/platform/supabase-client.js"></script>
+  <script defer src="${REL}/src/platform/repository.js"></script>
+  <script defer src="${REL}/src/security/sanitize.js"></script>
+  <script defer src="${REL}/src/shared/boot.js"></script>
+
+  <!-- ═══ Async third-party (Turnstile + Supabase SDK) — non-blocking ═══ -->
+  <script async src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+  <script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <!-- ═══ Page-specific CSS (defer if not critical to first paint) ═══ -->
+  <link rel="stylesheet" href="${REL}/styles/PAGE.css">
+
+  <!-- ═══ i18n (defer — runs after parse) ═══ -->
+  <script defer src="${REL}/src/i18n/index.js"></script>
+  <script defer src="${REL}/src/i18n/lang-switcher.js"></script>
+</head>
+<body>
+  <!-- Shell skeleton renders immediately thanks to critical-css.js -->
+  <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
+
+  <div class="albedu-shell">
+    <header class="albedu-shell__header">
+      <a href="${REL}/" class="albedu-shell__brand">
+        <img src="${REL}/public/images/logo.svg" alt="" width="28" height="28">
+        <span>AlbEdu</span>
+      </a>
+      <!-- Page-specific header content -->
+    </header>
+
+    <main class="albedu-shell__main" id="main-content">
+      <!-- Page content here -->
+    </main>
+
+    <footer class="albedu-shell__footer">
+      &copy; 2026 AlbEdu
+    </footer>
+  </div>
+
+  <!-- ═══ Page controller — waits for boot.ready before running ═══ -->
+  <script>
+    AlbEdu.boot.whenReady(function () {
+      // Page-specific initialization here
+    });
+  </script>
+</body>
+</html>

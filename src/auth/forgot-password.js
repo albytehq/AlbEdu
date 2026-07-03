@@ -350,7 +350,7 @@ async function handleSubmit(event) {
     try {
         await waitForSupabaseReady();
 
-        if (!window.sb?.auth?.resetPasswordForEmail) {
+        if (!window.AlbEdu?.supabase?.client?.auth?.resetPasswordForEmail) {
             throw new Error('Sistem autentikasi belum siap. Silakan muat ulang halaman.');
         }
 
@@ -362,7 +362,7 @@ async function handleSubmit(event) {
             throw new Error('Konfigurasi redirect tidak valid.');
         }
 
-        const { error } = await window.sb.auth.resetPasswordForEmail(email, {
+        const { error } = await window.AlbEdu?.supabase?.client.auth.resetPasswordForEmail(email, {
             redirectTo,
         });
 
@@ -497,7 +497,7 @@ async function handleResend() {
             return;
         }
 
-        const { error } = await window.sb.auth.resetPasswordForEmail(email, {
+        const { error } = await window.AlbEdu?.supabase?.client.auth.resetPasswordForEmail(email, {
             redirectTo,
         });
 
@@ -591,10 +591,10 @@ async function checkExistingSession() {
 
     try {
         await waitForSupabaseReady();
-        const { data } = await window.sb.auth.getSession();
+        const { data } = await window.AlbEdu?.supabase?.client.auth.getSession();
         if (data?.session) {
             try {
-                await window.sb.auth.signOut();
+                await window.AlbEdu?.supabase?.client.auth.signOut();
             } catch (signOutErr) {
                 console.warn('[ForgotPassword] signOut failed (non-fatal):', signOutErr?.message);
             }

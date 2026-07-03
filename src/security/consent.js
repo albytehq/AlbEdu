@@ -2,22 +2,17 @@
 // security/consent.js — UU PDP Consent Gate (v1.1.0)
 // =============================================================================
 // Checks if peserta has given consent. If not, shows consent popup.
-// Records consent to `consents` table via Supabase native client (window.sb).
+// Records consent to `consents` table via the native Supabase platform layer
+// (window.AlbEdu.supabase.client).
 // Blocks access to assessment until consent given.
 //
-// v1.1.0 (v0.742.5): Rewrote to use window.sb (Supabase native) directly.
-//   Previous v1.0.0 used Firebase Firestore API (db.collection().where().get(),
-//   .add()) via the Firestore-compat shim — but the shim had two bugs:
-//     1. .where('revoked_at', '==', null) translated to PostgREST
-//        ?revoked_at=eq.null — which is the STRING "null", not SQL NULL.
-//        PostgREST requires .is(col, null) for NULL checks. Supabase
-//        returned HTTP 400: "invalid input syntax for type timestamp
-//        with time zone: 'null'".
-//     2. .add() was never implemented on the shim's collection ref —
-//        so granting consent threw "db.collection(...).add is not a
-//        function".
-//   Fix: bypass the shim entirely. Use window.sb.from('consents') with
-//   native Supabase query builder (.eq, .is, .order, .limit, .insert).
+// v2.0.0 (Phase 3 refactor): Migrated from window.AlbEdu?.supabase?.client / window.firebaseAuth
+//   to window.AlbEdu.supabase.{client,auth}. This file is now Supabase-native
+//   — no Firebase shim references. The auth-shim global is gone, replaced
+//   by AlbEdu.supabase.auth.currentUser.
+//
+// v1.1.0 (v0.742.5): Originally rewrote to use window.AlbEdu?.supabase?.client (Supabase native) directly.
+//   Previous v1.0.0 used Firebase Firestore API via the compat shim.
 //
 // Edge cases handled:
 //   - First login (no consent) → show popup
@@ -38,19 +33,19 @@
   const Consent = {
     async check() {
       // Wait for auth
-      if (!window.firebaseAuth?.currentUser) {
+      if (!window.AlbEdu?.supabase?.auth?.currentUser) {
         // Not logged in — let auth flow handle redirect
         console.info('[consent] User not logged in, skipping consent');
         return true;
       }
 
-      const sb = window.sb;
+      const sb = window.AlbEdu?.supabase?.client;
       if (!sb) {
-        console.warn('[consent] window.sb not ready, allowing access (fail-safe)');
+        console.warn('[consent] AlbEdu.supabase.client not ready, allowing access (fail-safe)');
         return true;
       }
 
-      const user = window.firebaseAuth.currentUser;
+      const user = window.AlbEdu.supabase.auth.currentUser;
 
       try {
         // Check existing consent.
@@ -60,7 +55,7 @@
         const { data, error } = await sb
           .from('consents')
           .select('*')
-          .eq('user_id', user.uid)
+          .eq('user_id', user.id)
           .eq('consent_type', CONSENT_TYPE)
           .eq('granted', true)
           .is('revoked_at', null)
@@ -84,7 +79,7 @@
 
         // Consent valid — update user's consent_at if null
         console.info('[consent] Consent valid, allowing access');
-        await this._syncConsentAt(user.uid);
+        await this._syncConsentAt(user.id);
         return true;
       } catch (err) {
         console.error('[consent] Check failed, showing popup (fail-safe):', err);
@@ -94,7 +89,7 @@
 
     async _syncConsentAt(userId) {
       try {
-        const sb = window.sb;
+        const sb = window.AlbEdu?.supabase?.client;
         if (!sb) return;
         // Update users.consent_at + consent_version.
         // Using .eq('id', userId) + .select() to confirm the row was touched.
@@ -225,8 +220,8 @@
     },
 
     async _grantConsent() {
-      const user = window.firebaseAuth?.currentUser;
-      const sb = window.sb;
+      const user = window.AlbEdu?.supabase?.auth?.currentUser;
+      const sb = window.AlbEdu?.supabase?.client;
       if (!user || !sb) throw new Error('Auth not ready');
 
       const ip = await this._getClientIP();
@@ -239,7 +234,7 @@
       const { error: insertError } = await sb
         .from('consents')
         .insert({
-          user_id: user.uid,
+          user_id: user.id,
           consent_type: CONSENT_TYPE,
           version: POLICY_VERSION,
           granted: true,
@@ -259,7 +254,7 @@
           consent_at: new Date().toISOString(),
           consent_version: POLICY_VERSION,
         })
-        .eq('id', user.uid);
+        .eq('id', user.id);
 
       if (updateError) {
         console.warn('[consent] sync consent_at failed:', updateError.message);

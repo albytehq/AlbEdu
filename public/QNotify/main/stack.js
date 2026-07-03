@@ -144,26 +144,66 @@ function _reflowDesktop(notifs) {
     });
 }
 
-// Mobile: overlap seperti deck kartu, terbaru di depan
-// [v7.5.0 CLS Fix] All positional changes via spring/transform only — no top/left.
-// [v7.5.0 Layout Thrash Fix] Compute targets first (no DOM reads), then write.
+// Mobile: Dynamic Peek Effect — notif bertumpuk dengan real-time height tracking
+// [v2.0 Dynamic Peek Effect] Sistem baru:
+//   - Notif depan (idx 0) full height, notif belakang peek dari bawah
+//   - Offset belakang = tinggi notif depan + gap (bukan overlap kaku)
+//   - Notif belakang di-clamp ke tinggi notif depan + overflow:hidden
+//   - Tap front notif → expand semua ke list vertikal (spring animation)
+//   - Tap lagi → collapse kembali ke peek mode
+//   - Max 3 visible (front + 2 peek)
+const PEEK_GAP = 6;           // px gap antara notif depan dan peek
+const PEEK_SCALE = [1.0, 0.92, 0.85];  // scale per layer
+const PEEK_OPACITY = [1.0, 0.65, 0.35]; // opacity per layer
+const PEEK_PEEK_HEIGHT = 8;   // px ujung yang terlihat mengintip
+
+// State: apakah stack sedang di-expand (list mode)?
+let _mobileExpanded = false;
+
 function _reflowMobile(notifs) {
-    const overlap = MOBILE_STACK.OVERLAP;
-    const baseY   = MOBILE_STACK.BASE_Y;
-    let   cumulY  = baseY;
+    const baseY = MOBILE_STACK.BASE_Y;
 
-    // PHASE 1: Compute all targets (pure math — zero DOM reads)
-    const targets = notifs.map((n, idx) => {
-        const targetY     = cumulY;
-        const layerClass  = idx === 0 ? 'active' : idx === 1 ? 'layer-1' : idx === 2 ? 'layer-2' : null;
-        const depthFactor = idx === 0 ? 1.0 : idx === 1 ? 0.7 : idx === 2 ? 0.5 : 0.3;
-        const effH        = Math.max(0, (n.height || 78) - overlap);
-        cumulY += effH;
-        return { n, idx, targetY, layerClass, depthFactor };
-    });
+    // Limit to 3 visible
+    const visible = notifs.slice(0, 3);
 
-    // PHASE 2: All writes (zero reads in this pass)
-    targets.forEach(({ n, idx, targetY, layerClass, depthFactor }) => {
+    if (_mobileExpanded) {
+        _reflowMobileExpanded(visible, baseY);
+    } else {
+        _reflowMobilePeek(visible, baseY);
+    }
+}
+
+// Peek mode: notif depan full, belakang peek dengan dynamic height tracking
+function _reflowMobilePeek(notifs, baseY) {
+    // PHASE 1: Compute targets (pure math)
+    const targets = [];
+    let cumulY = baseY;
+
+    for (let idx = 0; idx < notifs.length; idx++) {
+        const n = notifs[idx];
+        const targetY = cumulY;
+        const layerClass = idx === 0 ? 'active' : idx === 1 ? 'layer-1' : 'layer-2';
+        const depthFactor = PEEK_SCALE[idx] || 0.8;
+        const opacity = PEEK_OPACITY[idx] || 0.3;
+
+        if (idx === 0) {
+            // Front notif: full height, no clamp
+            n._clamped = false;
+            cumulY += (n.height || 78) + PEEK_GAP;
+        } else {
+            // Back notif: clamp height to front notif height + peek height
+            const frontHeight = notifs[0].height || 78;
+            const clampHeight = frontHeight + PEEK_PEEK_HEIGHT;
+            n._clamped = true;
+            n._clampHeight = clampHeight;
+            cumulY += PEEK_PEEK_HEIGHT + PEEK_GAP;
+        }
+
+        targets.push({ n, idx, targetY, layerClass, depthFactor, opacity });
+    }
+
+    // PHASE 2: All writes
+    targets.forEach(({ n, idx, targetY, layerClass, depthFactor, opacity }) => {
         if (n.mobileStack) {
             n.mobileStack.to(targetY, {
                 onUpdate: () => { if (!n.isDead) updateElementTransform(n); },
@@ -171,14 +211,70 @@ function _reflowMobile(notifs) {
         }
 
         const el = n.element;
-        el.classList.remove('active', 'layer-1', 'layer-2', 'layer-3', 'layer-4', 'layer-5');
+        el.classList.remove('active', 'layer-1', 'layer-2', 'layer-3', 'layer-4', 'layer-5',
+                           'rn-peek-expanded', 'rn-peek-clamped');
         if (layerClass) el.classList.add(layerClass);
 
+        // [Dynamic Peek] Clamp back notifs
+        if (n._clamped && n._clampHeight) {
+            el.classList.add('rn-peek-clamped');
+            el.style.maxHeight = n._clampHeight + 'px';
+            el.style.overflow = 'hidden';
+        } else {
+            el.style.maxHeight = '';
+            el.style.overflow = '';
+        }
+
         el.style.zIndex = 100 - idx;
-        n.depthFactor   = depthFactor;
+        el.style.opacity = String(opacity);
+        n.depthFactor = depthFactor;
         applyDepthShadow(n);
         updateMobileLayer(n, idx);
     });
+}
+
+// Expanded mode: semua notif di-expand ke list vertikal, no clamp
+function _reflowMobileExpanded(notifs, baseY) {
+    let cumulY = baseY;
+    const EXPANDED_GAP = 8;
+
+    for (let idx = 0; idx < notifs.length; idx++) {
+        const n = notifs[idx];
+        const targetY = cumulY;
+
+        if (n.mobileStack) {
+            n.mobileStack.to(targetY, {
+                onUpdate: () => { if (!n.isDead) updateElementTransform(n); },
+            });
+        }
+
+        const el = n.element;
+        el.classList.remove('active', 'layer-1', 'layer-2', 'layer-3', 'layer-4', 'layer-5',
+                           'rn-peek-clamped');
+        el.classList.add('active', 'rn-peek-expanded');
+
+        // Release clamp
+        el.style.maxHeight = '';
+        el.style.overflow = '';
+        el.style.opacity = '1';
+        el.style.zIndex = 100 - idx;
+        n.depthFactor = 1.0;
+        applyDepthShadow(n);
+        updateMobileLayer(n, 0); // all at full depth when expanded
+
+        cumulY += (n.height || 78) + EXPANDED_GAP;
+    }
+}
+
+// Toggle expand/collapse — called by tap on front notif
+export function toggleMobileExpand(notifications) {
+    _mobileExpanded = !_mobileExpanded;
+    requestStackingUpdate(notifications, true);
+}
+
+// Check if currently expanded
+export function isMobileExpanded() {
+    return _mobileExpanded;
 }
 
 /**

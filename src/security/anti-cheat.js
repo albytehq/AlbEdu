@@ -245,23 +245,23 @@
       // Instead, rely on heartbeat sync + server-side audit
 
       // Best-effort: insert violation event directly (fire-and-forget)
-      const user = window.firebaseAuth?.currentUser;
-      const db = window.firebaseDb;
-      if (!user || !db || !this._sessionId) return;
+      const user = window.AlbEdu?.supabase?.auth?.currentUser;
+      const repo = window.AlbEdu?.repository;
+      if (!user || !repo || !this._sessionId) return;
 
-      // Get assessment_id from session
-      db.collection('assessment_sessions').doc(this._sessionId).get().then((doc) => {
-        if (!doc.exists) return;
+      // Get assessment_id from session, then insert violation event
+      repo.getDoc('assessment_sessions', this._sessionId).then((doc) => {
+        if (!doc?.exists) return;
         const session = doc.data();
 
         // Insert violation event (fire-and-forget, non-blocking)
-        db.collection('violation_events').add({
+        repo.addDoc('violation_events', {
           assessment_id: session.assessment_id,
           session_id: this._sessionId,
-          user_id: user.uid,
+          user_id: user.id,
           user_email: user.email,
           user_name: session.identity_snapshot?.nama || 'Unknown',
-          exam_title: null, // could fetch from assessment, but skip for performance
+          exam_title: null,
           event_type: eventType,
           message: message,
           severity: eventType === 'max_violations_reached' ? 'critical' : 'warning',

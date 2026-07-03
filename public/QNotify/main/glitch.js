@@ -439,6 +439,30 @@ export function _buildTransform({
 }
 
 // ═══════════════════════════════════════════════════════════
+//  REDUCED MOTION — [Phase B a11y] prefers-reduced-motion support
+//  When user prefers reduced motion, spring physics are disabled
+//  and CSS transitions handle all animations (already in CSS via
+//  @media (prefers-reduced-motion: reduce) in notify.css).
+//  JS checks this flag before creating springs.
+// ═══════════════════════════════════════════════════════════
+
+let _reducedMotion = false;
+
+function _checkReducedMotion() {
+    _reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+_checkReducedMotion();
+
+// Listen for changes (user can toggle this at runtime in OS settings)
+window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', _checkReducedMotion);
+
+export function prefersReducedMotion() {
+    return _reducedMotion;
+}
+
+
+// ═══════════════════════════════════════════════════════════
 //  DEV AUDIT
 // ═══════════════════════════════════════════════════════════
 

@@ -335,11 +335,12 @@ form?.addEventListener('submit', async (event) => {
 
     try {
         await waitForSupabaseReady();
-        if (!window.sb?.auth?.signInWithPassword) {
+        const client = window.AlbEdu?.supabase?.client;
+        if (!client?.auth?.signInWithPassword) {
             throw new Error('Supabase auth belum tersedia.');
         }
 
-        const { error } = await window.sb.auth.signInWithPassword({
+        const { error } = await client.auth.signInWithPassword({
             email: emailInput.value.trim(),
             password: passwordInput.value,
         });

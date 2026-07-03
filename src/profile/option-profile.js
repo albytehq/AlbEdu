@@ -845,13 +845,13 @@
         ${sepBefore}
         <button class="op-item ${item.danger ? 'op-danger' : ''} ${item.isLanguage ? 'op-language-item' : ''}" data-op="${item.op}" role="menuitem" style="--op-delay: ${delay}ms;">
           <div class="op-item-icon ${item.iconClass}">
-            <i class="material-symbols-outlined">${item.icon}</i>
+            <span data-albedu-icon="${item.icon}"></span>
           </div>
           <div class="op-item-text">
             ${_esc(item.title)}
             <span>${_esc(item.subtitle)}</span>
           </div>
-          <i class="material-symbols-outlined op-item-chevron">${chevronIcon}</i>
+          <span class="op-item-chevron" data-albedu-icon="${chevronIcon}"></span>
         </button>
         ${item.isLanguage ? `
           <div class="op-lang-panel" data-op-lang-panel hidden>
@@ -871,9 +871,9 @@
           ${email ? `<div class="op-user-email">${_esc(email)}</div>` : ''}
           <div class="op-chips">
             <span class="op-role-chip ${roleClass}">
-              <i class="material-symbols-outlined">${roleIcon}</i> ${_esc(roleLabel)}
+              <span data-albedu-icon="${roleIcon}"></span> ${_esc(roleLabel)}
             </span>
-            ${incomplete ? `<span class="op-incomplete-chip"><i class="material-symbols-outlined">error</i> ${_esc(ti18n('nav.profile_incomplete', 'Belum lengkap'))}</span>` : ''}
+            ${incomplete ? `<span class="op-incomplete-chip"><span data-albedu-icon="error"></span> ${_esc(ti18n('nav.profile_incomplete', 'Belum lengkap'))}</span>` : ''}
           </div>
         </div>
       </div>
@@ -892,10 +892,13 @@
     if (avatarImg) {
       avatarImg.addEventListener('error', function () {
         this.style.display = 'none';
-        const fallback = document.createElement('i');
-        fallback.className = 'material-symbols-outlined op-avatar-fallback';
-        fallback.textContent = 'person';
+        // SVG icon fallback (replaces Material Symbols font)
+        const fallback = document.createElement('span');
+        fallback.className = 'op-avatar-fallback';
+        fallback.setAttribute('data-albedu-icon', 'account-circle');
+        fallback.setAttribute('aria-hidden', 'true');
         this.parentElement.appendChild(fallback);
+        window.AlbEdu?.bindIcons?.(this.parentElement);
       }, { once: true });
     }
 
@@ -955,7 +958,7 @@
                     aria-pressed="${isActive}">
               <span class="op-lang-flag" aria-hidden="true">${flags[locale] || '🌐'}</span>
               <span class="op-lang-name">${_esc(name)}</span>
-              ${isActive ? '<i class="material-symbols-outlined op-lang-check" aria-hidden="true">check</i>' : ''}
+              ${isActive ? '<span class="op-lang-check" aria-hidden="true" data-albedu-icon="check"></span>' : ''}
             </button>
           `;
         }).join('')}

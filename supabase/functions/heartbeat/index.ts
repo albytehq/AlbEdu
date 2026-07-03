@@ -21,7 +21,7 @@ import { HTTPError, successResponse } from '../_shared/error.ts';
 import { requirePeserta } from '../_shared/auth.ts';
 import { SupabaseDB } from '../_shared/db.ts';
 import { logAudit, getClientIP, getUserAgent } from '../_shared/audit.ts';
-import { checkHeartbeatRate } from '../_shared/rate-limit.ts';
+import { checkHeartbeatRate, checkHeartbeatRateDB } from '../_shared/rate-limit.ts';
 import type { Env, AssessmentSession } from '../_shared/types.ts';
 
 interface HeartbeatBody {
@@ -48,10 +48,18 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
   }
 
   // Rate limit: 4 req/min per session (15s interval)
+  // [v2.0 Hardening] In-memory soft limit + DB-based hard limit (cross-isolate)
   const rateLimit = checkHeartbeatRate(body.session_id);
   if (!rateLimit.allowed) {
     throw new HTTPError(429, 'RATE_LIMITED', 'Heartbeat too frequent', {
       reset_at: new Date(rateLimit.resetAt).toISOString(),
+    });
+  }
+  // DB-based hard limit — catches cross-isolate bypass
+  const dbRateLimit = await checkHeartbeatRateDB(env, body.session_id);
+  if (!dbRateLimit.allowed) {
+    throw new HTTPError(429, 'RATE_LIMITED', 'Heartbeat rate limit exceeded (DB)', {
+      reset_at: new Date(dbRateLimit.resetAt).toISOString(),
     });
   }
 

@@ -48,13 +48,84 @@ export function checkRateLimit(
 }
 
 // Heartbeat: 4 req/min per session (15s interval = 4/min)
+// [v2.0 Hardening] In-memory for soft limit + DB-based for hard limit.
+// In-memory catches most abuse. DB-based catches cross-isolate bypass.
 export function checkHeartbeatRate(sessionId: string) {
   return checkRateLimit(`hb:${sessionId}`, 4, 60_000);
+}
+
+export async function checkHeartbeatRateDB(env: Env, sessionId: string) {
+  const windowMs = 60_000;
+  const maxRequests = 4;
+  const since = new Date(Date.now() - windowMs).toISOString();
+
+  const res = await fetch(
+    `${env.SUPABASE_URL}/rest/v1/rate_limit_heartbeats?session_id=eq.${sessionId}&created_at=gte.${since}&select=id&limit=${maxRequests + 1}`,
+    {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    }
+  );
+  const rows = res.ok ? await res.json() : [];
+  if (rows.length >= maxRequests) {
+    return { allowed: false, remaining: 0, resetAt: Date.now() + windowMs };
+  }
+
+  // Insert attempt record (non-fatal if fails)
+  try {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/rate_limit_heartbeats`, {
+      method: 'POST',
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ session_id: sessionId }),
+    });
+  } catch (_) { /* non-fatal */ }
+
+  return { allowed: true, remaining: maxRequests - rows.length - 1, resetAt: Date.now() + windowMs };
 }
 
 // Submit: 1 req/min per session (idempotency + anti-spam)
 export function checkSubmitRate(sessionId: string) {
   return checkRateLimit(`submit:${sessionId}`, 2, 60_000);  // allow 1 retry
+}
+
+export async function checkSubmitRateDB(env: Env, sessionId: string) {
+  const windowMs = 60_000;
+  const maxRequests = 2;
+  const since = new Date(Date.now() - windowMs).toISOString();
+
+  const res = await fetch(
+    `${env.SUPABASE_URL}/rest/v1/rate_limit_submits?session_id=eq.${sessionId}&created_at=gte.${since}&select=id&limit=${maxRequests + 1}`,
+    {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    }
+  );
+  const rows = res.ok ? await res.json() : [];
+  if (rows.length >= maxRequests) {
+    return { allowed: false, remaining: 0, resetAt: Date.now() + windowMs };
+  }
+
+  try {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/rate_limit_submits`, {
+      method: 'POST',
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ session_id: sessionId }),
+    });
+  } catch (_) { /* non-fatal */ }
+
+  return { allowed: true, remaining: maxRequests - rows.length - 1, resetAt: Date.now() + windowMs };
 }
 
 // Block: 10 req/min per admin (bulk block UI)

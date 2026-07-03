@@ -33,6 +33,13 @@ export function ensureContainer() {
         container = document.createElement('div');
         container.id        = 'qnotify-container';
         container.className = 'qnotify-notification-container notification-container';
+        // [Phase B a11y] Screen reader live region — announces new toasts automatically.
+        // aria-live="polite" = announce when screen reader is idle (non-interrupting).
+        // aria-atomic="false" = only new content is announced, not the whole container.
+        container.setAttribute('role', 'region');
+        container.setAttribute('aria-label', 'Notifikasi');
+        container.setAttribute('aria-live', 'polite');
+        container.setAttribute('aria-atomic', 'false');
         // [v7.5.0 Perf] isolation:isolate creates new stacking context without
         // creating a new layer — prevents paint bleeding into parent stacking contexts.
         container.style.isolation = 'isolate';
@@ -109,10 +116,19 @@ export function createNotifyElement({ id, type, title, message, icon, isDesktop,
     el.setAttribute('data-notification-id', id);
     el.setAttribute('data-qn', '');
 
+    // [Phase B a11y] ARIA roles for screen readers
+    // error/warning = assertive (role="alert" implies aria-live="assertive")
+    // success/info  = polite (role="status" implies aria-live="polite")
+    if (type === 'error' || type === 'warning') {
+        el.setAttribute('role', 'alert');
+    } else {
+        el.setAttribute('role', 'status');
+    }
+
     const stagger = isDesktop ? '' : 'stagger';
 
     el.innerHTML = `
-        <div class="notification-icon ${stagger}">
+        <div class="notification-icon ${stagger}" aria-hidden="true">
             <div class="icon-blob">
                 <span class="material-icons-round">${escapeHtml(finalIcon)}</span>
             </div>
@@ -121,7 +137,7 @@ export function createNotifyElement({ id, type, title, message, icon, isDesktop,
             <div class="text-small ${stagger}">${escapeHtml(finalTitle)}</div>
             <div class="text-main  ${stagger}">${escapeHtml(finalMessage)}</div>
         </div>
-        <div class="progress-track">
+        <div class="progress-track" aria-hidden="true">
             <div class="progress-bar" id="qnotify-progress-${id}"></div>
         </div>
     `;
@@ -205,9 +221,15 @@ export function createDialogElement({ id, title, message, icon, lang, intent = '
     ].filter(Boolean).join(' ');
     el.setAttribute('data-notification-id', id);
 
+    // [Phase B a11y] Dialog ARIA attributes for screen readers
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-labelledby', `${id}-title`);
+    el.setAttribute('aria-describedby', `${id}-message`);
+
     // Loader SVG (only if async)
     const loaderHTML = hasLoader ? `
-                <svg class="qnotify-loader premium-loader" viewBox="0 0 100 100">
+                <svg class="qnotify-loader premium-loader" viewBox="0 0 100 100" aria-hidden="true">
                     <circle class="loader-bg"   cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
                     <circle class="loader-path" cx="50" cy="50" r="42" fill="none" stroke="white"               stroke-width="6" stroke-linecap="round"/>
                 </svg>` : '';
@@ -219,18 +241,18 @@ export function createDialogElement({ id, title, message, icon, lang, intent = '
         : 'qnotify-btn confirm-btn yes';
 
     el.innerHTML = `
-        <div class="notification-icon">
+        <div class="notification-icon" aria-hidden="true">
             <div class="icon-blob stagger">
                 <span class="material-icons-round">${escapeHtml(finalIcon)}</span>${loaderHTML}
             </div>
         </div>
         <div class="notification-text" style="-webkit-user-select:none;user-select:none;">
-            <div class="text-small stagger">${escapeHtml(getText(TEXTS.dialog.confirmTitle, lang))}</div>
-            <div class="text-main  stagger">${escapeHtml(message || '')}</div>
+            <div class="text-small stagger" id="${id}-title">${escapeHtml(getText(TEXTS.dialog.confirmTitle, lang))}</div>
+            <div class="text-main  stagger" id="${id}-message">${escapeHtml(message || '')}</div>
         </div>
         <div class="confirmation-actions stagger">
-            <button class="qnotify-btn confirm-btn no">${escapeHtml(noLabel)}</button>
-            <button class="${btnYesClass}"${isHold ? ' data-hold' : ''}>${escapeHtml(yesLabel)}</button>
+            <button class="qnotify-btn confirm-btn no" type="button">${escapeHtml(noLabel)}</button>
+            <button class="${btnYesClass}"${isHold ? ' data-hold' : ''} type="button">${escapeHtml(yesLabel)}</button>
         </div>
     `;
 

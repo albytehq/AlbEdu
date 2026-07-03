@@ -179,7 +179,11 @@ export async function runPreflightValidation(turnstileToken) {
     }
     lastPreflightAt = now;
 
-    const { data, error } = await window.sb.functions.invoke('user-auth-preflight', {
+    // Use the native platform layer's RPC service — handles auth token auto-attachment.
+    const rpc = window.AlbEdu?.supabase?.rpc;
+    if (!rpc) throw new PreflightError('platform_not_ready');
+
+    const { data, error } = await rpc.invoke('user-auth-preflight', {
         body: {
             turnstileToken: token,
             deviceId,

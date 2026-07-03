@@ -85,7 +85,7 @@
         let attempts = 0;
         const check = () => {
           attempts++;
-          if (window.firebaseAuth?.currentUser) {
+          if (window.AlbEdu?.supabase?.auth?.currentUser) {
             resolve();
           } else if (window.Auth?.authReady === false && attempts < 100) {
             setTimeout(check, 100);
@@ -407,24 +407,23 @@
     },
 
     async _checkExistingSession(token) {
-      const db = window.firebaseDb;
-      const user = window.firebaseAuth?.currentUser;
-      if (!db || !user) return null;
+      const repo = window.AlbEdu?.repository;
+      const user = window.AlbEdu?.supabase?.auth?.currentUser;
+      if (!repo || !user) return null;
 
       try {
-        // Find assessment by access_code
-        const assessmentDoc = await db.collection('assessment_view_peserta').doc(token).get();
+        // Find assessment by access_code (view is keyed by access_code)
+        const assessmentDoc = await repo.getDoc('assessment_view_peserta', token, 'access_code');
         if (!assessmentDoc.exists) return null;
 
         const assessmentId = assessmentDoc.id;
 
         // Check for existing session
-        const sessionSnap = await db.collection('assessment_sessions')
-          .where('assessment_id', '==', assessmentId)
-          .where('user_id', '==', user.uid)
-          .orderBy('created_at', 'desc')
-          .limit(1)
-          .get();
+        const sessionSnap = await repo.getDocs('assessment_sessions', {
+          eq: { assessment_id: assessmentId, user_id: user.id },
+          order: { column: 'created_at', ascending: false },
+          limit: 1,
+        });
 
         if (sessionSnap.empty) return null;
 
@@ -454,12 +453,12 @@
     },
 
     async _fetchAssessment(token) {
-      const db = window.firebaseDb;
-      if (!db) return null;
+      const repo = window.AlbEdu?.repository;
+      if (!repo) return null;
 
       try {
         // Use peserta view (strips admin fields like total_score, ac_override)
-        const doc = await db.collection('assessment_view_peserta').doc(token).get();
+        const doc = await repo.getDoc('assessment_view_peserta', token, 'access_code');
         if (!doc.exists) return null;
         return { id: doc.id, ...doc.data() };
       } catch (err) {
@@ -515,15 +514,14 @@
     },
 
     async _checkSubmissions(assessmentId) {
-      const db = window.firebaseDb;
-      const user = window.firebaseAuth?.currentUser;
-      if (!db || !user) return 0;
+      const repo = window.AlbEdu?.repository;
+      const user = window.AlbEdu?.supabase?.auth?.currentUser;
+      if (!repo || !user) return 0;
 
       try {
-        const snap = await db.collection('submissions')
-          .where('assessment_id', '==', assessmentId)
-          .where('user_id', '==', user.uid)
-          .get();
+        const snap = await repo.getDocs('submissions', {
+          eq: { assessment_id: assessmentId, user_id: user.id },
+        });
         return snap.size;
       } catch {
         return 0;
@@ -531,40 +529,40 @@
     },
 
     async _createSession(assessment) {
-      const db = window.firebaseDb;
-      const user = window.firebaseAuth?.currentUser;
-      if (!db || !user) return null;
+      const repo = window.AlbEdu?.repository;
+      const user = window.AlbEdu?.supabase?.auth?.currentUser;
+      if (!repo || !user) return null;
 
       try {
         // Determine attempt_number
-        const existingSnap = await db.collection('assessment_sessions')
-          .where('assessment_id', '==', assessment.id)
-          .where('user_id', '==', user.uid)
-          .get();
+        const existingSnap = await repo.getDocs('assessment_sessions', {
+          eq: { assessment_id: assessment.id, user_id: user.id },
+        });
         const attemptNumber = existingSnap.size + 1;
 
+        const nowIso = new Date().toISOString();
         const sessionData = {
           assessment_id: assessment.id,
-          user_id: user.uid,
+          user_id: user.id,
           user_email: user.email,
           identity_snapshot: null, // filled when peserta submits identity form
           device_id: this._deviceId,
           ip_address: null, // server fills via Edge Function
           user_agent: navigator.userAgent,
           status: 'active',
-          started_at: new Date().toISOString(),
-          last_heartbeat_at: new Date().toISOString(),
+          started_at: nowIso,
+          last_heartbeat_at: nowIso,
           current_section: 0,
           current_question: 0,
           progress_pct: 0,
           violation_count: 0,
           draft_answers: {},
           attempt_number: attemptNumber,
-          created_at: db.FieldValue?.serverTimestamp() || new Date().toISOString(),
-          updated_at: db.FieldValue?.serverTimestamp() || new Date().toISOString(),
+          created_at: nowIso,
+          updated_at: nowIso,
         };
 
-        const docRef = await db.collection('assessment_sessions').add(sessionData);
+        const docRef = await repo.addDoc('assessment_sessions', sessionData);
         return { id: docRef.id, ...sessionData };
       } catch (err) {
         console.error('[assessment-entry] createSession error:', err);
@@ -583,7 +581,7 @@
       // Save to sessionStorage
       sessionStorage.setItem('assessment_token', token);
       sessionStorage.setItem('assessment_session_id', session.id);
-      sessionStorage.setItem('assessment_user_key', window.firebaseAuth.currentUser.uid);
+      sessionStorage.setItem('assessment_user_key', window.AlbEdu.supabase.auth.currentUser.uid);
 
       // Redirect
       window.location.href = `take.html?token=${token}`;

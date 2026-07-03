@@ -40,7 +40,7 @@ import { HTTPError, successResponse } from '../_shared/error.ts';
 import { requirePeserta } from '../_shared/auth.ts';
 import { SupabaseDB } from '../_shared/db.ts';
 import { logAudit, getClientIP, getUserAgent } from '../_shared/audit.ts';
-import { checkSubmitRate } from '../_shared/rate-limit.ts';
+import { checkSubmitRate, checkSubmitRateDB } from '../_shared/rate-limit.ts';
 import type { Env, Assessment, AssessmentSession, Section } from '../_shared/types.ts';
 
 interface SubmitBody {
@@ -77,11 +77,17 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     throw new HTTPError(413, 'PAYLOAD_TOO_LARGE', `Answers payload exceeds ${MAX_ANSWERS_SIZE} bytes`);
   }
 
-  // 3. Rate limit
+  // 3. Rate limit — in-memory soft + DB-based hard (cross-isolate)
   const rateLimit = checkSubmitRate(body.session_id);
   if (!rateLimit.allowed) {
     throw new HTTPError(429, 'RATE_LIMITED', 'Too many submit attempts. Wait before retrying.', {
       reset_at: new Date(rateLimit.resetAt).toISOString(),
+    });
+  }
+  const dbRateLimit = await checkSubmitRateDB(env, body.session_id);
+  if (!dbRateLimit.allowed) {
+    throw new HTTPError(429, 'RATE_LIMITED', 'Submit rate limit exceeded (DB)', {
+      reset_at: new Date(dbRateLimit.resetAt).toISOString(),
     });
   }
 

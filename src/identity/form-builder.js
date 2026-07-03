@@ -295,7 +295,7 @@ window.IdentityFormBuilder = (() => {
     header.className = 'ifb-header';
     header.innerHTML = `
       <div class="ifb-header__title">
-        <i class="material-symbols-outlined ifb-header__icon">edit_note</i>
+        <span class="ifb-header__icon" data-albedu-icon="edit_note"></span>
         <span>Form Builder Identitas Peserta</span>
       </div>
       <div class="ifb-header__count">${_fields.length} / ${MAX_FIELDS} field</div>
@@ -380,7 +380,7 @@ window.IdentityFormBuilder = (() => {
     const upBtn = document.createElement('button');
     upBtn.type = 'button';
     upBtn.className = 'ifb-icon-btn';
-    upBtn.innerHTML = '<i class="material-symbols-outlined" style="font-size:14px;">arrow_upward</i>';
+    upBtn.innerHTML = '<span style="font-size:14px;" data-albedu-icon="arrow_upward"></span>';
     upBtn.title = 'Pindah ke atas';
     upBtn.disabled = idx === 0;
     upBtn.onclick = () => moveFieldUp(idx);
@@ -389,7 +389,7 @@ window.IdentityFormBuilder = (() => {
     const downBtn = document.createElement('button');
     downBtn.type = 'button';
     downBtn.className = 'ifb-icon-btn';
-    downBtn.innerHTML = '<i class="material-symbols-outlined" style="font-size:14px;">arrow_downward</i>';
+    downBtn.innerHTML = '<span style="font-size:14px;" data-albedu-icon="arrow_downward"></span>';
     downBtn.title = 'Pindah ke bawah';
     downBtn.disabled = idx === _fields.length - 1;
     downBtn.onclick = () => moveFieldDown(idx);
@@ -398,7 +398,7 @@ window.IdentityFormBuilder = (() => {
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'ifb-icon-btn ifb-icon-btn--danger';
-    delBtn.innerHTML = '<i class="material-symbols-outlined" style="font-size:14px;">close</i>';
+    delBtn.innerHTML = '<span style="font-size:14px;" data-albedu-icon="close"></span>';
     delBtn.title = 'Hapus field';
     delBtn.disabled = _fields.length <= MIN_FIELDS;
     delBtn.onclick = () => {
@@ -542,7 +542,7 @@ window.IdentityFormBuilder = (() => {
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
       delBtn.className = 'ifb-icon-btn ifb-icon-btn--danger';
-      delBtn.innerHTML = '<i class="material-symbols-outlined" style="font-size:14px;">close</i>';
+      delBtn.innerHTML = '<span style="font-size:14px;" data-albedu-icon="close"></span>';
       delBtn.disabled = options.length <= MIN_OPTIONS;
       delBtn.onclick = () => {
         const newOpts = options.filter((_, j) => j !== i);

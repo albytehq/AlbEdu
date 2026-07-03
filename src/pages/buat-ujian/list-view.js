@@ -41,7 +41,7 @@
       const max = 300; // 300 × 100ms = 30s
       const tick = () => {
         attempts++;
-        if (window.firebaseDb && window.firebaseAuth?.currentUser) {
+        if (window.AlbEdu?.repository && window.AlbEdu?.supabase?.auth?.currentUser) {
           this._loadExams();
           return;
         }
@@ -56,31 +56,38 @@
 
     async _loadExams() {
       try {
-        const db = window.firebaseDb;
-        const user = window.firebaseAuth?.currentUser;
-        if (!db || !user) return;
+        const repo = window.AlbEdu?.repository;
+        const user = window.AlbEdu?.supabase?.auth?.currentUser;
+        if (!repo || !user) return;
 
-        // Initial fetch
-        const snap = await db.collection('assessments')
-          .where('created_by', '==', user.uid)
-          .orderBy('created_at', 'desc')
-          .limit(50)
-          .get();
+        // Initial fetch — native repository
+        const snap = await repo.getDocs('assessments', {
+          eq: { created_by: user.id },
+          order: { column: 'created_at', ascending: false },
+          limit: 50,
+        });
         const exams = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         this._render(exams);
 
-        // Subscribe to changes (live update)
-        db.collection('assessments')
-          .where('created_by', '==', user.uid)
-          .orderBy('created_at', 'desc')
-          .limit(50)
-          .onSnapshot(
-            (snap) => {
-              const exams = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-              this._render(exams);
-            },
-            (err) => console.warn('[ListView] snapshot error:', err)
-          );
+        // Subscribe to changes (live update) — native realtime
+        repo.subscribe(
+          'list-view:assessments',
+          'assessments',
+          async () => {
+            try {
+              const s = await repo.getDocs('assessments', {
+                eq: { created_by: user.id },
+                order: { column: 'created_at', ascending: false },
+                limit: 50,
+              });
+              const xs = s.docs.map((d) => ({ id: d.id, ...d.data() }));
+              this._render(xs);
+            } catch (err) {
+              console.warn('[ListView] snapshot refetch error:', err);
+            }
+          },
+          `created_by=eq.${user.id}`
+        );
       } catch (err) {
         console.warn('[ListView] failed to load assessments:', err);
         // Show empty state on error
@@ -113,9 +120,9 @@
               <span class="albedu-exam-card-token">#${this._esc(token)}</span>
             </div>
             <div class="albedu-exam-card-meta">
-              <span><i class="material-symbols-outlined">book</i> ${this._esc(mapel)}</span>
-              <span><i class="material-symbols-outlined">schedule</i> ${this._esc(durasi)}m</span>
-              ${e.identity_mode ? `<span><i class="material-symbols-outlined">badge</i> ${e.identity_mode === 'daftar' ? 'Daftar' : 'Manual'}</span>` : ''}
+              <span><span data-albedu-icon="book"></span> ${this._esc(mapel)}</span>
+              <span><span data-albedu-icon="schedule"></span> ${this._esc(durasi)}m</span>
+              ${e.identity_mode ? `<span><span data-albedu-icon="badge"></span> ${e.identity_mode === 'daftar' ? 'Daftar' : 'Manual'}</span>` : ''}
             </div>
             <div class="albedu-exam-card-date">Dibuat: ${tanggal}</div>
           </article>

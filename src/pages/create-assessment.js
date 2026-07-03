@@ -324,63 +324,53 @@
         this.generateToken();
       }
 
-      const db = window.firebaseDb;
-      const user = window.firebaseAuth?.currentUser;
+      const repo = window.AlbEdu?.repository;
+      const user = window.AlbEdu?.supabase?.auth?.currentUser;
       if (!user) throw new Error('User tidak terautentikasi');
-      if (!db) throw new Error('Database belum siap');
+      if (!repo) throw new Error('Platform layer belum siap');
 
       const data = this.exportAssessmentData();
       const now = new Date().toISOString();
 
-      // Insert into assessments table (new v1.0.0 schema)
-      const docRef = db.collection('assessments').doc(); // auto-generate UUID
+      // Insert into assessments table (native repository — addDoc returns the
+      // inserted row with its generated UUID PK).
+      const payload = {
+        access_code: data.access_code,
+        organization_id: null, // single-tenant mode
+        created_by: user.id,
+        created_by_email: user.email || null,
+        published_at: now,
+        title: data.title,
+        subject: data.subject,
+        duration_minutes: data.duration_minutes,
+        access_mode: data.access_mode,
+        note_enabled: data.note_enabled,
+        note_text: data.note_text,
+        max_pages_per_section: data.max_pages_per_section,
+        total_score: data.total_score,
+        theme_config: data.theme_config,
+        identity_mode: data.identity_mode,
+        identity_config: data.identity_config,
+        sections: data.sections,
+        allow_retake: data.allow_retake,
+        status: 'active',
+        ac_manual_status: 'closed',
+        ac_override: false,
+        ac_end: null,
+        ac_remaining_time: null,
+        ac_scheduled_start: data.access_mode === 'scheduled' ? _state.scheduled_start : null,
+        ac_scheduled_end: data._scheduled_end || null,
+        created_at: now,
+        updated_at: now,
+      };
 
-      await db.runTransaction(async (transaction) => {
-        const doc = await transaction.get(docRef);
-        // Insert new doc
-        transaction.set(docRef, {
-          access_code: data.access_code,
-          organization_id: null, // single-tenant mode
-          created_by: user.uid,
-          created_by_email: user.email || null,
-          published_at: now,
-          title: data.title,
-          subject: data.subject,
-          duration_minutes: data.duration_minutes,
-          access_mode: data.access_mode,
-          note_enabled: data.note_enabled,
-          note_text: data.note_text,
-          max_pages_per_section: data.max_pages_per_section,
-          total_score: data.total_score,
-          theme_config: data.theme_config,
-          identity_mode: data.identity_mode,
-          identity_config: data.identity_config,
-          sections: data.sections,
-          allow_retake: data.allow_retake,
-          status: 'active',
-          ac_manual_status: 'closed',
-          ac_override: false,
-          ac_end: null,
-          ac_remaining_time: null,
-          ac_scheduled_start: data.access_mode === 'scheduled' ? _state.scheduled_start : null,
-          ac_scheduled_end: data._scheduled_end || null,
-          created_at: db.FieldValue.serverTimestamp(),
-          updated_at: db.FieldValue.serverTimestamp(),
-        });
-      });
+      const docRef = await repo.addDoc('assessments', payload);
 
-      // Audit log via Edge Function (non-blocking)
+      // Audit log via native RPC service (non-blocking, auth token auto-attached)
       try {
-        await fetch('https://kzsrerxhhrtsxnpnmqgl.supabase.co/functions/v1/assessment-lifecycle', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user.accessToken || ''}`,
-          },
-          body: JSON.stringify({
-            assessment_id: docRef.id,
-            action: 'publish',
-          }),
+        await window.AlbEdu?.supabase?.rpc?.invoke('assessment-lifecycle', {
+          assessment_id: docRef.id,
+          action: 'publish',
         });
       } catch (err) {
         console.warn('[publish] audit log failed (non-blocking):', err);
@@ -513,10 +503,10 @@
       const validation = window.ThemeSystem.validate(theme.primary);
       if (validation.allPass) {
         wcagStatus.className = 'albedu-wcag-status albedu-wcag-pass';
-        wcagStatus.innerHTML = '<i class="material-symbols-outlined" style="font-size: 14px;">check_circle</i><span>' + t('create.wcag_pass', null, 'Contrast OK (Pass)') + '</span>';
+        wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="check_circle"></span><span>' + t('create.wcag_pass', null, 'Contrast OK (Pass)') + '</span>';
       } else {
         wcagStatus.className = 'albedu-wcag-status albedu-wcag-fail';
-        wcagStatus.innerHTML = '<i class="material-symbols-outlined" style="font-size: 14px;">warning</i><span>' + t('create.wcag_fail', null, 'Warna ini mungkin sulit dibaca. Coba warna lebih gelap.') + '</span>';
+        wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="warning"></span><span>' + t('create.wcag_fail', null, 'Warna ini mungkin sulit dibaca. Coba warna lebih gelap.') + '</span>';
       }
     }
 

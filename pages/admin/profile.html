@@ -15,53 +15,34 @@
     
 
     <!-- Design System Tokens -->
-    <link rel="stylesheet" href="../../styles/tokens.css">
-  <!-- F1+F2 fix: font loading strategy (preconnect + swap, no @import) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+        <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
+    <script src="../../src/shared/head/critical-css.js"></script>
+
+    <!-- ═══ Design tokens ═══ -->
+    <link rel="stylesheet" href="../../styles/tokens.css">    <!-- QNotify Styles (consolidated) -->
+    <link rel="stylesheet" href="../../public/QNotify/ui/qnotify.css"><!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
+    <script defer src="../../src/shared/head/fonts.js"></script>
+    <script defer src="../../src/shared/icons/icons.js"></script>
+    <script defer src="../../src/platform/supabase-client.js"></script>
+    <script type="module" src="../../src/shared/resilience.js"></script>
+    <script defer src="../../src/platform/repository.js"></script>
+    <script defer src="../../src/security/sanitize.js"></script>
+    <script defer src="../../src/shared/boot.js"></script>
+    <script defer src="RELPREFIXsrc/shared/error-boundary.js"></script>
+    <script defer src="../../src/shared/qnotify-loader.js"></script>
     <!-- style.css removed — tokens.css provides global reset, focus ring, skip-to-main -->
     <link rel="stylesheet" href="../../styles/loading.css">
     <link rel="stylesheet" href="../../styles/navigasi.css">
     <link rel="stylesheet" href="../../styles/albedu-v1.css">
-    <link rel="stylesheet" href="../../styles/profile.css">
-    <link rel="stylesheet" href="../../public/QNotify/ui/notify.css">
-    <link rel="stylesheet" href="../../public/QNotify/ui/dialog.css">
-    <link rel="stylesheet" href="../../public/QNotify/ui/label.css">
-    <link rel="stylesheet" href="../../public/QNotify/ui/Readnote.css">
-    <link rel="stylesheet" href="../../styles/notification-panel.css">
+    <link rel="stylesheet" href="../../styles/profile.css"><link rel="stylesheet" href="../../styles/notification-panel.css">
     
     <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
-    <script src="../../src/utils/supabase-api.js" defer></script>
-    
-    <script src="../../src/auth/security.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" async></script><script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
     <script src="../../src/auth/errors.js" defer></script>
     <script src="../../src/auth/user-helpers.js" defer></script>
     <script src="../../src/auth/main.js" defer></script>
-    <script src="../../src/auth/byteward.js" defer></script>
-    
-    
-
-    <!-- QNotify Module + Bridge -->
-    <script type="module">
-        import QNotify from '../../public/QNotify/api/index.js';
-        window.QNotify = QNotify;
-        window.show    = QNotify;
-        window.notify  = {
-            success:          (t, m, d) => QNotify.notify.success(t, m, d),
-            error:            (t, m, d) => QNotify.notify.error(t, m, d),
-            warning:          (t, m, d) => QNotify.notify.warning(t, m, d),
-            info:             (t, m, d) => QNotify.notify.info(t, m, d),
-            confirm:          (opts)    => QNotify.dialog.confirm(opts),
-            holdConfirmAsync: (opts)    => QNotify.dialog.holdAsync(opts),
-        };
-        window.dispatchEvent(new Event('qnotify-ready'));
-    </script>
-
-    <!-- ProfileEditorPanel dimuat eksplisit di sini -->
+    <script src="../../src/auth/byteward.js" defer></script><!-- ProfileEditorPanel dimuat eksplisit di sini -->
     <script src="../../src/profile/editor-panel.js" defer></script>
 
     <style>
@@ -91,13 +72,13 @@
                    title="AlbEdu Creates — Klik untuk ke beranda">
                     <span class="logo-icon-stack" aria-hidden="true">
                         <img class="logo-icon logo-icon--default" src="../../public/images/logo.svg" alt="">
-                        <i class="logo-icon logo-icon--reveal material-symbols-outlined">left_panel_open</i>
+                        <span class="logo-icon logo-icon--reveal" data-albedu-icon="left_panel_open"></span>
                     </span>
                 </a>
                 <span class="logo-text">AlbEdu Creates</span>
                 <button class="sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button"
                         aria-label="Tutup sidebar" aria-expanded="true">
-                    <i class="material-symbols-outlined">left_panel_close</i>
+                    <span data-albedu-icon="left_panel_close"></span>
                 </button>
             </div>
             
@@ -105,43 +86,43 @@
                 <ul>
                     <li class="menu-item sidebar-item active" data-tab="profil">
                         <a href="profile.html" class="menu-item-content" aria-current="page">
-                            <i class="sidebar-icon material-symbols-outlined">account_circle</i>
+                            <span class="sidebar-icon" data-albedu-icon="account_circle"></span>
                             <span class="sidebar-text" data-i18n="nav.profile">Profil Admin</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="create-assessment">
                         <a href="create-assessment.html" class="menu-item-content">
-                            <i class="sidebar-icon material-symbols-outlined">edit_note</i>
+                            <span class="sidebar-icon" data-albedu-icon="edit_note"></span>
                             <span class="sidebar-text" data-i18n="nav.create_assessment">Buat Asesmen</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="active-assessments">
                         <a href="active-assessments.html" class="menu-item-content">
-                            <i class="sidebar-icon material-symbols-outlined">menu_book</i>
+                            <span class="sidebar-icon" data-albedu-icon="menu_book"></span>
                             <span class="sidebar-text" data-i18n="nav.active_assessments">Asesmen Aktif</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="question-bank">
                         <a href="question-bank.html" class="menu-item-content">
-                            <i class="sidebar-icon material-symbols-outlined">inventory_2</i>
+                            <span class="sidebar-icon" data-albedu-icon="inventory_2"></span>
                             <span class="sidebar-text" data-i18n="nav.question_bank">Bank Soal</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="monitoring">
                         <a href="monitoring.html" class="menu-item-content">
-                            <i class="sidebar-icon material-symbols-outlined">monitor_heart</i>
+                            <span class="sidebar-icon" data-albedu-icon="monitor_heart"></span>
                             <span class="sidebar-text" data-i18n="nav.monitoring">Monitoring</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="results">
                         <a href="results-analytics.html" class="menu-item-content">
-                            <i class="sidebar-icon material-symbols-outlined">bar_chart</i>
+                            <span class="sidebar-icon" data-albedu-icon="bar_chart"></span>
                             <span class="sidebar-text" data-i18n="nav.results">Hasil &amp; Analitik</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="daftar-nama">
                         <a href="daftar-nama.html" class="menu-item-content">
-                            <i class="sidebar-icon material-symbols-outlined">list</i>
+                            <span class="sidebar-icon" data-albedu-icon="list"></span>
                             <span class="sidebar-text" data-i18n="nav.daftar_nama">Daftar Nama</span>
                         </a>
                     </li>
@@ -151,7 +132,7 @@
             <div class="user-profile sidebar-item">
                 <button class="user-profile-content" aria-haspopup="true" aria-expanded="false" aria-label="Menu profil pengguna">
                     <div class="avatar" id="sidebar-avatar">
-                        <i class="material-symbols-outlined">person</i>
+                        <span data-albedu-icon="person"></span>
                     </div>
                     <div class="user-info">
                         <h4 id="sidebar-user-name" data-i18n="nav.default_admin_name">Admin AlbEdu</h4>
@@ -169,13 +150,13 @@
             <header class="header">
                 <div class="header-left">
                     <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka menu">
-                        <i class="material-symbols-outlined">menu</i>
+                        <span data-albedu-icon="menu"></span>
                     </button>
                     <h1 id="page-title" data-i18n="profile.page_title">Profil Admin</h1>
                 </div>
                 <div class="header-right">
                     <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
-                        <i class="material-symbols-outlined">notifications</i>
+                        <span data-albedu-icon="notifications"></span>
                         <span class="badge">0</span>
                     </button>
                 </div>
@@ -191,32 +172,32 @@
                         <div class="profile-header-section">
                             <div class="avatar-container">
                                 <div class="profile-avatar" id="admin-avatar">
-                                    <i class="material-symbols-outlined">account_circle</i>
+                                    <span data-albedu-icon="account_circle"></span>
                                 </div>
                                 <div class="avatar-overlay">
                                     <button class="btn-avatar-edit" id="btn-avatar-edit" data-i18n-aria-label="admin.profile.btn_change_photo_aria" aria-label="Ganti foto profil">
-                                        <i class="material-symbols-outlined">photo_camera</i>
+                                        <span data-albedu-icon="photo_camera"></span>
                                     </button>
                                 </div>
                             </div>
                             <h2 id="admin-name" data-i18n="nav.default_admin_name">Admin AlbEdu</h2>
                             <p id="admin-email">admin@alb.edu</p>
                             <div class="role-badge">
-                                <i class="material-symbols-outlined">shield</i>
+                                <span data-albedu-icon="shield"></span>
                                 <span data-i18n="admin.profile.role_badge">Administrator</span>
                             </div>
                         </div>
                         
                         <div class="profile-details">
                             <div class="detail-section">
-                                <h3><i class="material-symbols-outlined">info</i> <span data-i18n="profile.section_info">Informasi Pribadi</span></h3>
+                                <h3><span data-albedu-icon="info"></span> <span data-i18n="profile.section_info">Informasi Pribadi</span></h3>
                                 <div class="detail-grid">
                                     <div class="detail-item">
-                                        <label><i class="material-symbols-outlined">fingerprint</i> <span data-i18n="profile.uuid_label">UUID Admin</span></label>
+                                        <label><span data-albedu-icon="fingerprint"></span> <span data-i18n="profile.uuid_label">UUID Admin</span></label>
                                         <p id="admin-id">—</p>
                                     </div>
                                     <div class="detail-item">
-                                        <label><i class="material-symbols-outlined">schedule</i> <span data-i18n="profile.last_login_label">Terakhir Login</span></label>
+                                        <label><span data-albedu-icon="schedule"></span> <span data-i18n="profile.last_login_label">Terakhir Login</span></label>
                                         <p id="admin-last-login">—</p>
                                     </div>
                                 </div>
@@ -224,7 +205,7 @@
                             
                             <div class="profile-actions">
                                 <button class="btn-action btn-edit" id="btn-edit-profile">
-                                    <i class="material-symbols-outlined">photo_camera</i>
+                                    <span data-albedu-icon="photo_camera"></span>
                                     <span data-i18n="admin.profile.btn_change_photo">Ganti Foto</span>
                                 </button>
                             </div>
@@ -256,11 +237,12 @@
         // ── Fetch Admin UUID langsung dari Supabase ────────
         async function _getAdminIdFromSupabase() {
             try {
-                if (!window.sb) {
-                    console.warn('[Profile] window.sb belum ready — tunggu supabase-ready event');
+                var client = window.AlbEdu?.supabase?.client;
+                if (!client) {
+                    console.warn('[Profile] AlbEdu.supabase.client belum ready — tunggu albedu:platform-ready event');
                     return null;
                 }
-                var session = await window.sb.auth.getSession();
+                var session = await client.auth.getSession();
                 if (!session.data?.session?.user?.id) {
                     console.warn('[Profile] Session tidak ada atau user.id kosong');
                     return null;

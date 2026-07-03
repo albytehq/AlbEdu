@@ -34,7 +34,7 @@ window.SelfStorage = (() => {
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   function _getSb() {
-    return window.sb;
+    return window.AlbEdu?.supabase?.client;
   }
 
   function _isAdmin() {

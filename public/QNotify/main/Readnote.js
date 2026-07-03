@@ -49,7 +49,12 @@ import { escapeHtml, sanitizeUrl } from '../security/sanitize.js';
 // [v7.5.0] glitch.js: stampInitialState already ran before DOM insert (from engine.js).
 // animateReadNoteEnter must NOT re-write card opacity/transform — it conflicts.
 // clearInitialState is called on exit to release GPU compositor layer.
-import { clearInitialState } from './glitch.js';
+// [v2.0 Anti-Glitch Hardening] Import additional glitch guards:
+//   afterTwoFrames  — triple-barrier (rAF→rAF→microtask) prevents animation flash
+//   forceReflow     — locks stamped initial state before springs start
+//   prefersReducedMotion — skip springs when user prefers reduced motion
+//   isTabVisible    — pause scroll-progress when tab is hidden
+import { clearInitialState, afterTwoFrames, forceReflow, prefersReducedMotion, isTabVisible } from './glitch.js';
 
 // ════════════════════════════════════════════════════════════
 //  HELPERS
@@ -464,6 +469,35 @@ export function animateReadNoteEnter(el, uiType, onReady) {
 
     let cancelled = false;
 
+    // ── [v2.0 Anti-Glitch Hardening #4] Reduced motion: skip all springs ──────
+    // When user prefers reduced motion, set final state immediately.
+    // CSS @media (prefers-reduced-motion: reduce) handles transition timing.
+    if (prefersReducedMotion()) {
+        card.style.willChange = 'auto';
+        card.style.opacity    = '1';
+        card.style.transform  = 'translate(-50%, -50%)';
+        _clearShadowLift(card);
+        if (backdrop) {
+            backdrop.style.opacity    = '1';
+            backdrop.style.willChange = 'auto';
+        }
+        // Show content immediately
+        el.querySelectorAll('.rn-anim-item').forEach(item => {
+            item.style.opacity   = '';
+            item.style.transform = '';
+            item.style.willChange = 'auto';
+        });
+        const closeBtn = el.querySelector('.rn-close-btn');
+        if (closeBtn) {
+            closeBtn.style.opacity   = '';
+            closeBtn.style.transform = '';
+            closeBtn.classList.remove('rn-close-hidden');
+        }
+        el._rnAnimating = false;
+        if (onReady) onReady();
+        return { cancel: () => {} };
+    }
+
     // Card enter
     // [v7.5.0 FOIS Fix — ReadNote]
     // engine.js does NOT call stampInitialState (it breaks translate(-50%,-50%) centering).
@@ -484,6 +518,13 @@ export function animateReadNoteEnter(el, uiType, onReady) {
     _applyShadowLift(card, 0);
 
     _hideContentItems(el);
+
+    // ── [v2.0 Anti-Glitch Hardening #2] Force reflow after initial state stamp ──
+    // Lock in the stamped transform+opacity BEFORE springs start writing.
+    // Without this, the browser may batch the initial state write with the first
+    // spring frame write → visual jump (the "position spike" bug from v8.0.1 but
+    // at the DOM-write level rather than the initial-translate level).
+    forceReflow(card);
 
     const scaleSpring   = _aSpring({ k: 300, c: 24, m: 0.9 });
     const txYSpring     = _aSpring({ k: 280, c: 22, m: 0.9 });
@@ -509,73 +550,80 @@ export function animateReadNoteEnter(el, uiType, onReady) {
     }
     const bdSpring = _aSpring({ k: 240, c: 20, m: 1.0 });
     bdSpring.jump(0);
-    bdSpring.to(1, {
-        onUpdate: v => {
-            if (cancelled || !backdrop) return;
-            backdrop.style.opacity = v.toFixed(3);
-        },
-        onRest: () => {
-            if (backdrop) backdrop.style.willChange = 'auto';
-        },
-    });
 
-    // [v8.0.1] CONTENT TIMING OVERHAUL — fixes content delay + "blank card" glitch.
-    //
-    // OLD: wait for ALL 3 card springs to rest (~550-620ms), then start content.
-    //      → Card visible but empty for >500ms. Users saw a blank card appear.
-    //      → setTimeout-based stagger had no cancel guard → ghost springs after exit.
-    //
-    // NEW: trigger content once opacity crosses 0.72 threshold (~160ms into animation).
-    //      → Card clearly visible, springs still settling → content flows in AS card lands.
-    //      → Feels alive, not dead. Zero blank-card period.
-    //      → onRest is a guaranteed safety fallback if threshold is never crossed.
-    let contentTriggered = false;
-    const triggerContent = () => {
-        if (contentTriggered || cancelled) return;
-        contentTriggered = true;
-        card.style.willChange = 'auto';
-        _animateContentIn(el, uiType, () => {
-            el._rnAnimating = false;
-            if (!cancelled && onReady) onReady();
-        });
-    };
-
-    const applyCardTransform = () => {
+    // ── [v2.0 Anti-Glitch Hardening #1] Triple-barrier (afterTwoFrames) ────────
+    // Wrap ALL spring starts in afterTwoFrames() — same pattern as engine.show()
+    // and dialog activateDialog(). This prevents animation flash on mid-range
+    // Android where compositor layer allocation happens in a microtask AFTER
+    // the 2nd rAF, not during. Without this barrier, the first spring frame
+    // may write to a DOM element that hasn't been compositor-promoted yet,
+    // causing a visible "flash of un-animated content" before the spring kicks in.
+    const cancelFrames = afterTwoFrames(() => {
         if (cancelled) return;
-        const sc = scaleSpring.x;
-        const ty = txYSpring.x;
-        card.style.transform = `translate(-50%,-50%) scale(${sc.toFixed(5)}) translateY(${ty.toFixed(2)}px)`;
-    };
 
-    // Scale and txY springs no longer gate content — they run freely.
-    scaleSpring.to(1, { onUpdate: applyCardTransform });
-    txYSpring.to(0,   { onUpdate: applyCardTransform });
+        // Remove spawn class — visibility becomes visible
+        el.classList.remove('spawn');
+        el.classList.add('active');
 
-    opacitySpring.to(1, {
-        onUpdate: v => {
-            if (!cancelled) {
-                card.style.opacity = v.toFixed(3);
-                // Threshold: 72% opacity → card feels solid, springs still settling.
-                // Content starts revealing while card is still in motion — looks dynamic.
-                if (v >= 0.72) triggerContent();
-            }
-        },
-        // Safety fallback — always fires even if threshold somehow missed.
-        onRest: () => triggerContent(),
-    });
+        // Backdrop spring starts NOW (visibility was hidden via .spawn CSS)
+        bdSpring.to(1, {
+            onUpdate: v => {
+                if (cancelled || !backdrop) return;
+                backdrop.style.opacity = v.toFixed(3);
+            },
+            onRest: () => {
+                if (backdrop) backdrop.style.willChange = 'auto';
+            },
+        });
 
-    // [U3] Shadow: independent, clears inline style on rest
-    shadowSpring.to(1, {
-        onUpdate: v => { if (!cancelled) _applyShadowLift(card, v); },
-        onRest:   () => { if (!cancelled) _clearShadowLift(card); },
-    });
+        // [v8.0.1] CONTENT TIMING OVERHAUL — fixes content delay + "blank card" glitch.
+        let contentTriggered = false;
+        const triggerContent = () => {
+            if (contentTriggered || cancelled) return;
+            contentTriggered = true;
+            card.style.willChange = 'auto';
+            _animateContentIn(el, uiType, () => {
+                el._rnAnimating = false;
+                if (!cancelled && onReady) onReady();
+            });
+        };
+
+        const applyCardTransform = () => {
+            if (cancelled) return;
+            const sc = scaleSpring.x;
+            const ty = txYSpring.x;
+            card.style.transform = `translate(-50%,-50%) scale(${sc.toFixed(5)}) translateY(${ty.toFixed(2)}px)`;
+        };
+
+        // Scale and txY springs no longer gate content — they run freely.
+        scaleSpring.to(1, { onUpdate: applyCardTransform });
+        txYSpring.to(0,   { onUpdate: applyCardTransform });
+
+        opacitySpring.to(1, {
+            onUpdate: v => {
+                if (!cancelled) {
+                    card.style.opacity = v.toFixed(3);
+                    // Threshold: 72% opacity → card feels solid, springs still settling.
+                    // Content starts revealing while card is still in motion — looks dynamic.
+                    if (v >= 0.72) triggerContent();
+                }
+            },
+            // Safety fallback — always fires even if threshold somehow missed.
+            onRest: () => triggerContent(),
+        });
+
+        // [U3] Shadow: independent, clears inline style on rest
+        shadowSpring.to(1, {
+            onUpdate: v => { if (!cancelled) _applyShadowLift(card, v); },
+            onRest:   () => { if (!cancelled) _clearShadowLift(card); },
+        });
+    }); // end afterTwoFrames
 
     const cancelHandle = {
         cancel: () => {
             cancelled = true;
             // Mark element so all pending setTimeout callbacks bail immediately.
             // This is the critical fix for ghost springs after rapid open→close.
-            contentTriggered   = true;
             el._rnAnimCancelled = true;
             scaleSpring.stop();
             txYSpring.stop();
@@ -584,6 +632,13 @@ export function animateReadNoteEnter(el, uiType, onReady) {
             shadowSpring.stop();
             _clearShadowLift(card);
             el._rnAnimating = false;
+            // [v2.0 Hardening] Cancel the afterTwoFrames barrier if it hasn't fired yet
+            if (cancelFrames) cancelFrames();
+            // [v2.0 Hardening #8] Ensure backdrop opacity is cleaned up on cancel
+            if (backdrop) {
+                backdrop.style.opacity = '';
+                backdrop.style.willChange = 'auto';
+            }
         },
     };
 
@@ -723,6 +778,16 @@ export function animateReadNoteExit(el, onDone) {
     if (el._rnAnimCancel) { el._rnAnimCancel(); el._rnAnimCancel = null; }
     el._rnAnimating = false;
 
+    // [v2.0 Anti-Glitch Hardening #4] Reduced motion: skip springs, instant exit
+    if (prefersReducedMotion()) {
+        if (backdrop) { backdrop.style.opacity = '0'; backdrop.style.willChange = 'auto'; }
+        card.style.opacity = '0';
+        card.style.willChange = 'auto';
+        clearInitialState(el);
+        if (onDone) onDone();
+        return;
+    }
+
     el.querySelectorAll('.rn-anim-item, .rn-footer, .rn-close-btn, .rn-step-dots').forEach(c => {
         c.style.transition = 'opacity 0.10s ease';
         c.style.opacity    = '0';
@@ -803,9 +868,14 @@ export function wireScrollProgress(notificationId, lang, onUnlock) {
 
     const onScroll = () => {
         if (reached || rafPending) return;
+        // [v2.0 Anti-Glitch Hardening #7] Skip scroll processing when tab is hidden.
+        // When user switches tabs, scroll events may fire with stale dimensions.
+        // This prevents false "read complete" triggers from inaccurate measurements.
+        if (!isTabVisible()) return;
         rafPending = true;
         requestAnimationFrame(() => {
             rafPending = false;
+            if (!isTabVisible()) return; // double-check inside rAF
             const { scrollTop, scrollHeight, clientHeight } = content;
             const max = Math.max(0, scrollHeight - clientHeight);
             const pct = max > 0 ? _clamp((scrollTop / max) * 100, 0, 100) : 100;
@@ -976,6 +1046,12 @@ export function advanceReadNoteStep(el, nextIdx, onDismiss) {
             item.style.opacity   = '0';
             item.style.transform = 'translateX(32px) scale(0.97)';
         });
+
+        // [v2.0 Anti-Glitch Hardening #6] Force reflow after content swap
+        // Lock in the new initial state (opacity:0, translateX:32px) BEFORE
+        // springs start writing. Without this, the browser may batch the
+        // initial state write with the first spring frame → visual jump.
+        forceReflow(content);
 
         const delays = _buildStaggerDelays(newItems.length);
         newItems.forEach((item, i) => {

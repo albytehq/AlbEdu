@@ -15,29 +15,28 @@
   <link rel="manifest" href="../../public/images/favicon/site.webmanifest">
 
   <!-- Design System Tokens -->
-  <link rel="stylesheet" href="../../styles/tokens.css">
-  <!-- F1+F2 fix: font loading strategy (preconnect + swap, no @import) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+      <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
+    <script src="../../src/shared/head/critical-css.js"></script>
 
-  <!-- Styles -->
+    <!-- ═══ Design tokens ═══ -->
+    <link rel="stylesheet" href="../../styles/tokens.css">    <!-- QNotify Styles (consolidated) -->
+    <link rel="stylesheet" href="../../public/QNotify/ui/qnotify.css"><!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
+    <script defer src="../../src/shared/head/fonts.js"></script>
+    <script defer src="../../src/shared/icons/icons.js"></script>
+    <script defer src="../../src/platform/supabase-client.js"></script>
+    <script type="module" src="../../src/shared/resilience.js"></script>
+    <script defer src="../../src/platform/repository.js"></script>
+    <script defer src="../../src/security/sanitize.js"></script>
+    <script defer src="../../src/shared/boot.js"></script>
+    <script defer src="RELPREFIXsrc/shared/error-boundary.js"></script>
+    <script defer src="../../src/shared/qnotify-loader.js"></script>
+    <!-- Styles -->
   <link rel="stylesheet" href="../../styles/loading.css">
   <link rel="stylesheet" href="../../styles/navigasi.css">
   <link rel="stylesheet" href="../../styles/albedu-v1.css">
   <link rel="stylesheet" href="../../styles/daftar-nama.css">
-  <link rel="stylesheet" href="../../styles/notification-panel.css">
-  <link rel="stylesheet" href="../../public/QNotify/ui/notify.css">
-  <link rel="stylesheet" href="../../public/QNotify/ui/dialog.css">
-  <link rel="stylesheet" href="../../public/QNotify/ui/label.css">
-  <link rel="stylesheet" href="../../public/QNotify/ui/Readnote.css">
-
-  <!-- Supabase SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
-  <script src="../../src/utils/supabase-api.js" defer></script>
-
-  <!-- Auth + Core -->
+  <link rel="stylesheet" href="../../styles/notification-panel.css"><!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" async></script><!-- Auth + Core -->
   <script src="../../src/auth/security.js" defer></script>
   <script src="../../src/utils/ui.js" defer></script>
   <script src="../../src/auth/errors.js" defer></script>
@@ -46,23 +45,6 @@
   <script src="../../src/auth/byteward.js" defer></script>
   <script src="../../src/utils/self-storage.js" defer></script>
   <script src="../../src/pages/daftar-nama.js" defer></script>
-
-  <!-- QNotify Module -->
-  <script type="module">
-    import QNotify from '../../public/QNotify/api/index.js';
-    window.QNotify = QNotify;
-    window.show    = QNotify;
-    window.notify  = {
-      success:          (t, m, d) => QNotify.notify.success(t, m, d),
-      error:            (t, m, d) => QNotify.notify.error(t, m, d),
-      warning:          (t, m, d) => QNotify.notify.warning(t, m, d),
-      info:             (t, m, d) => QNotify.notify.info(t, m, d),
-      confirm:          (opts)    => QNotify.dialog.confirm(opts),
-      holdConfirmAsync: (opts)    => QNotify.dialog.holdAsync(opts),
-      readNote:         (opts)    => QNotify.label.readNote(opts),
-    };
-    window.dispatchEvent(new Event('qnotify-ready'));
-  </script>
 </head>
 <body>
 <a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
@@ -79,56 +61,56 @@
          title="AlbEdu Creates — Klik untuk ke beranda">
         <span class="logo-icon-stack" aria-hidden="true">
           <img class="logo-icon logo-icon--default" src="../../public/images/logo.svg" alt="">
-          <i class="logo-icon logo-icon--reveal material-symbols-outlined">left_panel_open</i>
+          <span class="logo-icon logo-icon--reveal" data-albedu-icon="left_panel_open"></span>
         </span>
       </a>
       <span class="logo-text">AlbEdu Creates</span>
       <button class="sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button"
               aria-label="Tutup sidebar" aria-expanded="true">
-        <i class="material-symbols-outlined">left_panel_close</i>
+        <span data-albedu-icon="left_panel_close"></span>
       </button>
     </div>
     <nav class="menu">
       <ul>
         <li class="menu-item sidebar-item" data-tab="profil">
           <a href="profile.html" class="menu-item-content">
-            <i class="sidebar-icon material-symbols-outlined">account_circle</i>
+            <span class="sidebar-icon" data-albedu-icon="account_circle"></span>
             <span class="sidebar-text" data-i18n="nav.profile">Profil Admin</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="create-assessment">
           <a href="create-assessment.html" class="menu-item-content">
-            <i class="sidebar-icon material-symbols-outlined">edit_note</i>
+            <span class="sidebar-icon" data-albedu-icon="edit_note"></span>
             <span class="sidebar-text" data-i18n="nav.create_assessment">Buat Asesmen</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="active-assessments">
           <a href="active-assessments.html" class="menu-item-content">
-            <i class="sidebar-icon material-symbols-outlined">menu_book</i>
+            <span class="sidebar-icon" data-albedu-icon="menu_book"></span>
             <span class="sidebar-text" data-i18n="nav.active_assessments">Asesmen Aktif</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="question-bank">
           <a href="question-bank.html" class="menu-item-content">
-            <i class="sidebar-icon material-symbols-outlined">inventory_2</i>
+            <span class="sidebar-icon" data-albedu-icon="inventory_2"></span>
             <span class="sidebar-text" data-i18n="nav.question_bank">Bank Soal</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="monitoring">
           <a href="monitoring.html" class="menu-item-content">
-            <i class="sidebar-icon material-symbols-outlined">monitor_heart</i>
+            <span class="sidebar-icon" data-albedu-icon="monitor_heart"></span>
             <span class="sidebar-text" data-i18n="nav.monitoring">Monitoring</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="results">
           <a href="results-analytics.html" class="menu-item-content">
-            <i class="sidebar-icon material-symbols-outlined">bar_chart</i>
+            <span class="sidebar-icon" data-albedu-icon="bar_chart"></span>
             <span class="sidebar-text" data-i18n="nav.results">Hasil &amp; Analitik</span>
           </a>
         </li>
         <li class="menu-item sidebar-item active" data-tab="daftar-nama">
           <a href="daftar-nama.html" class="menu-item-content" aria-current="page">
-            <i class="sidebar-icon material-symbols-outlined">list</i>
+            <span class="sidebar-icon" data-albedu-icon="list"></span>
             <span class="sidebar-text" data-i18n="nav.daftar_nama">Daftar Nama</span>
           </a>
         </li>
@@ -137,7 +119,7 @@
     <div class="user-profile sidebar-item">
       <button class="user-profile-content" aria-haspopup="true" aria-expanded="false" aria-label="Menu profil pengguna">
         <div class="avatar" id="sidebar-avatar">
-          <i class="material-symbols-outlined">person</i>
+          <span data-albedu-icon="person"></span>
         </div>
         <div class="user-info">
           <h4 id="sidebar-user-name" data-i18n="nav.default_admin_name">Admin AlbEdu</h4>
@@ -155,16 +137,16 @@
     <header class="header">
       <div class="header-left">
         <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka menu">
-          <i class="material-symbols-outlined">menu</i>
+          <span data-albedu-icon="menu"></span>
         </button>
         <h1 id="page-title" data-i18n="daftar_nama.page_title">Daftar Nama</h1>
       </div>
       <div class="header-right">
         <!-- Language Switcher -->
         <div class="albedu-lang-switcher" id="lang-switcher">
-          <i class="material-symbols-outlined">language</i>
+          <span data-albedu-icon="language"></span>
           <span id="current-lang">🇮🇩 ID</span>
-          <i class="material-symbols-outlined">expand_more</i>
+          <span data-albedu-icon="expand_more"></span>
           <div class="albedu-lang-dropdown" id="lang-dropdown" hidden>
             <div class="albedu-lang-option albedu-active" data-locale="id">🇮🇩 Bahasa Indonesia</div>
             <div class="albedu-lang-option" data-locale="en">🇬🇧 English</div>
@@ -173,7 +155,7 @@
                             </div>
         </div>
         <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
-          <i class="material-symbols-outlined">notifications</i>
+          <span data-albedu-icon="notifications"></span>
           <span class="badge">0</span>
         </button>
       </div>
@@ -190,11 +172,11 @@
         <!-- Header -->
         <div class="dn-header">
           <div>
-            <h2><i style="color:var(--color-primary);margin-right:8px" class="material-symbols-outlined">list</i><span data-i18n="daftar_nama.header_title">Daftar Nama</span></h2>
+            <h2><span style="color:var(--color-primary);margin-right:8px" data-albedu-icon="list"></span><span data-i18n="daftar_nama.header_title">Daftar Nama</span></h2>
             <p data-i18n="daftar_nama.header_subtitle">Kelola daftar nama yang digunakan saat pembuatan asesmen. Maksimal 3 daftar.</p>
           </div>
           <button class="dn-btn primary" id="btnBuatDaftar">
-            <i class="material-symbols-outlined">add</i> <span data-i18n="daftar_nama.btn_buat_daftar">Buat Daftar</span>
+            <span data-albedu-icon="add"></span> <span data-i18n="daftar_nama.btn_buat_daftar">Buat Daftar</span>
           </button>
         </div>
 
@@ -208,7 +190,7 @@
 
         <!-- Limit notice -->
         <div class="dn-limit-notice" id="dnLimitNotice" style="display:none;">
-          <i class="material-symbols-outlined">warning</i>
+          <span data-albedu-icon="warning"></span>
           <span data-i18n="daftar_nama.limit_notice">Kamu sudah memiliki 3 data daftar (batas maksimum). Hapus salah satu untuk membuat yang baru.</span>
         </div>
 
@@ -340,7 +322,7 @@
     if (_daftarList.length === 0) {
       list.innerHTML = `
         <div class="dn-empty">
-          <i class="material-symbols-outlined">folder_open</i>
+          <span data-albedu-icon="folder_open"></span>
           <h3><span data-i18n="daftar_nama.empty_state">Belum ada data daftar</span></h3>
           <p>Klik "Buat Daftar" untuk membuat data daftar pertamamu.</p>
         </div>
@@ -362,22 +344,22 @@
         <div class="dn-card ${isActive ? 'is-active' : ''}"
              data-id="${d.id}" role="button" tabindex="0">
           <div class="dn-card__icon">
-            <i class="material-symbols-outlined">${meta.icon}</i>
+            <span data-albedu-icon="${meta.icon}"></span>
           </div>
           <div class="dn-card__body">
             <div class="dn-card__title">${_esc(d.nama_daftar)}</div>
             <div class="dn-card__meta">
-              <span class="dn-card__badge"><i class="material-symbols-outlined" style="font-size:11px;">sell</i> ${_esc(tipe)}</span>
+              <span class="dn-card__badge"><span style="font-size:11px;" data-albedu-icon="sell"></span> ${_esc(tipe)}</span>
               <span>${tabCount} bagian</span>
               <span>${totalAnggota} entri</span>
             </div>
           </div>
           <div class="dn-card__actions">
             <button class="dn-btn-icon" data-action="edit" data-id="${d.id}" title="Edit" type="button">
-              <i class="material-symbols-outlined" style="font-size:16px;">edit</i>
+              <span style="font-size:16px;" data-albedu-icon="edit"></span>
             </button>
             <button class="dn-btn-icon danger" data-action="delete" data-id="${d.id}" title="Hapus" type="button">
-              <i class="material-symbols-outlined" style="font-size:16px;">delete</i>
+              <span style="font-size:16px;" data-albedu-icon="delete"></span>
             </button>
           </div>
         </div>
@@ -443,12 +425,12 @@
           <div>
             <div class="dn-panel__kicker">Buat Baru</div>
             <div class="dn-panel__title">
-              <i class="material-symbols-outlined">add_circle</i>
+              <span data-albedu-icon="add_circle"></span>
               Buat Daftar Baru
             </div>
           </div>
           <button class="dn-btn-icon" id="dnEditorClose" type="button" title="Tutup">
-            <i class="material-symbols-outlined" style="font-size:18px;">close</i>
+            <span style="font-size:18px;" data-albedu-icon="close"></span>
           </button>
         </div>
         <div class="dn-panel__body">
@@ -462,7 +444,7 @@
             <div class="dn-type-picker" id="dnTipePicker">
               ${Object.entries(TIPE_META).map(([key, m]) => `
                 <button class="dn-type-btn" data-tipe="${key}" type="button">
-                  <i class="material-symbols-outlined" style="font-size:14px;margin-right:4px;">${m.icon}</i>
+                  <span style="font-size:14px;margin-right:4px;" data-albedu-icon="${m.icon}"></span>
                   ${m.label}
                 </button>
               `).join('')}
@@ -477,7 +459,7 @@
         <div class="dn-action-bar">
           <button class="dn-btn ghost" id="dnCreateCancel" type="button" data-i18n="common.cancel_btn">Batal</button>
           <button class="dn-btn primary" id="dnCreateSave" type="button">
-            <i class="material-symbols-outlined" style="font-size:16px;">add</i>
+            <span style="font-size:16px;" data-albedu-icon="add"></span>
             Buat Daftar
           </button>
         </div>
@@ -600,12 +582,12 @@
       <div class="dn-panel">
         <div class="dn-panel__head">
           <div class="dn-panel__title">
-            <i class="material-symbols-outlined">edit</i>
+            <span data-albedu-icon="edit"></span>
             ${_esc(d.nama_daftar)}
             <span class="dn-count-chip">${d.tabs.length} tab</span>
           </div>
           <button class="dn-btn-icon" id="dnEditorClose" type="button" title="Tutup">
-            <i class="material-symbols-outlined" style="font-size:18px;">close</i>
+            <span style="font-size:18px;" data-albedu-icon="close"></span>
           </button>
         </div>
         <div class="dn-panel__body">
@@ -623,7 +605,7 @@
             }).join('')}
             ${d.tabs.length < MAX_TABS ? `
               <button class="dn-add-tab-btn" id="dnAddTab" type="button" title="Tambah tab">
-                <i class="material-symbols-outlined" style="font-size:14px;">add</i>
+                <span style="font-size:14px;" data-albedu-icon="add"></span>
               </button>
             ` : ''}
           </div>
@@ -635,7 +617,7 @@
                 <input type="text" id="dnTabName" value="${_esc(activeTab.nama_tab || '')}" placeholder="Nama tab (cth: 7A)" maxlength="15">
                 ${d.tabs.length > 1 ? `
                   <button class="dn-btn-icon danger" id="dnDeleteTab" type="button" title="Hapus tab ini">
-                    <i class="material-symbols-outlined" style="font-size:16px;">delete</i>
+                    <span style="font-size:16px;" data-albedu-icon="delete"></span>
                   </button>
                 ` : ''}
               </div>
@@ -644,7 +626,7 @@
               </div>
               <div style="padding:12px 16px;border-top:1px solid #f1f5f9;">
                 <button class="dn-add-nama-btn" id="dnAddEntry" type="button">
-                  <i class="material-symbols-outlined" style="font-size:14px;">person_add</i>
+                  <span style="font-size:14px;" data-albedu-icon="person_add"></span>
                   Tambah Nama
                 </button>
               </div>
@@ -653,12 +635,12 @@
         </div>
         <div class="dn-action-bar">
           <span style="margin-right:auto;font-size:12px;color:#64748b;">
-            <i class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">info</i>
+            <span style="font-size:12px;vertical-align:middle;" data-albedu-icon="info"></span>
             Total ${anggotaCount} nama di tab ini
           </span>
           <button class="dn-btn ghost" id="dnEditorCancel" type="button" data-i18n="common.close">Tutup</button>
           <button class="dn-btn primary" id="dnEditorSave" type="button">
-            <i class="material-symbols-outlined" style="font-size:16px;">save</i>
+            <span style="font-size:16px;" data-albedu-icon="save"></span>
             Simpan Perubahan
           </button>
         </div>
@@ -765,7 +747,7 @@
       <div class="dn-nama-row" data-idx="${idx}">
         <input type="text" class="dn-entry-nama" data-idx="${idx}" value="${_esc(nama)}" placeholder="Nama peserta" maxlength="50">
         <button class="dn-btn-icon danger dn-entry-del" data-idx="${idx}" title="Hapus" type="button">
-          <i class="material-symbols-outlined" style="font-size:14px;">delete</i>
+          <span style="font-size:14px;" data-albedu-icon="delete"></span>
         </button>
       </div>
     `).join('');

@@ -340,7 +340,7 @@ function _hasRecoveryMarker() {
 async function _tryGetSessionWithRetry() {
     for (let attempt = 1; attempt <= RECOVERY_DETECT_RETRIES; attempt++) {
         try {
-            const { data, error } = await window.sb.auth.getSession();
+            const { data, error } = await window.AlbEdu?.supabase?.client.auth.getSession();
             if (error) {
                 console.warn(`[ResetPassword] getSession attempt ${attempt} error:`, error.message);
                 return { session: null, error };
@@ -399,10 +399,10 @@ async function detectRecoverySession() {
         // NOT come from a recovery link, sign out to give the recovery flow a
         // clean slate.
         if (!hadRecoveryMarkerAtLoad) {
-            const initialProbe = await window.sb.auth.getSession();
+            const initialProbe = await window.AlbEdu?.supabase?.client.auth.getSession();
             if (initialProbe.data?.session) {
                 try {
-                    await window.sb.auth.signOut();
+                    await window.AlbEdu?.supabase?.client.auth.signOut();
                     await new Promise(r => setTimeout(r, 300));
                 } catch (signOutErr) {
                     console.warn('[ResetPassword] pre-detection signOut failed:', signOutErr?.message);
@@ -449,7 +449,7 @@ async function detectRecoverySession() {
         // Session exists but NO recovery marker at load — treat as invalid
         // direct access. Sign out so we don't leave a dangling session.
         try {
-            await window.sb.auth.signOut();
+            await window.AlbEdu?.supabase?.client.auth.signOut();
         } catch (_) {}
         showErrorState(
             'Link Diperlukan',
@@ -493,13 +493,13 @@ async function handleSubmit(event) {
     try {
         await waitForSupabaseReady();
 
-        if (!window.sb?.auth?.updateUser) {
+        if (!window.AlbEdu?.supabase?.client?.auth?.updateUser) {
             throw new Error('Sistem autentikasi belum siap. Silakan muat ulang halaman.');
         }
 
         // Cek session sekali lagi sebelum updateUser — session mungkin sudah
         // expired antara detect & submit (race condition).
-        const { data: sessionCheck } = await window.sb.auth.getSession();
+        const { data: sessionCheck } = await window.AlbEdu?.supabase?.client.auth.getSession();
         if (!sessionCheck?.session) {
             showErrorState(
                 'Link Kadaluarsa',
@@ -510,7 +510,7 @@ async function handleSubmit(event) {
 
         const newPassword = newPasswordInput.value;
 
-        const { error } = await window.sb.auth.updateUser({
+        const { error } = await window.AlbEdu?.supabase?.client.auth.updateUser({
             password: newPassword,
         });
 
@@ -547,7 +547,7 @@ async function handleSubmit(event) {
         // we still proceed and clear local storage manually.
         try {
             await Promise.race([
-                window.sb.auth.signOut(),
+                window.AlbEdu?.supabase?.client.auth.signOut(),
                 new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('signOut timeout')), SIGNOUT_TIMEOUT_MS)
                 ),
