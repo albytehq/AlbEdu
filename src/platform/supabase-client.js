@@ -40,9 +40,9 @@
   const CONFIG_ENDPOINT = `${WORKER_BASE}/api/supabase-config`;
   const CONFIG_CACHE_KEY = 'albedu_sb_config';
   const CONFIG_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+  const SDK_TIMEOUT_MS = 30_000; // [Fix] 10s → 30s: CDN can be slow on first load
   const FETCH_RETRY_COUNT = 3;
   const FETCH_RETRY_BASE_MS = 1500;
-  const SDK_TIMEOUT_MS = 10_000;
 
   // ── Module state ───────────────────────────────────────────────────────
   let _client = null;
@@ -132,6 +132,22 @@
       if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
         return resolve();
       }
+
+      // [Fix] If SDK not found after 3s, try injecting it dynamically.
+      // The defer script tag might have failed silently (CSP, network, etc).
+      let dynamicallyInjected = false;
+      const injectTimer = setTimeout(() => {
+        if (typeof window.supabase !== 'undefined' && window.supabase.createClient) return;
+        if (dynamicallyInjected) return;
+        dynamicallyInjected = true;
+        console.warn('[platform] SDK not detected after 3s — injecting dynamically');
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+        s.onload = () => console.info('[platform] SDK dynamically loaded');
+        s.onerror = () => console.error('[platform] SDK dynamic load failed');
+        document.head.appendChild(s);
+      }, 3_000);
+
       let elapsed = 0;
       const tick = 100;
       const id = setInterval(() => {
@@ -139,13 +155,15 @@
         if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
           clearInterval(id);
           clearTimeout(timer);
+          clearTimeout(injectTimer);
           resolve();
         }
       }, tick);
       const timer = setTimeout(() => {
         clearInterval(id);
+        clearTimeout(injectTimer);
         reject(new Error(
-          'Supabase SDK not loaded within 10s. Check CDN script tag in HTML.'
+          'Supabase SDK not loaded within 30s. Check network connection or CDN availability.'
         ));
       }, SDK_TIMEOUT_MS);
     });
