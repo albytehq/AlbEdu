@@ -28,6 +28,11 @@
   // All icons use the same 24×24 viewBox, stroke=currentColor, stroke-width=2.
   // Keep this list short — only icons actually used by critical UI.
   // Page-specific icons can be added via AlbEdu.registerIcon(name, svg).
+  //
+  // NAMING: Both underscore (Material Symbols style: 'account_circle') AND
+  // hyphen (CSS class style: 'account-circle') variants are accepted.
+  // The icon() function normalizes the name before lookup so HTML authors
+  // can use whichever convention matches their reference docs.
   var ICONS = {
     // Auth / nav
     'login': '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>',
@@ -40,11 +45,25 @@
     'arrow-back': '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
     'arrow-forward': '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>',
     'expand-more': '<polyline points="6 9 12 15 18 9"/>',
+    'expand-less': '<polyline points="18 15 12 9 6 15"/>',
     'language': '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
     'menu': '<line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>',
     'close': '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
     'check': '<polyline points="20 6 9 17 4 12"/>',
     'x': '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+
+    // Sidebar / panel toggling (Material Symbols: left_panel_open / left_panel_close)
+    'left-panel-open': '<rect x="3" y="4" width="18" height="16" rx="2"/><rect x="3" y="4" width="7" height="16" rx="1"/><polyline points="14 9 18 12 14 15"/>',
+    'left-panel-close': '<rect x="3" y="4" width="18" height="16" rx="2"/><rect x="3" y="4" width="7" height="16" rx="1"/><polyline points="18 9 14 12 18 15"/>',
+
+    // Person / user (Material Symbols: person, account_circle)
+    'person': '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',
+    'edit-note': '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/><line x1="8" y1="20" x2="16" y2="20"/>',
+    'menu-book': '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+    'inventory-2': '<path d="M21 7L12 3 3 7v0l9 4 9-4v0z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>',
+    'monitor-heart': '<rect x="2" y="6" width="20" height="12" rx="2"/><polyline points="6 12 9 12 11 9 13 15 15 12 18 12"/>',
+    'bar-chart': '<line x1="4" y1="20" x2="4" y2="10"/><line x1="10" y1="20" x2="10" y2="4"/><line x1="16" y1="20" x2="16" y2="14"/><line x1="22" y1="20" x2="22" y2="8"/>',
+    'list': '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
 
     // Status
     'lock': '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
@@ -92,11 +111,24 @@
   };
 
   // ── Public API ─────────────────────────────────────────────────────────
+
+  // Normalize icon name: accept both underscore (Material Symbols style:
+  // 'account_circle', 'left_panel_open') and hyphen (CSS class style:
+  // 'account-circle', 'left-panel-open'). The registry is stored with hyphens
+  // for consistency with CSS class naming, but HTML authors using Material
+  // Symbols references naturally use underscores — so we accept both.
+  function _normalizeName(name) {
+    if (typeof name !== 'string') return name;
+    return name.trim().toLowerCase().replace(/_/g, '-');
+  }
+
   function icon(name, opts) {
-    var path = ICONS[name];
+    var normalizedName = _normalizeName(name);
+    var path = ICONS[normalizedName];
     if (!path) {
       if (window.console && console.warn) {
-        console.warn('[albedu:icons] unknown icon:', name);
+        console.warn('[albedu:icons] unknown icon:', name,
+                     '(normalized:', normalizedName + ')');
       }
       return '';
     }
@@ -119,7 +151,8 @@
 
   function registerIcon(name, svgPath) {
     if (!name || typeof svgPath !== 'string') return false;
-    ICONS[name] = svgPath;
+    // Normalize on register so future lookups (which also normalize) match.
+    ICONS[_normalizeName(name)] = svgPath;
     return true;
   }
 

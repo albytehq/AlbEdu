@@ -76,6 +76,7 @@ let _translations = {};        // { id: {...}, en: {...} }
 let _listeners = new Set();
 let _initialized = false;
 let _initAttempts = 0;
+let _localeLoaded = {};        // { id: true, en: true } — tracks which locales finished loading
 let _supabaseSyncPending = false;
 
 // ── INLINE FALLBACK DICTIONARY ─────────────────────────────────────────────
@@ -255,7 +256,10 @@ async function loadLocale(locale) {
     console.warn('[i18n] Cannot load invalid locale:', locale);
     return null;
   }
-  if (_translations[valid]) return _translations[valid];
+  if (_translations[valid]) {
+    _localeLoaded[valid] = true;
+    return _translations[valid];
+  }
 
   try {
     const basePath = _getBasePath();
@@ -265,6 +269,7 @@ async function loadLocale(locale) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     _translations[valid] = data;
+    _localeLoaded[valid] = true;
     console.info(`[i18n] Locale '${valid}' loaded:`, _countKeys(data), 'keys');
     return data;
   } catch (err) {
@@ -275,14 +280,17 @@ async function loadLocale(locale) {
     if (_FALLBACK_DICT[valid]) {
       console.info(`[i18n] Using inline fallback for '${valid}'`);
       _translations[valid] = _FALLBACK_DICT[valid];
+      _localeLoaded[valid] = true;
       return _translations[valid];
     }
     // Fallback 2: default locale's fallback dict
     if (valid !== DEFAULT_LOCALE && _FALLBACK_DICT[DEFAULT_LOCALE]) {
       console.info(`[i18n] Using default fallback for '${DEFAULT_LOCALE}'`);
       _translations[valid] = _FALLBACK_DICT[DEFAULT_LOCALE];
+      _localeLoaded[valid] = true;
       return _translations[valid];
     }
+    _localeLoaded[valid] = true; // mark as "tried" so t() doesn't stay silent forever
     return null;
   }
 }
@@ -346,6 +354,16 @@ function pluralize(str, count) {
 //   3. inline fallback dictionary (active locale)
 //   4. inline fallback dictionary (default locale)
 //   5. undefined (caller decides — updateDOM keeps HTML fallback text)
+//
+// IMPORTANT: During initial page load, the locale JSON is fetched async.
+// Many modules call t() SYNCHRONOUSLY during their init (before the fetch
+// resolves), which previously caused false "Missing translation key" warnings
+// for keys that ACTUALLY EXIST in the JSON — just hadn't been loaded yet.
+//
+// FIX: Suppress the warning if the locale hasn't finished loading yet.
+// After loadLocale() resolves, updateDOM() is called which re-applies all
+// translations, so the user never sees blank text. The warning is only
+// emitted for keys that are TRULY missing (locale loaded, key not in JSON).
 export function t(key, params) {
   const localeData = _translations[_currentLocale] || {};
   const defaultData = _translations[DEFAULT_LOCALE] || {};
@@ -355,7 +373,11 @@ export function t(key, params) {
     // Try default locale
     value = getNested(defaultData, key);
     if (value === undefined && _currentLocale !== DEFAULT_LOCALE) {
-      console.warn(`[i18n] Missing key "${key}" in locale "${_currentLocale}", fallback to "${DEFAULT_LOCALE}"`);
+      // Only warn if BOTH locales are loaded — otherwise the missing value
+      // might just be due to the async fetch not having completed yet.
+      if (_localeLoaded[_currentLocale] && _localeLoaded[DEFAULT_LOCALE]) {
+        console.warn(`[i18n] Missing key "${key}" in locale "${_currentLocale}", fallback to "${DEFAULT_LOCALE}"`);
+      }
     }
   }
   if (value === undefined) {
@@ -366,8 +388,11 @@ export function t(key, params) {
     }
   }
   if (value === undefined) {
-    // Total miss — return undefined, let updateDOM keep HTML text
-    if (typeof console !== 'undefined') {
+    // Total miss — return undefined, let updateDOM keep HTML text.
+    // Suppress warning during initial load (locale fetch in flight) to
+    // avoid noise from keys that will resolve once JSON arrives.
+    // After load completes, ONLY warn for truly missing keys (not "still loading").
+    if (typeof console !== 'undefined' && _localeLoaded[_currentLocale]) {
       console.warn(`[i18n] Missing translation key: "${key}" (locale: ${_currentLocale})`);
     }
     return undefined;
