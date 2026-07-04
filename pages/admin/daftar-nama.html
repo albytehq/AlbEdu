@@ -38,6 +38,7 @@
     <script defer src="../../src/shared/error-boundary.js"></script>
     <script type="module" src="../../src/shared/qnotify-loader.js"></script>
     <link rel="stylesheet" href="../../styles/loading.css">
+    <link rel="stylesheet" href="../../styles/skeleton-loading.css">
     <link rel="stylesheet" href="../../styles/navigasi.css">
     <link rel="stylesheet" href="../../styles/notification-panel.css">
     <!-- v0.742.9 — Enterprise design system -->
@@ -126,7 +127,16 @@
           <p id="sidebar-user-role">Administrator</p>
         </div>
       </button>
-    </div>
+    
+                <!-- Skeleton: shown until auth-ready fires -->
+                <div class="sidebar-user-skeleton" id="sidebar-user-skeleton" aria-hidden="true">
+                    <div class="sidebar-avatar-skeleton skeleton"></div>
+                    <div class="sidebar-text-skeleton">
+                        <div class="sidebar-name-skeleton skeleton"></div>
+                        <div class="sidebar-role-skeleton skeleton"></div>
+                    </div>
+                </div>
+            </div>
   </aside>
 
   <!-- Sidebar Overlay (mobile) -->

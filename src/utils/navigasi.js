@@ -463,6 +463,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (nameEl) nameEl.textContent = user.nama  || _t('nav.default_admin_name', null, 'Admin');
         if (roleEl) roleEl.textContent = user.peran === 'admin' ? _t('nav.role_admin', null, 'Administrator') : _t('nav.peserta_role', null, 'Peserta');
 
+        // Hide sidebar skeleton + show real user-profile-content
+        const skeletonEl = document.getElementById('sidebar-user-skeleton');
+        if (skeletonEl) skeletonEl.classList.add('skeleton-hidden');
+        const profileContent = document.querySelector('.user-profile-content');
+        if (profileContent) profileContent.classList.remove('skeleton-hidden');
+
         const content = document.querySelector('.user-profile-content');
         if (content && user.profilLengkap === false) {
             if (!content.querySelector('.profile-incomplete-dot')) {
@@ -473,6 +479,14 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     }
+
+    // Initial state: hide real user-profile-content, show skeleton.
+    // (Skeleton is visible by default in HTML; we just need to hide the
+    // real content until _syncSidebarUser runs.)
+    (function _initialSidebarSkeletonState() {
+        const profileContent = document.querySelector('.user-profile-content');
+        if (profileContent) profileContent.classList.add('skeleton-hidden');
+    })();
 
     if (window.Auth?.userData) {
         _syncSidebarUser();

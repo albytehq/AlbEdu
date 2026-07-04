@@ -37,6 +37,7 @@
     <script defer src="../../src/shared/error-boundary.js"></script>
     <script type="module" src="../../src/shared/qnotify-loader.js"></script>
     <link rel="stylesheet" href="../../styles/loading.css">
+    <link rel="stylesheet" href="../../styles/skeleton-loading.css">
     <link rel="stylesheet" href="../../styles/navigasi.css">
     <link rel="stylesheet" href="../../styles/notification-panel.css">
     <!-- v0.742.9 — Enterprise design system -->
@@ -124,6 +125,14 @@
                         <p id="sidebar-user-role">Administrator</p>
                     </div>
                 </button>
+                <!-- Skeleton: shown until auth-ready fires -->
+                <div class="sidebar-user-skeleton" id="sidebar-user-skeleton" aria-hidden="true">
+                    <div class="sidebar-avatar-skeleton skeleton"></div>
+                    <div class="sidebar-text-skeleton">
+                        <div class="sidebar-name-skeleton skeleton"></div>
+                        <div class="sidebar-role-skeleton skeleton"></div>
+                    </div>
+                </div>
             </div>
         </aside>
         
@@ -165,11 +174,20 @@
                                     </button>
                                 </div>
                             </div>
-                            <h2 id="admin-name">Admin AlbEdu</h2>
-                            <p id="admin-email">admin@alb.edu</p>
-                            <div class="role-badge">
-                                <span data-albedu-icon="shield"><svg class="albedu-icon" aria-hidden="true"><use href="#i-shield"/></svg></span>
-                                <span>Administrator</span>
+                            <!-- Skeleton: shown until profile data renders -->
+                            <div id="profile-skeleton" aria-hidden="true">
+                                <div class="profile-avatar-skeleton skeleton"></div>
+                                <div class="profile-name-skeleton skeleton"></div>
+                                <div class="profile-email-skeleton skeleton"></div>
+                                <div class="profile-role-skeleton skeleton"></div>
+                            </div>
+                            <div id="profile-real" class="skeleton-hidden">
+                                <h2 id="admin-name">Admin AlbEdu</h2>
+                                <p id="admin-email">admin@alb.edu</p>
+                                <div class="role-badge">
+                                    <span data-albedu-icon="shield"><svg class="albedu-icon" aria-hidden="true"><use href="#i-shield"/></svg></span>
+                                    <span>Administrator</span>
+                                </div>
                             </div>
                         </div>
                         
@@ -179,11 +197,14 @@
                                 <div class="detail-grid">
                                     <div class="detail-item">
                                         <label><span data-albedu-icon="fingerprint"><svg class="albedu-icon" aria-hidden="true"><use href="#i-fingerprint"/></svg></span> <span>UUID Admin</span></label>
-                                        <p id="admin-id">—</p>
+                                        <!-- Skeleton: shown until UUID fetched -->
+                                        <div class="profile-detail-skeleton skeleton" id="admin-id-skeleton"></div>
+                                        <p id="admin-id" class="skeleton-hidden">—</p>
                                     </div>
                                     <div class="detail-item">
                                         <label><span data-albedu-icon="schedule"><svg class="albedu-icon" aria-hidden="true"><use href="#i-schedule"/></svg></span> <span>Terakhir Login</span></label>
-                                        <p id="admin-last-login">—</p>
+                                        <div class="profile-detail-skeleton short skeleton" id="admin-last-login-skeleton"></div>
+                                        <p id="admin-last-login" class="skeleton-hidden">—</p>
                                     </div>
                                 </div>
                             </div>
@@ -234,6 +255,43 @@
             }
         }
 
+        // ── Skeleton helpers ────────────────────────────────────────────────
+        function _showSkeleton(id) {
+            var el = document.getElementById(id);
+            if (el) el.classList.remove('skeleton-hidden');
+        }
+        function _hideSkeleton(id) {
+            var el = document.getElementById(id);
+            if (el) el.classList.add('skeleton-hidden');
+        }
+        function _showReal(id) {
+            var el = document.getElementById(id);
+            if (el) el.classList.remove('skeleton-hidden');
+        }
+
+        function _revealProfileHeader() {
+            _hideSkeleton('profile-skeleton');
+            _showReal('profile-real');
+        }
+
+        function _revealAdminId(value) {
+            _hideSkeleton('admin-id-skeleton');
+            var el = document.getElementById('admin-id');
+            if (el) {
+                el.textContent = value || '—';
+                el.classList.remove('skeleton-hidden');
+            }
+        }
+
+        function _revealLastLogin(value) {
+            _hideSkeleton('admin-last-login-skeleton');
+            var el = document.getElementById('admin-last-login');
+            if (el) {
+                el.textContent = value || '—';
+                el.classList.remove('skeleton-hidden');
+            }
+        }
+
         // ── Render profil dengan UUID real dari Supabase ────────────────────
         async function _renderProfile(user, skipSupabaseFetch) {
             if (!user && skipSupabaseFetch !== false) return;
@@ -253,6 +311,9 @@
                     + ' onerror="this.parentElement.innerHTML=\'<i class=&quot;material-symbols-outlined&quot;>account_circle</i>\'">';
             }
 
+            // Reveal profile header (replace skeleton with real data)
+            _revealProfileHeader();
+
             var adminId = await _getAdminIdFromSupabase();
 
             if (!adminId && user && user.id) {
@@ -260,22 +321,19 @@
                 console.log('[Profile] Fallback ke user document ID:', adminId);
             }
 
-            if (idEl) {
-                if (adminId) {
-                    idEl.textContent = String(adminId).toLowerCase();
-                    console.log('[Profile] ✓ Admin UUID ditampilkan:', adminId);
-                } else {
-                    idEl.textContent = '—';
-                    console.warn('[Profile] ✗ Admin UUID tidak tersedia dari Supabase');
-                }
+            if (adminId) {
+                _revealAdminId(String(adminId).toLowerCase());
+                console.log('[Profile] ✓ Admin UUID ditampilkan:', adminId);
+            } else {
+                _revealAdminId('—');
+                console.warn('[Profile] ✗ Admin UUID tidak tersedia dari Supabase');
             }
 
-            if (loginEl) {
-                loginEl.textContent = new Date().toLocaleString('id-ID', {
-                    day: '2-digit', month: 'short', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
-                });
-            }
+            var loginStr = new Date().toLocaleString('id-ID', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+            _revealLastLogin(loginStr);
         }
 
         // ── Listen ke auth-ready event ────────────────────────────────────────
@@ -291,8 +349,9 @@
         }
 
         setTimeout(function () {
-            var _idEl = document.getElementById('admin-id');
-            if (_idEl && _idEl.textContent === '—') {
+            // If skeleton still visible after 3s, force render with whatever we have
+            var skeletonStillVisible = !document.getElementById('profile-real')?.classList.contains('skeleton-hidden');
+            if (skeletonStillVisible && !document.getElementById('profile-skeleton')?.classList.contains('skeleton-hidden')) {
                 console.log('[Profile] Timeout waiting for auth-ready — fetching UUID dari Supabase');
                 _renderProfile(window.Auth?.userData, true);
             }

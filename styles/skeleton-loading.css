@@ -1,0 +1,137 @@
+/* ============================================================
+   skeleton-loading.css — AlbEdu Skeleton Loading Extensions
+   Extends the base .skeleton system in tokens.css with
+   page-specific skeleton patterns for profile page + sidebar.
+   ============================================================ */
+
+/* ──────────────────────────────────────────────────────────────
+   1. PROFILE PAGE SKELETONS
+   Shown on initial load, hidden when _renderProfile() runs.
+   ────────────────────────────────────────────────────────────── */
+
+/* Profile avatar skeleton — large, rounded, in header section */
+.profile-avatar-skeleton {
+    width: 96px;
+    height: 96px;
+    border-radius: var(--radius-full);
+    margin: 0 auto var(--sp-3);
+}
+
+/* Profile name skeleton — appears under avatar */
+.profile-name-skeleton {
+    height: 26px;
+    width: 180px;
+    margin: 0 auto var(--sp-2);
+}
+
+/* Profile email skeleton — smaller, under name */
+.profile-email-skeleton {
+    height: 16px;
+    width: 220px;
+    margin: 0 auto var(--sp-3);
+}
+
+/* Role badge skeleton — small pill under email */
+.profile-role-skeleton {
+    height: 24px;
+    width: 130px;
+    border-radius: var(--radius-full);
+    margin: 0 auto;
+}
+
+/* Detail row skeleton — used for UUID + last-login rows */
+.profile-detail-skeleton {
+    height: 18px;
+    width: 100%;
+    margin-top: var(--sp-1);
+}
+
+.profile-detail-skeleton.short {
+    width: 65%;
+}
+
+/* Button skeleton — for the "Ganti Foto" action */
+.profile-button-skeleton {
+    height: 40px;
+    width: 140px;
+    border-radius: var(--radius-md);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   2. SIDEBAR USER PROFILE SKELETON
+   Shown in the sidebar user-profile section until auth data
+   is synced by _syncSidebarUser() in navigasi.js.
+   ────────────────────────────────────────────────────────────── */
+
+.sidebar-user-skeleton {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    width: 100%;
+}
+
+.sidebar-avatar-skeleton {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+}
+
+.sidebar-text-skeleton {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+}
+
+.sidebar-name-skeleton {
+    height: 14px;
+    width: 70%;
+    border-radius: var(--radius-xs);
+}
+
+.sidebar-role-skeleton {
+    height: 11px;
+    width: 50%;
+    border-radius: var(--radius-xs);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   3. VISIBILITY CONTROL
+   Skeleton blocks start visible (no class needed).
+   When data is ready, JS adds .skeleton-hidden to parent
+   and removes skeleton elements (or hides them).
+   ────────────────────────────────────────────────────────────── */
+
+.skeleton-hidden {
+    display: none !important;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   4. REDUCED MOTION SUPPORT
+   Disable shimmer animation for users who prefer reduced motion.
+   Skeleton blocks become solid surface-2 color instead.
+   ────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton,
+    .skeleton-text,
+    .skeleton-heading,
+    .skeleton-avatar,
+    .skeleton-card,
+    .skeleton-table-row,
+    .profile-avatar-skeleton,
+    .profile-name-skeleton,
+    .profile-email-skeleton,
+    .profile-role-skeleton,
+    .profile-detail-skeleton,
+    .profile-button-skeleton,
+    .sidebar-avatar-skeleton,
+    .sidebar-name-skeleton,
+    .sidebar-role-skeleton {
+        animation: none;
+        background: var(--color-surface-2);
+    }
+}
