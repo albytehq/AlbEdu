@@ -75,7 +75,9 @@ class AdminPanel {
             const email = escape(rawEmail);
             const avatarUrl = data.foto_profil || data.fotoProfil || '';
             const role = data.peran === 'admin' ? t('nav.role_admin', null, 'Administrator') : t('nav.role_admin_alt', null, 'Admin AlbEdu');
-            const incomplete = data.profilLengkap === false || data.profil_lengkap === false;
+            // NOTE: DB column is `profile_complete` (renamed from
+            // `profil_lengkap` — migration 20260701_002_alter_users_snake_case.sql).
+            const incomplete = data.profile_complete === false || data.profilLengkap === false || data.profil_lengkap === false;
 
             const safeAvatarUrl = (avatarUrl && /^https:/.test(avatarUrl)) ? avatarUrl : '';
             const incompleteBadge = incomplete

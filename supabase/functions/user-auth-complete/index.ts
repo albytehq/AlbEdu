@@ -163,11 +163,16 @@ serve(async (req) => {
         );
       }
 
+      // NOTE: `foto_profil`/`profil_lengkap` were renamed to `avatar_url`/
+      // `profile_complete` by migration 20260701_002_alter_users_snake_case.sql.
+      // Inserting the old column name here causes every new peserta's first
+      // Google login to fail with a Postgres "column does not exist" error
+      // (caught below as a generic 500). Fixed to use the current schema.
       const { error: insertUserErr } = await supabase.from("users").insert({
         id: user.id,
         email: user.email ?? "",
         peran: "peserta",
-        profil_lengkap: false,
+        profile_complete: false,
       });
 
       if (insertUserErr) {

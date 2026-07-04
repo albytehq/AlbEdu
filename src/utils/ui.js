@@ -554,22 +554,38 @@ UI.Profile = {
             const trimName = (state.tempName || '').trim();
             if (trimName.length === 0) throw new Error('Nama tidak boleh kosong');
             if (trimName !== window.Auth.userData.nama) updates.nama = trimName;
+            // NOTE: migration 20260701_002_alter_users_snake_case.sql renamed
+            // foto_profil → avatar_url and profil_lengkap → profile_complete.
+            // Writing the old names here threw a Postgrest "column does not
+            // exist" error on every save from this panel — fixed to the
+            // current schema. window.Auth.userData still carries foto_profil
+            // too (normalizeUserDoc keeps both in sync for legacy readers).
             if (state.tempAvatar && state.tempAvatar !== window.Auth.userData.foto_profil) {
-                updates.foto_profil = state.tempAvatar;
-                updates.fotoProfil  = state.tempAvatar;
+                updates.avatar_url = state.tempAvatar;
             }
-            const finalName   = updates.nama   || window.Auth.userData.nama || '';
-            const finalAvatar = updates.foto_profil || window.Auth.userData.foto_profil || '';
-            updates.profilLengkap = finalName.trim().length > 0 && finalAvatar.trim().length > 0;
-            updates.updatedAt = new Date().toISOString();
+            const finalName   = updates.nama        || window.Auth.userData.nama       || '';
+            const finalAvatar = updates.avatar_url  || window.Auth.userData.foto_profil || '';
+            updates.profile_complete = finalName.trim().length > 0 && finalAvatar.trim().length > 0;
+            updates.updated_at = new Date().toISOString();
 
-            delete updates.email; delete updates.peran; delete updates.id; delete updates.createdAt;
+            delete updates.email; delete updates.peran; delete updates.id; delete updates.created_at;
 
             // Native platform layer — replaces window.firebaseDb.collection('users').doc(uid).update().
             // Note: user.id (Supabase native) replaces user.uid (Firebase-shaped legacy).
             const userId = window.Auth.currentUser?.id || window.Auth.currentUser?.uid;
             await window.AlbEdu?.repository?.updateDoc('users', userId, updates);
-            window.Auth.userData = { ...window.Auth.userData, ...updates };
+            // Mirror the DB write into the local camelCase/legacy shape so the
+            // rest of the UI (which still reads foto_profil/fotoProfil/
+            // profilLengkap) reflects the change immediately without a refetch.
+            const localMirror = { ...updates };
+            if ('avatar_url' in updates) {
+                localMirror.foto_profil = updates.avatar_url;
+                localMirror.fotoProfil  = updates.avatar_url;
+            }
+            if ('profile_complete' in updates) {
+                localMirror.profilLengkap = updates.profile_complete;
+            }
+            window.Auth.userData = { ...window.Auth.userData, ...localMirror };
 
             state.hasChanges = false; state.tempAvatar = null; state.isLoading = false;
             UI.hideAuthLoading();

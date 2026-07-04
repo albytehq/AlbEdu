@@ -405,11 +405,16 @@ serve(async (req) => {
     }
     // ── End Patch A ───────────────────────────────────────────────────────
 
+    // NOTE: `foto_profil`/`profil_lengkap` were renamed to `avatar_url`/
+    // `profile_complete` by migration 20260701_002_alter_users_snake_case.sql.
+    // Inserting the old column name here causes every admin registration to
+    // fail with a Postgres "column does not exist" error (caught below as a
+    // generic 500). Fixed to use the current schema.
     const { error: profileError } = await supabase.from("users").insert({
       id: userId,
       email,
       peran: "admin",
-      profil_lengkap: false,
+      profile_complete: false,
     });
 
     if (profileError) {

@@ -436,12 +436,18 @@
     const userId = auth.currentUser?.id;
     if (!userId) throw new Error('User tidak login.');
 
+    // NOTE: migration 20260701_002_alter_users_snake_case.sql renamed
+    // foto_profil → avatar_url and profil_lengkap → profile_complete.
+    // `fields` may still come in as { foto_profil } from older callers, so
+    // translate it to the real column name here rather than sending a
+    // nonexistent column to Postgrest (which previously made every profile
+    // save fail).
+    const { foto_profil, ...restFields } = fields;
     const payload = {
-      ...fields,
-      // Jaga sinkronisasi kedua key shape (legacy camelCase + baru snake_case)
-      fotoProfil:    fields.foto_profil,
-      updated_at:    new Date().toISOString(),
-      profil_lengkap: true,
+      ...restFields,
+      ...(foto_profil !== undefined ? { avatar_url: foto_profil } : {}),
+      updated_at:       new Date().toISOString(),
+      profile_complete: true,
     };
 
     // [Production Hardening] Use Actly resilience for profile update

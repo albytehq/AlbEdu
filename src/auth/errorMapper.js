@@ -112,6 +112,11 @@ export const ERROR_MESSAGES = {
     method_not_allowed:
         'Metode tidak didukung.',
 
+    // Thrown client-side by preflight.js when window.AlbEdu.supabase.rpc isn't
+    // ready yet (platform bootstrap still in progress / failed silently).
+    platform_not_ready:
+        'Sistem belum siap. Tunggu beberapa detik lalu coba lagi. Jika masalah berlanjut, muat ulang halaman.',
+
     network_error:
         'Koneksi ke server gagal. Periksa koneksi internet Anda dan coba lagi.',
 

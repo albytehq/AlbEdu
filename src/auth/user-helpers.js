@@ -82,8 +82,11 @@ function escapeHTML(str) {
 // ── Profile helpers ───────────────────────────────────────────────────────────
 function isProfileComplete(data) {
     if (!data) return false;
-    // Support both snake_case (Firestore-era) and camelCase (Supabase read path).
-    const foto = data.foto_profil || data.fotoProfil || '';
+    // Support avatar_url (current schema, since migration
+    // 20260701_002_alter_users_snake_case.sql renamed foto_profil → avatar_url),
+    // plus the legacy snake_case/camelCase aliases for backward compat with any
+    // caller still passing the pre-migration shape.
+    const foto = data.avatar_url || data.foto_profil || data.fotoProfil || '';
     return typeof data.nama === 'string' && data.nama.trim().length > 0
         && typeof foto       === 'string' && foto.trim().length > 0;
 }
@@ -96,12 +99,17 @@ function normalizeUserDoc(data, userId) {
     data.nama  = data.nama  || '';
     data.peran = data.peran || 'peserta';
 
-    // Keep both key shapes in sync so isProfileComplete() works with either.
-    const existingFoto = data.foto_profil || data.fotoProfil || '';
+    // avatar_url is the current DB column (renamed from foto_profil by
+    // migration 20260701_002_alter_users_snake_case.sql). Keep all three key
+    // shapes in sync so isProfileComplete() and any legacy display code
+    // (panel.js, navigasi.js, ui.js, profile editor, etc.) work regardless of
+    // which field name they read.
+    const existingFoto = data.avatar_url || data.foto_profil || data.fotoProfil || '';
     const resolvedFoto = existingFoto || buildAvatarUrl(data.email || userId);
 
-    data.foto_profil = resolvedFoto;
-    data.fotoProfil  = resolvedFoto;
+    data.avatar_url   = resolvedFoto;
+    data.foto_profil  = resolvedFoto;
+    data.fotoProfil   = resolvedFoto;
 
     return data;
 }

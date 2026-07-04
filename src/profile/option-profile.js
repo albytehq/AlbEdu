@@ -777,7 +777,11 @@
     const avatarUrl  = user.foto_profil || user.fotoProfil || '';
     const role       = user.peran || 'peserta';
     const isAdmin    = role === 'admin';
-    const incomplete = user.profilLengkap === false || user.profil_lengkap === false;
+    // NOTE: DB column is `profile_complete` (renamed from `profil_lengkap` by
+    // migration 20260701_002_alter_users_snake_case.sql). `profilLengkap` is
+    // never actually set anywhere, so that check was always false — this
+    // banner silently never showed. Kept as fallback for any legacy caller.
+    const incomplete = user.profile_complete === false || user.profilLengkap === false || user.profil_lengkap === false;
     const roleLabel  = isAdmin ? (window.i18n?.t?.('nav.role_admin') || 'Administrator') : (window.i18n?.t?.('peserta.role') || 'Peserta');
     const roleClass  = isAdmin ? 'op-role-admin' : 'op-role-peserta';
     const roleIcon   = isAdmin ? 'shield' : 'school';
