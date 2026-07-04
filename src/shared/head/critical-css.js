@@ -114,6 +114,165 @@ html[data-theme="dark"]{--albedu-slate-50:#0f172a;--albedu-slate-100:#1e293b;--a
     }
   } catch (_) { /* private mode */ }
 
+  // ── Detect locale SYNCHRONOUSLY (prevents language flash) ──────────────
+  // This runs BEFORE body renders. localStorage read is sync, so we can
+  // detect the user's preferred locale and set <html lang> immediately.
+  // Without this, the page would flash Indonesian (default) before the
+  // async locale JSON fetch completes and switches to English.
+  //
+  // Priority: URL ?lang= → localStorage → default ('id')
+  // (Supabase user pref + navigator.language are checked async by i18n/index.js)
+  var _detectedLocale = 'id';  // default
+  try {
+    // 1. URL param (?lang=en) — highest priority, shareable links
+    var urlParams = new URLSearchParams(window.location.search);
+    var urlLang = urlParams.get('lang');
+    if (urlLang === 'en' || urlLang === 'id') {
+      _detectedLocale = urlLang;
+      localStorage.setItem('albedu_locale', urlLang);
+    }
+    // 2. localStorage (user explicit preference)
+    else {
+      var stored = localStorage.getItem('albedu_locale');
+      if (stored === 'en' || stored === 'id') {
+        _detectedLocale = stored;
+      }
+    }
+  } catch (_) { /* private mode — keep default */ }
+
+  // Set <html lang> + dir IMMEDIATELY (before body paint)
+  document.documentElement.setAttribute('lang', _detectedLocale);
+  document.documentElement.setAttribute('dir', 'ltr');
+
+  // ── Inline critical translations (applied BEFORE body renders) ──────────
+  // These ~30 keys are the most visible on first paint (nav, buttons, titles).
+  // Having them inline means the user sees the CORRECT language instantly,
+  // even before the full locale JSON (53KB) finishes loading.
+  //
+  // Full locale JSON loads async via i18n/index.js and upgrades all remaining
+  // [data-i18n] elements. Elements already translated by this inline dict
+  // are skipped by updateDOM() (it checks data-i18n-applied attribute).
+  var _CRITICAL_I18N = {
+    id: {
+      'landing.nav_login': 'Login',
+      'landing.nav_register': 'Daftar Admin',
+      'landing.hero_title_1': 'Kelola Ujian Online,',
+      'landing.hero_title_2': 'Tanpa Ribet',
+      'landing.hero_cta_primary': 'Mulai Sekarang',
+      'landing.hero_cta_secondary': 'Lihat Demo',
+      'auth.login_title': 'Masuk ke AlbEdu',
+      'auth.login_subtitle': 'Kelola ujian Anda dengan mudah',
+      'auth.login_btn': 'Masuk',
+      'auth.login_google': 'Masuk dengan Google',
+      'auth.login_email_label': 'Email',
+      'auth.login_password_label': 'Kata Sandi',
+      'auth.login_forgot': 'Lupa Kata Sandi?',
+      'auth.login_no_account': 'Belum punya akun?',
+      'auth.login_register_link': 'Daftar sekarang',
+      'auth.login_back': '← Kembali ke halaman utama',
+      'common.skip_to_main': 'Langsung ke konten utama',
+      'common.loading': 'Memuat...',
+      'common.save': 'Simpan',
+      'common.cancel': 'Batal',
+      'common.close': 'Tutup',
+      'common.back': 'Kembali',
+      'common.delete': 'Hapus',
+      'common.edit': 'Edit',
+      'common.search': 'Cari',
+      'language.id': '🇮🇩 Bahasa Indonesia',
+      'language.en': '🇬🇧 English',
+      'auth.logout_confirm_msg': 'Anda akan log out. Yakin?',
+      'peserta.profile_logout': 'Keluar',
+      'peserta.profile_edit': 'Edit Profil'
+    },
+    en: {
+      'landing.nav_login': 'Login',
+      'landing.nav_register': 'Register Admin',
+      'landing.hero_title_1': 'Manage Online Exams,',
+      'landing.hero_title_2': 'Without the Hassle',
+      'landing.hero_cta_primary': 'Get Started',
+      'landing.hero_cta_secondary': 'View Demo',
+      'auth.login_title': 'Sign in to AlbEdu',
+      'auth.login_subtitle': 'Manage your exams with ease',
+      'auth.login_btn': 'Sign In',
+      'auth.login_google': 'Sign in with Google',
+      'auth.login_email_label': 'Email',
+      'auth.login_password_label': 'Password',
+      'auth.login_forgot': 'Forgot Password?',
+      'auth.login_no_account': "Don't have an account?",
+      'auth.login_register_link': 'Register now',
+      'auth.login_back': '← Back to home',
+      'common.skip_to_main': 'Skip to main content',
+      'common.loading': 'Loading...',
+      'common.save': 'Save',
+      'common.cancel': 'Cancel',
+      'common.close': 'Close',
+      'common.back': 'Back',
+      'common.delete': 'Delete',
+      'common.edit': 'Edit',
+      'common.search': 'Search',
+      'language.id': '🇮🇩 Indonesian',
+      'language.en': '🇬🇧 English',
+      'auth.logout_confirm_msg': 'You will be logged out. Continue?',
+      'peserta.profile_logout': 'Log Out',
+      'peserta.profile_edit': 'Edit Profile'
+    }
+  };
+
+  // Apply critical translations IMMEDIATELY (before body renders).
+  // This runs synchronously — by the time the browser paints, these elements
+  // already have the correct language text.
+  //
+  // We use a MutationObserver fallback in case body hasn't parsed yet.
+  // But since critical-css.js is in <head> (synchronous), body elements
+  // don't exist yet. So we defer to DOMContentLoaded — BUT we set a flag
+  // so i18n/index.js knows the locale is already detected.
+  window.AlbEdu._detectedLocale = _detectedLocale;
+  window.AlbEdu._criticalI18n = _CRITICAL_I18N[_detectedLocale] || _CRITICAL_I18N.id;
+
+  // Function to apply critical translations (called after DOM is ready)
+  window.AlbEdu._applyCriticalI18n = function () {
+    var dict = window.AlbEdu._criticalI18n;
+    if (!dict) return;
+
+    // Apply to [data-i18n] elements
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++) {
+      var key = nodes[i].getAttribute('data-i18n');
+      if (dict[key]) {
+        nodes[i].textContent = dict[key];
+        nodes[i].setAttribute('data-i18n-applied', 'critical');
+      }
+    }
+
+    // Apply to [data-i18n-placeholder]
+    var phNodes = document.querySelectorAll('[data-i18n-placeholder]');
+    for (var j = 0; j < phNodes.length; j++) {
+      var phKey = phNodes[j].getAttribute('data-i18n-placeholder');
+      if (dict[phKey]) {
+        phNodes[j].setAttribute('placeholder', dict[phKey]);
+        phNodes[j].setAttribute('data-i18n-applied', 'critical');
+      }
+    }
+
+    // Apply to [data-i18n-aria-label]
+    var alNodes = document.querySelectorAll('[data-i18n-aria-label]');
+    for (var k = 0; k < alNodes.length; k++) {
+      var alKey = alNodes[k].getAttribute('data-i18n-aria-label');
+      if (dict[alKey]) {
+        alNodes[k].setAttribute('aria-label', dict[alKey]);
+        alNodes[k].setAttribute('data-i18n-applied', 'critical');
+      }
+    }
+  };
+
+  // Run critical i18n ASAP — use DOMContentLoaded or immediately if DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.AlbEdu._applyCriticalI18n);
+  } else {
+    window.AlbEdu._applyCriticalI18n();
+  }
+
   // ── Mark platform as booting ──
   // Consumers can listen for 'albedu:platform-ready' to know when supabase is ready.
   if (!window.AlbEdu) window.AlbEdu = {};

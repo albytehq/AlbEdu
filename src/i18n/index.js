@@ -552,16 +552,36 @@ function updateDOM() {
 
 // ── Initialize i18n (call on DOMContentLoaded) ─────────────────────────────
 export async function initI18n() {
-  _currentLocale = detectLocale();
-  console.info(`[i18n] Initializing, locale: ${_currentLocale}`);
+  // v2.0: Use pre-detected locale from critical-css.js if available.
+  // critical-css.js runs synchronously in <head> and detects locale from
+  // localStorage/URL param BEFORE body renders. This prevents the language
+  // flash (Indonesian showing briefly before English loads).
+  //
+  // If critical-css.js already detected the locale, use it. Otherwise fall
+  // back to detectLocale() which also checks Supabase + navigator.language.
+  if (window.AlbEdu?._detectedLocale) {
+    _currentLocale = window.AlbEdu._detectedLocale;
+    console.info(`[i18n] Using pre-detected locale: ${_currentLocale} (from critical-css.js)`);
+  } else {
+    _currentLocale = detectLocale();
+    console.info(`[i18n] Detecting locale: ${_currentLocale}`);
+  }
+
   await loadLocale(_currentLocale);
   // Preload default as fallback
   if (_currentLocale !== DEFAULT_LOCALE) {
     await loadLocale(DEFAULT_LOCALE);
   }
+  // lang + dir already set by critical-css.js, but re-affirm in case
   document.documentElement.setAttribute('lang', _currentLocale);
   document.documentElement.setAttribute('dir', SUPPORTED_LOCALES[_currentLocale].dir);
+
+  // v2.0: updateDOM() now upgrades translations. Elements already translated
+  // by critical-css.js (marked with data-i18n-applied="critical") will be
+  // re-translated with the full dictionary (upgrading from inline critical
+  // to complete JSON). Elements NOT in the critical dict get translated now.
   updateDOM();
+
   console.info(`[i18n] Initialized: ${_currentLocale}`);
   // Signal that i18n is ready — lang-switcher.js + others listen for this
   document.dispatchEvent(new CustomEvent(I18N_READY_EVENT, {
