@@ -258,7 +258,21 @@ export async function executePreflightFlow() {
     try {
         tokenResult = await getFreshTurnstileToken(container);
     } catch (err) {
-        throw new PreflightError('missing_verification');
+        // Distinguish network/DNS failures (Turnstile can't reach Cloudflare)
+        // from other failures (widget not ready, container missing, etc).
+        // Network failures need a different message — user can fix by changing
+        // DNS / disabling VPN / trying a different network.
+        const msg = (err?.message || '').toLowerCase();
+        const isNetworkError =
+            msg.includes('timeout') ||
+            msg.includes('gagal') ||            // "Verifikasi Turnstile gagal" (error-callback fired)
+            msg.includes('failed') ||
+            msg.includes('kadaluarsa') === false && msg.includes('verifikasi'); // generic verification error
+        // Note: "kadaluarsa" (expired) is a separate concern, mapped to turnstile_expired
+        if (msg.includes('kadaluarsa')) {
+            throw new PreflightError('turnstile_expired');
+        }
+        throw new PreflightError(isNetworkError ? 'turnstile_network_error' : 'missing_verification');
     }
 
     const token = typeof tokenResult === 'string' ? tokenResult : tokenResult?.token;

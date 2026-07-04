@@ -1,6 +1,17 @@
 // =============================================================================
-// auth/turnstile.js — Helper untuk Cloudflare Turnstile
+// auth/turnstile.js — Helper untuk Cloudflare Turnstile (v2 — peserta-friendly)
 // =============================================================================
+//
+// v2.0 CHANGES (peserta-friendly — reduce DNS/network failures):
+//   - appearance: 'execute' → invisible challenge, no UI friction
+//   - Auto-retry on error-callback (up to 3 attempts with 1s delay)
+//     Handles transient Cloudflare PAT DNS failures (brunhild.challenges.cloudflare.com
+//     ERR_NAME_NOT_RESOLVED) — Cloudflare usually falls back to compute-bound
+//     challenge on retry.
+//   - Pre-warm API: prerenderTurnstile() renders widget on page load so token
+//     is ready by the time user clicks login (no on-demand delay).
+//   - waitForTurnstileReady timeout bumped from 10s → 30s (slow networks)
+//   - getFreshTurnstileToken timeout bumped from 30s → 45s
 //
 // Satu implementasi Turnstile yang dipakai bersama oleh:
 //   - User Login (index.html & login.html)
@@ -10,6 +21,7 @@
 // PENTING:
 //   - Turnstile size HANYA menerima: "normal", "compact", "flexible"
 //   - JANGAN gunakan "invisible" — itu BUKAN nilai yang valid!
+//   - appearance: 'execute' (invisible render) is valid and different from size.
 //   - render() otomatis men-trigger challenge — JANGAN panggil execute() setelah render()
 //   - Untuk re-challenge widget yang sudah ada, gunakan reset() saja
 // =============================================================================
@@ -18,10 +30,20 @@ import { AUTH_CONFIG, TIMING_CONFIG } from './constants.js';
 
 // ── Module state ──────────────────────────────────────────────────────────────
 let _activeWidgetId = null;
+let _prewarmedToken = null;     // cached token from pre-warm render
+let _prewarmedAt = 0;           // timestamp of pre-warm token
+
+// Token freshness window — Cloudflare tokens are valid for 300s (5 min),
+// but we use 240s (4 min) to leave buffer for backend validation.
+const TOKEN_FRESHNESS_MS = 240_000;
+
+// Retry config for transient Cloudflare PAT failures
+const MAX_ERROR_RETRIES = 3;
+const RETRY_DELAY_MS = 1_000;
 
 /**
  * Menunggu hingga Turnstile script siap digunakan.
- * @param {number} [timeout] - Timeout dalam ms (default: 10 detik)
+ * @param {number} [timeout] - Timeout dalam ms (default: 30 detik, was 10s)
  * @returns {Promise<void>}
  */
 export function waitForTurnstileReady(timeout = TIMING_CONFIG.TURNSTILE_READY_TIMEOUT_MS) {
@@ -63,55 +85,85 @@ export function getTurnstileToken(widgetId = null) {
     return '';
 }
 
-/**
- * Reset widget Turnstile untuk challenge baru.
- * Reset otomatis men-trigger challenge baru — TIDAK perlu execute().
- * @param {string|null} [widgetId] - ID widget Turnstile
- */
 export function resetTurnstile(widgetId = null) {
     const id = widgetId || _activeWidgetId;
-    if (id && window.turnstile?.reset) {
+    if (!id || !window.turnstile?.reset) return;
+    try {
         window.turnstile.reset(id);
-    }
+    } catch (_) {}
 }
 
-/**
- * Execute challenge Turnstile baru.
- * DEPRECATED: Jangan gunakan ini. render() dan reset() sudah auto-execute.
- * Fungsi ini hanya disimpan untuk kompatibilitas backward.
- * @param {string|null} [widgetId] - ID widget Turnstile
- */
 export function executeTurnstile(widgetId = null) {
-    // NO-OP: render() dan reset() sudah otomatis men-trigger challenge.
-    // Memanggil execute() setelah render()/reset() menyebabkan error:
-    // "Call to execute() on a widget that is already executing"
-    console.warn('[Turnstile] executeTurnstile() dipanggil tapi NO-OP. Gunakan resetTurnstile() untuk re-challenge.');
+    const id = widgetId || _activeWidgetId;
+    if (!id || !window.turnstile?.execute) return;
+    try {
+        window.turnstile.execute(id);
+    } catch (_) {}
 }
 
 /**
- * Render widget Turnstile dengan callback yang terjanjikan.
- * @param {HTMLElement} container - Elemen container untuk widget
- * @param {Object} options - Opsi tambahan (callback, error-callback, dll)
+ * Render widget Turnstile ke container.
+ * @param {HTMLElement} container - Element DOM untuk widget
+ * @param {Object} [options] - Override options untuk window.turnstile.render
  * @returns {Promise<{widgetId: string, token: string}>}
  */
 export async function renderTurnstile(container, options = {}) {
     await waitForTurnstileReady();
 
+    return _renderWithRetry(container, options);
+}
+
+/**
+ * Internal: render widget with auto-retry on error-callback.
+ * Handles transient Cloudflare PAT DNS failures.
+ *
+ * @param {HTMLElement} container
+ * @param {Object} options
+ * @param {number} [attempt] - current attempt (1-indexed)
+ * @returns {Promise<{widgetId: string, token: string}>}
+ */
+function _renderWithRetry(container, options = {}, attempt = 1) {
     return new Promise((resolve, reject) => {
+        let settled = false;
+
         const widgetId = window.turnstile.render(container, {
             sitekey: AUTH_CONFIG.TURNSTILE_SITE_KEY,
-            size: 'compact',  // HANYA "normal", "compact", atau "flexible" — BUKAN "invisible"!
+            size: 'compact',
+            appearance: 'execute',  // invisible challenge — no UI friction
             callback: (token) => {
+                if (settled) return;
+                settled = true;
+                _prewarmedToken = token;
+                _prewarmedAt = Date.now();
                 resolve({ widgetId, token });
             },
-            'error-callback': () => {
-                reject(new Error('Verifikasi Turnstile gagal.'));
+            'error-callback': (errorCode) => {
+                if (settled) return;
+                if (attempt < MAX_ERROR_RETRIES) {
+                    // Retry — Cloudflare usually falls back to compute-bound
+                    // challenge after PAT DNS failure.
+                    setTimeout(() => {
+                        try { window.turnstile.remove(widgetId); } catch (_) {}
+                        // Re-render with same options, increment attempt
+                        resolve(_renderWithRetry(container, options, attempt + 1));
+                    }, RETRY_DELAY_MS);
+                    return;
+                }
+                settled = true;
+                reject(new Error(`Verifikasi Turnstile gagal (${errorCode || 'unknown'}).`));
             },
             'expired-callback': () => {
+                if (settled) return;
+                settled = true;
                 reject(new Error('Verifikasi Turnstile kadaluarsa.'));
             },
             ...options,
         });
+
+        if (!widgetId) {
+            reject(new Error('Turnstile gagal diinisialisasi. Silakan muat ulang halaman.'));
+            return;
+        }
 
         _activeWidgetId = widgetId;
         // render() otomatis trigger execute — JANGAN panggil execute() di sini!
@@ -122,10 +174,10 @@ export async function renderTurnstile(container, options = {}) {
  * Dapatkan token Turnstile baru.
  * Jika widget sudah ada → reset() untuk re-challenge (reset auto-execute).
  * Jika belum ada → render() baru (render auto-execute).
- * 
+ *
  * PENTING: Selalu return {widgetId, token} — token adalah string, bukan null/undefined.
  * Jika token tidak bisa didapatkan dalam timeout, reject dengan error yang jelas.
- * 
+ *
  * @param {HTMLElement} [container] - Container element (wajib untuk render pertama)
  * @param {boolean} [isFirstRender] - Apakah ini render pertama?
  * @param {string|null} [existingWidgetId] - Widget ID yang sudah ada (diabaikan, pakai module state)
@@ -133,6 +185,14 @@ export async function renderTurnstile(container, options = {}) {
  */
 export async function getFreshTurnstileToken(container, isFirstRender = false, existingWidgetId = null) {
     await waitForTurnstileReady();
+
+    // 0. Check pre-warmed token first (cached from page-load pre-render).
+    // If still fresh, use it — no need to re-challenge.
+    if (_prewarmedToken && (Date.now() - _prewarmedAt) < TOKEN_FRESHNESS_MS) {
+        const cached = _prewarmedToken;
+        _prewarmedToken = null;  // consume — tokens are single-use
+        return { widgetId: _activeWidgetId, token: cached };
+    }
 
     const widgetId = existingWidgetId || _activeWidgetId;
 
@@ -149,7 +209,7 @@ export async function getFreshTurnstileToken(container, isFirstRender = false, e
     if (!isFirstRender && widgetId) {
         return new Promise((resolve, reject) => {
             const POLL_INTERVAL_MS = 200;
-            const TIMEOUT_MS = 30_000;
+            const TIMEOUT_MS = 45_000;  // was 30s — bumped for slow networks
 
             const checkInterval = setInterval(() => {
                 const token = getTurnstileToken(widgetId);
@@ -197,27 +257,50 @@ export async function getFreshTurnstileToken(container, isFirstRender = false, e
     }
     container.innerHTML = '';
 
-    return new Promise((resolve, reject) => {
-        const newWidgetId = window.turnstile.render(container, {
-            sitekey: AUTH_CONFIG.TURNSTILE_SITE_KEY,
-            size: 'compact',  // HANYA "normal", "compact", atau "flexible"
-            callback: (token) => {
-                resolve({ widgetId: newWidgetId, token });
-            },
-            'error-callback': (errorCode) => {
-                reject(new Error(`Verifikasi Turnstile gagal (${errorCode || 'unknown'}).`));
-            },
-            'expired-callback': () => {
-                reject(new Error('Verifikasi Turnstile kadaluarsa. Silakan coba lagi.'));
-            },
-        });
+    return _renderWithRetry(container);
+}
 
-        if (!newWidgetId) {
-            reject(new Error('Turnstile gagal diinisialisasi. Silakan muat ulang halaman.'));
-            return;
-        }
+/**
+ * Pre-warm: render Turnstile widget on page load.
+ * Call this as soon as the page is interactive — the widget will start its
+ * challenge in the background, so by the time the user clicks "Login",
+ * the token is already cached and ready (no on-demand delay, no UI surprise).
+ *
+ * @param {HTMLElement} [container] - Container element (default: #userTurnstile)
+ * @returns {Promise<{widgetId: string, token: string}|null>} - null if container missing or Turnstile not ready
+ */
+export async function prerenderTurnstile(container) {
+    if (!container) {
+        container = document.getElementById('userTurnstile');
+    }
+    if (!container) return null;
 
-        _activeWidgetId = newWidgetId;
-        // render() otomatis trigger execute — JANGAN panggil execute()!
-    });
+    try {
+        await waitForTurnstileReady();
+    } catch (_) {
+        return null;  // Turnstile script didn't load — user will see error on click
+    }
+
+    // Don't pre-warm twice
+    if (_activeWidgetId && _prewarmedToken) {
+        return { widgetId: _activeWidgetId, token: _prewarmedToken };
+    }
+
+    try {
+        return await _renderWithRetry(container);
+    } catch (_) {
+        return null;  // silent fail — caller (getFreshTurnstileToken) will retry on demand
+    }
+}
+
+/**
+ * Reset module state (for logout / cleanup).
+ */
+export function clearTurnstileState() {
+    if (_activeWidgetId) {
+        try { window.turnstile?.remove?.(_activeWidgetId); } catch (_) {}
+    }
+    _activeWidgetId = null;
+    _prewarmedToken = null;
+    _prewarmedAt = 0;
 }

@@ -41,7 +41,9 @@ export {
     resetTurnstile,
     executeTurnstile,
     renderTurnstile,
-    getFreshTurnstileToken
+    getFreshTurnstileToken,
+    prerenderTurnstile,
+    clearTurnstileState
 } from './turnstile.js';
 export {
     PreflightError,

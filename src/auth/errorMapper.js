@@ -30,12 +30,19 @@ export const ERROR_MESSAGES = {
     // Turnstile / Security Verification
     turnstile_failed:
         'Verifikasi keamanan gagal. Sistem akan mencoba ulang secara otomatis — jika masalah berlanjut, muat ulang halaman.',
-    
+
     turnstile_expired:
         'Verifikasi keamanan kadaluarsa. Silakan coba lagi.',
-    
+
+    turnstile_network_error:
+        'Tidak dapat terhubung ke layanan verifikasi Cloudflare. ' +
+        'Periksa koneksi internet, nonaktifkan VPN/proxy, atau coba jaringan lain. ' +
+        'Jika masalah berlanjut, ganti DNS ke 1.1.1.1 atau 8.8.8.8.',
+
     missing_verification:
-        'Verifikasi keamanan belum selesai. Silakan tunggu hingga verifikasi selesai.',
+        'Verifikasi keamanan tidak dapat diselesaikan. ' +
+        'Pastikan widget verifikasi terlihat di halaman, tunggu hingga selesai, lalu coba lagi. ' +
+        'Jika widget tidak muncul, muat ulang halaman.',
     
     // Auth & Session
     invalid_token:

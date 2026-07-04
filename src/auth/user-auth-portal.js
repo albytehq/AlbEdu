@@ -33,6 +33,7 @@ import {
     clearPreflight,
     executePreflightFlow,
 } from './index.js';
+import { prerenderTurnstile } from './turnstile.js';
 
 // ── Step labels untuk animasi Google button ──────────────────────────────────
 const AUTH_STEPS = {
@@ -447,3 +448,36 @@ document.addEventListener('auth-ready', (e) => {
         setAuthStep('success');
     }
 });
+
+// ===========================================================================
+// Pre-warm Turnstile — render widget as soon as page is interactive so the
+// challenge runs in the BACKGROUND. By the time user clicks "Masuk dengan
+// Google", the token is already cached and ready — no on-demand delay.
+//
+// Critical for peserta (exam participants) on slow networks where Cloudflare
+// PAT DNS resolution can take 5-15 seconds. Pre-warming hides this latency
+// behind the user's reading time.
+//
+// Silent fail: if Turnstile script hasn't loaded yet, prerenderTurnstile()
+// will retry internally. If pre-warm fails entirely, getFreshTurnstileToken()
+// will retry on click — pre-warm is best-effort, not required.
+// ===========================================================================
+
+// Use requestIdleCallback if available — don't compete with initial page render.
+// Fallback to setTimeout(0) on browsers without rIC.
+const _startPrewarm = () => {
+    try {
+        prerenderTurnstile().catch(() => {
+            // Silent fail — pre-warm is best-effort.
+        });
+    } catch (_) {
+        // Silent fail.
+    }
+};
+
+if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(_startPrewarm, { timeout: 2000 });
+} else {
+    setTimeout(_startPrewarm, 500);
+}
+
