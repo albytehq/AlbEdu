@@ -186,18 +186,23 @@ a { color: inherit; text-decoration: none; }
   margin: 0;
 }
 
-/* ── Inline icon — fixed size to prevent layout shift ── */
+/* ── Icon system — Lucide SVG (v5.0 — inline SVG, zero font loading) ──
+   The .albedu-icon class styles SVG icons rendered by icons.js.
+   No font is loaded — SVG paths are inlined in the JS bundle for instant
+   first-paint rendering with zero FOUT/FOUC.
+   Lucide icons: https://lucide.dev (ISC license, used by Vercel, shadcn/ui,
+   Cal.com, Linear). */
 .albedu-icon {
+  display: inline-block;
   width: 1em;
   height: 1em;
-  display: inline-block;
   vertical-align: -0.15em;
+  flex-shrink: 0;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  flex-shrink: 0;
 }
 .albedu-icon--16 { width: 16px; height: 16px; }
 .albedu-icon--20 { width: 20px; height: 20px; }
