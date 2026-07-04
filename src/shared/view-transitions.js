@@ -157,40 +157,15 @@
       return;
     }
 
-    // Set .albedu-admin-shell di halaman TUJUAN kalau link ke admin page.
-    // Kita tidak bisa set class di halaman tujuan sebelum load — tapi
-    // kita bisa set di halaman SEKARANG, dan CSS akan apply ke transition
-    // root. Untuk sidebar persist, halaman tujuan juga harus set class
-    // saat DOM ready — sudah di-handle di atas (_isAdminPage).
-    //
-    // Trick: set class di <html> sekarang, biar transition pakai
-    // animation slide-in. Halaman tujuan akan re-set class saat ready.
-    // ↑ NOTE: block ini sekarang dead code karena admin case sudah di-handle
-    // di atas (skip VT). Tinggal untuk non-admin → non-admin navigation.
-
-    // Intercept navigasi
+    // Intercept navigasi (untuk non-admin pages saja)
     e.preventDefault();
     e.stopImmediatePropagation(); // ← cegah handler lain preventDefault ulang
 
-    // Start view transition — callback navigate ke URL tujuan.
-    // Browser akan screenshot DOM lama, load halaman baru, screenshot DOM baru,
-    // lalu animasikan cross-fade antara dua screenshot.
-    //
-    // NOTE: navigasi.js click handler (mobile drawer closeSidebar) tidak akan
-    // jalan karena stopImmediatePropagation. Tapi navigasi.js punya pagehide
-    // listener yang handle cleanup saat halaman unload. Jadi sidebar mobile
-    // akan tertutup via pagehide, bukan via click handler. Acceptable.
-    // ↑ NOTE: di atas sudah skip VT untuk admin, jadi blok ini cuma jalan
-    // untuk non-admin → non-admin navigation (yang gak punya sidebar drawer).
     try {
       var transition = document.startViewTransition(function () {
-        // Set location.href — browser akan navigate dan render halaman baru.
-        // Saat halaman baru selesai render (atau partial), transition jalan.
         window.location.href = link.href;
       });
 
-      // Safety: kalau transition ready, skip page-transition overlay
-      // (Phase 4 akan handle overlay — untuk sekarang biarkan)
       if (transition && transition.finished) {
         transition.finished.catch(function (_) {
           // Transition abort (misal user klik link lain) — no-op

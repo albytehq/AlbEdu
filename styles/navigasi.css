@@ -720,7 +720,7 @@
     border-radius: 8px;
     font-size: 10px;
     font-weight: 700;
-    /* [FIX] Default hidden supaya gak ada flash merah "0" saat halaman
+    /* [FIX v0.743.0] Default hidden supaya gak ada flash merah "0" saat halaman
        baru load sebelum admin-notification-center.js sempat jalan.
        JS akan override via inline style `display: flex` pas count > 0. */
     display: none;

@@ -864,7 +864,7 @@
 }
 
 /* ── Badge ────────────────────────────────────────────────────────────────── */
-/* [FIX] Default hidden — sama kayak navigasi.css. JS override via inline style
+/* [FIX v0.743.0] Default hidden — sama kayak navigasi.css. JS override via inline style
    pas count > 0. Mencegah flash merah "0" saat page load. */
 .notification-btn .badge {
   display: none;

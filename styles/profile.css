@@ -2292,3 +2292,16 @@
   opacity: 1;
 }
 
+
+/* ── Avatar preview box (moved from inline <style> in profile.html) ────────── */
+/* [FIX v0.743.0] Dipindah dari inline <style> ke sini supaya profile.html
+   head-nya clean dan konsisten dengan halaman admin lain. */
+.avatar-preview-box {
+    width: 100px; height: 100px; border-radius: 50%;
+    margin: 0 auto 16px; overflow: hidden;
+    border: 3px solid var(--color-primary);
+    background: var(--color-primary-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 60px; color: var(--color-primary);
+}
+.avatar-preview-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }

@@ -79,7 +79,7 @@
                 </a>
                 <span class="logo-text">AlbEdu</span>
                 <button class="sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button"
-                        aria-label="Tutup sidebar" aria-label="Tutup sidebar" aria-expanded="true">
+                        aria-label="Tutup sidebar" aria-expanded="true">
                     <span data-albedu-icon="left_panel_close"></span>
                 </button>
             </div>
@@ -560,6 +560,15 @@
 
     <!-- Notification Center -->
     <script src="../../src/utils/admin-notification-center.js" defer></script>
+    <script>
+      // Apply default theme on load (prevents FOUC)
+      (function () {
+        try {
+          var saved = localStorage.getItem('albedu-theme') || 'default';
+          document.documentElement.setAttribute('data-theme', saved);
+        } catch (e) { /* noop */ }
+      })();
+    </script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('../../public/service-worker.js').catch(() => {}));

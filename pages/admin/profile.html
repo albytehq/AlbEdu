@@ -15,7 +15,7 @@
     <link rel="icon" type="image/png" sizes="96x96" href="../../public/images/favicon/favicon-96x96.png">
     <link rel="apple-touch-icon" sizes="180x180" href="../../public/images/favicon/apple-touch-icon.png">
 
-    <!-- Design System Tokens -->
+    <!-- Design System -->
         <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
     <script src="../../src/shared/head/critical-css.js"></script>
 
@@ -36,38 +36,25 @@
     <script defer src="../../src/shared/boot.js"></script>
     <script defer src="../../src/shared/error-boundary.js"></script>
     <script type="module" src="../../src/shared/qnotify-loader.js"></script>
-    <!-- style.css removed — tokens.css provides global reset, focus ring, skip-to-main -->
     <link rel="stylesheet" href="../../styles/loading.css">
     <link rel="stylesheet" href="../../styles/navigasi.css">
+    <link rel="stylesheet" href="../../styles/notification-panel.css">
+    <!-- v0.742.9 — Enterprise design system -->
     <link rel="stylesheet" href="../../styles/albedu-v1.css">
-    <link rel="stylesheet" href="../../styles/profile.css"><link rel="stylesheet" href="../../styles/notification-panel.css">
-    
-    <!-- Supabase SDK --><script src="../../src/auth/security.js" defer></script>
+    <link rel="stylesheet" href="../../styles/profile.css"><!-- Fonts --><!-- Supabase SDK --><!-- Auth baseline -->
+    <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
     <script src="../../src/auth/errors.js" defer></script>
     <script src="../../src/auth/user-helpers.js" defer></script>
     <script src="../../src/auth/main.js" defer></script>
-    <script src="../../src/auth/byteward.js" defer></script><!-- ProfileEditorPanel dimuat eksplisit di sini -->
-    <script src="../../src/profile/editor-panel.js" defer></script>
-
-    <style>
-        .avatar-preview-box {
-            width: 100px; height: 100px; border-radius: 50%;
-            margin: 0 auto 16px; overflow: hidden;
-            border: 3px solid var(--color-primary);
-            background: var(--color-primary-light);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 60px; color: var(--color-primary);
-        }
-        .avatar-preview-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    </style>
+    <script src="../../src/auth/byteward.js" defer></script>
+    <script src="../../src/utils/navigasi.js" defer></script>
+    <script src="../../src/utils/self-storage.js" defer></script>
 </head>
 <body>
     <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
-    <div class="page-transition">
-        
-    </div>
-    
+    <div class="page-transition"></div>
+
     <div class="container">
         <!-- Sidebar -->
         <aside class="sidebar" data-icon-eager>
@@ -225,13 +212,10 @@
             </footer>
         </main>
     </div>
-    
-    <!-- Navigation (juga bootstrap ProfileEditorPanel via _bootstrapProfilePanel()) -->
-    <script src="../../src/utils/navigasi.js" defer></script>
-<!-- Notification Center -->
-    <script src="../../src/utils/admin-notification-center.js" defer></script>
 
     <script type="module" src="../../src/theme-system/index.js"></script>
+<!-- Notification Center -->
+    <script src="../../src/utils/admin-notification-center.js" defer></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
 
