@@ -10,7 +10,7 @@
 //   App Start (HTML parse begins)
 //     ↓
 //   critical-css.js (sync, in <head>)
-//     ↓ injects inline sprite (16 critical icons available IMMEDIATELY)
+//     ↓ injects inline sprite (25 critical icons available IMMEDIATELY)
 //     ↓ injects critical CSS (shell paints)
 //     ↓
 //   First Paint (icons visible via <use href="#i-...">)
@@ -29,7 +29,7 @@
 // Public API (attached to window.AlbEdu.__iconLoader):
 //   .onIdle(cb, opts)         → schedule callback when browser is idle
 //   .preloadIcons(names)      → pre-render icons into cache (Layer 1)
-//   .preloadCriticalSet()     → pre-render the 16 critical icons
+//   .preloadCriticalSet()     → pre-render the 25 critical icons
 //   .preloadAll()             → pre-render entire registry (warm cache)
 //   .scheduleBind(fn)         → schedule a bind operation (rAF + idle)
 // =============================================================================
@@ -77,7 +77,7 @@
     }, { timeout: 3000 });
   }
 
-  // ── Pre-render the 16 critical icons ────────────────────────────────
+  // ── Pre-render the 25 critical icons ────────────────────────────────
   // (These are usually already in the sprite, but this populates the
   //  renderer cache for setIcon() calls.)
   function preloadCriticalSet() {

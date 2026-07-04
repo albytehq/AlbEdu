@@ -9,7 +9,7 @@
 //
 // Architecture:
 //   critical-css.js (sync, in <head>)
-//     └─ injects sprite DOM (16 <symbol> elements)
+//     └─ injects sprite DOM (25 <symbol> elements)
 //     └─ injects inline style for .albedu-sprite (hidden)
 //
 //   HTML pages use:
@@ -25,14 +25,16 @@
 //   - Single source of truth: the sprite defines the icon once.
 //   - Instant render: no JS, no string parse, no DOM mutation beyond <use>.
 //
-// Critical Icons (16):
+// Critical Icons (25):
 //   The set is chosen to cover ALL icons that appear in the persistent
 //   application shell (navbar, sidebar, header, footer, auth gates).
 //   These icons must render before first paint to avoid any flash.
 //
 //   menu, close, login, logout, person, person_add, manage_accounts,
 //   notifications, arrow_back, arrow_forward, chevron_right, chevron_left,
-//   search, home, language, refresh
+//   search, home, language, refresh,
+//   account_circle, edit_note, menu_book, inventory_2, monitor_heart,
+//   bar_chart, list, left_panel_open, left_panel_close (v0.746.0: admin sidebar)
 //
 // Public API (attached to window.AlbEdu.__iconSprite):
 //   .CRITICAL_ICONS      → array of critical icon names
@@ -48,7 +50,7 @@
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.AlbEdu && window.AlbEdu.__iconSprite) return;
 
-  // ── Critical icon set (16 icons) ────────────────────────────────────
+  // ── Critical icon set (25 icons) ────────────────────────────────────
   // These are the icons that appear in the persistent app shell and
   // auth gates — they MUST render on first paint.
   //
@@ -71,6 +73,16 @@
     'home': '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
     'language': '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
     'refresh': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+    // [v0.746.0] Admin sidebar icons — moved from secondary to critical
+    'account_circle': '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>',
+    'edit_note': '<path d="M14.364 13.634a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506l4.013-4.009a1 1 0 0 0-3.004-3.004z"/><path d="M14.487 7.858A1 1 0 0 1 14 7V2"/><path d="M20 19.645V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l2.516 2.516"/><path d="M8 18h1"/>',
+    'menu_book': '<path d="M12 7v14"/><path d="M16 12h2"/><path d="M16 8h2"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/><path d="M6 12h2"/><path d="M6 8h2"/>',
+    'inventory_2': '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><polyline points="3.29 7 12 12 20.71 7"/><path d="m7.5 4.27 9 5.15"/>',
+    'monitor_heart': '<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>',
+    'bar_chart': '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+    'list': '<path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/>',
+    'left_panel_open': '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/>',
+    'left_panel_close': '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/>',
   };
 
   // ── Check if a name is in the critical set ──────────────────────────
