@@ -1510,12 +1510,26 @@ window.AlbEdu.__iconRegistrySecondary = {
     }
   }
 
+  // FIX: this file is loaded via <script defer>, and defer scripts are
+  // guaranteed by spec to run AFTER the HTML parser has finished — i.e.
+  // document.readyState is already 'interactive' by the time this line
+  // executes, essentially every time, on every browser. The
+  // `readyState === 'loading'` branch below is therefore dead code in
+  // practice, and every single page load fell through to
+  // requestIdleCallback(..., {timeout:1000}). That call does not run
+  // "soon" — it waits for a genuinely idle main thread, or forces
+  // execution once the timeout is hit. On a light page (few scripts)
+  // the thread goes idle almost immediately, so the delay was
+  // imperceptible. On heavier pages (auth checks, sidebar sync,
+  // profile/notification bootstrapping, Supabase calls all competing
+  // for the main thread) idle never came quickly, so icons visibly
+  // popped in late — worse the busier the page. Since the DOM is
+  // already parsed by the time a defer script runs, there is nothing
+  // to gain by waiting: bind immediately.
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _autoInit);
-  } else if ('requestIdleCallback' in window) {
-    requestIdleCallback(_autoInit, { timeout: 1000 });
   } else {
-    setTimeout(_autoInit, 0);
+    _autoInit();
   }
 
   window.addEventListener('pagehide', _cleanup, { once: true });

@@ -561,98 +561,133 @@ document.addEventListener('DOMContentLoaded', function () {
      * and replace with `profile/` to land in the correct directory.
      * See rule-url-albedu.md §3 (always use Auth BASE_PATH helpers).
      * ═══════════════════════════════════════════════════════════ */
-    (function _bootstrapProfilePanel() {
-        if (document.getElementById('pep-panel-script')) return;
+    (function _bootstrapProfileScriptsLazy() {
+        // FIX: previously both editor-panel.js AND option-profile.js were
+        // fetched + parsed + initialised on EVERY admin page load, even
+        // when the user never touches the avatar/profile button on that
+        // visit. That's 2 extra network round-trips and 2 extra scripts
+        // competing for the main thread on every single navigation —
+        // part of why switching between admin pages felt heavy. Neither
+        // script does anything until the user opens the profile options
+        // panel or the profile editor, so we now defer loading both
+        // until first interaction.
+        //
+        // IMPORTANT: profile.html has its OWN "Edit Profil" / "Ganti
+        // Foto" buttons that call window.ProfileEditorPanel.open()
+        // directly — not through the sidebar avatar. So the loader is
+        // exposed as a shared, idempotent window.AlbEdu.ensureProfileScripts()
+        // API that ANY trigger can call, instead of being private to the
+        // sidebar avatar listeners below.
+        let _loadPromise = null;
 
-        const s    = document.createElement('script');
-        s.id       = 'pep-panel-script';
-        const base   = _resolveProfileScriptBase();
-        s.src        = base + 'editor-panel.js';
-        s.defer      = true;
+        function ensureProfileScripts(triggerEvent) {
+            if (_loadPromise) return _loadPromise;
+            // Was this load kicked off by a real click/tap (user wants the
+            // panel open now), or just a hover/focus warm-up (user might
+            // not click at all)? Only auto-open for the former, otherwise
+            // OptionProfile's own click binding handles it on the next click.
+            const wantsOpenNow = triggerEvent &&
+                (triggerEvent.type === 'click' || triggerEvent.type === 'touchstart');
 
-        s.onload = function () {
-            if (!window.ProfileEditorPanel) return;
-            window.ProfileEditorPanel.init({
-                trigger:    [],
-                workerBase: 'https://edu.albyte-inc.workers.dev',
-                onSaved: function (user) {
-                    const nameEl   = document.getElementById('sidebar-user-name');
-                    const avatarEl = document.getElementById('sidebar-avatar');
-                    if (nameEl   && user.nama)        nameEl.textContent = user.nama;
-                    if (avatarEl && user.foto_profil) {
-                        const url = user.foto_profil;
-                        const safeUrl = (/^https:/i.test(url) || /^data:image\//i.test(url) || !/^[a-z]+:/i.test(url)) ? url : '';
-                        if (safeUrl) {
-                            avatarEl.innerHTML = `<img src="${_esc(safeUrl)}" alt="Avatar"
-                                style="width:100%;height:100%;object-fit:cover;border-radius:50%;" data-nav-avatar-saved>`;
-                            const img = avatarEl.querySelector('img[data-nav-avatar-saved]');
-                            if (img) {
-                                img.addEventListener('error', function () {
-                                    this.parentElement.innerHTML = '<span data-albedu-icon="person"></span>';
-                                }, { once: true });
+            const base = _resolveProfileScriptBase();
+
+            const editorReady = new Promise(function (resolveEditor) {
+            const editorScript = document.createElement('script');
+            editorScript.id = 'pep-panel-script';
+            editorScript.src = base + 'editor-panel.js';
+            editorScript.defer = true;
+            editorScript.onload = function () {
+                if (!window.ProfileEditorPanel) { resolveEditor(); return; }
+                window.ProfileEditorPanel.init({
+                    trigger:    [],
+                    workerBase: 'https://edu.albyte-inc.workers.dev',
+                    onSaved: function (user) {
+                        const nameEl   = document.getElementById('sidebar-user-name');
+                        const avatarEl = document.getElementById('sidebar-avatar');
+                        if (nameEl   && user.nama)        nameEl.textContent = user.nama;
+                        if (avatarEl && user.foto_profil) {
+                            const url = user.foto_profil;
+                            const safeUrl = (/^https:/i.test(url) || /^data:image\//i.test(url) || !/^[a-z]+:/i.test(url)) ? url : '';
+                            if (safeUrl) {
+                                avatarEl.innerHTML = `<img src="${_esc(safeUrl)}" alt="Avatar"
+                                    style="width:100%;height:100%;object-fit:cover;border-radius:50%;" data-nav-avatar-saved>`;
+                                const img = avatarEl.querySelector('img[data-nav-avatar-saved]');
+                                if (img) {
+                                    img.addEventListener('error', function () {
+                                        this.parentElement.innerHTML = '<span data-albedu-icon="person"></span>';
+                                    }, { once: true });
+                                }
+                            }
+                        }
+                        const adminName   = document.getElementById('admin-name');
+                        const adminAvatar = document.getElementById('admin-avatar');
+                        if (adminName   && user.nama)        adminName.textContent = user.nama;
+                        if (adminAvatar && user.foto_profil) {
+                            const url2 = user.foto_profil;
+                            const safeUrl2 = (/^https:/i.test(url2) || /^data:image\//i.test(url2) || !/^[a-z]+:/i.test(url2)) ? url2 : '';
+                            if (safeUrl2) {
+                                adminAvatar.innerHTML = `<img src="${_esc(safeUrl2)}" alt="Foto Profil"
+                                    style="width:100%;height:100%;object-fit:cover;border-radius:50%;" data-nav-admin-avatar>`;
+                                const img2 = adminAvatar.querySelector('img[data-nav-admin-avatar]');
+                                if (img2) {
+                                    img2.addEventListener('error', function () {
+                                        this.parentElement.innerHTML = '<span data-albedu-icon="account_circle"></span>';
+                                    }, { once: true });
+                                }
                             }
                         }
                     }
-                    const adminName   = document.getElementById('admin-name');
-                    const adminAvatar = document.getElementById('admin-avatar');
-                    if (adminName   && user.nama)        adminName.textContent = user.nama;
-                    if (adminAvatar && user.foto_profil) {
-                        const url2 = user.foto_profil;
-                        const safeUrl2 = (/^https:/i.test(url2) || /^data:image\//i.test(url2) || !/^[a-z]+:/i.test(url2)) ? url2 : '';
-                        if (safeUrl2) {
-                            adminAvatar.innerHTML = `<img src="${_esc(safeUrl2)}" alt="Foto Profil"
-                                style="width:100%;height:100%;object-fit:cover;border-radius:50%;" data-nav-admin-avatar>`;
-                            const img2 = adminAvatar.querySelector('img[data-nav-admin-avatar]');
-                            if (img2) {
-                                img2.addEventListener('error', function () {
-                                    this.parentElement.innerHTML = '<span data-albedu-icon="account_circle"></span>';
-                                }, { once: true });
-                            }
-                        }
-                    }
+                });
+                resolveEditor();
+            };
+            editorScript.onerror = function () { resolveEditor(); };
+            document.head.appendChild(editorScript);
+            });
+
+            const optionReady = new Promise(function (resolveOption) {
+            const optionScript = document.createElement('script');
+            optionScript.id = 'op-script';
+            optionScript.src = base + 'option-profile.js';
+            optionScript.defer = true;
+            optionScript.onload = function () {
+                if (!window.OptionProfile) { resolveOption(); return; }
+                const userContent = document.querySelector('.user-profile-content');
+                window.OptionProfile.init({
+                    triggers:   userContent ? [userContent] : [],
+                    context:    'sidebar',
+                    workerBase: 'https://edu.albyte-inc.workers.dev',
+                });
+                if (wantsOpenNow && userContent) {
+                    window.OptionProfile.open(userContent);
                 }
+                resolveOption();
+            };
+            optionScript.onerror = function () { resolveOption(); };
+            document.head.appendChild(optionScript);
             });
-        };
 
-        document.head.appendChild(s);
-    }());
+            _loadPromise = Promise.all([editorReady, optionReady]);
+            return _loadPromise;
+        }
 
-    /* ═══════════════════════════════════════════════════════════
-     * OptionProfile bootstrap — kept from v1, FIXED in v2.1.
-     * Loads OptionProfile.js and attaches to the sidebar
-     * user-profile-content button. Clicking the name/avatar in the
-     * sidebar opens the global profile options panel.
-     *
-     * v2.1 FIX: Same regex bug as _bootstrapProfilePanel above —
-     * `navigasi.js` lives in `src/utils/` but `option-profile.js`
-     * lives in `src/profile/`. The original code tried to load from
-     * `src/utils/option-profile.js` (404). Now uses the shared
-     * _resolveProfileScriptBase() helper.
-     * ═══════════════════════════════════════════════════════════ */
-    (function _bootstrapOptionProfile() {
-        if (document.getElementById('op-script')) return;
+        // Expose globally so ANY trigger (sidebar avatar, profile.html's
+        // own "Edit Profil" / "Ganti Foto" buttons, etc.) can request the
+        // scripts without duplicating the loading logic. Idempotent —
+        // safe to call multiple times, always returns the same promise
+        // once loading has started.
+        window.AlbEdu = window.AlbEdu || {};
+        window.AlbEdu.ensureProfileScripts = ensureProfileScripts;
 
-        const s    = document.createElement('script');
-        s.id       = 'op-script';
-        const base   = _resolveProfileScriptBase();
-        s.src        = base + 'option-profile.js';
-        s.defer      = true;
+        const userContent = document.querySelector('.user-profile-content');
+        if (!userContent) return;
 
-        s.onload = function () {
-            if (!window.OptionProfile) return;
-            const userContent = document.querySelector('.user-profile-content');
-            window.OptionProfile.init({
-                triggers:   userContent ? [userContent] : [],
-                context:    'sidebar',
-                workerBase: 'https://edu.albyte-inc.workers.dev',
-            });
-        };
-
-        document.head.appendChild(s);
-
-        // [Item 2] Use named handler — already registered above as _onOptionProfileReady
-        // Just fire it once if OptionProfile is already ready
-        _onOptionProfileReady();
+        // Intent-based warm-up (hover/focus) + guaranteed load on click/tap.
+        // addEventListener already passes the triggering event as the
+        // first argument to ensureProfileScripts, so no wrapper is needed.
+        userContent.addEventListener('pointerenter', ensureProfileScripts, { passive: true });
+        userContent.addEventListener('focus', ensureProfileScripts, { passive: true });
+        userContent.addEventListener('touchstart', ensureProfileScripts, { passive: true });
+        userContent.addEventListener('click', ensureProfileScripts, { passive: true });
     }());
 
 });

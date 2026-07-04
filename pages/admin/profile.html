@@ -328,11 +328,26 @@
         });
 
         // ── Wire tombol edit ke ProfileEditorPanel ────────────────────────────
+        // NOTE: editor-panel.js is now lazy-loaded (see navigasi.js) instead
+        // of being fetched unconditionally on every admin page — it's only
+        // pulled in on first real interaction. These buttons are one of
+        // those interactions, so request it via the shared loader (which
+        // is idempotent and safe to call even if the sidebar avatar
+        // already triggered it) instead of polling, which would have
+        // just timed out silently since nothing was loading it anymore.
         function _openPanel() {
             if (window.ProfileEditorPanel) {
                 window.ProfileEditorPanel.open();
                 return;
             }
+            if (window.AlbEdu && window.AlbEdu.ensureProfileScripts) {
+                window.AlbEdu.ensureProfileScripts().then(function () {
+                    if (window.ProfileEditorPanel) window.ProfileEditorPanel.open();
+                });
+                return;
+            }
+            // Fallback (navigasi.js hasn't run yet for some reason) —
+            // keep the old poll as a last resort.
             var tries = 0;
             var t = setInterval(function () {
                 if (window.ProfileEditorPanel || ++tries > 20) {
