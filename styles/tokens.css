@@ -317,6 +317,51 @@ textarea:focus-visible {
   box-shadow: var(--shadow-focus);
 }
 
+/* ═══ Tap Highlight Reset — Hilangkan flash biru default Chrome/Android ═══ */
+/* -webkit-tap-highlight-color: transparent → hilangkan highlight biru saat tap
+   di mobile (Chrome Android, Safari iOS). Default browser bikin flash biru
+   yang terlihat tidak profesional. Sekarang: tap = no flash, clean.
+   Accessibility tetap aman karena :focus-visible (keyboard nav) tetap jalan. */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;          /* iOS: disable long-press menu */
+}
+
+/* Override untuk elemen yang butuh callout (input, contenteditable) */
+input, textarea, [contenteditable="true"] {
+  -webkit-touch-callout: default;
+}
+
+/* Disable text selection pada UI elements (button, nav) — cegah accidental
+   select saat rapid tap. Tapi tetap allow di content area (main, p, h1-h6). */
+button, [role="button"], nav, .menu-item, .mobile-card, .nav-btn-login,
+.nav-btn-primary, .sidebar-item, .logo-icon-link, .sidebar-collapse-toggle,
+.menu-toggle, .notification-btn {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Active state: hapus outline default tap, pakai subtle scale feedback */
+button:active:not(:disabled),
+[role="button"]:active,
+.menu-item-content:active,
+.mobile-card:active,
+.nav-btn-login:active,
+.nav-btn-primary:active {
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Pastikan area konten tetap selectable (UX: user bisa copy text) */
+main, p, h1, h2, h3, h4, h5, h6, li, blockquote, [contenteditable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
 /* ═══ Skip Link ═══ */
 .skip-to-main {
   position: absolute;
