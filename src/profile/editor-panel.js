@@ -19,14 +19,7 @@
 ;(function (global) {
   'use strict';
 
-  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
-  const t = (key, vars, fallback) => {
-    if (window.i18n && typeof window.i18n.t === 'function') {
-      const v = window.i18n.t(key, vars);
-      return v !== undefined ? v : fallback;
-    }
-    return fallback;
-  };
+  const t = (key, vars, fallback) => fallback;
 
   // ── Constants ──────────────────────────────────────────────
   const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB — Worker max adalah 10MB, kita batasi 4MB di client

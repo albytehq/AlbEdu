@@ -8,14 +8,7 @@
 (function () {
   'use strict';
 
-  // v2.0.0: i18n helper
-  const t = (key, vars, fallback) => {
-    if (window.i18n && typeof window.i18n.t === 'function') {
-      const v = window.i18n.t(key, vars);
-      return v !== undefined ? v : fallback;
-    }
-    return fallback;
-  };
+  const t = (key, vars, fallback) => fallback;
 
   const KeyboardShortcuts = {
     init() {

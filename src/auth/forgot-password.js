@@ -57,14 +57,7 @@ import {
     waitForSupabaseReady,
 } from './index.js';
 
-// v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
-const t = (key, vars, fallback) => {
-    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
-        const v = window.i18n.t(key, vars);
-        return v !== undefined ? v : fallback;
-    }
-    return fallback;
-};
+const t = (key, vars, fallback) => fallback;
 
 // ── DOM references ──────────────────────────────────────────────────────────
 const form            = document.getElementById('forgotPasswordForm');

@@ -134,20 +134,7 @@ Functions: `submit-assessment`, `heartbeat`, `block-participant`, `assessment-li
 
 ---
 
-## 8. i18n Locale Loading
-
-Uses `_getBasePath()` (via `import.meta.url`) to construct correct fetch URL:
-
-```javascript
-const basePath = _getBasePath(); // e.g. /AlbEdu/
-const res = await fetch(`${basePath}src/i18n/locales/${locale}.json`);
-```
-
-**NEVER use `/src/i18n/locales/...` (absolute path).**
-
----
-
-## 9. Cloudflare Worker
+## 8. Cloudflare Worker
 
 | Item | Value |
 |---|---|
@@ -190,7 +177,6 @@ const res = await fetch(`${basePath}src/i18n/locales/${locale}.json`);
 
 - ❌ **Jangan** gunakan `href="/"` — lompat ke profile GitHub, bukan app
 - ❌ **Jangan** gunakan `fetch('/functions/v1/...')` — 404 di GitHub Pages
-- ❌ **Jangan** gunakan `fetch('/src/i18n/...')` — 404 di GitHub Pages
 - ❌ **Jangan** gunakan `window.location.origin` di fetch — resolve ke GitHub Pages origin
 - ❌ **Jangan** hardcode `/AlbEdu/` di JS — pakai `AUTH_CONFIG.BASE_PATH`
 - ❌ **Jangan** commit secret keys (Supabase service role, GitHub token, Turnstile secret) ke repo

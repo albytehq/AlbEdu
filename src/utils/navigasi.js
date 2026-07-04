@@ -54,13 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* ── Native tooltips on menu items (visible when collapsed) ── */
-    // v2.0.0: i18n-aware — re-runs on locale change so tooltips reflect
-    // the current language (since sidebar-text is data-i18n-translated).
     function _t(key, fallback) {
-        if (window.i18n && typeof window.i18n.t === 'function') {
-            const v = window.i18n.t(key);
-            return v !== undefined ? v : fallback;
-        }
         return fallback;
     }
 
@@ -77,7 +71,6 @@ document.addEventListener('DOMContentLoaded', function () {
     _updateTooltips();
 
     // Re-update tooltips when locale changes (so they reflect the new lang)
-    document.addEventListener('locale-changed', _updateTooltips);
 
     // [Item 2 Memory Leak Fix] Named handlers for document/window listeners
     // so they can be removed on pagehide. Anonymous functions can't be removed.
@@ -130,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // [Item 2] Cleanup on page hide — prevents ghost listeners in bfcache
     function _cleanup() {
-        document.removeEventListener('locale-changed', _updateTooltips);
         document.removeEventListener('keydown', _onKeydown);
         window.removeEventListener('resize', _onResize);
         document.removeEventListener('option-profile-ready', _onOptionProfileReady);

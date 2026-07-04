@@ -53,7 +53,6 @@ This document captures the final architecture after the three-stage refactor.
 - `src/utils/index.js` — removed legacy `firebaseAuth`/`firebaseDb` aliases from `SupabaseApi` barrel export; added `auth`, `repo`, `realtime`, `rpc`, `ready` native accessors.
 - `src/utils/ui.js` — profile update uses `AlbEdu.repository.updateDoc()`.
 - `src/utils/admin-notification-center.js` — fully migrated: `_subscribeToViolations` uses `repo.subscribe()` + `repo.getDocs()`; `_dismissOne` uses `repo.deleteDoc()`; `_clearAll` uses `repo.bulkDelete()`; init waits on `albedu:platform-ready` event.
-- `src/i18n/index.js` — locale save uses `AlbEdu.supabase.client`.
 - `src/utils/self-storage.js` — uses `AlbEdu.supabase.client`.
 - `src/pages/daftar-nama.js` — uses `AlbEdu.supabase.client`.
 - `src/profile/editor-panel.js` — `_updateUserProfile` and `_fetchCurrentUser` use `AlbEdu.repository`.
@@ -145,7 +144,6 @@ src/
 ├── identity/              # Domain: identity forms
 ├── exam/                  # Domain: exam runtime
 ├── pages/                 # Page controllers (mostly migrated)
-├── i18n/                  # Internationalization
 ├── theme-system/          # Theme presets
 └── utils/                 # Shared utilities
 ```
@@ -185,7 +183,6 @@ src/
 - `src/security/{consent,block-listener,heartbeat,anti-cheat}.js`
 - `src/auth/{main,authFlow,user-auth-portal,preflight,forgot-password,reset-password,admin-onboarding}.js`
 - `src/utils/{index,ui,admin-notification-center,self-storage}.js`
-- `src/i18n/index.js`
 - `src/profile/editor-panel.js`
 - `src/pages/{take-assessment,question-bank,daftar-nama}.js`
 

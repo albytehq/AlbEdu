@@ -48,13 +48,13 @@
     <script src="../../src/auth/byteward.js" defer></script><link rel="stylesheet" href="../../styles/pages/assessment-entry.css">
 </head>
 <body>
-        <a href="#main-content" class="albedu-skip-link" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
+        <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
 <div class="token-container">
         <div class="token-logo">
             <span data-albedu-icon="quiz"></span>
         </div>
-        <h1 class="token-title" data-i18n="peserta.entry_title">Masuk Asesmen</h1>
-        <p class="token-subtitle" data-i18n="peserta.entry_subtitle">Masukkan 6-digit kode akses yang diberikan admin</p>
+        <h1 class="token-title">Masuk Asesmen</h1>
+        <p class="token-subtitle">Masukkan 6-digit kode akses yang diberikan admin</p>
 
         <div class="cooldown-banner" id="cooldown-banner">
             <span style="font-size: 18px; vertical-align: middle;" data-albedu-icon="schedule"></span>
@@ -75,11 +75,11 @@
         </div>
 
         <button class="token-submit" id="token-submit" type="button" disabled>
-            <span id="submit-text" data-i18n="peserta.entry_submit">Masuk Asesmen</span>
+            <span id="submit-text">Masuk Asesmen</span>
         </button>
 
         <div class="token-back">
-            <a href="../../index.html" data-i18n="peserta.entry_back">← Kembali ke beranda</a>
+            <a href="../../index.html">← Kembali ke beranda</a>
         </div>
     </div>
 
@@ -89,11 +89,8 @@
 
     <!-- Security modules -->
     <script src="../../src/security/consent.js" defer></script>
-    <!-- v0.742.8 Theme System + i18n -->
     <script type="module" src="../../src/theme-system/index.js"></script>
-    <script type="module" src="../../src/i18n/index.js"></script>
-    <script defer src="../../src/i18n/lang-switcher.js"></script>
-    <!-- v0.742.8: Floating profile button (triggers OptionProfile — gives peserta logout) -->
+<!-- v0.742.8: Floating profile button (triggers OptionProfile — gives peserta logout) -->
     <script src="../../src/profile/peserta-profile-fab.js" defer></script>
     <!-- Page controller -->
     <script src="../../src/pages/assessment-entry.js" defer></script>

@@ -3,7 +3,6 @@
 // =============================================================================
 // Full rewrite with:
 //   - Google Form-like theme editor (1 color → auto-derive)
-//   - i18n integration (5 languages)
 //   - New schema (assessments table, 6-digit access_code, allow_retake)
 //   - Server-side publish via direct Supabase insert (assessments table)
 //   - Live WCAG AA validation
@@ -13,14 +12,7 @@
 (function () {
   'use strict';
 
-  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
-  const t = (key, vars, fallback) => {
-    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
-      const v = window.i18n.t(key, vars);
-      return v !== undefined ? v : fallback;
-    }
-    return fallback;
-  };
+  const t = (key, vars, fallback) => fallback;
 
   // ─── Constants ──────────────────────────────────────────────────────────
   const SCHEMA_VERSION = '1.0.0';
@@ -385,18 +377,10 @@
 
   // ─── Bootstrap ──────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
-    // Init i18n
-    if (window.i18n?.initI18n) {
-      window.i18n.initI18n().catch(err => console.warn('[i18n] init failed:', err));
-    }
-
     // Init theme system with default
     if (window.ThemeSystem) {
       window.ThemeSystem.apply(_state.examData.theme_config);
     }
-
-    // Init language switcher
-    initLanguageSwitcher();
 
     // Init theme editor
     initThemeEditor();
@@ -415,41 +399,7 @@
   });
 
   // ─── Language Switcher ──────────────────────────────────────────────────
-  function initLanguageSwitcher() {
-    const switcher = document.getElementById('lang-switcher');
-    const dropdown = document.getElementById('lang-dropdown');
-    const currentLang = document.getElementById('current-lang');
-
-    if (!switcher || !dropdown) return;
-
-    switcher.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdown.hidden = !dropdown.hidden;
-    });
-
-    document.addEventListener('click', () => {
-      dropdown.hidden = true;
-    });
-
-    dropdown.querySelectorAll('.albedu-lang-option').forEach((opt) => {
-      opt.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const locale = opt.dataset.locale;
-        const flags = { id: '🇮🇩', en: '🇬🇧', ru: '🇷🇺', es: '🇪🇸', zh: '🇨🇳' };
-        const codes = { id: 'ID', en: 'EN', ru: 'RU', es: 'ES', zh: 'ZH' };
-
-        if (window.i18n?.switchLocale) {
-          await window.i18n.switchLocale(locale);
-        }
-
-        currentLang.textContent = `${flags[locale]} ${codes[locale]}`;
-        dropdown.querySelectorAll('.albedu-lang-option').forEach((o) => o.classList.remove('albedu-active'));
-        opt.classList.add('albedu-active');
-        dropdown.hidden = true;
-      });
-    });
-  }
-
+  
   // ─── Theme Editor (Google Form-like) ────────────────────────────────────
   function initThemeEditor() {
     const presetChips = document.querySelectorAll('.albedu-preset-chip');

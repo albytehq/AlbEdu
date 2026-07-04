@@ -39,12 +39,6 @@ class AdminPanel {
             if (e.detail && window.Auth) window.Auth.userData = e.detail;
             this._renderUserInfo();
         });
-
-        // v2.0.0: Re-render greeting + user info when locale changes
-        // (supaya "Selamat Pagi" → "Good Morning" update instant)
-        document.addEventListener('locale-changed', () => {
-            this._renderUserInfo();
-        });
     }
 
     _renderUserInfo() {
@@ -59,14 +53,7 @@ class AdminPanel {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;'));
 
-        // v2.0.0: i18n helper — falls back to Indonesian string if i18n not loaded
-        const t = (key, vars, fallback) => {
-            if (window.i18n && typeof window.i18n.t === 'function') {
-                const v = window.i18n.t(key, vars);
-                return v !== undefined ? v : fallback;
-            }
-            return fallback;
-        };
+        const t = (key, vars, fallback) => fallback;
 
         if (user || data.email || data.nama) {
             const rawName = data.nama || user?.displayName || user?.email?.split('@')[0] || t('nav.role_admin', null, 'Administrator');
@@ -225,14 +212,7 @@ class AdminPanel {
         const el = document.getElementById('greeting');
         if (!el) return;
 
-        // v2.0.0: i18n-aware greeting — falls back to Indonesian if i18n not loaded
-        const t = (key, vars, fallback) => {
-            if (window.i18n && typeof window.i18n.t === 'function') {
-                const v = window.i18n.t(key, vars);
-                return v !== undefined ? v : fallback;
-            }
-            return fallback;
-        };
+        const t = (key, vars, fallback) => fallback;
 
         const hour = new Date().getHours();
         let salutationKey, salutationFallback;

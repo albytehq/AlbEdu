@@ -51,7 +51,7 @@
     <script src="../../src/utils/self-storage.js" defer></script><link rel="stylesheet" href="../../styles/pages/question-bank.css">
 </head>
 <body>
-    <a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
+    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
     <div class="page-transition"></div>
 
     <div class="container">
@@ -78,43 +78,43 @@
                     <li class="menu-item sidebar-item" data-tab="profil">
                         <a href="profile.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="account_circle"></span>
-                            <span class="sidebar-text" data-i18n="nav.profile">Profil Admin</span>
+                            <span class="sidebar-text">Profil Admin</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="create-assessment">
                         <a href="create-assessment.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="edit_note"></span>
-                            <span class="sidebar-text" data-i18n="nav.create_assessment">Buat Asesmen</span>
+                            <span class="sidebar-text">Buat Asesmen</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="active-assessments">
                         <a href="active-assessments.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="menu_book"></span>
-                            <span class="sidebar-text" data-i18n="nav.active_assessments">Asesmen Aktif</span>
+                            <span class="sidebar-text">Asesmen Aktif</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item active" data-tab="question-bank">
                         <a href="question-bank.html" class="menu-item-content" aria-current="page">
                             <span class="sidebar-icon" data-albedu-icon="inventory_2"></span>
-                            <span class="sidebar-text" data-i18n="nav.question_bank">Bank Soal</span>
+                            <span class="sidebar-text">Bank Soal</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="monitoring">
                         <a href="monitoring.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="monitor_heart"></span>
-                            <span class="sidebar-text" data-i18n="nav.monitoring">Monitoring</span>
+                            <span class="sidebar-text">Monitoring</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="results">
                         <a href="results-analytics.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="bar_chart"></span>
-                            <span class="sidebar-text" data-i18n="nav.results">Hasil & Analitik</span>
+                            <span class="sidebar-text">Hasil & Analitik</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="daftar-nama">
                         <a href="daftar-nama.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="list"></span>
-                            <span class="sidebar-text" data-i18n="nav.daftar_nama">Daftar Nama</span>
+                            <span class="sidebar-text">Daftar Nama</span>
                         </a>
                     </li>
                 </ul>
@@ -126,8 +126,8 @@
                         <span data-albedu-icon="person"></span>
                     </div>
                     <div class="user-info">
-                        <h4 id="sidebar-user-name" data-i18n="nav.default_admin_name">Admin AlbEdu</h4>
-                        <p id="sidebar-user-role" data-i18n="nav.role_admin">Administrator</p>
+                        <h4 id="sidebar-user-name">Admin AlbEdu</h4>
+                        <p id="sidebar-user-role">Administrator</p>
                     </div>
                 </button>
             </div>
@@ -143,21 +143,10 @@
                     <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka menu">
                         <span data-albedu-icon="menu"></span>
                     </button>
-                    <h1 id="page-title" data-i18n="question_bank.page_title">Bank Soal</h1>
+                    <h1 id="page-title">Bank Soal</h1>
                 </div>
                 <div class="header-right">
-                    <!-- Language Switcher -->
-                    <div class="albedu-lang-switcher" id="lang-switcher">
-                        <span data-albedu-icon="language"></span>
-                        <span id="current-lang">🇮🇩 ID</span>
-                        <span data-albedu-icon="expand_more"></span>
-                        <div class="albedu-lang-dropdown" id="lang-dropdown" hidden>
-                            <div class="albedu-lang-option albedu-active" data-locale="id">🇮🇩 Bahasa Indonesia</div>
-                            <div class="albedu-lang-option" data-locale="en">🇬🇧 English</div>
-
-                            </div>
-                    </div>
-                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
+                    <!-- Language Switcher -->                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
                         <span data-albedu-icon="notifications"></span>
                         <span class="badge">0</span>
                     </button>
@@ -171,15 +160,15 @@
                     <div class="qb-toolbar-left">
                         <button class="albedu-btn albedu-btn-primary albedu-btn-sm" id="btn-qb-add" type="button">
                             <span data-albedu-icon="add_circle"></span>
-                            <span data-i18n="question_bank.add">Tambah Soal</span>
+                            <span>Tambah Soal</span>
                         </button>
                         <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-qb-import" type="button">
                             <span data-albedu-icon="file_upload"></span>
-                            <span data-i18n="question_bank.import">Import JSON</span>
+                            <span>Import JSON</span>
                         </button>
                         <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-qb-export" type="button">
                             <span data-albedu-icon="file_download"></span>
-                            <span data-i18n="question_bank.export">Export JSON</span>
+                            <span>Export JSON</span>
                         </button>
                     </div>
                     <div class="qb-search" role="search">
@@ -189,7 +178,7 @@
                             id="qb-search-input"
                             class="albedu-input"
                             placeholder="Cari soal berdasarkan teks, mata pelajaran, atau tag..."
-                            data-i18n-placeholder="question_bank.search_placeholder"
+                            placeholder="Cari soal..."
                             aria-label="Cari soal"
                             autocomplete="off">
                     </div>
@@ -198,10 +187,10 @@
                 <!-- Filters -->
                 <div class="qb-filters" role="group" aria-label="Filter soal">
                     <div class="qb-filter-field">
-                        <label for="qb-filter-subject" data-i18n="question_bank.filter_subject">Mata Pelajaran</label>
+                        <label for="qb-filter-subject">Mata Pelajaran</label>
                         <select id="qb-filter-subject" aria-label="Filter berdasarkan mata pelajaran">
-                            <option value="" data-i18n="question_bank.filter_all">Semua</option>
-                            <option value="Matematika" data-i18n="question_bank.subject_math">Matematika</option>
+                            <option value="">Semua</option>
+                            <option value="Matematika">Matematika</option>
                             <option value="Bahasa Indonesia">Bahasa Indonesia</option>
                             <option value="Bahasa Inggris">Bahasa Inggris</option>
                             <option value="IPA Terpadu">IPA Terpadu</option>
@@ -210,22 +199,22 @@
                         </select>
                     </div>
                     <div class="qb-filter-field">
-                        <label for="qb-filter-difficulty" data-i18n="question_bank.filter_difficulty">Tingkat Kesulitan</label>
+                        <label for="qb-filter-difficulty">Tingkat Kesulitan</label>
                         <select id="qb-filter-difficulty" aria-label="Filter berdasarkan tingkat kesulitan">
-                            <option value="" data-i18n="question_bank.filter_all">Semua</option>
-                            <option value="easy" data-i18n="question_bank.difficulty_easy">Mudah</option>
-                            <option value="medium" data-i18n="question_bank.difficulty_medium">Sedang</option>
-                            <option value="hard" data-i18n="question_bank.difficulty_hard">Sulit</option>
+                            <option value="">Semua</option>
+                            <option value="easy">Mudah</option>
+                            <option value="medium">Sedang</option>
+                            <option value="hard">Sulit</option>
                         </select>
                     </div>
                     <div class="qb-filter-field">
-                        <label for="qb-filter-tags" data-i18n="question_bank.filter_tags">Tags</label>
+                        <label for="qb-filter-tags">Tags</label>
                         <input
                             type="text"
                             id="qb-filter-tags"
                             class="albedu-input"
                             placeholder="cth: aljabar, geometri"
-                            data-i18n-placeholder="question_bank.filter_tags_placeholder"
+                            placeholder="Filter berdasarkan tag..."
                             aria-label="Filter berdasarkan tag">
                     </div>
                 </div>
@@ -241,35 +230,31 @@
                 <!-- Empty state -->
                 <div class="albedu-empty-state" id="qb-empty" hidden>
                     <span data-albedu-icon="inventory_2"></span>
-                    <h3 data-i18n="question_bank.empty_title">Bank Soal Kosong</h3>
-                    <p data-i18n="question_bank.empty_desc">Tambahkan soal pertama Anda atau import dari file JSON.</p>
+                    <h3>Bank Soal Kosong</h3>
+                    <p>Tambahkan soal pertama Anda atau import dari file JSON.</p>
                     <button class="albedu-btn albedu-btn-primary albedu-btn-sm" id="btn-qb-empty-add" type="button">
                         <span data-albedu-icon="add_circle"></span>
-                        <span data-i18n="question_bank.add">Tambah Soal</span>
+                        <span>Tambah Soal</span>
                     </button>
                 </div>
 
                 <!-- No results (after search) -->
                 <div class="albedu-empty-state" id="qb-no-results" hidden>
                     <span data-albedu-icon="search_off"></span>
-                    <h3 data-i18n="question_bank.no_results_title">Tidak Ditemukan</h3>
-                    <p data-i18n="question_bank.no_results_desc">Coba kata kunci atau filter lain.</p>
+                    <h3>Tidak Ditemukan</h3>
+                    <p>Coba kata kunci atau filter lain.</p>
                 </div>
             </div>
 
             <footer class="footer">
-                <p><span data-i18n="common.copyright" data-i18n-vars="{&quot;year&quot;:2026}">© 2026 AlbEdu. Semua hak dilindungi.</span></p>
+                <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
                 <p>v0.742.9</p>
             </footer>
         </main>
     </div>
 
-    <!-- Theme System + i18n (v0.742.9) -->
     <script type="module" src="../../src/theme-system/index.js"></script>
-    <script type="module" src="../../src/i18n/index.js"></script>
-    <script defer src="../../src/i18n/lang-switcher.js"></script>
-
-    <!-- Question Bank v0.742.9 page controller (NEW) -->
+<!-- Question Bank v0.742.9 page controller (NEW) -->
     <!-- Page controller — split modules load first, orchestrator last -->
     <script defer src="../../src/pages/question-bank/utils.js"></script>
     <script defer src="../../src/pages/question-bank/data.js"></script>

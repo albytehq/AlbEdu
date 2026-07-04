@@ -157,14 +157,7 @@ const AUTH_CONFIG = {
 // Re-aliased locally for clean code style.
 const _isDev                       = window.AuthHelpers.isDev;
 
-// v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
-const _t = (key, vars, fallback) => {
-    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
-        const v = window.i18n.t(key, vars);
-        return v !== undefined ? v : fallback;
-    }
-    return fallback;
-};
+const _t = (key, vars, fallback) => fallback;
 const PROFILE_FETCH_TIMEOUT_MS     = window.AuthHelpers.PROFILE_FETCH_TIMEOUT_MS;
 const AUTH_STATE_TIMEOUT_MS        = window.AuthHelpers.AUTH_STATE_TIMEOUT_MS;
 const REDIRECT_DELAY_MS            = window.AuthHelpers.REDIRECT_DELAY_MS;

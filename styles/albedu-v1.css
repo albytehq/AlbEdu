@@ -559,44 +559,6 @@ body {
 .albedu-status-finished { background: #fef2f2; color: var(--albedu-danger); }
 
 /* ── Language switcher ─────────────────────────────────────────────────── */
-.albedu-lang-switcher {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid var(--albedu-border);
-  border-radius: var(--albedu-radius-sm);
-  background: var(--albedu-surface);
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--albedu-body);
-  transition: all var(--albedu-transition);
-}
-.albedu-lang-switcher:hover { border-color: var(--albedu-primary); color: var(--albedu-primary); }
-.albedu-lang-dropdown {
-  position: absolute;
-  top: 100%; right: 0;
-  margin-top: 4px;
-  background: var(--albedu-surface);
-  border: 1px solid var(--albedu-border);
-  border-radius: var(--albedu-radius-sm);
-  box-shadow: var(--albedu-shadow-md);
-  min-width: 160px;
-  z-index: 100;
-  overflow: hidden;
-}
-.albedu-lang-option {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--albedu-body);
-  cursor: pointer;
-  transition: background var(--albedu-transition);
-}
-.albedu-lang-option:hover { background: var(--albedu-surface-alt); }
-.albedu-lang-option.albedu-active { color: var(--albedu-primary); font-weight: 600; background: var(--albedu-primary-muted); }
-
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
   .albedu-summary-grid { grid-template-columns: repeat(2, 1fr); }

@@ -3,7 +3,7 @@
 -- AlbEdu v1.0.0 — Phase 1.2
 -- =============================================================================
 -- Renames users columns to snake_case (Postgres convention).
--- Adds: organization_id (SCloud-ready), locale (i18n), consent_at (UU PDP),
+-- Adds: organization_id (SCloud-ready), consent_at (UU PDP),
 --       deleted_at (soft delete for DSR).
 --
 -- BEFORE:
@@ -11,7 +11,7 @@
 --
 -- AFTER:
 --   users (id, email, nama, peran, created_at, avatar_url, profile_complete,
---         updated_at, organization_id, locale, consent_at, consent_version,
+--         updated_at, organization_id, consent_at, consent_version,
 --         deleted_at)
 -- =============================================================================
 
@@ -22,7 +22,6 @@ ALTER TABLE public.users RENAME COLUMN profil_lengkap TO profile_complete;
 -- ── Add new columns ──
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS organization_id uuid REFERENCES public.organizations(id),
-  ADD COLUMN IF NOT EXISTS locale text DEFAULT 'id' CHECK (locale IN ('id', 'en', 'ru', 'es', 'zh')),
   ADD COLUMN IF NOT EXISTS consent_at timestamptz,
   ADD COLUMN IF NOT EXISTS consent_version text,
   ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
@@ -63,4 +62,4 @@ CREATE POLICY "users_update_own"
 -- Admins cannot directly INSERT users (must go through register-admin edge function)
 
 COMMENT ON TABLE public.users IS
-  'AlbEdu users table (v1.0.0). Renamed foto_profil → avatar_url, profil_lengkap → profile_complete. Added organization_id (SCloud), locale (i18n), consent_at (UU PDP), deleted_at (soft delete for DSR).';
+  'AlbEdu users table (v1.0.0). Renamed foto_profil → avatar_url, profil_lengkap → profile_complete. Added organization_id (SCloud), consent_at (UU PDP), deleted_at (soft delete for DSR).';

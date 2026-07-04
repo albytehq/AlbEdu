@@ -36,7 +36,6 @@ All modules access shared state via `window.TakeAssessment._internal`:
 - `.state` — the runtime state object
 - `.dom` — cached DOM references
 - `.constants` — SUBMIT_UNLOCK_SECONDS, TIMER_WARNING_SECONDS, etc.
-- `.t(key, vars, fallback)` — i18n helper
 
 ## Load order (in assessment/take.html)
 

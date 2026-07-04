@@ -53,7 +53,7 @@
   <script src="../../src/pages/daftar-nama.js" defer></script>
 </head>
 <body>
-<a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
+<a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
 
 <!-- Page Load -->
 <div class="page-transition"></div>
@@ -81,43 +81,43 @@
         <li class="menu-item sidebar-item" data-tab="profil">
           <a href="profile.html" class="menu-item-content">
             <span class="sidebar-icon" data-albedu-icon="account_circle"></span>
-            <span class="sidebar-text" data-i18n="nav.profile">Profil Admin</span>
+            <span class="sidebar-text">Profil Admin</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="create-assessment">
           <a href="create-assessment.html" class="menu-item-content">
             <span class="sidebar-icon" data-albedu-icon="edit_note"></span>
-            <span class="sidebar-text" data-i18n="nav.create_assessment">Buat Asesmen</span>
+            <span class="sidebar-text">Buat Asesmen</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="active-assessments">
           <a href="active-assessments.html" class="menu-item-content">
             <span class="sidebar-icon" data-albedu-icon="menu_book"></span>
-            <span class="sidebar-text" data-i18n="nav.active_assessments">Asesmen Aktif</span>
+            <span class="sidebar-text">Asesmen Aktif</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="question-bank">
           <a href="question-bank.html" class="menu-item-content">
             <span class="sidebar-icon" data-albedu-icon="inventory_2"></span>
-            <span class="sidebar-text" data-i18n="nav.question_bank">Bank Soal</span>
+            <span class="sidebar-text">Bank Soal</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="monitoring">
           <a href="monitoring.html" class="menu-item-content">
             <span class="sidebar-icon" data-albedu-icon="monitor_heart"></span>
-            <span class="sidebar-text" data-i18n="nav.monitoring">Monitoring</span>
+            <span class="sidebar-text">Monitoring</span>
           </a>
         </li>
         <li class="menu-item sidebar-item" data-tab="results">
           <a href="results-analytics.html" class="menu-item-content">
             <span class="sidebar-icon" data-albedu-icon="bar_chart"></span>
-            <span class="sidebar-text" data-i18n="nav.results">Hasil &amp; Analitik</span>
+            <span class="sidebar-text">Hasil &amp; Analitik</span>
           </a>
         </li>
         <li class="menu-item sidebar-item active" data-tab="daftar-nama">
           <a href="daftar-nama.html" class="menu-item-content" aria-current="page">
             <span class="sidebar-icon" data-albedu-icon="list"></span>
-            <span class="sidebar-text" data-i18n="nav.daftar_nama">Daftar Nama</span>
+            <span class="sidebar-text">Daftar Nama</span>
           </a>
         </li>
       </ul>
@@ -128,8 +128,8 @@
           <span data-albedu-icon="person"></span>
         </div>
         <div class="user-info">
-          <h4 id="sidebar-user-name" data-i18n="nav.default_admin_name">Admin AlbEdu</h4>
-          <p id="sidebar-user-role" data-i18n="nav.role_admin">Administrator</p>
+          <h4 id="sidebar-user-name">Admin AlbEdu</h4>
+          <p id="sidebar-user-role">Administrator</p>
         </div>
       </button>
     </div>
@@ -145,21 +145,10 @@
         <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka menu">
           <span data-albedu-icon="menu"></span>
         </button>
-        <h1 id="page-title" data-i18n="daftar_nama.page_title">Daftar Nama</h1>
+        <h1 id="page-title">Daftar Nama</h1>
       </div>
       <div class="header-right">
-        <!-- Language Switcher -->
-        <div class="albedu-lang-switcher" id="lang-switcher">
-          <span data-albedu-icon="language"></span>
-          <span id="current-lang">🇮🇩 ID</span>
-          <span data-albedu-icon="expand_more"></span>
-          <div class="albedu-lang-dropdown" id="lang-dropdown" hidden>
-            <div class="albedu-lang-option albedu-active" data-locale="id">🇮🇩 Bahasa Indonesia</div>
-            <div class="albedu-lang-option" data-locale="en">🇬🇧 English</div>
-
-                            </div>
-        </div>
-        <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
+        <!-- Language Switcher -->        <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
           <span data-albedu-icon="notifications"></span>
           <span class="badge">0</span>
         </button>
@@ -168,8 +157,8 @@
 
     <div class="content-area">
       <div class="content-header">
-        <h2 data-i18n="daftar_nama.content_title">Daftar Nama</h2>
-        <p data-i18n="daftar_nama.content_subtitle">Kelola daftar nama yang digunakan saat pembuatan asesmen</p>
+        <h2>Daftar Nama</h2>
+        <p>Kelola daftar nama yang digunakan saat pembuatan asesmen</p>
       </div>
 
       <div class="dn-page" id="dnPage">
@@ -177,11 +166,11 @@
         <!-- Header -->
         <div class="dn-header">
           <div>
-            <h2><span style="color:var(--color-primary);margin-right:8px" data-albedu-icon="list"></span><span data-i18n="daftar_nama.header_title">Daftar Nama</span></h2>
-            <p data-i18n="daftar_nama.header_subtitle">Kelola daftar nama yang digunakan saat pembuatan asesmen. Maksimal 3 daftar.</p>
+            <h2><span style="color:var(--color-primary);margin-right:8px" data-albedu-icon="list"></span><span>Daftar Nama</span></h2>
+            <p>Kelola daftar nama yang digunakan saat pembuatan asesmen. Maksimal 3 daftar.</p>
           </div>
           <button class="dn-btn primary" id="btnBuatDaftar">
-            <span data-albedu-icon="add"></span> <span data-i18n="daftar_nama.btn_buat_daftar">Buat Daftar</span>
+            <span data-albedu-icon="add"></span> <span>Buat Daftar</span>
           </button>
         </div>
 
@@ -189,14 +178,14 @@
         <div id="dnLoading" style="text-align:center;padding:48px;color:var(--color-text-muted);">
           <div style="display:flex;flex-direction:column;align-items:center;gap:var(--sp-4);">
             <div class="spinner spinner-lg"></div>
-            <p data-i18n="daftar_nama.loading">Memuat data daftar...</p>
+            <p>Memuat data daftar...</p>
           </div>
         </div>
 
         <!-- Limit notice -->
         <div class="dn-limit-notice" id="dnLimitNotice" style="display:none;">
           <span data-albedu-icon="warning"></span>
-          <span data-i18n="daftar_nama.limit_notice">Kamu sudah memiliki 3 data daftar (batas maksimum). Hapus salah satu untuk membuat yang baru.</span>
+          <span>Kamu sudah memiliki 3 data daftar (batas maksimum). Hapus salah satu untuk membuat yang baru.</span>
         </div>
 
         <!-- Daftar list -->
@@ -209,7 +198,7 @@
     </div>
 
     <footer class="footer">
-      <p><span data-i18n="common.copyright" data-i18n-vars="{&quot;year&quot;:2026}">© 2026 AlbEdu. Semua hak dilindungi.</span></p>
+      <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
       <p>v0.742.9</p>
     </footer>
   </main>
@@ -220,11 +209,7 @@
 <!-- Notification Center -->
 <script src="../../src/utils/admin-notification-center.js" defer></script>
 
-<!-- v0.742.9 Theme System + i18n -->
 <script type="module" src="../../src/theme-system/index.js"></script>
-<script type="module" src="../../src/i18n/index.js"></script>
-    <script defer src="../../src/i18n/lang-switcher.js"></script>
-
 <!-- v0.742.9 — Apply default theme on load (prevents FOUC) -->
 <script>
   (function () {
@@ -328,7 +313,7 @@
       list.innerHTML = `
         <div class="dn-empty">
           <span data-albedu-icon="folder_open"></span>
-          <h3><span data-i18n="daftar_nama.empty_state">Belum ada data daftar</span></h3>
+          <h3><span>Belum ada data daftar</span></h3>
           <p>Klik "Buat Daftar" untuk membuat data daftar pertamamu.</p>
         </div>
       `;
@@ -462,7 +447,7 @@
           </div>
         </div>
         <div class="dn-action-bar">
-          <button class="dn-btn ghost" id="dnCreateCancel" type="button" data-i18n="common.cancel_btn">Batal</button>
+          <button class="dn-btn ghost" id="dnCreateCancel" type="button">Batal</button>
           <button class="dn-btn primary" id="dnCreateSave" type="button">
             <span style="font-size:16px;" data-albedu-icon="add"></span>
             Buat Daftar
@@ -643,7 +628,7 @@
             <span style="font-size:12px;vertical-align:middle;" data-albedu-icon="info"></span>
             Total ${anggotaCount} nama di tab ini
           </span>
-          <button class="dn-btn ghost" id="dnEditorCancel" type="button" data-i18n="common.close">Tutup</button>
+          <button class="dn-btn ghost" id="dnEditorCancel" type="button">Tutup</button>
           <button class="dn-btn primary" id="dnEditorSave" type="button">
             <span style="font-size:16px;" data-albedu-icon="save"></span>
             Simpan Perubahan

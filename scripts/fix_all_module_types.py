@@ -13,7 +13,6 @@ ROOT = Path('/home/z/my-project/work/AlbEdu')
 ES_MODULE_FILES = [
     'src/shared/resilience.js',
     'src/shared/qnotify-loader.js',
-    'src/i18n/index.js',
     'src/theme-system/index.js',
 ]
 

@@ -149,8 +149,6 @@ export async function extractBackendErrorCode(error) {
     // When the Supabase SDK fails to even send the request (CORS preflight blocked,
     // DNS failure, offline, etc.), error.context is undefined and error.message is
     // a generic English string like "Failed to send a request to the Edge Function".
-    // That string would otherwise become the i18n key (with spaces!) — never matches.
-    // Map to stable 'network_error' code so i18n can resolve it properly.
     const msg = (error?.message || '').toLowerCase();
     if (
         msg.includes('failed to send a request') ||

@@ -22,14 +22,7 @@
 (function () {
   'use strict';
 
-  // v2.0.0: i18n helper
-  const t = (key, vars, fallback) => {
-    if (window.i18n && typeof window.i18n.t === 'function') {
-      const v = window.i18n.t(key, vars);
-      return v !== undefined ? v : fallback;
-    }
-    return fallback;
-  };
+  const t = (key, vars, fallback) => fallback;
 
   const AssessmentEntry = {
     _inputs: [],
@@ -241,9 +234,8 @@
     _setLoading(loading) {
       this._isValidating = loading;
       this._submitBtn.disabled = loading;
-      // v0.742.9: use i18n for loading text
-      const submittingText = window.i18n?.t?.('peserta.entry_submitting') || 'Memvalidasi...';
-      const submitText = window.i18n?.t?.('peserta.entry_submit') || 'Masuk Asesmen';
+      const submittingText = 'Memvalidasi...';
+      const submitText = 'Masuk Asesmen';
       this._submitText.textContent = loading ? submittingText : submitText;
       this._inputs.forEach((i) => (i.disabled = loading));
     },
@@ -279,8 +271,7 @@
           this._cooldownBanner.classList.remove('show');
           return;
         }
-        // v0.742.9: use i18n for cooldown text with interpolation
-        const tmpl = window.i18n?.t?.('peserta.entry_cooldown') || 'Terlalu banyak percobaan. Coba lagi dalam {{seconds}} detik.';
+        const tmpl = 'Terlalu banyak percobaan. Coba lagi dalam {{seconds}} detik.';
         this._cooldownText.textContent = tmpl.replace('{{seconds}}', seconds);
         seconds--;
         setTimeout(update, 1000);
@@ -499,7 +490,7 @@
         const end = assessment.ac_scheduled_end ? new Date(assessment.ac_scheduled_end).getTime() : null;
 
         if (start && now < start) {
-          const locale = (window.i18n?.getCurrentLocale?.() || 'id') === 'en' ? 'en-US' : 'id-ID';
+          const locale = ('id' || 'id') === 'en' ? 'en-US' : 'id-ID';
           const startStr = new Date(start).toLocaleString(locale, {
             day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
           });

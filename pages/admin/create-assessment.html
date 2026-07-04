@@ -62,7 +62,7 @@
     </style>
 </head>
 <body>
-    <a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
+    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
     <div class="page-transition"></div>
 
     <div class="container">
@@ -79,7 +79,7 @@
                 </a>
                 <span class="logo-text">AlbEdu</span>
                 <button class="sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button"
-                        data-i18n-aria-label="nav.close_sidebar" aria-label="Tutup sidebar" aria-expanded="true">
+                        aria-label="Tutup sidebar" aria-label="Tutup sidebar" aria-expanded="true">
                     <span data-albedu-icon="left_panel_close"></span>
                 </button>
             </div>
@@ -89,43 +89,43 @@
                     <li class="menu-item sidebar-item" data-tab="profil">
                         <a href="profile.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="account_circle"></span>
-                            <span class="sidebar-text" data-i18n="nav.profile">Profil Admin</span>
+                            <span class="sidebar-text">Profil Admin</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item active" data-tab="create-assessment">
                         <a href="create-assessment.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="edit_note"></span>
-                            <span class="sidebar-text" data-i18n="nav.create_assessment">Buat Asesmen</span>
+                            <span class="sidebar-text">Buat Asesmen</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="active-assessments">
                         <a href="active-assessments.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="menu_book"></span>
-                            <span class="sidebar-text" data-i18n="nav.active_assessments">Asesmen Aktif</span>
+                            <span class="sidebar-text">Asesmen Aktif</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="question-bank">
                         <a href="question-bank.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="inventory_2"></span>
-                            <span class="sidebar-text" data-i18n="nav.question_bank">Bank Soal</span>
+                            <span class="sidebar-text">Bank Soal</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="monitoring">
                         <a href="monitoring.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="monitor_heart"></span>
-                            <span class="sidebar-text" data-i18n="nav.monitoring">Monitoring</span>
+                            <span class="sidebar-text">Monitoring</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="results">
                         <a href="results-analytics.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="bar_chart"></span>
-                            <span class="sidebar-text" data-i18n="nav.results">Hasil & Analitik</span>
+                            <span class="sidebar-text">Hasil & Analitik</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="daftar-nama">
                         <a href="daftar-nama.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="list"></span>
-                            <span class="sidebar-text" data-i18n="nav.daftar_nama">Daftar Nama</span>
+                            <span class="sidebar-text">Daftar Nama</span>
                         </a>
                     </li>
                 </ul>
@@ -137,8 +137,8 @@
                         <span data-albedu-icon="person"></span>
                     </div>
                     <div class="user-info">
-                        <h4 id="sidebar-user-name" data-i18n="nav.default_admin_name">Admin AlbEdu</h4>
-                        <p id="sidebar-user-role" data-i18n="nav.role_admin">Administrator</p>
+                        <h4 id="sidebar-user-name">Admin AlbEdu</h4>
+                        <p id="sidebar-user-role">Administrator</p>
                     </div>
                 </button>
             </div>
@@ -154,21 +154,10 @@
                     <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka menu">
                         <span data-albedu-icon="menu"></span>
                     </button>
-                    <h1 id="page-title" data-i18n="create.page_title">Buat Asesmen</h1>
+                    <h1 id="page-title">Buat Asesmen</h1>
                 </div>
                 <div class="header-right">
-                    <!-- Language Switcher -->
-                    <div class="albedu-lang-switcher" id="lang-switcher">
-                        <span data-albedu-icon="language"></span>
-                        <span id="current-lang">🇮🇩 ID</span>
-                        <span data-albedu-icon="expand_more"></span>
-                        <div class="albedu-lang-dropdown" id="lang-dropdown" hidden>
-                            <div class="albedu-lang-option albedu-active" data-locale="id">🇮🇩 Bahasa Indonesia</div>
-                            <div class="albedu-lang-option" data-locale="en">🇬🇧 English</div>
-
-                            </div>
-                    </div>
-                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
+                    <!-- Language Switcher -->                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
                         <span data-albedu-icon="notifications"></span>
                         <span class="badge">0</span>
                     </button>
@@ -182,20 +171,20 @@
                     <div class="albedu-card" style="margin-bottom: 24px;">
                         <div class="albedu-card-header" style="flex-wrap: wrap;">
                             <div>
-                                <h2 class="albedu-card-title" data-i18n="create.list_title">Daftar Asesmen</h2>
-                                <p class="albedu-card-desc" data-i18n="create.list_subtitle">Kelola asesmen yang telah Anda buat</p>
+                                <h2 class="albedu-card-title">Daftar Asesmen</h2>
+                                <p class="albedu-card-desc">Kelola asesmen yang telah Anda buat</p>
                             </div>
                             <button class="albedu-btn albedu-btn-primary albedu-btn-lg" id="btn-new-assessment" type="button">
                                 <span data-albedu-icon="add_circle"></span>
-                                <span data-i18n="create.new_assessment">Buat Asesmen Baru</span>
+                                <span>Buat Asesmen Baru</span>
                             </button>
                         </div>
                         <div class="albedu-card-body">
                             <div class="albedu-assessments-grid" id="assessments-grid" hidden></div>
                             <div class="albedu-empty-state" id="empty-state">
                                 <span data-albedu-icon="assignment"></span>
-                                <h3 data-i18n="create.empty_title">Belum Ada Asesmen</h3>
-                                <p data-i18n="create.empty_desc">Klik tombol di atas untuk membuat asesmen pertama Anda.</p>
+                                <h3>Belum Ada Asesmen</h3>
+                                <p>Klik tombol di atas untuk membuat asesmen pertama Anda.</p>
                             </div>
                         </div>
                     </div>
@@ -207,34 +196,34 @@
                     <div class="albedu-steps" role="tablist">
                         <div class="albedu-step albedu-step-active" data-step="1" data-clickable="false">
                             <span class="albedu-step-num"><span class="albedu-step-num-text">1</span></span>
-                            <span class="albedu-step-label" data-i18n="create.step1_label">Informasi</span>
+                            <span class="albedu-step-label">Informasi</span>
                         </div>
                         <div class="albedu-step-line"></div>
                         <div class="albedu-step" data-step="2" data-clickable="false">
                             <span class="albedu-step-num"><span class="albedu-step-num-text">2</span></span>
-                            <span class="albedu-step-label" data-i18n="nav.question_bank">Soal</span>
+                            <span class="albedu-step-label">Soal</span>
                         </div>
                         <div class="albedu-step-line"></div>
                         <div class="albedu-step" data-step="3" data-clickable="false">
                             <span class="albedu-step-num"><span class="albedu-step-num-text">3</span></span>
-                            <span class="albedu-step-label" data-i18n="create.publish">Publish</span>
+                            <span class="albedu-step-label">Publish</span>
                         </div>
                     </div>
 
                     <!-- ─── Step 1: Informasi + Identitas + Tema ─── -->
                     <section class="albedu-step-content" id="step-1" role="tabpanel">
-                        <h2 class="albedu-step-title" data-i18n="create.step1_title">Informasi Asesmen</h2>
-                        <p class="albedu-step-desc" data-i18n="create.step1_desc">Detail dasar asesmen, identitas peserta, dan tema visual</p>
+                        <h2 class="albedu-step-title">Informasi Asesmen</h2>
+                        <p class="albedu-step-desc">Detail dasar asesmen, identitas peserta, dan tema visual</p>
 
                         <div class="albedu-form-grid">
                             <div class="albedu-field albedu-field-full">
-                                <label for="assessment-title" data-i18n="create.title_label">Judul Asesmen</label>
-                                <input type="text" id="assessment-title" class="albedu-input" data-i18n-placeholder="create.title_placeholder" placeholder="e.g. Ujian Tengah Semester Matematika" maxlength="120" autocomplete="off">
+                                <label for="assessment-title">Judul Asesmen</label>
+                                <input type="text" id="assessment-title" class="albedu-input" placeholder="e.g. Ujian Tengah Semester Matematika" placeholder="e.g. Ujian Tengah Semester Matematika" maxlength="120" autocomplete="off">
                                 <span class="albedu-field-hint" id="title-hint"></span>
                             </div>
                             <div class="albedu-field">
-                                <label for="assessment-subject" data-i18n="create.subject_label">Mata Pelajaran</label>
-                                <input type="text" id="assessment-subject" class="albedu-input" data-i18n-placeholder="create.subject_placeholder" placeholder="e.g. Matematika" list="subject-list" autocomplete="off">
+                                <label for="assessment-subject">Mata Pelajaran</label>
+                                <input type="text" id="assessment-subject" class="albedu-input" placeholder="e.g. Matematika" placeholder="e.g. Matematika" list="subject-list" autocomplete="off">
                                 <datalist id="subject-list">
                                     <option value="Matematika"></option>
                                     <option value="Bahasa Indonesia"></option>
@@ -247,36 +236,36 @@
                                 </datalist>
                             </div>
                             <div class="albedu-field">
-                                <label for="assessment-duration" data-i18n="create.duration_label">Durasi (menit)</label>
+                                <label for="assessment-duration">Durasi (menit)</label>
                                 <input type="number" id="assessment-duration" class="albedu-input" min="1" max="120" value="60">
-                                <span class="albedu-field-hint" data-i18n="create.duration_hint">1-120 menit</span>
+                                <span class="albedu-field-hint">1-120 menit</span>
                             </div>
                             <div class="albedu-field">
-                                <label for="assessment-access-mode" data-i18n="create.access_mode_label">Mode Akses</label>
+                                <label for="assessment-access-mode">Mode Akses</label>
                                 <select id="assessment-access-mode" class="albedu-select">
-                                    <option value="manual" data-i18n="create.access_mode_manual">Manual (admin buka/tutup)</option>
-                                    <option value="scheduled" data-i18n="create.access_mode_scheduled">Terjadwal (otomatis)</option>
+                                    <option value="manual">Manual (admin buka/tutup)</option>
+                                    <option value="scheduled">Terjadwal (otomatis)</option>
                                 </select>
                             </div>
                             <div class="albedu-field" id="scheduled-field" hidden>
-                                <label for="assessment-scheduled-start" data-i18n="create.scheduled_start_label">Waktu Mulai</label>
+                                <label for="assessment-scheduled-start">Waktu Mulai</label>
                                 <input type="datetime-local" id="assessment-scheduled-start" class="albedu-input">
-                                <span class="albedu-field-hint" data-i18n="create.scheduled_start_hint">Waktu selesai dihitung otomatis dari durasi</span>
+                                <span class="albedu-field-hint">Waktu selesai dihitung otomatis dari durasi</span>
                             </div>
                         </div>
 
                         <!-- Identity Mode -->
                         <div class="albedu-theme-section">
-                            <h3 class="albedu-card-title" style="font-size: 15px; margin-bottom: 4px;" data-i18n="create.identity_title">Identitas Peserta</h3>
-                            <p class="albedu-card-desc" style="margin-bottom: 16px;" data-i18n="create.identity_desc">Pilih bagaimana peserta diidentifikasi saat asesmen</p>
+                            <h3 class="albedu-card-title" style="font-size: 15px; margin-bottom: 4px;">Identitas Peserta</h3>
+                            <p class="albedu-card-desc" style="margin-bottom: 16px;">Pilih bagaimana peserta diidentifikasi saat asesmen</p>
                             <div class="albedu-radio-cards">
                                 <label class="albedu-radio-card">
                                     <input type="radio" name="identity_mode" value="manual" checked>
                                     <div class="albedu-radio-card-content">
                                         <span data-albedu-icon="edit"></span>
                                         <div>
-                                            <div class="albedu-radio-card-title" data-i18n="create.identity_manual">Manual</div>
-                                            <div class="albedu-radio-card-desc" data-i18n="create.identity_manual_desc">Buat field custom (Nama, Kelas, dll)</div>
+                                            <div class="albedu-radio-card-title">Manual</div>
+                                            <div class="albedu-radio-card-desc">Buat field custom (Nama, Kelas, dll)</div>
                                         </div>
                                     </div>
                                 </label>
@@ -285,8 +274,8 @@
                                     <div class="albedu-radio-card-content">
                                         <span data-albedu-icon="list_alt"></span>
                                         <div>
-                                            <div class="albedu-radio-card-title" data-i18n="create.identity_daftar">Daftar Nama</div>
-                                            <div class="albedu-radio-card-desc" data-i18n="create.identity_daftar_desc">Pilih dari daftar nama yang sudah dibuat</div>
+                                            <div class="albedu-radio-card-title">Daftar Nama</div>
+                                            <div class="albedu-radio-card-desc">Pilih dari daftar nama yang sudah dibuat</div>
                                         </div>
                                     </div>
                                 </label>
@@ -296,15 +285,15 @@
                                 <div id="identity-fields" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
                                 <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-add-field" type="button">
                                     <span data-albedu-icon="add"></span>
-                                    <span data-i18n="create.identity_add_field">Tambah Field</span>
+                                    <span>Tambah Field</span>
                                 </button>
                             </div>
 
                             <div id="identity-daftar" hidden>
                                 <div class="albedu-field">
-                                    <label for="daftar-select" data-i18n="create.identity_daftar_select">Pilih Daftar Nama</label>
+                                    <label for="daftar-select">Pilih Daftar Nama</label>
                                     <select id="daftar-select" class="albedu-select">
-                                        <option value="" data-i18n="common.select_daftar">— Pilih daftar —</option>
+                                        <option value="">— Pilih daftar —</option>
                                     </select>
                                 </div>
                             </div>
@@ -314,44 +303,44 @@
                         <div class="albedu-theme-section">
                             <div class="albedu-form-grid">
                                 <div class="albedu-field">
-                                    <label for="note-toggle" data-i18n="create.note_label">Catatan</label>
+                                    <label for="note-toggle">Catatan</label>
                                     <select id="note-toggle" class="albedu-select">
                                         <option value="Off">Off</option>
                                         <option value="On">On</option>
                                     </select>
                                 </div>
                                 <div class="albedu-field" id="note-text-field" hidden>
-                                    <label for="note-text" data-i18n="create.note_text_label">Isi Catatan</label>
-                                    <textarea id="note-text" class="albedu-textarea" maxlength="500" data-i18n-placeholder="create.note_placeholder" placeholder="Catatan untuk peserta..." rows="2"></textarea>
+                                    <label for="note-text">Isi Catatan</label>
+                                    <textarea id="note-text" class="albedu-textarea" maxlength="500" placeholder="Catatan untuk peserta..." placeholder="Catatan untuk peserta..." rows="2"></textarea>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Allow Retake (NEW feature) -->
                         <div class="albedu-theme-section">
-                            <h3 class="albedu-card-title" style="font-size: 15px; margin-bottom: 4px;" data-i18n="create.allow_retake_label">Boleh diulang?</h3>
-                            <p class="albedu-card-desc" style="margin-bottom: 16px;" data-i18n="create.allow_retake_desc">Izinkan peserta mengerjakan ulang asesmen ini</p>
+                            <h3 class="albedu-card-title" style="font-size: 15px; margin-bottom: 4px;">Boleh diulang?</h3>
+                            <p class="albedu-card-desc" style="margin-bottom: 16px;">Izinkan peserta mengerjakan ulang asesmen ini</p>
                             <label class="albedu-toggle">
                                 <input type="checkbox" id="allow-retake">
                                 <span class="albedu-toggle-track"></span>
                                 <span class="albedu-toggle-label">
-                                    <span data-i18n="create.allow_retake_no">Tidak</span>
-                                    / <span data-i18n="create.allow_retake_yes">Ya</span>
+                                    <span>Tidak</span>
+                                    / <span>Ya</span>
                                 </span>
                             </label>
                         </div>
 
                         <!-- ═══ THEME EDITOR (Google Form-like) ═══ -->
                         <div class="albedu-theme-section">
-                            <h3 class="albedu-card-title" style="font-size: 15px; margin-bottom: 4px;" data-i18n="create.theme_title">Tema Visual</h3>
-                            <p class="albedu-card-desc" style="margin-bottom: 16px;" data-i18n="create.theme_desc">Kustomisasi warna asesmen untuk peserta. Biarkan default untuk tema AlbEdu standar.</p>
+                            <h3 class="albedu-card-title" style="font-size: 15px; margin-bottom: 4px;">Tema Visual</h3>
+                            <p class="albedu-card-desc" style="margin-bottom: 16px;">Kustomisasi warna asesmen untuk peserta. Biarkan default untuk tema AlbEdu standar.</p>
 
                             <div class="albedu-theme-grid">
                                 <!-- Controls (left) -->
                                 <div class="albedu-theme-controls">
                                     <!-- Preset chips -->
                                     <div class="albedu-theme-control-group">
-                                        <label data-i18n="create.theme_template">Template</label>
+                                        <label>Template</label>
                                         <div class="albedu-preset-chips" id="preset-chips">
                                             <button class="albedu-preset-chip albedu-active" data-preset="default" type="button">Default</button>
                                             <button class="albedu-preset-chip" data-preset="modern" type="button">Modern</button>
@@ -363,7 +352,7 @@
 
                                     <!-- Quick-pick colors -->
                                     <div class="albedu-theme-control-group">
-                                        <label data-i18n="create.theme_primary_color">Warna Utama</label>
+                                        <label>Warna Utama</label>
                                         <div class="albedu-color-quickpicks" id="color-quickpicks"></div>
                                         <div class="albedu-color-picker-wrap">
                                             <input type="color" id="color-picker" value="#2563eb">
@@ -376,7 +365,7 @@
 
                                     <!-- Font -->
                                     <div class="albedu-theme-control-group">
-                                        <label data-i18n="create.theme_font">Font</label>
+                                        <label>Font</label>
                                         <select id="theme-font" class="albedu-select">
                                             <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
                                             <option value="Inter">Inter</option>
@@ -387,26 +376,26 @@
 
                                     <!-- Mode -->
                                     <div class="albedu-theme-control-group">
-                                        <label data-i18n="create.theme_mode">Mode</label>
+                                        <label>Mode</label>
                                         <select id="theme-mode" class="albedu-select">
-                                            <option value="auto" data-i18n="create.theme_mode_auto">Otomatis (sistem)</option>
-                                            <option value="light" data-i18n="create.theme_mode_light">Terang</option>
-                                            <option value="dark" data-i18n="create.theme_mode_dark">Gelap</option>
+                                            <option value="auto">Otomatis (sistem)</option>
+                                            <option value="light">Terang</option>
+                                            <option value="dark">Gelap</option>
                                         </select>
                                     </div>
 
                                     <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="theme-reset-all" type="button">
                                         <span data-albedu-icon="restart_alt"></span>
-                                        <span data-i18n="create.theme_reset">Reset ke Default</span>
+                                        <span>Reset ke Default</span>
                                     </button>
                                 </div>
 
                                 <!-- Live Preview (right) -->
                                 <div>
                                     <div class="albedu-theme-preview">
-                                        <div class="albedu-theme-preview-title" data-i18n="create.theme_preview">Preview Langsung</div>
+                                        <div class="albedu-theme-preview-title">Preview Langsung</div>
                                         <div class="albedu-preview-card">
-                                            <h4 class="albedu-preview-heading" data-i18n="common.assessment_title_label">Judul Asesmen</h4>
+                                            <h4 class="albedu-preview-heading">Judul Asesmen</h4>
                                             <p class="albedu-preview-question">Berapakah hasil dari 7 × 8?</p>
                                             <div class="albedu-preview-options">
                                                 <div class="albedu-preview-option">
@@ -426,11 +415,11 @@
                                                     <span>D. 64</span>
                                                 </div>
                                             </div>
-                                            <button class="albedu-btn albedu-btn-primary" type="button" data-i18n="create.publish">Publish Asesmen</button>
+                                            <button class="albedu-btn albedu-btn-primary" type="button">Publish Asesmen</button>
                                         </div>
                                         <div class="albedu-wcag-status albedu-wcag-pass" id="wcag-status">
                                             <span style="font-size: 14px;" data-albedu-icon="check_circle"></span>
-                                            <span data-i18n="create.theme_wcag_pass">Contrast OK (Pass)</span>
+                                            <span>Contrast OK (Pass)</span>
                                         </div>
                                     </div>
                                 </div>
@@ -440,32 +429,32 @@
 
                     <!-- ─── Step 2: Soal ─── -->
                     <section class="albedu-step-content" id="step-2" role="tabpanel" hidden>
-                        <h2 class="albedu-step-title" data-i18n="create.step2_title">Soal Asesmen</h2>
-                        <p class="albedu-step-desc" data-i18n="create.step2_desc">Tambahkan bagian dan soal. Maksimal 2 bagian, minimal 3 soal per bagian.</p>
+                        <h2 class="albedu-step-title">Soal Asesmen</h2>
+                        <p class="albedu-step-desc">Tambahkan bagian dan soal. Maksimal 2 bagian, minimal 3 soal per bagian.</p>
 
                         <div class="albedu-soal-toolbar">
                             <div class="albedu-soal-toolbar-info">
-                                <strong id="section-count">0</strong> bagian • <strong id="question-count">0</strong> soal • <span data-i18n="create.soal_poin_total">100 poin total</span>
+                                <strong id="section-count">0</strong> bagian • <strong id="question-count">0</strong> soal • <span>100 poin total</span>
                             </div>
                             <div class="albedu-section-actions">
                                 <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-add-section" type="button" disabled>
                                     <span data-albedu-icon="add_circle"></span>
-                                    <span data-i18n="create.soal_add_section">Tambah Bagian</span>
+                                    <span>Tambah Bagian</span>
                                 </button>
                                 <button class="albedu-btn albedu-btn-primary albedu-btn-sm" id="btn-template" type="button">
                                     <span data-albedu-icon="category"></span>
-                                    <span data-i18n="create.soal_from_template">Dari Template</span>
+                                    <span>Dari Template</span>
                                 </button>
                             </div>
                         </div>
 
                         <div class="albedu-empty-state" id="soal-empty">
                             <span data-albedu-icon="quiz"></span>
-                            <h3 data-i18n="create.soal_empty_title">Belum ada bagian soal</h3>
-                            <p data-i18n="create.soal_empty_desc">Mulai dengan menambahkan bagian (maksimal 2 bagian).</p>
+                            <h3>Belum ada bagian soal</h3>
+                            <p>Mulai dengan menambahkan bagian (maksimal 2 bagian).</p>
                             <button class="albedu-btn albedu-btn-primary albedu-btn-sm" id="btn-empty-add-section" type="button">
                                 <span data-albedu-icon="add"></span>
-                                <span data-i18n="create.soal_add_first_section">Tambah Bagian Pertama</span>
+                                <span>Tambah Bagian Pertama</span>
                             </button>
                         </div>
                         <div class="albedu-sections-list" id="sections-list" hidden></div>
@@ -473,17 +462,17 @@
 
                     <!-- ─── Step 3: Publish ─── -->
                     <section class="albedu-step-content" id="step-3" role="tabpanel" hidden>
-                        <h2 class="albedu-step-title" data-i18n="create.step3_title">Ringkasan & Publish</h2>
-                        <p class="albedu-step-desc" data-i18n="create.step3_desc">Review detail asesmen sebelum dipublish ke sistem.</p>
+                        <h2 class="albedu-step-title">Ringkasan & Publish</h2>
+                        <p class="albedu-step-desc">Review detail asesmen sebelum dipublish ke sistem.</p>
 
                         <div class="albedu-summary-grid" id="summary-grid"></div>
 
                         <div class="albedu-token-display" id="token-display" hidden>
-                            <span class="albedu-token-label" data-i18n="create.token_label">Kode Akses:</span>
+                            <span class="albedu-token-label">Kode Akses:</span>
                             <code class="albedu-token-value" id="token-value">—</code>
                             <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-regenerate-token" type="button">
                                 <span data-albedu-icon="refresh"></span>
-                                <span data-i18n="create.token_new">Kode Baru</span>
+                                <span>Kode Baru</span>
                             </button>
                             <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="btn-copy-token" type="button" aria-label="Salin kode">
                                 <span data-albedu-icon="content_copy"></span>
@@ -500,20 +489,20 @@
                     <footer class="albedu-wizard-footer">
                         <button class="albedu-btn albedu-btn-ghost" id="btn-cancel" type="button">
                             <span data-albedu-icon="close"></span>
-                            <span data-i18n="create.cancel_create">Batal</span>
+                            <span>Batal</span>
                         </button>
                         <div class="albedu-wizard-footer-right">
                             <button class="albedu-btn albedu-btn-secondary" id="btn-prev" type="button" hidden>
                                 <span data-albedu-icon="arrow_back"></span>
-                                <span data-i18n="common.previous">Sebelumnya</span>
+                                <span>Sebelumnya</span>
                             </button>
                             <button class="albedu-btn albedu-btn-primary" id="btn-next" type="button">
-                                <span data-i18n="common.next">Selanjutnya</span>
+                                <span>Selanjutnya</span>
                                 <span data-albedu-icon="arrow_forward"></span>
                             </button>
                             <button class="albedu-btn albedu-btn-primary albedu-btn-lg" id="btn-publish-final" type="button" hidden>
                                 <span data-albedu-icon="rocket_launch"></span>
-                                <span data-i18n="create.publish_final">Publish Asesmen</span>
+                                <span>Publish Asesmen</span>
                             </button>
                         </div>
                     </footer>
@@ -521,7 +510,7 @@
             </div>
 
             <footer class="footer">
-                <p><span data-i18n="common.copyright" data-i18n-vars="{&quot;year&quot;:2026}">© 2026 AlbEdu. Semua hak dilindungi.</span></p>
+                <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
                 <p>v0.742.9</p>
             </footer>
         </main>
@@ -532,8 +521,8 @@
       <div class="albedu-modal" id="question-modal" role="dialog" aria-modal="true" style="background: var(--albedu-surface); border-radius: var(--albedu-radius-lg); box-shadow: var(--albedu-shadow-modal); border: 1px solid var(--albedu-border); max-width: 720px; width: 100%; margin: auto;">
         <header style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--albedu-border);">
           <div>
-            <h2 style="font-size: 18px; font-weight: 700; margin: 0; color: var(--albedu-heading);" id="question-modal-title" data-i18n="common.add_question_modal_title">Tambah Soal</h2>
-            <p style="font-size: 13px; color: var(--albedu-body); margin: 4px 0 0;" id="question-modal-subtitle" data-i18n="common.add_question_modal_sub">Bagian 1 • Soal baru</p>
+            <h2 style="font-size: 18px; font-weight: 700; margin: 0; color: var(--albedu-heading);" id="question-modal-title">Tambah Soal</h2>
+            <p style="font-size: 13px; color: var(--albedu-body); margin: 4px 0 0;" id="question-modal-subtitle">Bagian 1 • Soal baru</p>
           </div>
           <button id="question-modal-close" type="button" aria-label="Tutup" style="background: transparent; border: none; cursor: pointer; color: var(--albedu-body); padding: 8px;">
             <span data-albedu-icon="close"></span>
@@ -541,10 +530,10 @@
         </header>
         <div id="question-modal-body" style="padding: 24px; max-height: 60vh; overflow-y: auto;"></div>
         <footer style="display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--albedu-border);">
-          <button class="albedu-btn albedu-btn-secondary" id="question-modal-cancel" type="button" data-i18n="common.cancel_btn">Batal</button>
+          <button class="albedu-btn albedu-btn-secondary" id="question-modal-cancel" type="button">Batal</button>
           <button class="albedu-btn albedu-btn-primary" id="question-modal-save" type="button">
             <span data-albedu-icon="check"></span>
-            <span data-i18n="common.save_question">Simpan Soal</span>
+            <span>Simpan Soal</span>
           </button>
         </footer>
       </div>
@@ -555,12 +544,8 @@
       window.ALBYTE_UPLOAD_API_URL = 'https://albyte-upload-api.vercel.app/api/upload';
     </script>
 
-    <!-- Theme System + i18n (v0.742.9) -->
     <script type="module" src="../../src/theme-system/index.js"></script>
-    <script type="module" src="../../src/i18n/index.js"></script>
-    <script defer src="../../src/i18n/lang-switcher.js"></script>
-
-    <!-- Buat Ujian v0.2.0 modules (still working — will be replaced in next iteration) -->
+<!-- Buat Ujian v0.2.0 modules (still working — will be replaced in next iteration) -->
     <script src="../../src/pages/buat-ujian/templates.js" defer></script>
     <script src="../../src/pages/buat-ujian/keyboard-shortcuts.js" defer></script>
     <script src="../../src/pages/buat-ujian/metadata-card.js" defer></script>

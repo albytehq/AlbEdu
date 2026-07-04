@@ -179,8 +179,8 @@ def check_unsafe_inner_html():
                                               'AlbEdu.sanitize', 'AlbEdu._esc',
                                               'window.AlbEdu.sanitize']):
                     continue
-                # [Item 1] Also allow template literals that only use t() (i18n) —
-                # i18n strings are developer-controlled, not user-controlled.
+                # [Item 1] Also allow template literals that only use t() —
+                # translation strings are developer-controlled, not user-controlled.
                 if 't(' in rhs and '${' in rhs:
                     # Check if ALL ${} interpolations are t() calls or static
                     import re as _re

@@ -84,9 +84,9 @@
             <select id="qb-f-difficulty"
                     style="padding:10px 12px;border:1px solid var(--albedu-border,#e2e8f0);border-radius:10px;font-size:14px;background:var(--albedu-surface,#fff);width:100%;box-sizing:border-box;">
               <option value="">— Tidak ditentukan —</option>
-              <option value="easy">${_internal._esc(_internal._t('question_bank.difficulty_easy'))}</option>
-              <option value="medium">${_internal._esc(_internal._t('question_bank.difficulty_medium'))}</option>
-              <option value="hard">${_internal._esc(_internal._t('question_bank.difficulty_hard'))}</option>
+              <option value="easy">${_internal._esc('Mudah')}</option>
+              <option value="medium">${_internal._esc('Sedang')}</option>
+              <option value="hard">${_internal._esc('Sulit')}</option>
             </select>
           </div>
 

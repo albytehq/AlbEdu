@@ -51,7 +51,7 @@
     <script src="../../src/utils/self-storage.js" defer></script><link rel="stylesheet" href="../../styles/pages/monitoring.css">
 </head>
 <body>
-    <a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
+    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
     <div class="page-transition"></div>
 
     <div class="container">
@@ -78,43 +78,43 @@
                     <li class="menu-item sidebar-item" data-tab="profil">
                         <a href="profile.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="account_circle"></span>
-                            <span class="sidebar-text" data-i18n="nav.profile">Profil Admin</span>
+                            <span class="sidebar-text">Profil Admin</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="create-assessment">
                         <a href="create-assessment.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="edit_note"></span>
-                            <span class="sidebar-text" data-i18n="nav.create_assessment">Buat Asesmen</span>
+                            <span class="sidebar-text">Buat Asesmen</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="active-assessments">
                         <a href="active-assessments.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="menu_book"></span>
-                            <span class="sidebar-text" data-i18n="nav.active_assessments">Asesmen Aktif</span>
+                            <span class="sidebar-text">Asesmen Aktif</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="question-bank">
                         <a href="question-bank.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="inventory_2"></span>
-                            <span class="sidebar-text" data-i18n="nav.question_bank">Bank Soal</span>
+                            <span class="sidebar-text">Bank Soal</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item active" data-tab="monitoring">
                         <a href="monitoring.html" class="menu-item-content" aria-current="page">
                             <span class="sidebar-icon" data-albedu-icon="monitor_heart"></span>
-                            <span class="sidebar-text" data-i18n="nav.monitoring">Monitoring</span>
+                            <span class="sidebar-text">Monitoring</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="results">
                         <a href="results-analytics.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="bar_chart"></span>
-                            <span class="sidebar-text" data-i18n="nav.results">Hasil & Analitik</span>
+                            <span class="sidebar-text">Hasil & Analitik</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="daftar-nama">
                         <a href="daftar-nama.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="list"></span>
-                            <span class="sidebar-text" data-i18n="nav.daftar_nama">Daftar Nama</span>
+                            <span class="sidebar-text">Daftar Nama</span>
                         </a>
                     </li>
                 </ul>
@@ -126,8 +126,8 @@
                         <span data-albedu-icon="person"></span>
                     </div>
                     <div class="user-info">
-                        <h4 id="sidebar-user-name" data-i18n="nav.default_admin_name">Admin AlbEdu</h4>
-                        <p id="sidebar-user-role" data-i18n="nav.role_admin">Administrator</p>
+                        <h4 id="sidebar-user-name">Admin AlbEdu</h4>
+                        <p id="sidebar-user-role">Administrator</p>
                     </div>
                 </button>
             </div>
@@ -143,21 +143,10 @@
                     <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka menu">
                         <span data-albedu-icon="menu"></span>
                     </button>
-                    <h1 id="page-title" data-i18n="monitoring.page_title">Monitoring Real-time</h1>
+                    <h1 id="page-title">Monitoring Real-time</h1>
                 </div>
                 <div class="header-right">
-                    <!-- Language Switcher -->
-                    <div class="albedu-lang-switcher" id="lang-switcher">
-                        <span data-albedu-icon="language"></span>
-                        <span id="current-lang">🇮🇩 ID</span>
-                        <span data-albedu-icon="expand_more"></span>
-                        <div class="albedu-lang-dropdown" id="lang-dropdown" hidden>
-                            <div class="albedu-lang-option albedu-active" data-locale="id">🇮🇩 Bahasa Indonesia</div>
-                            <div class="albedu-lang-option" data-locale="en">🇬🇧 English</div>
-
-                            </div>
-                    </div>
-                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
+                    <!-- Language Switcher -->                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
                         <span data-albedu-icon="notifications"></span>
                         <span class="badge">0</span>
                     </button>
@@ -169,9 +158,9 @@
                 <!-- Controls: Assessment picker + batch actions + refresh indicator -->
                 <div class="mon-controls">
                     <div>
-                        <label for="mon-assessment-select" data-i18n="monitoring.select_assessment">Pilih Asesmen</label>
+                        <label for="mon-assessment-select">Pilih Asesmen</label>
                         <select id="mon-assessment-select" class="mon-select-assessment" aria-label="Pilih asesmen untuk monitoring">
-                            <option value="" data-i18n="monitoring.select_placeholder">— Pilih asesmen —</option>
+                            <option value="">— Pilih asesmen —</option>
                         </select>
                     </div>
                     <div>
@@ -179,11 +168,11 @@
                         <div class="mon-batch-actions" role="group" aria-label="Tindakan batch">
                             <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-mon-pause-all" type="button" disabled>
                                 <span data-albedu-icon="pause"></span>
-                                <span data-i18n="monitoring.pause_all">Jeda Semua</span>
+                                <span>Jeda Semua</span>
                             </button>
                             <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-mon-stop-all" type="button" disabled>
                                 <span data-albedu-icon="stop_circle"></span>
-                                <span data-i18n="monitoring.stop_all">Hentikan Semua</span>
+                                <span>Hentikan Semua</span>
                             </button>
                         </div>
                     </div>
@@ -191,7 +180,7 @@
                         <label>&nbsp;</label>
                         <div class="mon-refresh-indicator" id="mon-refresh" aria-live="off">
                             <span data-albedu-icon="sync"></span>
-                            <span data-i18n="monitoring.auto_refresh">Auto-refresh 5s</span>
+                            <span>Auto-refresh 5s</span>
                         </div>
                     </div>
                 </div>
@@ -204,7 +193,7 @@
                         </div>
                         <div>
                             <div class="mon-stat-value" id="mon-stat-active">0/0</div>
-                            <div class="mon-stat-label" data-i18n="monitoring.stat_active">Peserta Aktif</div>
+                            <div class="mon-stat-label">Peserta Aktif</div>
                         </div>
                     </div>
                     <div class="mon-stat-card">
@@ -213,7 +202,7 @@
                         </div>
                         <div>
                             <div class="mon-stat-value" id="mon-stat-violations">0</div>
-                            <div class="mon-stat-label" data-i18n="monitoring.stat_violations">Pelanggaran</div>
+                            <div class="mon-stat-label">Pelanggaran</div>
                         </div>
                     </div>
                     <div class="mon-stat-card">
@@ -222,7 +211,7 @@
                         </div>
                         <div>
                             <div class="mon-stat-value" id="mon-stat-blocked">0</div>
-                            <div class="mon-stat-label" data-i18n="monitoring.stat_blocked">Diblokir</div>
+                            <div class="mon-stat-label">Diblokir</div>
                         </div>
                     </div>
                     <div class="mon-stat-card">
@@ -231,7 +220,7 @@
                         </div>
                         <div>
                             <div class="mon-stat-value" id="mon-stat-finished">0</div>
-                            <div class="mon-stat-label" data-i18n="monitoring.stat_finished">Selesai</div>
+                            <div class="mon-stat-label">Selesai</div>
                         </div>
                     </div>
                 </div>
@@ -242,31 +231,27 @@
                 <!-- Empty state: no assessment selected -->
                 <div class="albedu-empty-state" id="mon-empty-select" hidden>
                     <span data-albedu-icon="monitor_heart"></span>
-                    <h3 data-i18n="monitoring.empty_select_title">Pilih Asesmen</h3>
-                    <p data-i18n="monitoring.empty_select_desc">Pilih asesmen dari dropdown di atas untuk melihat peserta.</p>
+                    <h3>Pilih Asesmen</h3>
+                    <p>Pilih asesmen dari dropdown di atas untuk melihat peserta.</p>
                 </div>
 
                 <!-- Empty state: no active participants -->
                 <div class="albedu-empty-state" id="mon-empty" hidden>
                     <span data-albedu-icon="person_off"></span>
-                    <h3 data-i18n="monitoring.empty_title">Tidak Ada Peserta Aktif</h3>
-                    <p data-i18n="monitoring.empty_desc">Belum ada peserta yang sedang mengerjakan asesmen ini.</p>
+                    <h3>Tidak Ada Peserta Aktif</h3>
+                    <p>Belum ada peserta yang sedang mengerjakan asesmen ini.</p>
                 </div>
             </div>
 
             <footer class="footer">
-                <p><span data-i18n="common.copyright" data-i18n-vars="{&quot;year&quot;:2026}">© 2026 AlbEdu. Semua hak dilindungi.</span></p>
+                <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
                 <p>v0.742.9</p>
             </footer>
         </main>
     </div>
 
-    <!-- Theme System + i18n (v0.742.9) -->
     <script type="module" src="../../src/theme-system/index.js"></script>
-    <script type="module" src="../../src/i18n/index.js"></script>
-    <script defer src="../../src/i18n/lang-switcher.js"></script>
-
-    <!-- Monitoring v0.742.9 page controller (NEW) -->
+<!-- Monitoring v0.742.9 page controller (NEW) -->
     <script src="../../src/pages/monitoring.js" defer></script>
 
     <!-- Notification Center -->

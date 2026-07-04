@@ -13,16 +13,7 @@
   _internal._internal = _internal._internal || { state: {}, dom: {}, constants: {}, t: null };
   const I = _internal._internal;
 
-  // ── i18n helper ─────────────────────────────────────────────────────────
-  function _t(key, params) {
-    try {
-      if (window.i18n && typeof window.i18n.t === 'function') {
-        const result = window.i18n.t(key, params);
-        return result !== undefined ? result : key;
-      }
-    } catch (_) { /* noop */ }
-    return key;
-  }
+  function _t(key, params) { return key; }
 
   function _esc(s) {
     return String(s ?? '')

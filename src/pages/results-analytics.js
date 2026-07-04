@@ -34,20 +34,12 @@
 //   - AlbEdu.repository             (typed table access)
 //   - AlbEdu.supabase.auth          (native auth)
 //   - window.notify / .confirm     (QNotify bridge)
-//   - window.i18n.t                (translations — best-effort)
 // =============================================================================
 
 (function () {
   'use strict';
 
-  // v2.0.0: i18n helper — falls back to Indonesian if i18n not loaded
-  const t = (key, vars, fallback) => {
-    if (window.i18n && typeof window.i18n.t === 'function') {
-      const v = window.i18n.t(key, vars);
-      return v !== undefined ? v : fallback;
-    }
-    return fallback;
-  };
+  const t = (key, vars, fallback) => fallback;
 
   // ─── Constants ──────────────────────────────────────────────────────────
   const COLLECTION_ASSESSMENTS = 'assessments';
@@ -71,19 +63,7 @@
 
   // ─── Helpers ────────────────────────────────────────────────────────────
 
-  function _t(key, params) {
-    try {
-      if (window.i18n && typeof window.i18n.t === 'function') {
-        const result = window.i18n.t(key, params);
-        // v0.742.6: t() now returns undefined for missing translations
-        // (was: returned the key itself). Fall back to the key so JS string
-        // operations don't break, but DOM elements with data-i18n will
-        // still preserve their HTML fallback text via updateDOM().
-        return result !== undefined ? result : key;
-      }
-    } catch (_) { /* noop */ }
-    return key;
-  }
+  function _t(key, params) { return key; }
 
   function _esc(s) {
     return String(s ?? '')

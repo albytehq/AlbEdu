@@ -488,14 +488,6 @@ export function getErrorMessage(errorCode, fallback = ERROR_MESSAGES.unknown_err
         return fallback;
     }
 
-    // v2.0.0: i18n lookup FIRST — try `auth.err.{errorCode}` key.
-    // Falls back to ERROR_MESSAGES map if i18n key not found or i18n not loaded.
-    if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
-        const i18nKey = `auth.err.${errorCode}`;
-        const i18nMsg = window.i18n.t(i18nKey);
-        if (i18nMsg !== undefined) return i18nMsg;
-    }
-
     // GUARD: Jika input sudah merupakan pesan user-friendly yang kita hasilkan
     // sendiri, jangan map ulang — kembalikan langsung. Ini mencegah
     // double-mapping ketika err.message sudah berisi pesan Indonesia
@@ -514,11 +506,6 @@ export function getErrorMessage(errorCode, fallback = ERROR_MESSAGES.unknown_err
     const lowerCode = errorCode.toLowerCase();
     for (const [key, message] of Object.entries(ERROR_MESSAGES)) {
         if (lowerCode.includes(key.toLowerCase())) {
-            // v2.0.0: try i18n for partial match too
-            if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
-                const i18nMsg = window.i18n.t(`auth.err.${key}`);
-                if (i18nMsg !== undefined) return i18nMsg;
-            }
             return message;
         }
     }

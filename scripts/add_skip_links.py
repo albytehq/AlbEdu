@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path('/home/z/my-project/work/AlbEdu')
 
-SKIP_LINK_HTML = '<a href="#main-content" class="albedu-skip-link" data-i18n="common.skip_to_main">Langsung ke konten utama</a>\n'
+SKIP_LINK_HTML = '<a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>\n'
 
 # Some pages use #main as the anchor (legacy), some use #main-content.
 # Detect which to use by looking for id="main" or id="main-content" in the body.

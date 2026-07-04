@@ -51,7 +51,7 @@
     <script src="../../src/utils/self-storage.js" defer></script><link rel="stylesheet" href="../../styles/pages/active-assessments.css">
 </head>
 <body>
-    <a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
+    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
     <div class="page-transition"></div>
 
     <div class="container">
@@ -78,43 +78,43 @@
                     <li class="menu-item sidebar-item" data-tab="profil">
                         <a href="profile.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="account_circle"></span>
-                            <span class="sidebar-text" data-i18n="nav.profile">Profil Admin</span>
+                            <span class="sidebar-text">Profil Admin</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="create-assessment">
                         <a href="create-assessment.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="edit_note"></span>
-                            <span class="sidebar-text" data-i18n="nav.create_assessment">Buat Asesmen</span>
+                            <span class="sidebar-text">Buat Asesmen</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item active" data-tab="active-assessments">
                         <a href="active-assessments.html" class="menu-item-content" aria-current="page">
                             <span class="sidebar-icon" data-albedu-icon="menu_book"></span>
-                            <span class="sidebar-text" data-i18n="nav.active_assessments">Asesmen Aktif</span>
+                            <span class="sidebar-text">Asesmen Aktif</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="question-bank">
                         <a href="question-bank.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="inventory_2"></span>
-                            <span class="sidebar-text" data-i18n="nav.question_bank">Bank Soal</span>
+                            <span class="sidebar-text">Bank Soal</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="monitoring">
                         <a href="monitoring.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="monitor_heart"></span>
-                            <span class="sidebar-text" data-i18n="nav.monitoring">Monitoring</span>
+                            <span class="sidebar-text">Monitoring</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="results">
                         <a href="results-analytics.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="bar_chart"></span>
-                            <span class="sidebar-text" data-i18n="nav.results">Hasil & Analitik</span>
+                            <span class="sidebar-text">Hasil & Analitik</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="daftar-nama">
                         <a href="daftar-nama.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="list"></span>
-                            <span class="sidebar-text" data-i18n="nav.daftar_nama">Daftar Nama</span>
+                            <span class="sidebar-text">Daftar Nama</span>
                         </a>
                     </li>
                 </ul>
@@ -126,8 +126,8 @@
                         <span data-albedu-icon="person"></span>
                     </div>
                     <div class="user-info">
-                        <h4 id="sidebar-user-name" data-i18n="nav.default_admin_name">Admin AlbEdu</h4>
-                        <p id="sidebar-user-role" data-i18n="nav.role_admin">Administrator</p>
+                        <h4 id="sidebar-user-name">Admin AlbEdu</h4>
+                        <p id="sidebar-user-role">Administrator</p>
                     </div>
                 </button>
             </div>
@@ -143,21 +143,10 @@
                     <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka menu">
                         <span data-albedu-icon="menu"></span>
                     </button>
-                    <h1 id="page-title" data-i18n="active.page_title">Asesmen Aktif</h1>
+                    <h1 id="page-title">Asesmen Aktif</h1>
                 </div>
                 <div class="header-right">
-                    <!-- Language Switcher -->
-                    <div class="albedu-lang-switcher" id="lang-switcher">
-                        <span data-albedu-icon="language"></span>
-                        <span id="current-lang">🇮🇩 ID</span>
-                        <span data-albedu-icon="expand_more"></span>
-                        <div class="albedu-lang-dropdown" id="lang-dropdown" hidden>
-                            <div class="albedu-lang-option albedu-active" data-locale="id">🇮🇩 Bahasa Indonesia</div>
-                            <div class="albedu-lang-option" data-locale="en">🇬🇧 English</div>
-
-                            </div>
-                    </div>
-                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
+                    <!-- Language Switcher -->                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
                         <span data-albedu-icon="notifications"></span>
                         <span class="badge">0</span>
                     </button>
@@ -175,7 +164,7 @@
                             id="active-search-input"
                             class="albedu-input"
                             placeholder="Cari asesmen berdasarkan judul, mata pelajaran, atau kode akses..."
-                            data-i18n-placeholder="active.search_placeholder"
+                            placeholder="Cari asesmen..."
                             aria-label="Cari asesmen aktif"
                             autocomplete="off">
                     </div>
@@ -187,7 +176,7 @@
                 <!-- Loading skeleton (shown while data loads) -->
                 <div class="albedu-empty-state" id="active-loading" hidden>
                     <div class="albedu-spinner" role="status" aria-label="Memuat"></div>
-                    <h3 data-i18n="active.loading_title">Memuat asesmen...</h3>
+                    <h3>Memuat asesmen...</h3>
                 </div>
 
                 <!-- ═══ Assessments Grid ═══ -->
@@ -196,35 +185,31 @@
                 <!-- Empty state -->
                 <div class="albedu-empty-state" id="active-empty" hidden>
                     <span data-albedu-icon="menu_book"></span>
-                    <h3 data-i18n="active.empty_title">Belum Ada Asesmen Aktif</h3>
-                    <p data-i18n="active.empty_desc">Buat asesmen baru atau mulai asesmen yang sudah ada.</p>
+                    <h3>Belum Ada Asesmen Aktif</h3>
+                    <p>Buat asesmen baru atau mulai asesmen yang sudah ada.</p>
                     <a href="create-assessment.html" class="albedu-btn albedu-btn-primary albedu-btn-sm">
                         <span data-albedu-icon="add_circle"></span>
-                        <span data-i18n="active.empty_cta">Buat Asesmen</span>
+                        <span>Buat Asesmen</span>
                     </a>
                 </div>
 
                 <!-- No results (after search) -->
                 <div class="albedu-empty-state" id="active-no-results" hidden>
                     <span data-albedu-icon="search_off"></span>
-                    <h3 data-i18n="active.no_results_title">Tidak Ditemukan</h3>
-                    <p data-i18n="active.no_results_desc">Coba kata kunci lain.</p>
+                    <h3>Tidak Ditemukan</h3>
+                    <p>Coba kata kunci lain.</p>
                 </div>
             </div>
 
             <footer class="footer">
-                <p><span data-i18n="common.copyright" data-i18n-vars="{&quot;year&quot;:2026}">© 2026 AlbEdu. Semua hak dilindungi.</span></p>
+                <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
                 <p>v0.742.9</p>
             </footer>
         </main>
     </div>
 
-    <!-- Theme System + i18n (v0.742.9) -->
     <script type="module" src="../../src/theme-system/index.js"></script>
-    <script type="module" src="../../src/i18n/index.js"></script>
-    <script defer src="../../src/i18n/lang-switcher.js"></script>
-
-    <!-- Active Assessments v0.742.9 page controller (NEW) -->
+<!-- Active Assessments v0.742.9 page controller (NEW) -->
     <script src="../../src/pages/active-assessments.js" defer></script>
 
     <!-- Notification Center -->

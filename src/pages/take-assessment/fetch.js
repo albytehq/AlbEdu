@@ -117,7 +117,7 @@
       const start = assessment.ac_scheduled_start ? new Date(assessment.ac_scheduled_start).getTime() : null;
       const end   = assessment.ac_scheduled_end ? new Date(assessment.ac_scheduled_end).getTime() : null;
       if (start && now < start) {
-        const locale = (window.i18n?.getCurrentLocale?.() || 'id') === 'en' ? 'en-US' : 'id-ID';
+        const locale = ('id' || 'id') === 'en' ? 'en-US' : 'id-ID';
         const startStr = new Date(start).toLocaleString(locale, {
           day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
         });

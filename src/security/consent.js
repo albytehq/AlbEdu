@@ -110,8 +110,7 @@
 
     _showPopup(previousVersion = null) {
       return new Promise((resolve) => {
-        // v0.742.9: use i18n for all text
-        const t = (key, params) => window.i18n?.t?.(key, params) || key;
+        const t = (key, params) => key;
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'consent-overlay';
@@ -135,27 +134,27 @@
         `;
 
         const versionNote = previousVersion
-          ? `<p style="font-size: 13px; color: var(--albedu-warning, #f59e0b); margin: 8px 0 16px; padding: 8px 12px; background: #fffbeb; border-radius: 6px;">⚠ ${t('peserta.consent_updated', { old: previousVersion, new: POLICY_VERSION })}</p>`
+          ? `<p style="font-size: 13px; color: var(--albedu-warning, #f59e0b); margin: 8px 0 16px; padding: 8px 12px; background: #fffbeb; border-radius: 6px;">⚠ Kebijakan Privasi telah diperbarui (v${previousVersion} → v${POLICY_VERSION}). Mohon setujui kembali.</p>`
           : '';
 
         dialog.innerHTML = `
-          <h2 style="font-size: 22px; font-weight: 700; margin: 0 0 8px; color: var(--albedu-heading, #0f172a);">${t('peserta.consent_title')}</h2>
+          <h2 style="font-size: 22px; font-weight: 700; margin: 0 0 8px; color: var(--albedu-heading, #0f172a);">${'Pemberitahuan Privasi AlbEdu'}</h2>
           ${versionNote}
           <p style="font-size: 14px; color: var(--albedu-body, #475569); line-height: 1.6; margin: 16px 0;">
-            ${t('peserta.consent_intro')}
+            ${'AlbEdu mengumpulkan data berikut saat Anda mengerjakan asesmen:'}
           </p>
           <ul style="font-size: 14px; color: var(--albedu-body, #475569); line-height: 1.8; padding-left: 20px; margin: 12px 0;">
-            <li>${t('peserta.consent_data_1')}</li>
-            <li>${t('peserta.consent_data_2')}</li>
-            <li>${t('peserta.consent_data_3')}</li>
-            <li>${t('peserta.consent_data_4')}</li>
-            <li>${t('peserta.consent_data_5')}</li>
+            <li>${'Email Google Anda'}</li>
+            <li>${'Nama yang Anda input'}</li>
+            <li>${'Jawaban Anda'}</li>
+            <li>${'Aktivitas selama ujian (untuk anti-cheat)'}</li>
+            <li>${'Alamat IP dan perangkat'}</li>
           </ul>
           <p style="font-size: 14px; color: var(--albedu-body, #475569); line-height: 1.6; margin: 16px 0;">
-            ${t('peserta.consent_usage')}
+            ${'Data digunakan untuk: menyimpan dan menilai jawaban, mencegah kecurangan, audit keamanan. Data disimpan sesuai kebijakan retensi (90 hari - 3 tahun).'}
           </p>
           <p style="font-size: 14px; color: var(--albedu-body, #475569); line-height: 1.6; margin: 16px 0;">
-            ${t('peserta.consent_rights')} <a href="../pages/privacy-policy.html" target="_blank" style="color: var(--albedu-primary, #2563eb);">Kebijakan Privasi</a>
+            ${'Anda bisa request akses/hapus data kapan saja. Lihat Kebijakan Privasi lengkap.'} <a href="../pages/privacy-policy.html" target="_blank" style="color: var(--albedu-primary, #2563eb);">Kebijakan Privasi</a>
           </p>
           <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
             <button id="consent-reject" type="button" style="
@@ -163,13 +162,13 @@
               background: transparent; color: var(--albedu-body, #475569);
               border: 1px solid var(--albedu-border, #e2e8f0); cursor: pointer;
               font-family: inherit; transition: all 150ms;
-            ">${t('peserta.consent_reject')}</button>
+            ">${'Tidak Setuju'}</button>
             <button id="consent-accept" type="button" style="
               padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600;
               background: var(--albedu-primary, #2563eb); color: #fff;
               border: none; cursor: pointer;
               font-family: inherit; transition: all 150ms;
-            ">${t('peserta.consent_accept')}</button>
+            ">${'Setuju'}</button>
           </div>
         `;
 
@@ -188,8 +187,7 @@
 
         acceptBtn.addEventListener('click', async () => {
           acceptBtn.disabled = true;
-          // v0.742.9: use i18n for saving text
-          acceptBtn.textContent = window.i18n?.t?.('peserta.consent_saving') || 'Menyimpan...';
+          acceptBtn.textContent = 'Menyimpan...';
           try {
             await this._grantConsent();
             this._close(overlay, dialog);
@@ -198,13 +196,13 @@
             console.error('[consent] grant failed:', err);
             window.notify?.error('Gagal', 'Tidak bisa menyimpan persetujuan. Coba lagi.');
             acceptBtn.disabled = false;
-            acceptBtn.textContent = window.i18n?.t?.('peserta.consent_accept') || 'Setuju';
+            acceptBtn.textContent = 'Setuju';
           }
         });
 
         rejectBtn.addEventListener('click', () => {
           rejectBtn.disabled = true;
-          rejectBtn.textContent = window.i18n?.t?.('peserta.profile_logout') || 'Logout...';
+          rejectBtn.textContent = 'Logout...';
           this._close(overlay, dialog);
           // Logout
           if (window.Auth?.authLogout) {

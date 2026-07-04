@@ -51,7 +51,7 @@
     <script src="../../src/utils/self-storage.js" defer></script><link rel="stylesheet" href="../../styles/pages/results-analytics.css">
 </head>
 <body>
-    <a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
+    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
     <div class="page-transition"></div>
 
     <div class="container">
@@ -78,43 +78,43 @@
                     <li class="menu-item sidebar-item" data-tab="profil">
                         <a href="profile.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="account_circle"></span>
-                            <span class="sidebar-text" data-i18n="nav.profile">Profil Admin</span>
+                            <span class="sidebar-text">Profil Admin</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="create-assessment">
                         <a href="create-assessment.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="edit_note"></span>
-                            <span class="sidebar-text" data-i18n="nav.create_assessment">Buat Asesmen</span>
+                            <span class="sidebar-text">Buat Asesmen</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="active-assessments">
                         <a href="active-assessments.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="menu_book"></span>
-                            <span class="sidebar-text" data-i18n="nav.active_assessments">Asesmen Aktif</span>
+                            <span class="sidebar-text">Asesmen Aktif</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="question-bank">
                         <a href="question-bank.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="inventory_2"></span>
-                            <span class="sidebar-text" data-i18n="nav.question_bank">Bank Soal</span>
+                            <span class="sidebar-text">Bank Soal</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="monitoring">
                         <a href="monitoring.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="monitor_heart"></span>
-                            <span class="sidebar-text" data-i18n="nav.monitoring">Monitoring</span>
+                            <span class="sidebar-text">Monitoring</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item active" data-tab="results">
                         <a href="results-analytics.html" class="menu-item-content" aria-current="page">
                             <span class="sidebar-icon" data-albedu-icon="bar_chart"></span>
-                            <span class="sidebar-text" data-i18n="nav.results">Hasil & Analitik</span>
+                            <span class="sidebar-text">Hasil & Analitik</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="daftar-nama">
                         <a href="daftar-nama.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="list"></span>
-                            <span class="sidebar-text" data-i18n="nav.daftar_nama">Daftar Nama</span>
+                            <span class="sidebar-text">Daftar Nama</span>
                         </a>
                     </li>
                 </ul>
@@ -126,8 +126,8 @@
                         <span data-albedu-icon="person"></span>
                     </div>
                     <div class="user-info">
-                        <h4 id="sidebar-user-name" data-i18n="nav.default_admin_name">Admin AlbEdu</h4>
-                        <p id="sidebar-user-role" data-i18n="nav.role_admin">Administrator</p>
+                        <h4 id="sidebar-user-name">Admin AlbEdu</h4>
+                        <p id="sidebar-user-role">Administrator</p>
                     </div>
                 </button>
             </div>
@@ -143,21 +143,10 @@
                     <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka menu">
                         <span data-albedu-icon="menu"></span>
                     </button>
-                    <h1 id="page-title" data-i18n="results.page_title">Hasil & Analitik</h1>
+                    <h1 id="page-title">Hasil & Analitik</h1>
                 </div>
                 <div class="header-right">
-                    <!-- Language Switcher -->
-                    <div class="albedu-lang-switcher" id="lang-switcher">
-                        <span data-albedu-icon="language"></span>
-                        <span id="current-lang">🇮🇩 ID</span>
-                        <span data-albedu-icon="expand_more"></span>
-                        <div class="albedu-lang-dropdown" id="lang-dropdown" hidden>
-                            <div class="albedu-lang-option albedu-active" data-locale="id">🇮🇩 Bahasa Indonesia</div>
-                            <div class="albedu-lang-option" data-locale="en">🇬🇧 English</div>
-
-                            </div>
-                    </div>
-                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
+                    <!-- Language Switcher -->                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
                         <span data-albedu-icon="notifications"></span>
                         <span class="badge">0</span>
                     </button>
@@ -169,23 +158,23 @@
                 <!-- Controls: Assessment picker + Export buttons -->
                 <div class="ra-controls">
                     <div>
-                        <label for="ra-assessment-select" data-i18n="results.select_assessment">Pilih Asesmen</label>
+                        <label for="ra-assessment-select">Pilih Asesmen</label>
                         <select id="ra-assessment-select" class="ra-select" aria-label="Pilih asesmen untuk analitik">
-                            <option value="" data-i18n="results.select_placeholder">— Pilih asesmen —</option>
+                            <option value="">— Pilih asesmen —</option>
                         </select>
                     </div>
                     <div class="ra-export-actions" role="group" aria-label="Export data">
                         <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-ra-export-pdf" type="button" disabled>
                             <span data-albedu-icon="picture_as_pdf"></span>
-                            <span data-i18n="results.export_pdf">PDF</span>
+                            <span>PDF</span>
                         </button>
                         <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-ra-export-excel" type="button" disabled>
                             <span data-albedu-icon="table_view"></span>
-                            <span data-i18n="results.export_excel">Excel</span>
+                            <span>Excel</span>
                         </button>
                         <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-ra-export-json" type="button" disabled>
                             <span data-albedu-icon="data_object"></span>
-                            <span data-i18n="results.export_json">JSON</span>
+                            <span>JSON</span>
                         </button>
                     </div>
                 </div>
@@ -193,41 +182,41 @@
                 <!-- ═══ Stats Cards ═══ -->
                 <div class="ra-stats-grid" id="ra-stats" hidden aria-live="polite">
                     <div class="ra-stat-card">
-                        <span class="ra-stat-label" data-i18n="results.stat_mean">Mean</span>
+                        <span class="ra-stat-label">Mean</span>
                         <span class="ra-stat-value" id="ra-stat-mean">—</span>
-                        <span class="ra-stat-sub" data-i18n="results.stat_mean_sub">Rata-rata</span>
+                        <span class="ra-stat-sub">Rata-rata</span>
                     </div>
                     <div class="ra-stat-card">
-                        <span class="ra-stat-label" data-i18n="results.stat_median">Median</span>
+                        <span class="ra-stat-label">Median</span>
                         <span class="ra-stat-value" id="ra-stat-median">—</span>
-                        <span class="ra-stat-sub" data-i18n="results.stat_median_sub">Nilai tengah</span>
+                        <span class="ra-stat-sub">Nilai tengah</span>
                     </div>
                     <div class="ra-stat-card">
-                        <span class="ra-stat-label" data-i18n="results.stat_min">Min</span>
+                        <span class="ra-stat-label">Min</span>
                         <span class="ra-stat-value" id="ra-stat-min">—</span>
-                        <span class="ra-stat-sub" data-i18n="results.stat_min_sub">Terendah</span>
+                        <span class="ra-stat-sub">Terendah</span>
                     </div>
                     <div class="ra-stat-card">
-                        <span class="ra-stat-label" data-i18n="results.stat_max">Max</span>
+                        <span class="ra-stat-label">Max</span>
                         <span class="ra-stat-value" id="ra-stat-max">—</span>
-                        <span class="ra-stat-sub" data-i18n="results.stat_max_sub">Tertinggi</span>
+                        <span class="ra-stat-sub">Tertinggi</span>
                     </div>
                     <div class="ra-stat-card">
-                        <span class="ra-stat-label" data-i18n="results.stat_std">Std Dev</span>
+                        <span class="ra-stat-label">Std Dev</span>
                         <span class="ra-stat-value" id="ra-stat-std">—</span>
-                        <span class="ra-stat-sub" data-i18n="results.stat_std_sub">Standar deviasi</span>
+                        <span class="ra-stat-sub">Standar deviasi</span>
                     </div>
                     <div class="ra-stat-card">
-                        <span class="ra-stat-label" data-i18n="results.stat_count">Submissions</span>
+                        <span class="ra-stat-label">Submissions</span>
                         <span class="ra-stat-value" id="ra-stat-count">0</span>
-                        <span class="ra-stat-sub" data-i18n="results.stat_count_sub">Total peserta</span>
+                        <span class="ra-stat-sub">Total peserta</span>
                     </div>
                 </div>
 
                 <!-- ═══ Score Distribution Histogram ═══ -->
                 <section class="ra-section" id="ra-histogram-section" hidden aria-label="Distribusi nilai">
-                    <h2 class="ra-section-title" data-i18n="results.histogram_title">Distribusi Nilai</h2>
-                    <p class="ra-section-desc" data-i18n="results.histogram_desc">Histogram nilai peserta dalam rentang 0–100</p>
+                    <h2 class="ra-section-title">Distribusi Nilai</h2>
+                    <p class="ra-section-desc">Histogram nilai peserta dalam rentang 0–100</p>
                     <div class="ra-histogram" id="ra-histogram" role="img" aria-label="Histogram distribusi nilai"></div>
                     <div class="ra-histo-labels" id="ra-histo-labels">
                         <span>0</span><span>10</span><span>20</span><span>30</span><span>40</span>
@@ -237,16 +226,16 @@
 
                 <!-- ═══ Item Difficulty Table ═══ -->
                 <section class="ra-section" id="ra-item-section" hidden aria-label="Tingkat kesulitan soal">
-                    <h2 class="ra-section-title" data-i18n="results.item_difficulty_title">Tingkat Kesulitan Soal</h2>
-                    <p class="ra-section-desc" data-i18n="results.item_difficulty_desc">Persentase jawaban benar per soal + distribusi pilihan</p>
+                    <h2 class="ra-section-title">Tingkat Kesulitan Soal</h2>
+                    <p class="ra-section-desc">Persentase jawaban benar per soal + distribusi pilihan</p>
                     <div class="ra-table-wrap">
                         <table class="ra-table">
                             <thead>
                                 <tr>
-                                    <th scope="col" data-i18n="results.item_col_no">No</th>
-                                    <th scope="col" data-i18n="results.item_col_question">Soal</th>
-                                    <th scope="col" data-i18n="results.item_col_correct">% Benar</th>
-                                    <th scope="col" data-i18n="results.item_col_distractors">Distraktor</th>
+                                    <th scope="col">No</th>
+                                    <th scope="col">Soal</th>
+                                    <th scope="col">% Benar</th>
+                                    <th scope="col">Distraktor</th>
                                 </tr>
                             </thead>
                             <tbody id="ra-item-tbody"></tbody>
@@ -256,18 +245,18 @@
 
                 <!-- ═══ Per-class Breakdown Table ═══ -->
                 <section class="ra-section" id="ra-class-section" hidden aria-label="Rincian per kelas">
-                    <h2 class="ra-section-title" data-i18n="results.class_breakdown_title">Rincian per Kelas</h2>
-                    <p class="ra-section-desc" data-i18n="results.class_breakdown_desc">Tersedia jika mode identitas = Daftar Nama</p>
+                    <h2 class="ra-section-title">Rincian per Kelas</h2>
+                    <p class="ra-section-desc">Tersedia jika mode identitas = Daftar Nama</p>
                     <div class="ra-table-wrap">
                         <table class="ra-table">
                             <thead>
                                 <tr>
-                                    <th scope="col" data-i18n="results.class_col_name">Kelas</th>
-                                    <th scope="col" data-i18n="results.class_col_count">Peserta</th>
-                                    <th scope="col" data-i18n="results.class_col_mean">Mean</th>
-                                    <th scope="col" data-i18n="results.class_col_median">Median</th>
-                                    <th scope="col" data-i18n="results.class_col_min">Min</th>
-                                    <th scope="col" data-i18n="results.class_col_max">Max</th>
+                                    <th scope="col">Kelas</th>
+                                    <th scope="col">Peserta</th>
+                                    <th scope="col">Mean</th>
+                                    <th scope="col">Median</th>
+                                    <th scope="col">Min</th>
+                                    <th scope="col">Max</th>
                                 </tr>
                             </thead>
                             <tbody id="ra-class-tbody"></tbody>
@@ -278,31 +267,27 @@
                 <!-- Empty state: no assessment selected -->
                 <div class="albedu-empty-state" id="ra-empty-select" hidden>
                     <span data-albedu-icon="bar_chart"></span>
-                    <h3 data-i18n="results.empty_select_title">Pilih Asesmen</h3>
-                    <p data-i18n="results.empty_select_desc">Pilih asesmen dari dropdown di atas untuk melihat hasil & analitik.</p>
+                    <h3>Pilih Asesmen</h3>
+                    <p>Pilih asesmen dari dropdown di atas untuk melihat hasil & analitik.</p>
                 </div>
 
                 <!-- Empty state: no data -->
                 <div class="albedu-empty-state" id="ra-empty" hidden>
                     <span data-albedu-icon="inbox"></span>
-                    <h3 data-i18n="results.empty_title">Belum Ada Data</h3>
-                    <p data-i18n="results.empty_desc">Belum ada peserta yang menyelesaikan asesmen ini.</p>
+                    <h3>Belum Ada Data</h3>
+                    <p>Belum ada peserta yang menyelesaikan asesmen ini.</p>
                 </div>
             </div>
 
             <footer class="footer">
-                <p><span data-i18n="common.copyright" data-i18n-vars="{&quot;year&quot;:2026}">© 2026 AlbEdu. Semua hak dilindungi.</span></p>
+                <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
                 <p>v0.742.9</p>
             </footer>
         </main>
     </div>
 
-    <!-- Theme System + i18n (v0.742.9) -->
     <script type="module" src="../../src/theme-system/index.js"></script>
-    <script type="module" src="../../src/i18n/index.js"></script>
-    <script defer src="../../src/i18n/lang-switcher.js"></script>
-
-    <!-- Results & Analytics v0.742.9 page controller (NEW) -->
+<!-- Results & Analytics v0.742.9 page controller (NEW) -->
     <script src="../../src/pages/results-analytics.js" defer></script>
 
     <!-- Notification Center -->

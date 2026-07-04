@@ -499,82 +499,6 @@
         }
       }
 
-      /* ── Language item + inline switcher panel (v2.0.0) ── */
-      .op-item.op-language-item {
-        /* same as default .op-item */
-      }
-      .op-item.op-language-expanded .op-item-chevron {
-        transform: rotate(180deg);
-      }
-
-      /* Inline panel — sits below the language item */
-      .op-lang-panel {
-        padding: 4px 12px 8px;
-        animation: op-lang-in 220ms ${ANIM_SPRING} forwards;
-      }
-      .op-lang-panel[hidden] {
-        display: none !important;
-      }
-      @keyframes op-lang-in {
-        0%   { opacity: 0; transform: translateY(-4px); }
-        100% { opacity: 1; transform: translateY(0); }
-      }
-
-      .op-lang-switcher {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        background: #f8fafc;
-        border-radius: 10px;
-        padding: 6px;
-        border: 1px solid #e2e8f0;
-      }
-      .op-lang-pill {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-        padding: 8px 10px;
-        background: transparent;
-        border: 0;
-        border-radius: 8px;
-        color: #1e293b;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        text-align: left;
-        transition: background 140ms ease, color 140ms ease;
-        font-family: inherit;
-      }
-      .op-lang-pill:hover {
-        background: #e2e8f0;
-      }
-      .op-lang-pill:focus-visible {
-        outline: 2px solid #2563eb;
-        outline-offset: -2px;
-      }
-      .op-lang-pill.op-lang-active {
-        background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
-        color: #2563eb;
-      }
-      .op-lang-flag {
-        font-size: 18px;
-        line-height: 1;
-        flex-shrink: 0;
-      }
-      .op-lang-name {
-        flex: 1;
-        min-width: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .op-lang-check {
-        font-size: 14px;
-        color: #2563eb;
-        flex-shrink: 0;
-      }
-
       /* ── Reduced motion: collapse all animations ── */
       @media (prefers-reduced-motion: reduce) {
         .op-dropdown,
@@ -585,9 +509,7 @@
         .op-item,
         .op-item-icon,
         .op-item-chevron,
-        .op-ripple,
-        .op-lang-panel,
-        .op-lang-pill {
+        .op-ripple {
           transition-duration: 0.01ms !important;
           animation-duration: 0.01ms !important;
           animation-iteration-count: 1 !important;
@@ -782,23 +704,20 @@
     // never actually set anywhere, so that check was always false — this
     // banner silently never showed. Kept as fallback for any legacy caller.
     const incomplete = user.profile_complete === false || user.profilLengkap === false || user.profil_lengkap === false;
-    const roleLabel  = isAdmin ? (window.i18n?.t?.('nav.role_admin') || 'Administrator') : (window.i18n?.t?.('peserta.role') || 'Peserta');
+    const roleLabel  = isAdmin ? ('Administrator') : ('Peserta');
     const roleClass  = isAdmin ? 'op-role-admin' : 'op-role-peserta';
     const roleIcon   = isAdmin ? 'shield' : 'school';
 
     const avatarSrc = _safeUrl(avatarUrl) || _initialsAvatar(name || email);
 
     // Build menu items array for stagger calculation
-    // v2.0.0: use i18n for ALL menu titles/subtitles (was partial in v0.742.9)
-    // v2.0.0: tambah item 'language' dengan inline mini-switcher
-    const ti18n = (k, fallback) => window.i18n?.t?.(k) || fallback;
     const items = [
       {
         op: 'edit-profile',
         iconClass: 'op-icon-blue',
         icon: 'person_edit',
-        title: ti18n('peserta.profile_edit', 'Edit Profil'),
-        subtitle: ti18n('peserta.profile_edit_sub', 'Ubah nama dan foto profil'),
+        title: 'Edit Profil',
+        subtitle: 'Ubah nama dan foto profil',
         danger: false,
       },
     ];
@@ -808,34 +727,18 @@
         op: 'admin-panel',
         iconClass: 'op-icon-amber',
         icon: 'view_column',
-        title: ti18n('peserta.profile_admin_panel', 'Panel Admin'),
-        subtitle: ti18n('peserta.profile_admin_panel_sub', 'Kembali ke dashboard'),
+        title: 'Panel Admin',
+        subtitle: 'Kembali ke dashboard',
         danger: false,
       });
     }
-
-    // v2.0.0: Language item — special: clicking it expands inline switcher
-    // instead of navigating. Marked with op='language' so _handleAction
-    // can detect it and toggle the inline panel.
-    const currentLocale = window.i18n?.getCurrentLocale?.() || 'id';
-    const langNames = { id: ti18n('language.id_native', 'Bahasa Indonesia'), en: ti18n('language.en_native', 'English') };
-    const currentLangName = langNames[currentLocale] || currentLocale;
-    items.push({
-      op: 'language',
-      iconClass: 'op-icon-green',
-      icon: 'language',
-      title: ti18n('peserta.profile_language', 'Bahasa'),
-      subtitle: ti18n('peserta.profile_language_current', { lang: currentLangName }, currentLangName),
-      danger: false,
-      isLanguage: true,
-    });
 
     items.push({
       op: 'logout',
       iconClass: 'op-icon-red',
       icon: 'logout',
-      title: ti18n('peserta.profile_logout', 'Keluar'),
-      subtitle: ti18n('peserta.profile_logout_sub', 'Logout dari akun'),
+      title: 'Keluar',
+      subtitle: 'Logout dari akun',
       danger: true,
     });
 
@@ -843,11 +746,9 @@
     const itemsHtml = items.map((item, i) => {
       const delay = STAGGER_BASE_MS + (i * STAGGER_DELAY_MS);
       const sepBefore = (i > 0 && items[i].op === 'logout') ? '<div class="op-sep" style="margin:4px 12px;"></div>' : '';
-      // Language item: use expand_more chevron (rotates on expand)
-      const chevronIcon = item.isLanguage ? 'expand_more' : 'chevron_right';
       return `
         ${sepBefore}
-        <button class="op-item ${item.danger ? 'op-danger' : ''} ${item.isLanguage ? 'op-language-item' : ''}" data-op="${item.op}" role="menuitem" style="--op-delay: ${delay}ms;">
+        <button class="op-item ${item.danger ? 'op-danger' : ''}" data-op="${item.op}" role="menuitem" style="--op-delay: ${delay}ms;">
           <div class="op-item-icon ${item.iconClass}">
             <span data-albedu-icon="${item.icon}"></span>
           </div>
@@ -855,13 +756,8 @@
             ${_esc(item.title)}
             <span>${_esc(item.subtitle)}</span>
           </div>
-          <span class="op-item-chevron" data-albedu-icon="${chevronIcon}"></span>
+          <span class="op-item-chevron" data-albedu-icon="chevron_right"></span>
         </button>
-        ${item.isLanguage ? `
-          <div class="op-lang-panel" data-op-lang-panel hidden>
-            ${_renderLangSwitcherInline()}
-          </div>
-        ` : ''}
       `;
     }).join('');
 
@@ -877,7 +773,7 @@
             <span class="op-role-chip ${roleClass}">
               <span data-albedu-icon="${roleIcon}"></span> ${_esc(roleLabel)}
             </span>
-            ${incomplete ? `<span class="op-incomplete-chip"><span data-albedu-icon="error"></span> ${_esc(ti18n('nav.profile_incomplete', 'Belum lengkap'))}</span>` : ''}
+            ${incomplete ? `<span class="op-incomplete-chip"><span data-albedu-icon="error"></span> ${_esc('Belum lengkap')}</span>` : ''}
           </div>
         </div>
       </div>
@@ -905,9 +801,6 @@
         window.AlbEdu?.bindIcons?.(this.parentElement);
       }, { once: true });
     }
-
-    // Wire language switcher pills (inline panel)
-    _wireLangSwitcher();
 
     // Wire click handlers + ripple effect + mouseleave blur (v3.1 fix)
     _dropdown.querySelectorAll('[data-op]').forEach(btn => {
@@ -938,103 +831,9 @@
     });
   }
 
-  // ── Language switcher inline sub-panel ───────────────────────────
-  // Renders a compact vertical list of language pills inside the dropdown.
-  // Clicking a pill switches language instantly (no reload) via window.i18n.
-  // Updates are propagated via 'locale-changed' event from i18n module.
-  function _renderLangSwitcherInline() {
-    const currentLocale = window.i18n?.getCurrentLocale?.() || 'id';
-    const supported = window.i18n?.getSupportedLocales?.() || { id: {}, en: {} };
-    const flags = { id: '🇮🇩', en: '🇬🇧' };
-    const label = window.i18n?.t?.('language.menu_aria') || 'Select language';
-
-    return `
-      <div class="op-lang-switcher" role="group" aria-label="${_esc(label)}">
-        ${Object.keys(supported).map((locale) => {
-          const isActive = locale === currentLocale;
-          const name = supported[locale].native || locale;
-          return `
-            <button type="button"
-                    class="op-lang-pill ${isActive ? 'op-lang-active' : ''}"
-                    data-locale="${_esc(locale)}"
-                    role="option"
-                    aria-selected="${isActive}"
-                    aria-pressed="${isActive}">
-              <span class="op-lang-flag" aria-hidden="true">${flags[locale] || '🌐'}</span>
-              <span class="op-lang-name">${_esc(name)}</span>
-              ${isActive ? '<span class="op-lang-check" aria-hidden="true" data-albedu-icon="check"></span>' : ''}
-            </button>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  // ── Wire language switcher pill clicks ────────────────────────────
-  // Switches language via window.i18n.switchLocale (which handles DOM
-  // rescan + event dispatch + Supabase sync).
-  function _wireLangSwitcher() {
-    if (!_dropdown) return;
-    _dropdown.querySelectorAll('.op-lang-pill').forEach((pill) => {
-      pill.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const locale = pill.getAttribute('data-locale');
-        if (!locale || !window.i18n?.switchLocale) return;
-
-        // Visual feedback: blur immediately to avoid stuck hover
-        pill.blur();
-
-        // Switch locale (instant, no reload)
-        await window.i18n.switchLocale(locale);
-
-        // Re-populate dropdown to reflect new language in labels + active state
-        _populate();
-        _position(false);
-      });
-    });
-  }
-
-  // ── Toggle inline language panel ────────────────────────────
-  // Shows/hides the .op-lang-panel below the language item.
-  // Rotates the chevron icon to indicate expand/collapse state.
-  // Repositions the dropdown since height changed.
-  function _toggleLanguagePanel(langBtn) {
-    if (!langBtn) return;
-    const panelEl = langBtn.closest('.op-menu')?.querySelector('[data-op-lang-panel]');
-    if (!panelEl) return;
-
-    const isHidden = panelEl.hasAttribute('hidden');
-    if (isHidden) {
-      panelEl.removeAttribute('hidden');
-      langBtn.classList.add('op-language-expanded');
-      const chevron = langBtn.querySelector('.op-item-chevron');
-      if (chevron) chevron.textContent = 'expand_less';
-    } else {
-      panelEl.setAttribute('hidden', '');
-      langBtn.classList.remove('op-language-expanded');
-      const chevron = langBtn.querySelector('.op-item-chevron');
-      if (chevron) chevron.textContent = 'expand_more';
-    }
-
-    // Invalidate height cache + reposition (height changed)
-    _cachedHeight = null;
-    _position(false);
-  }
-
   // ── _handleAction (async — awaits close before executing action) ──
-  //
-  // v2.0.0 NEW: 'language' action does NOT close the dropdown. Instead it
-  // toggles the inline language switcher panel (visible right below the
-  // language item). This keeps the dropdown open so the user can pick
-  // a language without losing context.
   async function _handleAction(action, sourceBtn) {
     const trigger = _activeTrigger;
-
-    // Language action: toggle inline panel, do NOT close dropdown
-    if (action === 'language') {
-      _toggleLanguagePanel(sourceBtn);
-      return;
-    }
 
     await close();
 
@@ -1602,13 +1401,6 @@
       window.addEventListener('op-profile-updated', (e) => {
         if (e.detail && window.Auth) window.Auth.userData = e.detail;
         update();
-      });
-
-      // v2.0.0: Listen for locale changes from i18n module.
-      // Re-render dropdown content if open, so menu items + role labels +
-      // language item subtitle update to the new locale instantly.
-      document.addEventListener('locale-changed', () => {
-        if (_isOpen) update();
       });
 
       _initialized = true;

@@ -38,7 +38,7 @@
 
 <body>
 
-        <a href="#main-content" class="albedu-skip-link" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
+        <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
 <div class="split-screen">
         <!-- ═══ LEFT PANEL — Form ═══ -->
         <div class="split-left">
@@ -50,20 +50,20 @@
                         <img src="../public/images/logo.svg" alt="AlbEdu" width="36" height="36">
                         <span class="form-logo-name">AlbEdu</span>
                     </div>
-                    <h1 class="form-title" data-i18n="auth.register_title">Buat Akun Administrator</h1>
-                    <p class="form-subtitle" data-i18n="auth.register_subtitle">Kelola sistem pendidikan dengan akses penuh</p>
+                    <h1 class="form-title">Buat Akun Administrator</h1>
+                    <p class="form-subtitle">Kelola sistem pendidikan dengan akses penuh</p>
                 </div>
 
                 <!-- Registration form — IDs preserved for AdminOnboarding.js -->
                 <form id="adminRegisterForm" novalidate>
                     <div class="field">
-                        <label for="email" data-i18n="auth.register.email_label">Email</label>
+                        <label for="email">Email</label>
                         <input id="email" name="email" type="email" autocomplete="email"
                             class="input" placeholder="nama@sekolah.sch.id" required>
                     </div>
 
                     <div class="field field-password">
-                        <label for="password" data-i18n="auth.register.password_label">Kata Sandi</label>
+                        <label for="password">Kata Sandi</label>
                         <input id="password" name="password" type="password" autocomplete="new-password" minlength="8"
                             class="input" placeholder="Minimal 8 karakter" required>
                         <button type="button" class="toggle-visibility" data-target="password"
@@ -90,7 +90,7 @@
                     </div>
 
                     <div class="field field-password">
-                        <label for="confirmPassword" data-i18n="auth.register.confirm_label">Konfirmasi Kata Sandi</label>
+                        <label for="confirmPassword">Konfirmasi Kata Sandi</label>
                         <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password"
                             minlength="8" class="input" placeholder="Ulangi kata sandi" required>
                         <button type="button" class="toggle-visibility" data-target="confirmPassword"
@@ -114,7 +114,7 @@
                     </div>
 
                     <!-- Submit button -->
-                    <button id="registerBtn" type="submit" aria-busy="false" data-i18n="auth.register.submit_btn">
+                    <button id="registerBtn" type="submit" aria-busy="false">
                         Daftar Sekarang
                     </button>
 
@@ -128,12 +128,12 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
-                        <span data-i18n="auth.register.back_to_login">Kembali ke Login</span>
+                        <span>Kembali ke Login</span>
                     </a>
                 </div>
 
                 <p class="page-footer">
-                    &copy; <span id="regYear"></span> <span data-i18n="auth.register.footer">AlbEdu — Akses terbatas untuk administrator terdaftar.</span>
+                    &copy; <span id="regYear"></span> <span>AlbEdu — Akses terbatas untuk administrator terdaftar.</span>
                 </p>
             </div>
         </div>
@@ -158,8 +158,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label" data-i18n="auth.register.feature_1_label">Akses Penuh</span>
-                            <span class="feature-desc" data-i18n="auth.register.feature_1_desc">Kelola peserta, ujian, dan seluruh sistem</span>
+                            <span class="feature-label">Akses Penuh</span>
+                            <span class="feature-desc">Kelola peserta, ujian, dan seluruh sistem</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -170,8 +170,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label" data-i18n="auth.register.feature_2_label">Keamanan Terjamin</span>
-                            <span class="feature-desc" data-i18n="auth.register.feature_2_desc">Verifikasi email & proteksi perangkat</span>
+                            <span class="feature-label">Keamanan Terjamin</span>
+                            <span class="feature-desc">Verifikasi email & proteksi perangkat</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -181,8 +181,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label" data-i18n="auth.register.feature_3_label">Siap dalam Hitungan Menit</span>
-                            <span class="feature-desc" data-i18n="auth.register.feature_3_desc">Pendaftaran cepat, langsung aktif</span>
+                            <span class="feature-label">Siap dalam Hitungan Menit</span>
+                            <span class="feature-desc">Pendaftaran cepat, langsung aktif</span>
                         </div>
                     </div>
                 </div>
@@ -211,9 +211,6 @@
             });
         });
     </script>
-    <!-- v0.742.9: i18n -->
-    <script type="module" src="../src/i18n/index.js"></script>
-    <script defer src="../src/i18n/lang-switcher.js"></script>
 </body>
 
 </html>

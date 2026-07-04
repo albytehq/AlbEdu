@@ -66,17 +66,15 @@
         } catch (e) { /* noop */ }
       })();
     </script>
-    <script type="module" src="../../src/i18n/index.js"></script>
-    <script defer src="../../src/i18n/lang-switcher.js"></script>
 </head>
 <body>
-    <a href="#main-content" class="skip-to-main" data-i18n="common.skip_to_main">Langsung ke konten utama</a>
+    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
     <div class="panel-container">
 
         <!-- Header -->
         <div class="mobile-header">
             <div class="header-top">
-                <div class="app-title" data-i18n="nav.admin_app">AlbEdu Admin</div>
+                <div class="app-title">AlbEdu Admin</div>
                 <div style="display:flex;align-items:center;gap:8px;">
                     <button class="notification-btn" id="notification-btn-index"
                             aria-label="Notifikasi pelanggaran ujian">
@@ -96,7 +94,7 @@
                     <span data-albedu-icon="manage_accounts"></span>
                 </div>
                 <div class="user-details-mobile">
-                    <h3 data-i18n="nav.role_admin">Administrator</h3>
+                    <h3>Administrator</h3>
                     <p>admin@albedu.com</p>
                 </div>
             </div>
@@ -107,8 +105,8 @@
 
             <!-- Greeting -->
             <div class="greeting-section">
-                <h2 id="greeting" data-i18n="nav.admin_greeting">Panel Administrator</h2>
-                <p data-i18n="nav.welcome_back">Selamat datang kembali. Pilih ruang kerja Anda di bawah ini.</p>
+                <h2 id="greeting">Panel Administrator</h2>
+                <p>Selamat datang kembali. Pilih ruang kerja Anda di bawah ini.</p>
             </div>
 
             <!-- Cards — v0.742.9: simplified to 2 entry points -->
@@ -116,14 +114,14 @@
 
                 <!-- AlbEdu Creates (was: Profil Admin) -->
                 <div class="mobile-card mobile-card-primary" data-link="profile.html"
-                     role="button" tabindex="0" data-i18n-aria-label="nav.open_creates_aria" aria-label="Buka AlbEdu Creates">
+                     role="button" tabindex="0" aria-label="Buka AlbEdu Creates" aria-label="Buka AlbEdu Creates">
                     <div class="card-icon-mobile">
                         <span data-albedu-icon="auto_fix_high"></span>
                     </div>
                     <div class="card-content-mobile">
-                        <span class="card-kicker-mobile" data-i18n="nav.creates_kicker">Workspace admin</span>
+                        <span class="card-kicker-mobile">Workspace admin</span>
                         <h3 class="card-title-mobile">AlbEdu Creates</h3>
-                        <p class="card-description-mobile" data-i18n="nav.creates_desc">Pusat kendali administrator — kelola profil, preferensi, dan identitas akun AlbEdu Anda dari satu tempat.</p>
+                        <p class="card-description-mobile">Pusat kendali administrator — kelola profil, preferensi, dan identitas akun AlbEdu Anda dari satu tempat.</p>
                     </div>
                     <div class="card-arrow-mobile">
                         <span data-albedu-icon="chevron_right"></span>
@@ -132,14 +130,14 @@
 
                 <!-- Halaman Asesmen (was: Halaman Ujian) -->
                 <div class="mobile-card" data-link="../ujian/index.html"
-                     role="button" tabindex="0" data-i18n-aria-label="nav.open_asesmen_aria" aria-label="Buka Halaman Asesmen">
+                     role="button" tabindex="0" aria-label="Buka Halaman Asesmen" aria-label="Buka Halaman Asesmen">
                     <div class="card-icon-mobile">
                         <span data-albedu-icon="assignment_turned_in"></span>
                     </div>
                     <div class="card-content-mobile">
-                        <span class="card-kicker-mobile" data-i18n="nav.peserta_kicker">Sisi peserta</span>
-                        <h3 class="card-title-mobile" data-i18n="nav.asesmen_title">Halaman Asesmen</h3>
-                        <p class="card-description-mobile" data-i18n="nav.asesmen_desc">
+                        <span class="card-kicker-mobile">Sisi peserta</span>
+                        <h3 class="card-title-mobile">Halaman Asesmen</h3>
+                        <p class="card-description-mobile">
                             Buka halaman input kode akses peserta untuk uji coba, inspeksi alur, atau pemantauan sesi asesmen.
                         </p>
                     </div>
@@ -153,7 +151,7 @@
 
         <!-- Status Bar -->
         <div class="mobile-status">
-            <span data-i18n="nav.status_bar">AlbEdu Admin Panel · v0.742.9</span>
+            <span>AlbEdu Admin Panel · v0.742.9</span>
         </div>
     </div>
 

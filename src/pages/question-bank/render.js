@@ -141,7 +141,7 @@
       : '';
 
     const usage = Number(q.usage_count) || 0;
-    const usageLabel = _internal._t('question_bank.usage_count', { count: usage });
+    const usageLabel = `Dipakai ${usage}x`;
 
     return `
       <article class="qb-card" data-id="${_internal._esc(q.id)}">
@@ -159,13 +159,13 @@
         <footer class="qb-card-actions">
           <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" data-action="edit" data-id="${_internal._esc(q.id)}" type="button">
             <span data-albedu-icon="edit"></span>
-            <span>${_internal._esc(_internal._t('common.edit'))}</span>
+            <span>${_internal._esc('Edit')}</span>
           </button>
           <button class="albedu-btn albedu-btn-danger albedu-btn-sm" data-action="delete" data-id="${_internal._esc(q.id)}" type="button">
             <span data-albedu-icon="delete"></span>
-            <span>${_internal._esc(_internal._t('common.delete'))}</span>
+            <span>${_internal._esc('Hapus')}</span>
           </button>
-          <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" data-action="add-to-asm" data-id="${_internal._esc(q.id)}" type="button" title="${_internal._esc(_internal._t('question_bank.add_to_assessment'))}">
+          <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" data-action="add-to-asm" data-id="${_internal._esc(q.id)}" type="button" title="${_internal._esc('Tambah ke Asesmen')}">
             <span data-albedu-icon="add"></span>
             <span>+ Asesmen</span>
           </button>
