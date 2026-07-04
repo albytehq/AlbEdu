@@ -1359,7 +1359,20 @@ window.AlbEdu.__iconRegistrySecondary = {
       // display:none ancestor), bind immediately to be safe.
       var noLayout = rect.top === 0 && rect.bottom === 0 &&
                      rect.left === 0 && rect.right === 0;
-      var inViewport = noLayout ||
+      // FIX: off-canvas chrome (mobile sidebar drawers, slide-in panels)
+      // uses `transform: translateX(...)` to sit outside the viewport
+      // while "closed". getBoundingClientRect() reflects that transform,
+      // so these nodes look exactly like real off-screen/below-the-fold
+      // content and get queued into the IntersectionObserver instead of
+      // binding now. The icon only renders once the drawer's open
+      // transition brings it into the observer's bounds — visibly late,
+      // mid-animation. These nodes are NOT "far away, maybe never seen"
+      // content; they're persistent UI the user is about to reveal via a
+      // toggle. Opt them out of lazy-binding via [data-icon-eager] on the
+      // drawer/nav container so they always render immediately, matching
+      // the drawer's actual open trigger instead of a viewport heuristic.
+      var isEager = !!node.closest('[data-icon-eager]');
+      var inViewport = noLayout || isEager ||
                        (rect.top < window.innerHeight && rect.bottom > 0 &&
                         rect.left < window.innerWidth && rect.right > 0);
 
