@@ -201,14 +201,20 @@ export async function runPreflightValidation(turnstileToken) {
     const rpc = window.AlbEdu?.supabase?.rpc;
     if (!rpc) throw new PreflightError('platform_not_ready');
 
+    // PENTING: rpc.invoke(name, body, opts) — argumen ke-2 adalah payload JSON
+    // MENTAH yang langsung diteruskan ke client.functions.invoke(name, { body }).
+    // JANGAN bungkus payload di sini dengan `{ body: {...} }` — itu akan
+    // menghasilkan double-wrapping (`{ body: { body: {...} } }`) pada HTTP
+    // body yang benar-benar terkirim, sehingga edge function membaca
+    // `body.turnstileToken` sebagai undefined dan selalu menolak dengan
+    // 400 "missing_verification" walau token valid di client.
+    // Lihat pemakaian yang benar di heartbeat.js / submit.js / create-assessment.js.
     const { data, error } = await rpc.invoke('user-auth-preflight', {
-        body: {
-            turnstileToken: token,
-            deviceId,
-            browserHash: browserHash || null,
-            // deviceInfo tidak dipakai oleh preflight backend, tapi dikirim
-            // agar tersedia jika backend diperluas ke depannya
-        },
+        turnstileToken: token,
+        deviceId,
+        browserHash: browserHash || null,
+        // deviceInfo tidak dipakai oleh preflight backend, tapi dikirim
+        // agar tersedia jika backend diperluas ke depannya
     });
 
     if (error) {
