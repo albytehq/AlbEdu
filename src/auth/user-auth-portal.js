@@ -444,10 +444,78 @@ document.addEventListener('auth-ready', (e) => {
         }, 100);
     } else {
         // Role didapat → login sukses. Pastikan button di state success.
+        // Overlay tetap visible sampai redirect terjadi (1.8s delay) —
+        // biar user nggak lihat flash idle state sebelum pindah halaman.
         stopDotAnimation();
         setAuthStep('success');
+        _authInProgress = false;
     }
 });
+
+// ===========================================================================
+// OAuth CALLBACK DETECTION — Show loading overlay immediately on page load
+// when returning from Google OAuth.
+//
+// WHY: After Google OAuth redirect, the page reloads. The button is back in
+// idle state and there's NO UI feedback while _handleAuthStateChange runs.
+// The user sees a static login page for ~50ms–8s (depending on network and
+// whether the user row already exists) before being redirected. To them,
+// this looks like "pilih akun Google, terus gak terjadi apa-apa".
+//
+// FIX: Detect OAuth callback params in the URL (?code= for PKCE flow) and
+// show the auth loading overlay IMMEDIATELY on page load. The overlay stays
+// visible until either:
+//   - 'auth-ready' fires with a role → redirect happens (overlay auto-hides
+//     via UI.afterLogin / UI.hideAuthLoading)
+//   - 'auth-completion-error' fires → showError + reset UI (listener above
+//     already calls window.UI?.hideAuthLoading?.())
+//   - 30s safety net fires → show timeout error so user isn't stuck forever
+// ===========================================================================
+
+(function _detectOAuthCallback() {
+    try {
+        // Supabase PKCE flow appends ?code=... to the redirect URL.
+        // detectSessionInUrl: true (in supabase-client.js) will consume this
+        // and strip it from the URL after exchanging for a session, but there
+        // is a window of time where the param is still visible.
+        //
+        // Also handle error_description= which Supabase appends when the
+        // OAuth exchange fails (e.g. redirect URL mismatch, denied consent).
+        const url = window.location.href;
+        const hasOAuthCode = url.includes('code=') || url.includes('error_description=');
+
+        if (!hasOAuthCode) return;
+
+        // Mark that we're in a post-OAuth state so the safety net can clean up.
+        _authInProgress = true;
+
+        // Show the auth loading overlay immediately. The text tells the
+        // user exactly what's happening so they don't think the page is
+        // broken.
+        window.UI?.showAuthLoading?.('Menyelesaikan login Google...');
+
+        // Also put the Google button into the "connecting" state so the
+        // button itself reflects what's happening (in case the overlay
+        // is slow to render or the user looks at the button).
+        setAuthStep('connecting');
+
+        // Safety net: if for some reason auth-ready never fires within
+        // 30 seconds (e.g. Supabase config fetch failed, network died,
+        // Edge Function hung), hide the overlay and show an error so the
+        // user isn't stuck staring at a spinner forever.
+        setTimeout(() => {
+            if (_authInProgress) {
+                _authInProgress = false;
+                stopDotAnimation();
+                window.UI?.hideAuthLoading?.();
+                setAuthStep('idle');
+                showError('Login Google membutuhkan waktu terlalu lama. Coba muat ulang halaman dan coba lagi.');
+            }
+        }, 30_000);
+    } catch (_) {
+        // Best-effort detection — don't break the page if URL parsing fails.
+    }
+})();
 
 // ===========================================================================
 // Pre-warm Turnstile — render widget as soon as page is interactive so the

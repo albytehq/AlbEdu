@@ -579,104 +579,124 @@ async function _createUserDocViaServer(userId) {
 
 // ── Supabase/Firestore: sync user document ────────────────────────────────────
 //
-// Retry strategy: attempt once more on timeout before falling back.
-// WHY: a single Firestore timeout is usually a cold-start or brief network
-// hiccup — a second attempt resolves it most of the time. Only on the second
-// timeout do we use the user server-completion path if a valid preflight
-// exists. No client-side role fallback is allowed for new Google users.
-// We intentionally avoid console.warn here: the warning was showing up in the
-// user-visible browser console and looked like a crash even when everything
-// recovered fine on retry.
+// FIX (this audit): The previous implementation ONLY subscribed to a Supabase
+// Realtime channel and waited for a postgres_changes event. But Realtime
+// channels only fire on DB CHANGES (INSERT/UPDATE/DELETE) — they do NOT do
+// an initial fetch. So for both new AND existing users, no event ever fired
+// initially, and the code waited 8 seconds (PROFILE_FETCH_TIMEOUT_MS) for
+// the fallback timer to kick in.
+//
+// From the user's perspective, after returning from Google OAuth:
+//   - Page reloads → button is in idle state (no UI feedback)
+//   - 8 seconds of silence (the "pilih akun Google, terus gak terjadi apa-apa" bug)
+//   - Only then does the Edge Function fire and (maybe) redirect to dashboard
+//
+// FIX STRATEGY:
+//   1. Do an INITIAL FETCH immediately via repo.getDoc('users', userId).
+//      - If row exists → apply snapshot + resolve (~50ms instead of 8000ms).
+//      - If row doesn't exist → call _createUserDocViaServer immediately.
+//      - On error → fall back to _createUserDocViaServer (server is the
+//        source of truth anyway).
+//   2. STILL subscribe to Realtime for FUTURE changes (profile edits, role
+//      changes from another tab, etc.) — but don't rely on it for initial load.
+//   3. Keep a safety-net timer in case the initial fetch hangs (network stall).
 function _syncUserDocument(userId) {
     _stopProfileListener?.();
     _stopProfileListener = null;
 
-    const HALF_TIMEOUT = Math.floor(PROFILE_FETCH_TIMEOUT_MS / 2);
-
     return new Promise((resolve, reject) => {
-        let settled   = false;
-        let creating  = false; // guard: only one _createUserDocViaServer call
-        let attempts  = 0; // 0 = first try, 1 = retry
+        let settled  = false;
+        let creating = false; // guard: only one _createUserDocViaServer call
 
         const settle = (fn, value) => {
             if (settled) return;
             settled = true;
-            clearTimeout(firstTimer);
-            clearTimeout(retryTimer);
+            clearTimeout(safetyTimer);
             fn(value);
         };
 
-        // Timeout recovery: complete user provisioning on the server.
-        const _buildFallback = () => {
-            _stopProfileListener?.();
-            _stopProfileListener = null;
-
-            if (creating) return; // already in-flight from onSnapshot path
-            creating = true;
-
-            _createUserDocViaServer(userId)
-                .then((doc) => {
-                    _applyUserSnapshot(doc, userId);
-                    settle(resolve, _userData);
-                })
-                .catch((err) => settle(reject, err));
-        };
-
-        const _attach = () => {
-            // Native platform layer: subscribe to changes on the user's row.
-            // Replaces the legacy _getDb().collection('users').doc(userId).onSnapshot().
-            // The repository.subscribe() helper does an initial fetch + sets up
-            // a Supabase Realtime channel.
-            const repo = window.AlbEdu?.repository;
-            if (!repo) {
-                settle(reject, new Error('[Auth] repository not ready'));
-                return;
+        // Safety net: if the initial fetch + Edge Function call together take
+        // longer than PROFILE_FETCH_TIMEOUT_MS (8s) — e.g. network stall —
+        // reject so the outer catch block can dispatch auth-completion-error
+        // instead of leaving the user staring at a silent page forever.
+        const safetyTimer = setTimeout(() => {
+            if (!settled) {
+                settle(reject, new CompletionError('user_completion_failed'));
             }
-            const channelName = `auth:user-profile:${userId}`;
+        }, PROFILE_FETCH_TIMEOUT_MS * 2);
 
-            // Initial fetch + subscribe to changes
-            const unsub = repo.subscribe(
-                channelName,
-                'users',
-                async () => {
-                    // Re-fetch on any change to the user's row
-                    clearTimeout(firstTimer);
-                    clearTimeout(retryTimer);
+        // Main path: immediate initial fetch.
+        const _initialFetch = async () => {
+            try {
+                const repo = window.AlbEdu?.repository;
+                if (!repo) {
+                    settle(reject, new Error('[Auth] repository not ready'));
+                    return;
+                }
+                const snap = await repo.getDoc('users', userId);
+                if (snap?.exists) {
+                    // Existing user — apply and resolve immediately.
+                    _applyUserSnapshot(snap.data(), userId);
+                    settle(resolve, _userData);
+                    return;
+                }
+                // Row doesn't exist — provision via Edge Function.
+                if (!creating) {
+                    creating = true;
+                    const fresh = await _createUserDoc(userId);
+                    settle(resolve, fresh);
+                }
+            } catch (err) {
+                // Initial fetch failed (network/RLS/timeout). Fall back to the
+                // Edge Function, which can both fetch AND create server-side
+                // using the service role key (bypasses RLS).
+                if (!creating) {
+                    creating = true;
                     try {
-                        const snap = await repo.getDoc('users', userId);
-                        if (snap?.exists) {
-                            _applyUserSnapshot(snap.data(), userId);
-                            settle(resolve, _userData);
-                        } else if (!creating) {
-                            creating = true;
-                            const fresh = await _createUserDoc(userId);
-                            settle(resolve, fresh);
-                        }
-                    } catch (err) {
-                        settle(reject, err);
+                        const doc = await _createUserDocViaServer(userId);
+                        _applyUserSnapshot(doc, userId);
+                        settle(resolve, _userData);
+                    } catch (e) {
+                        settle(reject, e);
                     }
-                },
-                `id=eq.${userId}`
-            );
-            _stopProfileListener = unsub;
+                }
+            }
         };
 
-        // First attempt — allow half the full timeout
-        let firstTimer = setTimeout(() => {
-            if (settled) return;
-            attempts = 1;
-            // Detach the stale listener before retrying
-            _stopProfileListener?.();
-            _stopProfileListener = null;
-            // Give the retry the remaining half
-            retryTimer = setTimeout(() => {
-                if (!settled) _buildFallback();
-            }, HALF_TIMEOUT);
-            _attach();
-        }, HALF_TIMEOUT);
+        // Subscribe to FUTURE changes (profile edits, role changes from
+        // another tab, etc.). This is NOT used for the initial fetch —
+        // _initialFetch() handles that synchronously.
+        const _attachRealtime = () => {
+            const repo = window.AlbEdu?.repository;
+            if (!repo) return;
+            const channelName = `auth:user-profile:${userId}`;
+            try {
+                const unsub = repo.subscribe(
+                    channelName,
+                    'users',
+                    async () => {
+                        // Re-fetch on any change to the user's row.
+                        // Don't settle here — initial load is already handled.
+                        try {
+                            const snap = await repo.getDoc('users', userId);
+                            if (snap?.exists) {
+                                _applyUserSnapshot(snap.data(), userId);
+                            }
+                        } catch (_) { /* non-critical — realtime update */ }
+                    },
+                    `id=eq.${userId}`
+                );
+                _stopProfileListener = unsub;
+            } catch (_) {
+                // Realtime subscription is best-effort — don't fail the whole
+                // sync just because the channel couldn't be established.
+            }
+        };
 
-        let retryTimer;
-        _attach();
+        // Kick off both: immediate fetch (resolves the promise) and realtime
+        // subscription (keeps _userData fresh on future changes).
+        _initialFetch();
+        _attachRealtime();
     });
 }
 
