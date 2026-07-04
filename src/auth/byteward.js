@@ -194,12 +194,16 @@ function checkPageAccess() {
     if (!auth || !auth.authReady) return true;
 
     // No user → send to login if on a protected page.
-    if (!auth.currentUser) {
+    if (!auth?.currentUser) {
         if (_isWithinApp()) {
             console.info('[AuthRedirect] checkPageAccess: no user on protected page → login');
-            // v0.742.3: use auth.loginUrl() instead of hardcoded 'login.html'.
-            // The login page is at /pages/login.html, not /login.html.
-            _navigateTo(auth.loginUrl(), 'no session → login');
+            // v0.742.3: use auth.loginUrl() — login page is at /pages/login.html,
+            // not /login.html. Use optional chaining (matches line 254 & 280)
+            // supaya tidak crash kalau window.Auth belum fully initialized saat
+            // ByteWard jalan (race condition dengan main.js init).
+            const bp = auth?.getBasePath?.() ?? '/';
+            const loginUrl = auth?.loginUrl?.() ?? (bp + 'pages/login.html');
+            _navigateTo(loginUrl, 'no session → login');
         }
         return false;
     }
