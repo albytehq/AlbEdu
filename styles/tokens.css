@@ -832,3 +832,105 @@ textarea:focus-visible {
   --albedu-body: #cbd5e1;
   --albedu-border: #334155;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PHASE 2: View Transitions API
+   Cross-fade halus antar halaman + sidebar admin persist.
+   Progressive enhancement — browser tanpa support tetap jalan.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Opt-in untuk same-origin navigasi MPA (Chrome 126+).
+   Tanpa ini, document.startViewTransition() di JS tetap jalan,
+   tapi deklarasi @view-transition lebih clean — tidak perlu intercept. */
+@view-transition {
+  navigation: auto;
+}
+
+/* Default transition: cross-fade halus 180ms
+   Linear-ish ease-out supaya terasa snappy, bukan slow-mo. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::view-transition-old(root) {
+  animation-name: albedu-vt-fade-out;
+}
+::view-transition-new(root) {
+  animation-name: albedu-vt-fade-in;
+}
+
+@keyframes albedu-vt-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes albedu-vt-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Admin layout: sidebar persist, content slide-in
+   Selector .albedu-admin-shell di-set oleh navigasi.js saat intercept click.
+   Sidebar tidak beranimasi (animation: none), cuma main content yang swap. */
+.albedu-admin-shell ::view-transition-old(root) {
+  animation: none;
+}
+.albedu-admin-shell ::view-transition-new(root) {
+  animation: albedu-vt-admin-slide-in 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes albedu-vt-admin-slide-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Reduced motion respect — wajib untuk a11y */
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+    duration: 0s;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PHASE 4: Page Transition Overlay (fallback untuk browser tanpa VT)
+   Loading overlay muncul saat navigation > 500ms (Phase 4 script).
+   CSS ini minimal — supaya overlay jalan di semua halaman.
+   loading.css punya versi lebih lengkap (di admin/auth pages).
+   ═══════════════════════════════════════════════════════════════ */
+
+.page-transition {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg, #fff);
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 200ms ease, visibility 200ms ease;
+  pointer-events: none;
+}
+
+.page-transition.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.page-transition.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.page-transition.gone {
+  display: none;
+}
+
+/* Reduced motion — instant overlay (no fade) */
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    transition: none;
+  }
+}

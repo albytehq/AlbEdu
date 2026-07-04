@@ -125,6 +125,131 @@ html[data-theme="dark"]{--albedu-slate-50:#0f172a;--albedu-slate-100:#1e293b;--a
   spriteEl.setAttribute('aria-hidden', 'true');
   document.head.appendChild(spriteEl);
 
+  // ── Phase 1: Resource Hints (zero-risk performance optimization) ────
+  // Inject <link> hints ke <head> SEBELUM browser parse <script src="https://...">
+  // atau <script type="module" src="...">. Browser mulai resolve DNS + TLS
+  // handshake + fetch module secara paralel, hemat 200-500ms perceived load.
+  //
+  // Affects: semua 27 halaman (critical-css.js di-load synchronously di <head>)
+  // Risk:    ZERO — <link rel="preconnect">, dns-prefetch, modulepreload
+  //          adalah pure hints. Browser ignore kalau tidak dibutuhkan.
+  //          Tidak pernah block rendering.
+  //
+  // Strategy:
+  //   1. preconnect  → start TLS handshake early (cdn.jsdelivr.net, cloudflare)
+  //   2. dns-prefetch → fallback DNS-only (untuk browser lama tanpa preconnect)
+  //   3. modulepreload → fetch + parse ESM module sebelum <script type="module">
+  //
+  // Idempotent: skip kalau hint sudah ada di <head> (defensive — HTML mungkin
+  // sudah deklarasi manual di beberapa halaman).
+
+  function _injectHint(rel, href, attrs) {
+    // Cek existing — selector pakai attribute value match
+    var existing = document.querySelector(
+      'link[rel="' + rel + '"][href="' + href + '"]'
+    );
+    if (existing) return;
+    var link = document.createElement('link');
+    link.setAttribute('rel', rel);
+    link.setAttribute('href', href);
+    if (attrs) {
+      for (var key in attrs) {
+        if (attrs[key]) {
+          // crossorigin: true → set attribute empty string (spec requirement)
+          link.setAttribute(key, attrs[key] === true ? '' : attrs[key]);
+        }
+      }
+    }
+    document.head.appendChild(link);
+  }
+
+  // 1. External CDN preconnect — start DNS + TCP + TLS handshake early.
+  //    cdn.jsdelivr.net: dipakai di 15+ halaman (Supabase SDK, KaTeX)
+  //    challenges.cloudflare.com: dipakai di 4 halaman auth (Turnstile)
+  _injectHint('preconnect', 'https://cdn.jsdelivr.net', { crossorigin: true });
+  _injectHint('preconnect', 'https://challenges.cloudflare.com', { crossorigin: true });
+
+  // 2. DNS-prefetch — fallback untuk browser yang tidak support preconnect
+  //    (Safari < 11, IE). Zero cost di browser modern.
+  _injectHint('dns-prefetch', 'https://cdn.jsdelivr.net');
+  _injectHint('dns-prefetch', 'https://challenges.cloudflare.com');
+
+  // 3. Modulepreload — fetch + parse ESM module sebelum <script type="module">
+  //    tercapai oleh HTML parser. Critical path: resilience.js load Actly
+  //    transitively (15 file ESM). Tanpa modulepreload, browser baru mulai
+  //    fetch resilience.js setelah parse selesai — hemat 100-300ms.
+  //
+  //    resilience.js dipakai di 19/27 halaman (admin + auth + assessment).
+  //    qnotify-loader.js hanya di admin/assessment pages — skip global preload
+  //    untuk avoid waste di landing/auth pages yang tidak pakai QNotify.
+  //
+  //    Trade-off: 8 halaman kecil (404, docs/PAGE-TEMPLATE, legacy stubs
+  //    buat-ujian/data-hasil/ujian-peserta, pages/ujian/*) tidak load
+  //    resilience.js tapi tetap dapat modulepreload → waste ~8KB prefetch.
+  //    Acceptable karena: (a) halaman tersebut jarang dikunjungi,
+  //    (b) file di-cache SW setelah prefetch pertama, (c) cost kompleksitas
+  //    deteksi runtime (cek document.scripts saat critical-css.js execute
+  //    tidak work — script tags setelahnya belum di-DOM) lebih tinggi dari
+  //    benefit ~64KB total waste (8KB × 8 halaman, tapi cuma sekali per SW
+  //    cache lifetime).
+  _injectHint('modulepreload', BASE_PATH + 'src/shared/resilience.js');
+
+  // ── Phase 2: Inject view-transitions.js (deferred, non-blocking) ─────
+  // File ini intercept clicks pada internal <a href> dan wrap navigasi
+  // dengan document.startViewTransition() untuk cross-fade halus antar
+  // halaman. Progressive enhancement — browser tanpa support tetap jalan.
+  //
+  // Pakai <script defer> supaya:
+  //   - Tidak block HTML parsing (defer = download parallel, execute setelah parse)
+  //   - Jalan sebelum DOMContentLoaded (catch clicks awal)
+  //   - Idempotent — file punya guard sendiri
+  var vtScript = document.createElement('script');
+  vtScript.src = BASE_PATH + 'src/shared/view-transitions.js';
+  vtScript.defer = true;
+  document.head.appendChild(vtScript);
+
+  // ── Phase 3: Inject link-prefetch.js (deferred, non-blocking) ────────
+  // File ini prefetch halaman tujuan SEBELUM user klik, supaya saat klik
+  // terjadi halaman sudah ada di browser cache → instant load.
+  //
+  // 3 mode prefetch:
+  //   1. Viewport prefetch — saat link masuk viewport (200px margin), prefetch
+  //   2. Hover/focus prefetch — saat user hover/focus link (intent-based)
+  //   3. Touchstart prefetch — mobile, manfaatkan 300ms delay sebelum click
+  //
+  // Co-exist dengan Phase 2 (VT):
+  //   Prefetch fetch HTML ke cache. VT handle animasi cross-fade.
+  //   Kombinasi: instant + animated = native feel.
+  //
+  // Safety: skip external/anchor/javascript links, dedup via Set,
+  //         respect prefers-reduced-data (navigator.connection.saveData).
+  var prefetchScript = document.createElement('script');
+  prefetchScript.src = BASE_PATH + 'src/shared/link-prefetch.js';
+  prefetchScript.defer = true;
+  document.head.appendChild(prefetchScript);
+
+  // ── Phase 4: Inject page-transition-overlay.js (deferred, non-blocking)
+  // Loading overlay fallback untuk browser tanpa VT support (Firefox/Safari
+  // lama) + loading indicator untuk slow navigation (>500ms).
+  //
+  // Strategy:
+  //   - Browser DENGAN VT: overlay TIDAK muncul (VT handle animasi)
+  //   - Browser TANPA VT: overlay muncul kalau navigation > 500ms
+  //   - Auto-hide di pageshow event (handle bfcache restore juga)
+  //   - Safety timeout 8 detik (avoid stuck overlay)
+  //
+  // Co-exist dengan Phase 2 (VT):
+  //   Listen 'viewtransitionstart' event → cancel overlay timer.
+  //   VT jalan → overlay skip. VT tidak support → overlay fallback.
+  //
+  // Co-exist dengan Phase 3 (Prefetch):
+  //   Prefetch bikin navigation biasanya < 500ms → overlay jarang muncul.
+  //   Tapi kalau network lambat, overlay jadi loading indicator.
+  var overlayScript = document.createElement('script');
+  overlayScript.src = BASE_PATH + 'src/shared/page-transition-overlay.js';
+  overlayScript.defer = true;
+  document.head.appendChild(overlayScript);
+
   // ── Apply saved theme IMMEDIATELY (prevents dark-mode flash) ──
   // This must run BEFORE the body renders. Reading localStorage is sync.
   try {

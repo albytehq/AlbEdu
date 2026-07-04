@@ -1,12 +1,21 @@
 // =============================================================================
-// service-worker.js — AlbEdu v0.742.9 PWA Service Worker
+// service-worker.js — AlbEdu v0.742.9 PWA Service Worker (Phase 5 Enhanced)
 // =============================================================================
 // Strategy: stale-while-revalidate for static assets, network-first for API.
 // Cache limit: ~5MB (Free Plan safe).
 //
+// [Phase 5] Precache expanded from 27 → 63 entries:
+//   - All 21 HTML pages (landing, auth, admin, assessment)
+//   - All shared CSS (11 files: tokens, navigasi, admin-panel, QNotify, dll)
+//   - All shared JS (25 files: head, icons, auth, utils, platform, Phase 1-4)
+//   - Fonts (3 files: Plus Jakarta Sans, JetBrains Mono)
+//   - Images (3 files: logo, favicon)
+//
+// Result: subsequent visits = instant load (0ms network for precached assets).
+//
 // Edge cases:
-//   1. Install → precache critical assets
-//   2. Activate → clear old caches
+//   1. Install → precache critical assets (63 entries, partial failure OK)
+//   2. Activate → clear old caches (version-bumped trigger)
 //   3. Fetch → stale-while-revalidate for CSS/JS/fonts/images
 //   4. Fetch → network-first for API/Edge Functions
 //   5. Offline → serve cached page, queue API calls
@@ -14,41 +23,108 @@
 //   7. Cache size → evict oldest entries if > 100 entries
 // =============================================================================
 
-const CACHE_VERSION = 'albedu-v2-hardened';
+const CACHE_VERSION = 'albedu-v3-transitions';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const MAX_CACHE_ENTRIES = 100;
 
 // Assets to precache on install
-// [v2.0 Hardening] Added critical shared modules + QNotify CSS + resilience
+// [Phase 5] Expanded: 27 → 63 entries. Covers all pages + shared assets.
+// Page-specific CSS (profile.css, question-bank.css, dll) handled on-demand
+// via stale-while-revalidate — not precached to save install bandwidth.
 const PRECACHE_URLS = [
+  // ── HTML: Landing + Auth (8 pages) ──
   '/',
   '/index.html',
   '/pages/login.html',
+  '/pages/register-admin.html',
+  '/pages/register-success.html',
+  '/pages/forgot-password.html',
+  '/pages/reset-password.html',
+  '/pages/privacy-policy.html',
+  '/404.html',
+
+  // ── HTML: Admin (8 pages) ──
+  '/pages/admin/index.html',
+  '/pages/admin/profile.html',
+  '/pages/admin/create-assessment.html',
+  '/pages/admin/active-assessments.html',
+  '/pages/admin/question-bank.html',
+  '/pages/admin/monitoring.html',
+  '/pages/admin/results-analytics.html',
+  '/pages/admin/daftar-nama.html',
+
+  // ── HTML: Assessment (4 pages) ──
   '/pages/assessment/index.html',
+  '/pages/assessment/take.html',
   '/pages/assessment/blocked.html',
   '/pages/assessment/submitted.html',
+
+  // ── CSS: Shared (7 files) ──
   '/styles/tokens.css',
   '/styles/albedu-v1.css',
   '/styles/loading.css',
-  '/public/images/favicon/favicon.ico',
-  '/public/images/favicon/favicon-96x96.png',
-  '/public/images/logo.svg',
+  '/styles/navigasi.css',
+  '/styles/admin-panel.css',
+  '/styles/notification-panel.css',
+  '/styles/profile.css',
+
+  // ── CSS: QNotify (4 files) ──
+  '/public/QNotify/ui/notify.css',
+  '/public/QNotify/ui/dialog.css',
+  '/public/QNotify/ui/label.css',
+  '/public/QNotify/ui/Readnote.css',
+
+  // ── JS: Shared Head (3 files) ──
   '/src/shared/head/critical-css.js',
   '/src/shared/head/fonts.js',
+
+  // ── JS: Icons v7.0 (1 file) ──
   '/src/shared/icons/icons.js',
+
+  // ── JS: Shared Core (5 files) ──
   '/src/shared/boot.js',
   '/src/shared/qnotify-loader.js',
   '/src/shared/error-boundary.js',
   '/src/shared/race-condition.js',
   '/src/shared/observability.js',
+
+  // ── JS: Phase 1-4 Navigation Enhancement (4 files) ──
+  '/src/shared/resilience.js',
+  '/src/shared/view-transitions.js',
+  '/src/shared/link-prefetch.js',
+  '/src/shared/page-transition-overlay.js',
+
+  // ── JS: Platform (2 files) ──
   '/src/platform/supabase-client.js',
   '/src/platform/repository.js',
+
+  // ── JS: Auth (5 files) ──
+  '/src/auth/main.js',
+  '/src/auth/security.js',
+  '/src/auth/errors.js',
+  '/src/auth/user-helpers.js',
+  '/src/auth/byteward.js',
+
+  // ── JS: Utils (4 files) ──
+  '/src/utils/ui.js',
+  '/src/utils/navigasi.js',
+  '/src/utils/admin-notification-center.js',
+  '/src/utils/self-storage.js',
+
+  // ── JS: Security + Theme (2 files) ──
   '/src/security/sanitize.js',
-  '/public/QNotify/ui/notify.css',
-  '/public/QNotify/ui/dialog.css',
-  '/public/QNotify/ui/label.css',
-  '/public/QNotify/ui/Readnote.css',
+  '/src/theme-system/index.js',
+
+  // ── Fonts (3 files) ──
+  '/public/fonts/plus-jakarta-sans-latin.woff2',
+  '/public/fonts/plus-jakarta-sans-latin-ext.woff2',
+  '/public/fonts/jetbrains-mono-latin.woff2',
+
+  // ── Images (3 files) ──
+  '/public/images/logo.svg',
+  '/public/images/favicon/favicon.ico',
+  '/public/images/favicon/favicon-96x96.png',
 ];
 
 // Patterns for stale-while-revalidate (static assets)
