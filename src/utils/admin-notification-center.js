@@ -63,20 +63,32 @@
     return _notifications.filter(n => !n.read).length;
   }
 
-  function _updateBadge() {
-    const count = _getUnreadCount();
+  // [FIX v0.743.0] Flag untuk suppress pulse saat initial load / page navigate.
+  // Saat halaman baru load, _handleSnapshot akan dipanggil dengan semua notif
+  // yang sudah ada (bukan baru). Kita gak mau bell shake setiap pindah halaman.
+  // Setelah initial snapshot selesai, flag di-set false → pulse hanya untuk
+  // NEW violations yang masuk real-time.
+  let _isInitialSnapshot = true;
+
+  function _updateBadge(opts) {
+    // opts.pulse (default true) — false untuk suppress animation
+    //                     (e.g. saat init, dismiss, markAllRead, page load)
+    var pulse = !opts || opts.pulse !== false;
+    var count = _getUnreadCount();
     document.querySelectorAll('.notification-btn .badge, #anc-bell-badge').forEach(badge => {
       badge.textContent = count > 99 ? '99+' : String(count);
       badge.style.display = count > 0 ? 'flex' : 'none';
-      if (count > 0) {
+      if (count > 0 && pulse) {
         badge.classList.add('anc-badge-pulse');
-        setTimeout(() => badge.classList.remove('anc-badge-pulse'), 800);
+        // [FIX] Sync timeout dengan CSS duration baru (.28s = 280ms)
+        setTimeout(() => badge.classList.remove('anc-badge-pulse'), 300);
       }
     });
-    if (count > 0) {
+    if (count > 0 && pulse) {
       document.querySelectorAll('.notification-btn').forEach(btn => {
         btn.classList.add('anc-bell-pulse');
-        setTimeout(() => btn.classList.remove('anc-bell-pulse'), 600);
+        // [FIX] Sync timeout dengan CSS duration baru (.35s = 350ms)
+        setTimeout(() => btn.classList.remove('anc-bell-pulse'), 360);
       });
     }
   }
@@ -177,10 +189,14 @@
     }
 
     if (changed) {
-      _updateBadge();
+      // [FIX] Suppress pulse saat initial snapshot (page load). Setelah
+      // snapshot pertama selesai, _isInitialSnapshot = false, jadi pulse
+      // hanya fire untuk NEW violations yang masuk real-time.
+      _updateBadge({ pulse: !_isInitialSnapshot });
       _updateFooterTimestamp();
       if (_isPanelOpen) _renderPanelContent();
     }
+    _isInitialSnapshot = false;
   }
 
   // ── Footer "last updated" timestamp ─────────────────────────────────────────
@@ -244,7 +260,8 @@
 
     // Hapus dari state lokal sementara (biar UI responsif)
     _notifications = _notifications.filter(n => n.id !== notifId);
-    _updateBadge();
+    // [FIX] No pulse on dismiss — user initiated, no need to alert
+    _updateBadge({ pulse: false });
     if (_isPanelOpen) _renderPanelContent();
 
     // Delete via native repository — replaces _db.collection().doc().delete()
@@ -276,7 +293,8 @@
     // Bersihkan state lokal sementara
     _notifications = [];
     _docState.clear();
-    _updateBadge();
+    // [FIX] No pulse on clear all — count = 0 anyway, but explicit for clarity
+    _updateBadge({ pulse: false });
     if (_isPanelOpen) _renderPanelContent();
 
     // Batch delete Firestore (max 500 per batch)
@@ -511,13 +529,15 @@
 
   function _markOneRead(id) {
     const n = _notifications.find(n => n.id === id);
-    if (n) { n.read = true; _updateBadge(); _renderPanelContent(); }
+    // [FIX] No pulse on mark-read — user initiated
+    if (n) { n.read = true; _updateBadge({ pulse: false }); _renderPanelContent(); }
   }
 
   // ── Public ─────────────────────────────────────────────────────────────────
   function markAllRead() {
     _notifications.forEach(n => n.read = true);
-    _updateBadge();
+    // [FIX] No pulse on mark-all-read — user initiated
+    _updateBadge({ pulse: false });
     if (_isPanelOpen) _renderPanelContent();
   }
 
@@ -542,7 +562,9 @@
   // ── Init ───────────────────────────────────────────────────────────────────
   async function init() {
     if (_isInitialized) return;
-    _updateBadge();
+    // [FIX] No pulse on init — page load should be silent. Pulse only fires
+    // for NEW violations yang masuk real-time setelah initial snapshot.
+    _updateBadge({ pulse: false });
     _createPanel();
 
     function _waitForPlatform(ms) {
@@ -568,7 +590,8 @@
           _unsubscribe = null;
           _notifications = [];
           _docState.clear();
-          _updateBadge();
+          // [FIX] No pulse on logout — silent cleanup
+          _updateBadge({ pulse: false });
           if (_isPanelOpen) _renderPanelContent();
         }
       });

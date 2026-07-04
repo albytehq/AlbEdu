@@ -839,31 +839,35 @@
 }
 
 /* ── Bell button enhancements ─────────────────────────────────────────────── */
+/* [FIX v0.743.0] Reduced intensity & duration — sebelumnya 12deg rotation
+   selama 550ms terlalu distracting. Sekarang 6deg rotation selama 350ms,
+   cukup untuk catch attention tanpa bikin gimbal. */
 @keyframes anc-bell-shake {
   0%,100% { transform: rotate(0); }
-  20%     { transform: rotate(-12deg); }
-  40%     { transform: rotate(12deg); }
-  60%     { transform: rotate(-8deg); }
-  80%     { transform: rotate(8deg); }
+  25%     { transform: rotate(-6deg); }
+  50%     { transform: rotate(6deg); }
+  75%     { transform: rotate(-3deg); }
 }
 
 .anc-bell-pulse {
-  animation: anc-bell-shake .55s ease !important;
+  animation: anc-bell-shake .35s ease !important;
 }
 
 .anc-badge-pulse {
-  animation: anc-badge-pop .4s var(--anc-spring) !important;
+  animation: anc-badge-pop .28s var(--anc-spring) !important;
 }
 
 @keyframes anc-badge-pop {
   0%   { transform: scale(1); }
-  50%  { transform: scale(1.5); }
+  50%  { transform: scale(1.3); }
   100% { transform: scale(1); }
 }
 
 /* ── Badge ────────────────────────────────────────────────────────────────── */
+/* [FIX] Default hidden — sama kayak navigasi.css. JS override via inline style
+   pas count > 0. Mencegah flash merah "0" saat page load. */
 .notification-btn .badge {
-  display: flex;
+  display: none;
 }
 
 /* ── Mobile / narrow viewport ──────────────────────────────────────────────── */

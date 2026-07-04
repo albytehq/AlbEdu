@@ -127,6 +127,36 @@
 
     if (!_isEligibleLink(link, e)) return;
 
+    var href = link.getAttribute('href');
+
+    // [FIX v0.743.0] Skip VT entirely untuk admin area.
+    // Alasan:
+    //   1. Slide-in animation (translateX 12px) bikin "flinch" yang
+    //      distracting saat pindah halaman admin.
+    //   2. Saat VT intercept click, navigasi.js click handler tidak jalan
+    //      (stopImmediatePropagation) → mobile sidebar drawer tidak sempat
+    //      tertutup sebelum navigation → kedip saat halaman ganti.
+    //   3. User request: "pindah halaman instan kayak gak ada animasi".
+    //
+    // Dengan skip VT untuk admin:
+    //   - Browser navigate natural (no startViewTransition call)
+    //   - navigasi.js click handler jalan normal → sidebar mobile tertutup
+    //     BEFORE navigation → gak ada kedip
+    //   - Chrome 126+ tetap apply default MPA cross-fade (250ms) via
+    //     @view-transition { navigation: auto } di tokens.css, TAPI kita
+    //     override animation: none untuk .albedu-admin-shell (lihat tokens.css)
+    //     → truly instant.
+    var targetIsAdmin = href.indexOf('admin/') !== -1 || href.indexOf('/admin') !== -1;
+    if (_isAdminPage() || targetIsAdmin) {
+      // Set class di <html> supaya CSS override animation: none jalan
+      // untuk MPA VT cross-fade (Chrome 126+).
+      if (targetIsAdmin) {
+        document.documentElement.classList.add('albedu-admin-shell');
+      }
+      // Return tanpa preventDefault → browser navigate natural.
+      return;
+    }
+
     // Set .albedu-admin-shell di halaman TUJUAN kalau link ke admin page.
     // Kita tidak bisa set class di halaman tujuan sebelum load — tapi
     // kita bisa set di halaman SEKARANG, dan CSS akan apply ke transition
@@ -135,10 +165,8 @@
     //
     // Trick: set class di <html> sekarang, biar transition pakai
     // animation slide-in. Halaman tujuan akan re-set class saat ready.
-    var href = link.getAttribute('href');
-    if (href.indexOf('admin/') !== -1 || href.indexOf('/admin') !== -1) {
-      document.documentElement.classList.add('albedu-admin-shell');
-    }
+    // ↑ NOTE: block ini sekarang dead code karena admin case sudah di-handle
+    // di atas (skip VT). Tinggal untuk non-admin → non-admin navigation.
 
     // Intercept navigasi
     e.preventDefault();
@@ -152,6 +180,8 @@
     // jalan karena stopImmediatePropagation. Tapi navigasi.js punya pagehide
     // listener yang handle cleanup saat halaman unload. Jadi sidebar mobile
     // akan tertutup via pagehide, bukan via click handler. Acceptable.
+    // ↑ NOTE: di atas sudah skip VT untuk admin, jadi blok ini cuma jalan
+    // untuk non-admin → non-admin navigation (yang gak punya sidebar drawer).
     try {
       var transition = document.startViewTransition(function () {
         // Set location.href — browser akan navigate dan render halaman baru.
