@@ -915,26 +915,17 @@ main, p, h1, h2, h3, h4, h5, h6, li, blockquote, [contenteditable] {
   to   { opacity: 1; }
 }
 
-/* Admin layout: INSTANT navigation (no animation).
-   [FIX v0.743.0] Sebelumnya pakai slide-in 220ms (translateX 12px → 0)
-   yang bikin "flinch" saat pindah halaman admin. User request: instant.
+/* [v0.745.0] Admin area: ZERO page transition.
+   Admin pages inject `@view-transition { navigation: none }` via JS
+   (view-transitions.js) yang override `navigation: auto` di atas.
+   Jadi MPA VT gak fires sama sekali untuk admin — truly instant.
    
-   JS (view-transitions.js) sudah skip startViewTransition() untuk admin
-   pages, jadi same-document VT tidak fires. TAPI Chrome 126+ tetap
-   apply default MPA cross-fade via @view-transition { navigation: auto }
-   di atas. Override animation: none supaya truly instant.
+   Block `.albedu-admin-shell ::view-transition-* { animation: none }`
+   yang lama udah gak dipake (class .albedu-admin-shell juga gak di-set
+   lagi di view-transitions.js). Dihapus biar clean.
    
-   .albedu-admin-shell class di-set oleh:
-   1. view-transitions.js saat init (kalau current page is admin)
-   2. view-transitions.js saat click link ke admin (targetIsAdmin) */
-.albedu-admin-shell ::view-transition-old(root),
-.albedu-admin-shell ::view-transition-new(root) {
-  animation: none !important;
-}
-@keyframes albedu-vt-admin-slide-in {
-  from { opacity: 0; transform: translateX(0); }
-  to   { opacity: 1; transform: translateX(0); }
-}
+   Non-admin pages tetap dapet MPA VT cross-fade via @view-transition
+   { navigation: auto } di atas + ::view-transition-old/new animations. */
 
 /* Reduced motion respect — wajib untuk a11y */
 @media (prefers-reduced-motion: reduce) {

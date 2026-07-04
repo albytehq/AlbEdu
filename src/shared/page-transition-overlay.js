@@ -48,6 +48,33 @@
   if (window.__albeduOverlayInit) return;
   window.__albeduOverlayInit = true;
 
+  // ── [v0.745.0] ADMIN AREA: skip overlay entirely ─────────────────────
+  // User request: "hapus page transition sepenuhnya, wajib instant, di
+  // area albedu creates". Overlay (loading fallback >500ms) termasuk page
+  // transition. Untuk admin, return early — gak ada overlay div, gak ada
+  // click handler, gak ada pageshow listener, gak ada timer.
+  //
+  // Admin area punya ZERO page transition:
+  //   - view-transitions.js: inject @view-transition { navigation: none }
+  //   - page-transition-overlay.js: return early (this file)
+  //   - .page-transition div: dihapus dari HTML admin
+  //
+  // Result: admin navigation = pure browser natural. Kalau network lambat,
+  // user lihat browser's native loading indicator (address bar spinner) —
+  // gak ada overlay putih full-screen.
+  function _isAdminPage() {
+    var path = window.location.pathname;
+    if (path.indexOf('/admin/') !== -1 || path.indexOf('/pages/admin') !== -1) {
+      return true;
+    }
+    return !!document.querySelector('aside.sidebar');
+  }
+  if (_isAdminPage()) {
+    if (!window.AlbEdu) window.AlbEdu = {};
+    window.AlbEdu.overlayReady = true;
+    return; // ← admin: no overlay, no timer, no listeners
+  }
+
   // ── Config ───────────────────────────────────────────────────────────
   var OVERLAY_DELAY_MS = 500;       // tunggu 500ms sebelum overlay muncul
   var OVERLAY_TIMEOUT_MS = 8000;    // safety: hide setelah 8 detik max

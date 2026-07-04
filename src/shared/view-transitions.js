@@ -51,24 +51,44 @@
   if (window.__albeduViewTransitionsInit) return;
   window.__albeduViewTransitionsInit = true;
 
-  // ── Detect halaman admin (untuk sidebar persist animation) ───────────
+  // ── Detect halaman admin ─────────────────────────────────────────────
   // Pattern: URL mengandung /admin/ ATAU halaman ada <aside class="sidebar">
-  // Pathname check duluan (O(1) string search) — lebih cepat dari querySelector.
-  // querySelector cuma fallback untuk edge case (e.g. halaman admin tanpa
-  // /admin/ di URL, atau dynamic route).
   function _isAdminPage() {
     var path = window.location.pathname;
     if (path.indexOf('/admin/') !== -1 || path.indexOf('/pages/admin') !== -1) {
       return true;
     }
-    // Fallback: cek <aside class="sidebar"> (hanya admin pages yang punya ini)
     return !!document.querySelector('aside.sidebar');
   }
 
-  // Set class di <html> supaya CSS selector .albedu-admin-shell ::view-transition
-  // bisa target halaman admin saja.
+  // ── [v0.745.0] ADMIN AREA: ZERO page transition ──────────────────────
+  // User request: "hapus page transition sepenuhnya, wajib instant, di
+  // area albedu creates". Untuk achieve truly instant:
+  //
+  //   1. Inject `@view-transition { navigation: none }` — override global
+  //      `@view-transition { navigation: auto }` dari tokens.css. Ini
+  //      disable Chrome 126+ MPA VT cross-fade untuk admin pages. Tanpa
+  //      ini, browser tetap bikin VT snapshot (overhead + brief freeze)
+  //      walau animation: none.
+  //   2. Skip click interceptor entirely — gak ada startViewTransition
+  //      call, gak ada .albedu-admin-shell class, gak ada handler.
+  //   3. Mark viewTransitionsReady = true supaya page-transition-overlay.js
+  //      juga skip (overlay gak muncul).
+  //   4. Return early — sisa file gak dieksekusi untuk admin.
+  //
+  // Result: admin→admin navigation = pure browser natural navigation.
+  // No VT, no overlay, no snapshot, no animation. Truly instant.
   if (_isAdminPage()) {
-    document.documentElement.classList.add('albedu-admin-shell');
+    try {
+      var noVtStyle = document.createElement('style');
+      noVtStyle.id = 'albedu-admin-no-vt';
+      noVtStyle.textContent = '@view-transition { navigation: none; }';
+      document.head.appendChild(noVtStyle);
+    } catch (_) { /* noop */ }
+
+    if (!window.AlbEdu) window.AlbEdu = {};
+    window.AlbEdu.viewTransitionsReady = true;
+    return; // ← admin: stop here, no VT setup
   }
 
   // ── Cek apakah link eligible untuk view transition ───────────────────
@@ -117,11 +137,10 @@
     return true;
   }
 
-  // ── Click interceptor (capture phase, jalan SEBELUM handler lain) ────
-  // Pakai capture: true supaya kita pertama kali lihat click, sebelum
-  // navigasi.js atau handler lain mungkin preventDefault.
+  // ── Click interceptor (capture phase) — NON-ADMIN only ──────────────
+  // Admin pages return early di atas, jadi handler ini cuma jalan di
+  // non-admin pages. Untuk non-admin → admin click, skip VT (natural nav).
   document.addEventListener('click', function (e) {
-    // Cari anchor ancestor dari click target
     var link = e.target.closest ? e.target.closest('a[href]') : null;
     if (!link) return;
 
@@ -129,37 +148,17 @@
 
     var href = link.getAttribute('href');
 
-    // [FIX v0.743.0] Skip VT entirely untuk admin area.
-    // Alasan:
-    //   1. Slide-in animation (translateX 12px) bikin "flinch" yang
-    //      distracting saat pindah halaman admin.
-    //   2. Saat VT intercept click, navigasi.js click handler tidak jalan
-    //      (stopImmediatePropagation) → mobile sidebar drawer tidak sempat
-    //      tertutup sebelum navigation → kedip saat halaman ganti.
-    //   3. User request: "pindah halaman instan kayak gak ada animasi".
-    //
-    // Dengan skip VT untuk admin:
-    //   - Browser navigate natural (no startViewTransition call)
-    //   - navigasi.js click handler jalan normal → sidebar mobile tertutup
-    //     BEFORE navigation → gak ada kedip
-    //   - Chrome 126+ tetap apply default MPA cross-fade (250ms) via
-    //     @view-transition { navigation: auto } di tokens.css, TAPI kita
-    //     override animation: none untuk .albedu-admin-shell (lihat tokens.css)
-    //     → truly instant.
+    // [v0.745.0] Non-admin → admin click: skip VT, natural navigation.
+    // Admin area has ZERO page transition (lihat early-return di atas).
+    // Entering admin should be instant too.
     var targetIsAdmin = href.indexOf('admin/') !== -1 || href.indexOf('/admin') !== -1;
-    if (_isAdminPage() || targetIsAdmin) {
-      // Set class di <html> supaya CSS override animation: none jalan
-      // untuk MPA VT cross-fade (Chrome 126+).
-      if (targetIsAdmin) {
-        document.documentElement.classList.add('albedu-admin-shell');
-      }
-      // Return tanpa preventDefault → browser navigate natural.
-      return;
+    if (targetIsAdmin) {
+      return; // natural navigation, no VT
     }
 
-    // Intercept navigasi (untuk non-admin pages saja)
+    // Non-admin → non-admin: intercept with startViewTransition
     e.preventDefault();
-    e.stopImmediatePropagation(); // ← cegah handler lain preventDefault ulang
+    e.stopImmediatePropagation();
 
     try {
       var transition = document.startViewTransition(function () {
