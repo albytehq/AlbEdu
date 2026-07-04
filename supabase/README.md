@@ -27,7 +27,6 @@ Database schema, Edge Functions, and migrations for AlbEdu v1.0.0 enterprise.
 | 4 | `assessment_sessions` | Active peserta sessions (proctoring, heartbeat) | NEW (was embedded JSONB) |
 | 5 | `submissions` | Final submitted answers + server-side score | `ujian.hasil_peserta` JSONB |
 | 6 | `violation_events` | Normalized violation log (1 row per event) | `violations` table + `ujian.violations` JSONB |
-| 7 | `question_bank` | Feature #1: reusable question bank | NEW |
 | 8 | `audit_logs` | Q9 audit trail tier B (~25 event types) | NEW |
 | 9 | `consents` | UU PDP consent records | NEW |
 | 10 | `data_subject_requests` | UU PDP DSR lifecycle | NEW |
@@ -72,7 +71,6 @@ Run in order. See `migrations/` folder.
 | 004 | `20260701_004_create_assessment_sessions.sql` | Proctoring sessions. Heartbeat tracking. Cross-device resume. |
 | 005 | `20260701_005_create_submissions.sql` | Final answers + server-side score |
 | 006 | `20260701_006_create_violation_events.sql` | Normalized violation log (1 row per event) |
-| 007 | `20260701_007_create_question_bank.sql` | Feature #1: reusable questions per admin |
 | 008 | `20260701_008_create_audit_logs.sql` | Q9 audit trail tier B (~25 event types) |
 | 009 | `20260701_009_create_consents.sql` | UU PDP consent records |
 | 010 | `20260701_010_create_data_subject_requests.sql` | UU PDP DSR lifecycle |
@@ -159,7 +157,6 @@ All tables have RLS enabled. Helper function `peran_user()` (SECURITY DEFINER) u
 | `audit_logs` | SELECT all | SELECT own |
 | `consents` | SELECT all | SELECT/INSERT/UPDATE own |
 | `data_subject_requests` | SELECT all, UPDATE (resolve) | SELECT/INSERT/UPDATE own (cancel) |
-| `question_bank` | All on own | No access |
 | `daftar_nama` | All on own (via storage_id) | No access |
 | `admin_storages` | SELECT/INSERT own | No access |
 | `registration_attempts` | (Service role only) | (Service role only) |
@@ -177,7 +174,6 @@ All indexes created in respective migration files. Key indexes:
 - `submissions`: assessment_id, user_id, submitted_at, score, attempt_number
 - `violation_events`: assessment_id, session_id, user_id, event_type, created_at, expires_at
 - `audit_logs`: actor_id, action, target_type+target_id, created_at, expires_at
-- `question_bank`: owner_id, subject, difficulty, tags (GIN), search (tsvector GIN)
 
 ---
 
@@ -188,7 +184,6 @@ All indexes created in respective migration files. Key indexes:
 | `assessments` | BEFORE UPDATE | `update_updated_at()` | Auto-update updated_at |
 | `assessment_sessions` | BEFORE UPDATE | `update_updated_at()` | Auto-update updated_at |
 | `assessment_sessions` | BEFORE INSERT/UPDATE OF status | `enforce_single_active_session()` | One active session per user per assessment |
-| `question_bank` | BEFORE UPDATE | `update_updated_at()` | Auto-update updated_at |
 | `data_subject_requests` | BEFORE UPDATE | `update_updated_at()` | Auto-update updated_at |
 
 ---

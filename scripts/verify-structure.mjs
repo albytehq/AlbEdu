@@ -125,7 +125,7 @@ const HTML_FILES = [
   'pages/admin/data-hasil.html', 'pages/admin/profile.html',
   'pages/admin/ujian-peserta.html',
   'pages/admin/create-assessment.html', 'pages/admin/active-assessments.html',
-  'pages/admin/question-bank.html', 'pages/admin/monitoring.html',
+  'pages/admin/monitoring.html',
   'pages/admin/results-analytics.html',
   // Ujian
   'pages/ujian/index.html', 'pages/ujian/kerjakan-ujian.html',

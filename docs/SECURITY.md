@@ -225,7 +225,6 @@ supabase
 | `audit_logs` | SELECT all | SELECT own |
 | `consents` | SELECT all | SELECT/INSERT/UPDATE own |
 | `data_subject_requests` | SELECT all, UPDATE (resolve) | SELECT/INSERT own, UPDATE own (cancel pending) |
-| `question_bank` | All on own | No access |
 | `users` | SELECT all (non-deleted) | SELECT/UPDATE own |
 | `organizations` | SELECT all | SELECT all |
 

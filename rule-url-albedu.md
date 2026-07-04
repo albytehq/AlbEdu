@@ -94,7 +94,6 @@ AUTH_CONFIG = {
 | Admin dashboard | `/AlbEdu/pages/admin/index.html` | admin | protected |
 | Create assessment | `/AlbEdu/pages/admin/create-assessment.html` | admin | protected |
 | Active assessments | `/AlbEdu/pages/admin/active-assessments.html` | admin | protected |
-| Question bank | `/AlbEdu/pages/admin/question-bank.html` | admin | protected |
 | Monitoring | `/AlbEdu/pages/admin/monitoring.html` | admin | protected |
 | Results analytics | `/AlbEdu/pages/admin/results-analytics.html` | admin | protected |
 | Token entry | `/AlbEdu/pages/assessment/index.html` | ujian | protected (peserta) |

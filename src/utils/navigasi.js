@@ -365,7 +365,6 @@ document.addEventListener('DOMContentLoaded', function () {
         'buat-ujian.html':       'create-assessment', // legacy stub → canonical
         'active-assessments.html': 'active-assessments',
         'ujian-peserta.html':    'active-assessments', // legacy stub → canonical
-        'question-bank.html':    'question-bank',
         'monitoring.html':       'monitoring',
         'results-analytics.html': 'results',
         'data-hasil.html':       'results',            // legacy stub → canonical

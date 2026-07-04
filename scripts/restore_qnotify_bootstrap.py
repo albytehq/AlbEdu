@@ -20,7 +20,6 @@ QNOTIFY_PAGES = [
     'pages/admin/daftar-nama.html',
     'pages/admin/profile.html',
     'pages/admin/results-analytics.html',
-    'pages/admin/question-bank.html',
     'pages/admin/create-assessment.html',
     'pages/assessment/index.html',
     'pages/assessment/take.html',

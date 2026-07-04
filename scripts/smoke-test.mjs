@@ -28,7 +28,6 @@ const PAGES_TO_TEST = [
   '/pages/admin/ujian-peserta.html',
   '/pages/admin/create-assessment.html',
   '/pages/admin/active-assessments.html',
-  '/pages/admin/question-bank.html',
   '/pages/admin/monitoring.html',
   '/pages/admin/results-analytics.html',
   '/pages/ujian/index.html',

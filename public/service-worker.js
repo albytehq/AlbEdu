@@ -23,14 +23,14 @@
 //   7. Cache size → evict oldest entries if > 100 entries
 // =============================================================================
 
-const CACHE_VERSION = 'albedu-v3-transitions';
+const CACHE_VERSION = 'albedu-v4-post-bank-soal-removal';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const MAX_CACHE_ENTRIES = 100;
 
 // Assets to precache on install
 // [Phase 5] Expanded: 27 → 63 entries. Covers all pages + shared assets.
-// Page-specific CSS (profile.css, question-bank.css, dll) handled on-demand
+// Page-specific CSS (profile.css, dll) handled on-demand
 // via stale-while-revalidate — not precached to save install bandwidth.
 const PRECACHE_URLS = [
   // ── HTML: Landing + Auth (8 pages) ──
@@ -49,7 +49,6 @@ const PRECACHE_URLS = [
   '/pages/admin/profile.html',
   '/pages/admin/create-assessment.html',
   '/pages/admin/active-assessments.html',
-  '/pages/admin/question-bank.html',
   '/pages/admin/monitoring.html',
   '/pages/admin/results-analytics.html',
   '/pages/admin/daftar-nama.html',
