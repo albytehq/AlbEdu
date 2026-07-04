@@ -1,7 +1,7 @@
 // label.js — QNotify 1.0.5 For AlbEdu
 /**
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  Qnotify — label.js  [PERF REWRITE]                        ║
+ * ║  QNotify — label.js 1.0.5 For AlbEdu [PERF REWRITE]                        ║
  * ║  "Label Family — Alert DOM Builder + Hybrid Animations"     ║
  * ╚══════════════════════════════════════════════════════════════╝
  *

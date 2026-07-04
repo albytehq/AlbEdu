@@ -1,11 +1,11 @@
-// engine.js — Qnotify v8.0.5
+// engine.js — QNotify 1.0.5 For AlbEdu
 /**
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  Qnotify — engine.js v8.0.5                                 ║
+ * ║  QNotify — engine.js 1.0.5 For AlbEdu                                 ║
  * ║  "Pusat Kontrol — Glitch-Free, Jank-Free, Spike-Free"      ║
  * ╚══════════════════════════════════════════════════════════════╝
  *
- * v8.0.0 CRITICAL FIXES:
+ * 1.0.5 CRITICAL FIXES:
  *  🎭 Backdrop spike lag — prewarmBackdrop() di _init(), GPU layer ready sebelum dialog pertama
  *  🔀 Z-index stacking conflict — unified Z constants dari glitch.js
  *  💥 Layout thrash di activateDialog() — stamp SEBELUM DOM insert, satu forceReflow
@@ -28,14 +28,12 @@ import {
     cancelNotificationSprings, makeShadowBase, updateElementTransform,
     initBumpState, attachBumpEvents, detachBumpEvents,
     attachHoverShadow, detachHoverShadow,
-    attachSwipeDismiss, detachSwipeDismiss,
 } from './motion.js';
-import { startTimer, clearTimer } from './timer.js';
 import {
     requestStackingUpdate, recalcAllHeights,
     enforceStackLimits, updateContainerMode,
-    toggleMobileExpand, isMobileExpanded,
 } from './stack.js';
+import { startTimer, clearTimer } from './timer.js';
 import {
     createConfirmDialog, createAsyncConfirmDialog,
     createHoldConfirmDialog, createHoldAsyncConfirmDialog,
@@ -85,7 +83,7 @@ export class QNotifyEngine {
         this._setupResize();
         this._setupMorphCompleteListener();
 
-        // [v8.0.0] Pre-warm backdrop: GPU layer allocated NOW, not on first dialog open.
+        // [1.0.5] Pre-warm backdrop: GPU layer allocated NOW, not on first dialog open.
         // Eliminates the "spike lag" bug where first dialog open was visibly slow.
         prewarmBackdrop();
 
@@ -242,28 +240,6 @@ export class QNotifyEngine {
             applyDepthShadow(notification);
             attachBumpEvents(notification);
             attachHoverShadow(notification);
-
-            // [v2.0] Swipe to dismiss — mobile + desktop
-            attachSwipeDismiss(notification, (id) => this.dismiss(id));
-
-            // [v2.0 Dynamic Peek Effect] Tap front notif to expand/collapse stack (mobile only)
-            if (!isDesktop) {
-                const onTap = (e) => {
-                    if (notification.isDead) return;
-                    // Only front notif (idx 0) triggers expand
-                    const active = Array.from(this.notifications.values())
-                        .filter(n => !n.isDead && n.state !== 'exit' &&
-                                !['confirmation','hold','hold-async','alert','readnote'].includes(n.type))
-                        .sort((a, b) => b.createdAt - a.createdAt);
-                    if (active[0]?.id === id) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleMobileExpand(this.notifications);
-                    }
-                };
-                notification.element.addEventListener('click', onTap);
-                notification._peekTapHandler = onTap;
-            }
         });
 
         notification._cancelFrames = cancelFrames;
@@ -341,17 +317,8 @@ export class QNotifyEngine {
         if (n._exitOpTimeout)  { clearTimeout(n._exitOpTimeout);  n._exitOpTimeout  = null; }
         if (n._cancelFrames)   { n._cancelFrames();               n._cancelFrames   = null; }
         if (n._cleanupScroll)  { n._cleanupScroll();              n._cleanupScroll  = null; }
-        // [Phase B a11y] Remove keyboard listener if dialog had one attached
-        if (n._cleanupKeyboard) { n._cleanupKeyboard();           n._cleanupKeyboard = null; }
 
         detachHoverShadow(n);
-        // [v2.0] Remove swipe handlers
-        detachSwipeDismiss(n);
-        // [v2.0] Remove peek tap handler
-        if (n._peekTapHandler && n.element) {
-            n.element.removeEventListener('click', n._peekTapHandler);
-            n._peekTapHandler = null;
-        }
 
         if (n.handlers?.events) {
             n.handlers.events.forEach(({ el, type, fn, options }) => {

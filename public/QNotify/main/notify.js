@@ -1,7 +1,7 @@
 // notify.js — QNotify 1.0.5 For AlbEdu
 /**
  * ╔════════════════════════════════════════════╗
- * ║  Qnotify — notify.js                      ║
+ * ║  QNotify — notify.js 1.0.5 For AlbEdu ║
  * ║  "Shorthand wrapper. Bukan logika."        ║
  * ╚════════════════════════════════════════════╝
  *

@@ -1,7 +1,7 @@
-// motion.js — Qnotify v8.0.5
+// motion.js — QNotify 1.0.5 For AlbEdu
 /**
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  Qnotify — motion.js                                        ║
+ * ║  QNotify — motion.js 1.0.5 For AlbEdu ║
  * ║  "Physics Engine — Analytic Spring + Hybrid Solver"         ║
  * ╚══════════════════════════════════════════════════════════════╝
  *
@@ -37,8 +37,6 @@
 import { SPRING_CONFIG, SHADOW_BASE, BUMP_CONFIG, STACK_SPRING, MOBILE_STACK, SOLVER, TIMING } from './config.js';
 import { AnalyticSpring, RK4Spring, acquireSpring } from './spring.js';
 import { applyShadowVars } from './render.js';
-// [Phase B a11y] Reduced motion detection — skip springs when user prefers reduced motion
-import { prefersReducedMotion } from './glitch.js';
 
 // ════════════════════════════════════════════════════════════
 //  SOLVER FACTORY
@@ -56,14 +54,14 @@ import { prefersReducedMotion } from './glitch.js';
 function _spring(config) {
     // UI springs: analytic unless legacy rk4 mode is explicitly set
     const mode = (SOLVER.mode === 'rk4') ? 'rk4' : 'analytic';
-    if (SOLVER.debug) console.debug('[Qnotify spring] UI mode=' + mode, config);
+    if (SOLVER.debug) console.debug('[QNotify spring] UI mode=' + mode, config);
     return acquireSpring(config, mode);
 }
 
 function _interactSpring(config) {
     // Gesture/bump springs: always RK4 in hybrid mode (fast interactive response)
     const mode = (SOLVER.mode === 'hybrid' || SOLVER.mode === 'rk4') ? 'rk4' : 'analytic';
-    if (SOLVER.debug) console.debug('[Qnotify spring] interact mode=' + mode, config);
+    if (SOLVER.debug) console.debug('[QNotify spring] interact mode=' + mode, config);
     return acquireSpring(config, mode);
 }
 
@@ -230,7 +228,7 @@ export function initBumpState(notification) {
 export function updateElementTransform(notification) {
     const el = notification.element;
     if (!el) return;
-    // [v8.1.0] GUARD FIX: replaced isDead+state='exit' check with el.isConnected.
+    // [1.0.5] GUARD FIX: replaced isDead+state='exit' check with el.isConnected.
     //
     // OLD (WRONG): if (notification.isDead && notification.state === 'exit') return;
     // BUG: dismiss() sets isDead=true + state='exit' BEFORE calling animateDesktopExit.
@@ -311,17 +309,6 @@ export function animateMobileEnter(notification) {
     const el  = notification.element;
     const upd = () => updateElementTransform(notification);
 
-    // [Phase B a11y] Reduced motion: skip springs, set final state immediately
-    if (prefersReducedMotion()) {
-        el.style.opacity = '1';
-        applyMobileMorph(notification, 1, 0);
-        el.classList.add('active');
-        notification.state = 'active';
-        notification.height = el.getBoundingClientRect().height;
-        updateElementTransform(notification);
-        return;
-    }
-
     // [BUG FIX v7.5.1] Element harus terlihat SEKARANG saat slide spring mulai.
     // stampInitialState() menyetel opacity:0 sebelum append — ini benar untuk FOUC guard.
     // Tapi setelah .spawn dihapus dan animasi dimulai, opacity harus jadi 1 agar
@@ -361,14 +348,6 @@ export function animateMobileExit(notification, onDone) {
     if (notification.isDesktop) {
         notification.element.classList.add('exit');
         // CSS .exit transition = 280ms + 120ms safety margin (see TIMING.CSS_EXIT_DURATION_MS)
-        setTimeout(onDone, TIMING.CSS_EXIT_DURATION_MS);
-        return;
-    }
-
-    // [Phase B a11y] Reduced motion: skip 3-phase rAF exit, use CSS + timeout
-    if (prefersReducedMotion()) {
-        notification.element.classList.add('exit');
-        notification.element.style.opacity = '0';
         setTimeout(onDone, TIMING.CSS_EXIT_DURATION_MS);
         return;
     }
@@ -444,17 +423,6 @@ export function animateDesktopEnter(notification) {
     if (!notification.isDesktop) return;
     if (['confirmation', 'hold', 'hold-async', 'alert'].includes(notification.type)) return;
 
-    // [Phase B a11y] Reduced motion: skip springs, set final state immediately
-    if (prefersReducedMotion()) {
-        notification.currentTranslateX = 0;
-        notification.currentScale      = 1;
-        notification.element.style.opacity = '1';
-        updateElementTransform(notification);
-        notification.state = 'active';
-        notification.height = notification.element.getBoundingClientRect().height;
-        return;
-    }
-
     const upd = () => updateElementTransform(notification);
 
     const txSpring = _spring({ k: 220, c: 20, m: 1 });
@@ -471,7 +439,7 @@ export function animateDesktopEnter(notification) {
     if (icon) {
         icon.style.opacity   = '0';
         icon.style.transform = 'translateX(20px)';
-        // [v8.0.1] Store handle so animateDesktopExit can cancel before it fires.
+        // [1.0.5] Store handle so animateDesktopExit can cancel before it fires.
         // OLD: anonymous setTimeout — exit had no way to prevent ghost springs.
         notification._enterIconTimeout = setTimeout(() => {
             notification._enterIconTimeout = null;
@@ -492,7 +460,7 @@ export function animateDesktopEnter(notification) {
     if (text) {
         text.style.opacity   = '0';
         text.style.transform = 'translateX(15px)';
-        // [v8.0.1] Same cancel-safety pattern as icon timeout above.
+        // [1.0.5] Same cancel-safety pattern as icon timeout above.
         notification._enterTextTimeout = setTimeout(() => {
             notification._enterTextTimeout = null;
             if (notification.isDead) return;
@@ -517,15 +485,7 @@ export function animateDesktopExit(notification, onDone) {
         return;
     }
 
-    // [Phase B a11y] Reduced motion: skip springs, use CSS exit + timeout
-    if (prefersReducedMotion()) {
-        notification.element.classList.add('exit');
-        notification.element.style.opacity = '0';
-        setTimeout(onDone, TIMING.CSS_EXIT_DURATION_MS);
-        return;
-    }
-
-    // [v8.0.1] GHOST SPRING FIX — cancel pending enter stagger timeouts FIRST.
+    // [1.0.5] GHOST SPRING FIX — cancel pending enter stagger timeouts FIRST.
     // If exit fires before the 60ms/120ms icon+text enter timeouts, those callbacks
     // would have created new springs that fight the exit (icon going opacity:0→1
     // while exit drives card opacity:1→0). By cancelling here and cleaning up
@@ -548,7 +508,7 @@ export function animateDesktopExit(notification, onDone) {
 
     const upd = () => updateElementTransform(notification);
 
-    // [v8.0.1] DYNAMIC EXIT DIRECTION — calculate exit X from element's actual width.
+    // [1.0.5] DYNAMIC EXIT DIRECTION — calculate exit X from element's actual width.
     // OLD: hardcoded 380px — could leave card partially visible on narrow screens,
     //      and didn't reflect "each notification exits from its own position".
     // NEW: exit to (element width + right anchor offset + 32px safety buffer).
@@ -557,7 +517,7 @@ export function animateDesktopExit(notification, onDone) {
     const elWidth  = notification.element.offsetWidth || 390;
     const exitX    = elWidth + 72; // 40px right anchor + 32px safety
 
-    // [v8.1.0] PHASED EXIT — Slide-right IS the primary motion. Opacity trails.
+    // [1.0.5] PHASED EXIT — Slide-right IS the primary motion. Opacity trails.
     //
     // ROOT CAUSE (v7.6.0 bug): opacity spring (k=200,c=22) and tx spring (k=240,c=24)
     // shared nearly identical damping ratios (~0.78). Since opacity travels 1→0 (short)
@@ -903,130 +863,6 @@ export function animateSpring(notification, property, fromValue, toValue, onComp
 
     if (delay > 0) setTimeout(start, delay); else start();
 }
-
-// ════════════════════════════════════════════════════════════
-//  [v2.0] SWIPE TO DISMISS — mobile + desktop
-//  Swipe left/right to dismiss notification. Uses pointer events
-//  (works with touch + mouse). Threshold: 80px horizontal travel.
-// ════════════════════════════════════════════════════════════
-
-const SWIPE_THRESHOLD = 80;     // px — dismiss if swipe past this
-const SWIPE_VELOCITY = 0.5;     // px/ms — dismiss if fast flick
-
-export function attachSwipeDismiss(notification, dismissFn) {
-    if (['confirmation', 'hold', 'hold-async', 'alert', 'readnote'].includes(notification.type)) return;
-    if (notification.isDead) return;
-
-    const el = notification.element;
-    let startX = 0, startY = 0;
-    let currentX = 0;
-    let swiping = false;
-    let startTime = 0;
-    let pointerId = null;
-
-    const onDown = (e) => {
-        if (notification.isDead) return;
-        // Don't interfere with bump events (they check pointerdown too)
-        // Only start swipe if the user moves horizontally > vertical
-        swiping = false;
-        startX = e.clientX;
-        startY = e.clientY;
-        currentX = 0;
-        startTime = Date.now();
-        pointerId = e.pointerId;
-    };
-
-    const onMove = (e) => {
-        if (notification.isDead || e.pointerId !== pointerId) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-
-        // Determine if this is a horizontal swipe (not vertical scroll)
-        if (!swiping && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-            swiping = true;
-            el.style.transition = 'none';
-            el.style.willChange = 'transform, opacity';
-        }
-
-        if (swiping) {
-            e.preventDefault();
-            currentX = dx;
-            // Apply transform: follow finger + fade based on distance
-            const opacity = Math.max(0.3, 1 - Math.abs(dx) / 300);
-            if (notification.isDesktop) {
-                const baseTx = notification.currentTranslateX || 0;
-                el.style.transform = `translateX(${(baseTx + dx).toFixed(1)}px) translateY(${(notification.stackSpring?.val || 0).toFixed(1)}px) scale(${notification.currentScale || 1})`;
-            } else {
-                el.style.transform = `translateX(calc(-50% + ${dx.toFixed(1)}px)) translateY(${(notification.mobileStack?.val || 0).toFixed(1)}px) scale(${(notification.morphScaleX || 1) * (notification.depthScale || 1)})`;
-            }
-            el.style.opacity = String(opacity);
-        }
-    };
-
-    const onUp = (e) => {
-        if (notification.isDead || e.pointerId !== pointerId) return;
-        pointerId = null;
-
-        if (!swiping) return;
-        swiping = false;
-
-        const dx = currentX;
-        const dt = Date.now() - startTime;
-        const velocity = Math.abs(dx) / Math.max(dt, 1);
-
-        el.style.transition = '';
-
-        if (Math.abs(dx) > SWIPE_THRESHOLD || velocity > SWIPE_VELOCITY) {
-            // Dismiss — animate out in swipe direction
-            const exitX = dx > 0 ? 500 : -500;
-            el.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
-
-            if (notification.isDesktop) {
-                el.style.transform = `translateX(${exitX}px) scale(0.9)`;
-            } else {
-                el.style.transform = `translateX(calc(-50% + ${exitX}px)) scale(0.9)`;
-            }
-            el.style.opacity = '0';
-
-            setTimeout(() => {
-                if (!notification.isDead) dismissFn(notification.id);
-            }, 250);
-        } else {
-            // Snap back — spring to original position
-            el.style.transition = 'transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1), opacity 0.2s ease';
-            el.style.opacity = '';
-            // Let the spring system take over again — clear inline transform
-            // so updateElementTransform can write the correct value
-            setTimeout(() => {
-                el.style.transition = '';
-                updateElementTransform(notification);
-            }, 200);
-        }
-
-        currentX = 0;
-    };
-
-    el.addEventListener('pointerdown', onDown, { passive: true });
-    el.addEventListener('pointermove', onMove, { passive: false });
-    el.addEventListener('pointerup', onUp, { passive: true });
-    el.addEventListener('pointercancel', onUp, { passive: true });
-
-    notification._swipeHandlers = { onDown, onMove, onUp };
-}
-
-export function detachSwipeDismiss(notification) {
-    if (!notification._swipeHandlers) return;
-    const el = notification.element;
-    const h = notification._swipeHandlers;
-    if (el) {
-        el.removeEventListener('pointerdown', h.onDown);
-        el.removeEventListener('pointermove', h.onMove);
-        el.removeEventListener('pointerup', h.onUp);
-        el.removeEventListener('pointercancel', h.onUp);
-    }
-    notification._swipeHandlers = null;
-}
-
 
 // ════════════════════════════════════════════════════════════
 //  BACKWARD COMPAT — re-export RK4Spring for external consumers

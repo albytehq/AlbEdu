@@ -1,9 +1,9 @@
-/* notify.css — Qnotify v8.0.5
+/* notify.css — QNotify 1.0.5 For AlbEdu
  * CSS ISOLATION: All shared selectors (.icon-blob, .text-main, .text-small)
  * are scoped to .qnotify-item:not(.qnotify-dialog):not(.qnotify-label)
  * to prevent cascade bleeding into dialog and label components.
  * ╔══════════════════════════════════════════════════════════╗
- * ║  Qnotify — notify.css  (REFACTORED)                     ║
+ * ║  QNotify — notify.css 1.0.5 For AlbEdu  (REFACTORED)                     ║
  * ║  "Toast Notification Styles"                            ║
  * ╚══════════════════════════════════════════════════════════╝
  *
@@ -184,10 +184,9 @@
     position:    fixed;
     right:       40px;
     bottom:      40px;
-    width:       clamp(320px, 88vw, 420px);  /* [v2.0 Dynamic Height] wider max for long text */
+    width:       clamp(320px, 88vw, 390px);  /* fluid: never clips on small screens */
     height:      auto;
     min-height:  145px;
-    max-height:  400px;                       /* [v2.0] cap height, scroll if extreme */
     border-radius: 18px;
     background:  var(--qnotify-desktop-bg-light);
     border:      2px solid var(--qnotify-desktop-border);
@@ -200,10 +199,6 @@
     touch-action:  none;
     -webkit-user-select: none;
     user-select:         none;
-    overflow:      hidden;                   /* [v2.0] clean edges when height grows */
-    word-break:    break-word;               /* [v2.0] wrap long words */
-    transition:    height 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1),
-                   max-height 0.2s ease;     /* [v2.0] smooth height animation */
 }
 
 /*
@@ -295,16 +290,7 @@
     box-shadow:    0 6px 0 rgba(0, 0, 0, 0.18);
 }
 
-.notification-text {
-    flex: 1;
-    padding: 0 12px;
-    /* [v2.0 Visual Polish] Better text handling for dynamic height */
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-width: 0; /* prevent flex blowout on long text */
-}
+.notification-text { flex: 1; padding: 0 12px; }
 .desktop-mode .notification-text { padding-right: 28px; }
 .mobile-mode  .notification-text { padding-left: 18px; padding-right: 18px; }
 
@@ -313,8 +299,6 @@
     text-transform: uppercase; letter-spacing: 0.8px;
     margin-bottom:  2px;
     color:          rgba(0, 0, 0, 0.55);
-    /* [v2.0] Don't shrink subtitle when height grows */
-    flex-shrink: 0;
 }
 
 .desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .text-small {
@@ -325,26 +309,15 @@
 .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .text-main {
     font-size:   15px; font-weight: 600;
     line-height: 1.35; color: #1a1a1a;
-    /* [v2.0 Visual Polish] Multi-line text handling */
-    word-break: break-word;
-    overflow-wrap: break-word;
-    hyphens: auto;
 }
 
 .desktop-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) .text-main {
     font-size:   19px; font-weight: 700;
     line-height: 1.4; color: var(--qnotify-desktop-text-light);
-    /* [v2.0] Better line-height for tall toasts */
-    line-height: 1.45;
-}
-
-/* [v2.0 Visual Polish] Desktop progress bar adapts to taller toasts */
-.desktop-mode .progress-track {
-    transition: top 0.2s ease, bottom 0.2s ease;
 }
 
 /* ── Icon Colors ─────────────────────────────────────────── */
-/* [v8.0.0] Upgraded icon blob gradients — richer depth, inset glass edge */
+/* [1.0.5] Upgraded icon blob gradients — richer depth, inset glass edge */
 .qnotify-item.success .icon-blob {
     background: linear-gradient(145deg, #4cd97a 0%, #34c759 40%, #1e8f3f 100%);
     box-shadow: 0 4px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.30);
@@ -408,36 +381,11 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
-   [v2.0] DYNAMIC PEEK EFFECT — Mobile Only
-   Notif belakang di-clamp + overflow hidden saat peek mode.
-   Saat expanded (tap), semua notif tampil penuh sebagai list.
+   Anti-overlap z-index — QNotify above AlbEdu panels
+   AlbEdu panels typically use z-index 9000-9999; QNotify
+   container sits at 10000, backdrop 10001, dialog 10002,
+   ReadNote label 10050 (highest — never covered).
    ═══════════════════════════════════════════════════════════ */
-
-/* Peek clamped state — back notifs have max-height + overflow hidden */
-.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label).rn-peek-clamped {
-    overflow: hidden !important;
-    transition: max-height 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1),
-                opacity 0.2s ease !important;
-}
-
-/* Expanded state — all notifs at full height, no clamp */
-.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label).rn-peek-expanded {
-    max-height: none !important;
-    overflow: visible !important;
-    opacity: 1 !important;
-    transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.1),
-                opacity 0.3s ease,
-                max-height 0.3s ease !important;
-}
-
-/* [v2.0] Dynamic Height — mobile toast juga melebar untuk text panjang */
-.mobile-mode .qnotify-item:not(.qnotify-dialog):not(.qnotify-label) {
-    max-height: 200px;
-    overflow: hidden;
-    word-break: break-word;
-}
-
-/* [v2.0] Anti-overlap z-index — QNotify container above AlbEdu panels */
 #qnotify-container,
 .qnotify-notification-container {
     z-index: 10000;

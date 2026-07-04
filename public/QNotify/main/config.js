@@ -1,7 +1,7 @@
-// config.js — Qnotify v8.0.5
+// config.js — QNotify 1.0.5 For AlbEdu
 /**
  * ╔══════════════════════════════════════╗
- * ║  Qnotify — config.js                ║
+ * ║  QNotify — config.js 1.0.5 For AlbEdu ║
  * ║  "Data Only. Zero Logic."           ║
  * ╚══════════════════════════════════════╝
  */

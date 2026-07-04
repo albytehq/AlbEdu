@@ -1,7 +1,7 @@
-// compositor.js — Qnotify v8.0.5
+// compositor.js — QNotify 1.0.5 For AlbEdu
 /**
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  Qnotify — compositor.js v8.0.5                             ║
+ * ║  QNotify — compositor.js 1.0.5 For AlbEdu                             ║
  * ║  "GPU Layer Lifecycle Manager — Promote Fast, Retire Fast"  ║
  * ╚══════════════════════════════════════════════════════════════╝
  *

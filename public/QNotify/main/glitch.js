@@ -1,11 +1,11 @@
-// glitch.js — Qnotify v8.0.5
+// glitch.js — QNotify 1.0.5 For AlbEdu
 /**
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  Qnotify — glitch.js v8.0.5                                 ║
+ * ║  QNotify — glitch.js 1.0.5 For AlbEdu                                 ║
  * ║  "Anti-Glitch Guardian — Production Grade, Zero Compromise" ║
  * ╚══════════════════════════════════════════════════════════════╝
  *
- * v8.0.0 OVERHAUL — Root-cause fixes, not band-aids:
+ * 1.0.5 OVERHAUL — Root-cause fixes, not band-aids:
  *
  *  ⚡ FOUC  — Flash of Unstyled Content
  *     Fix: CSS critical path di-inject sebagai PERTAMA dalam <head>.
@@ -34,7 +34,7 @@
  *     Fix: Triple-barrier — rAF1 (layout committed) → rAF2 (compositor ready)
  *          → microtask (style flush) → callback. Zero flash guaranteed.
  *
- *  🎭 BACKDROP SPIKE LAG — FIXED v8.0.0
+ *  🎭 BACKDROP SPIKE LAG — FIXED 1.0.5
  *     Root cause: ensureBackdrop() dipanggil DALAM showBackdrop(), lalu
  *                 langsung .classList.add('active'). Browser harus:
  *                 1. Buat elemen baru 2. Hitung style 3. Alokasikan compositor
@@ -43,20 +43,20 @@
  *          will-change:opacity dipasang di critical CSS (GPU layer allocated).
  *          showBackdrop() hanya toggle class → backdrop sudah warm → no spike.
  *
- *  🔀 Z-INDEX STACKING CONFLICT — FIXED v8.0.0
+ *  🔀 Z-INDEX STACKING CONFLICT — FIXED 1.0.5
  *     Root cause: container z-index 10000, backdrop z-index 9999 → dalam
  *                 beberapa browser dengan stacking context isolation, dialog
  *                 di z-index 10000 bisa KALAH dengan backdrop z-index 10001.
  *     Fix: Unified Z constants. Backdrop > container. Dialog > backdrop.
  *          Semua elemen modal masuk body langsung (bukan dalam container).
  *
- *  💥 LAYOUT THRASH di activateDialog() — FIXED v8.0.0
+ *  💥 LAYOUT THRASH di activateDialog() — FIXED 1.0.5
  *     Root cause: forceReflow() dipanggil, lalu langsung write transform
  *                 baru → triggered second layout pass dalam frame yang sama.
  *     Fix: Stamp initial state SEBELUM DOM insert. forceReflow SATU kali.
  *          Tidak ada read-after-write dalam activation path.
  *
- *  🌊 BACKDROP TRANSITION DOUBLE-DEFINE — FIXED v8.0.0
+ *  🌊 BACKDROP TRANSITION DOUBLE-DEFINE — FIXED 1.0.5
  *     Root cause: Transition backdrop didefinisikan DI DUA TEMPAT:
  *                 glitch.js critical CSS DAN dialog.css → specificity race.
  *     Fix: Transition HANYA di dialog.css. Critical CSS tidak menyentuhnya.
@@ -81,7 +81,7 @@ export const Z = {
 //  Inject critical CSS sebagai elemen PERTAMA dalam <head>.
 // ═══════════════════════════════════════════════════════════
 
-const CRITICAL_CSS_VERSION = '801';
+const CRITICAL_CSS_VERSION = '105';
 let _cssInjected = false;
 
 export function injectCriticalCSS() {
@@ -286,7 +286,7 @@ export function stampTheme(el, intent) {
 // ═══════════════════════════════════════════════════════════
 //  FRAME GUARD — Animation Flash Prevention
 //
-//  v8.0.5: Triple barrier.
+//  1.0.5: Triple barrier.
 //
 //  Timeline:
 //    Stamp → DOM insert → forceReflow (one read)
@@ -439,30 +439,6 @@ export function _buildTransform({
 }
 
 // ═══════════════════════════════════════════════════════════
-//  REDUCED MOTION — [Phase B a11y] prefers-reduced-motion support
-//  When user prefers reduced motion, spring physics are disabled
-//  and CSS transitions handle all animations (already in CSS via
-//  @media (prefers-reduced-motion: reduce) in notify.css).
-//  JS checks this flag before creating springs.
-// ═══════════════════════════════════════════════════════════
-
-let _reducedMotion = false;
-
-function _checkReducedMotion() {
-    _reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-_checkReducedMotion();
-
-// Listen for changes (user can toggle this at runtime in OS settings)
-window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', _checkReducedMotion);
-
-export function prefersReducedMotion() {
-    return _reducedMotion;
-}
-
-
-// ═══════════════════════════════════════════════════════════
 //  DEV AUDIT
 // ═══════════════════════════════════════════════════════════
 
@@ -476,5 +452,5 @@ export function _auditLog(type, detail) {
     if (!_auditEnabled) return;
     // Dev-only diagnostic — never fires in production (gated by setAuditMode(true))
     // eslint-disable-next-line no-console
-    console.warn(`[Qnotify GlitchGuard] ${type}: ${detail}`);
+    console.warn(`[QNotify GlitchGuard] ${type}: ${detail}`);
 }

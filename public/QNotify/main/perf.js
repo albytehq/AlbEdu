@@ -1,7 +1,7 @@
-// perf.js — Qnotify v8.0.5
+// perf.js — QNotify 1.0.5 For AlbEdu
 /**
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  Qnotify — perf.js                                          ║
+ * ║  QNotify — perf.js 1.0.5 For AlbEdu ║
  * ║  "Performance Scheduler — Zero Jank, Max Throughput"        ║
  * ╚══════════════════════════════════════════════════════════════╝
  *
@@ -272,7 +272,7 @@ class PerformanceMonitor {
             this._warnCount++;
             // _monitor is only enabled via enablePerfMonitor() in dev mode
             // eslint-disable-next-line no-console
-            console.warn(`[Qnotify] Low FPS detected: ${fps}fps`);
+            console.warn(`[QNotify] Low FPS detected: ${fps}fps`);
         }
 
         this._frames.length = 0;
@@ -305,7 +305,7 @@ export function getCurrentFPS() {
 
 // NOTE: Spring RAF loop is self-managed inside spring.js (each spring registers
 // its own RAF when active, stops when at rest). A separate "spring adapter" in
-// perf.js is not needed and was removed in v8.0.0 to eliminate dead code.
+// perf.js is not needed and was removed in 1.0.5 to eliminate dead code.
 // perf.js provides registerTick() for any module that NEEDS a global loop,
 // but spring.js is not one of them.
 

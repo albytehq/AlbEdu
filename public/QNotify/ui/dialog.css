@@ -1,10 +1,10 @@
-/* dialog.css — Qnotify v8.0.5
+/* dialog.css — QNotify 1.0.5 For AlbEdu
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  Qnotify — dialog.css v8.0.5                             ║
+ * ║  QNotify — dialog.css 1.0.5 For AlbEdu                             ║
  * ║  "Visual King — Production Grade, Zero Glitch"              ║
  * ╚══════════════════════════════════════════════════════════════╝
  *
- * v8.0.0 CHANGES:
+ * 1.0.5 CHANGES:
  *  [B1] Backdrop transition: SATU definisi, di sini saja.
  *       glitch.js critical CSS tidak lagi mendefinisikan transition backdrop.
  *       Eliminates specificity race yang menyebabkan backdrop flicker.

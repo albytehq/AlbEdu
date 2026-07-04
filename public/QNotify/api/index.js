@@ -1,6 +1,6 @@
-// api/index.js — Qnotify v8.0.5
+// api/index.js — QNotify 1.0.5 For AlbEdu
 /**
- * v8.0.0 ADDITIONS:
+ * 1.0.5 ADDITIONS (AlbEdu rebrand):
  *  show.setGlitchAudit(true)   — enable glitch audit logging (dev)
  *  show.enablePerfMonitor()    — enable FPS drop warnings (dev)
  *  show.getFPS()               — read current animation FPS
@@ -8,7 +8,7 @@
  */
 /**
  * ╔══════════════════════════════════════════════════════╗
- * ║  Qnotify — api/index.js                             ║
+ * ║  QNotify — api/index.js 1.0.5 For AlbEdu ║
  * ║  "Satu pintu masuk. Tidak ada yang lain."           ║
  * ╚══════════════════════════════════════════════════════╝
  *
@@ -213,7 +213,7 @@ const show = {
      */
     getSolverConfig: () => ({ mode: SOLVER.mode, debug: SOLVER.debug }),
 
-    // ── v8.0.5 Dev Tools ────────────────────────────────────────
+    // ── 1.0.5 Dev Tools ────────────────────────────────────────
 
     /**
      * Enable glitch audit mode — logs suspected flash/glitch events to console.
@@ -235,14 +235,14 @@ const show = {
     getFPS: () => getCurrentFPS(),
 
     /**
-     * v8.0.5: Get current GPU compositor layer count.
+     * 1.0.5: Get current GPU compositor layer count.
      * Use to monitor memory pressure during heavy animation.
      * @returns {number}
      */
     getLayerCount: () => getLayerCount(),
 
     /**
-     * v8.0.5: Get device capability tier.
+     * 1.0.5: Get device capability tier.
      * 'full' | 'reduced' | 'minimal'
      * @returns {Object} DeviceCaps
      */

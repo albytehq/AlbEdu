@@ -1,7 +1,7 @@
-// dialog.js — Qnotify v8.0.5
+// dialog.js — QNotify 1.0.5 For AlbEdu
 /**
  * ╔══════════════════════════════════════════════════╗
- * ║  Qnotify — dialog.js                            ║
+ * ║  QNotify — dialog.js 1.0.5 For AlbEdu ║
  * ║  \"Interactive Dialog Controller\"                ║
  * ╚══════════════════════════════════════════════════╝
  *
@@ -29,13 +29,13 @@ import {
 } from './render.js';
 import { applySpawnShadow, applyDepthShadow } from './motion.js';
 import { acquireSpring } from './spring.js';
-// [v8.0.0] Anti-glitch: triple-barrier + pre-stamped initial state
+// [1.0.5] Anti-glitch: triple-barrier + pre-stamped initial state
 import { afterTwoFrames, forceReflow, clearInitialState } from './glitch.js';
 
 // Always analytic for dialog UI — Hybrid Architecture
 function _aSpring(cfg) { return acquireSpring(cfg, 'analytic'); }
 
-// [v8.0.0] Stamp dialog initial state BEFORE DOM insert
+// [1.0.5] Stamp dialog initial state BEFORE DOM insert
 // Dialog uses position:fixed + left:50% + top:50% centering.
 // Initial transform includes the centering translate so springs
 // start from the correct world-space position.
@@ -394,7 +394,7 @@ function createHoldFill(btnYes, holdDuration) {
 
 
 // ── Transition from spawn → active state ─────────────────────────────────────
-// [v8.0.0] LAYOUT THRASH FIX:
+// [1.0.5] LAYOUT THRASH FIX:
 //   Old flow: appendToContainer → stampInitialState → forceReflow → afterTwoFrames
 //             = READ (reflow) → WRITE (transform) → READ (reflow) = 2x layout!
 //
@@ -412,7 +412,7 @@ function activateDialog(notification, focusElement) {
         _dialogEnterCancels.delete(el);
     }
 
-    // [v8.0.0] Initial state is ALREADY stamped by caller before DOM insert.
+    // [1.0.5] Initial state is ALREADY stamped by caller before DOM insert.
     // We only set will-change here (compositor hint — not a layout trigger).
     // Then one clean forceReflow to lock in the stamped state.
     el.style.willChange = 'transform, opacity';
@@ -470,7 +470,7 @@ function activateDialog(notification, focusElement) {
             if (cancelled) return;
             cardDone++;
             if (cardDone >= 3) {
-                // [v8.0.1] DIALOG TEXT CENTERING FIX.
+                // [1.0.5] DIALOG TEXT CENTERING FIX.
                 // Spring rests at target ± float epsilon (e.g. scale=0.99997, ty=0.02).
                 // Inline `transform: translate(-50%,-50%) scale(0.99997) translateY(0.02px)`
                 // technically overrides CSS, and sub-pixel scale differences can cause
@@ -547,7 +547,7 @@ export function animateDialogExit(element, onDone) {
     const opSpring = _aSpring({ k: 340, c: 28, m: 1.0 });
     scSpring.jump(1); tySpring.jump(0); opSpring.jump(1);
 
-    // [v8.0.0] Backdrop exit: spring to 0, let CSS transition handle cleanup.
+    // [1.0.5] Backdrop exit: spring to 0, let CSS transition handle cleanup.
     // We DON'T call backdrop.classList.remove('active') here because
     // engine._cleanup() calls hideBackdrop() after this — avoid double removal.
     const backdrop = document.getElementById('qnotify-backdrop');
@@ -577,7 +577,7 @@ export function animateDialogExit(element, onDone) {
     opSpring.to(0, {
         onUpdate: v => { element.style.opacity = v.toFixed(3); },
         onRest: () => {
-            // [v8.0.1] Finalize opacity to exact 0 and clear willChange.
+            // [1.0.5] Finalize opacity to exact 0 and clear willChange.
             // Avoids any sub-pixel opacity bleed (e.g. 0.0014) on the last frame.
             element.style.opacity   = '0';
             element.style.willChange = 'auto';
@@ -593,71 +593,6 @@ export function animateDialogExit(element, onDone) {
 // Eliminates duplication that caused timing divergence in previous versions.
 const lockScroll   = showBackdrop;
 const unlockScroll = hideBackdrop;
-
-
-/* ══════════════════════════════════════════════════════════════════════════════
-   [Phase B a11y] KEYBOARD ACCESSIBILITY — ESC + Focus Trap + Enter
-   ══════════════════════════════════════════════════════════════════════════════
-   Shared keyboard handler for all dialog types (confirm, async, hold, hold-async).
-   - ESC: cancel dialog (trigger handleNo)
-   - Tab: cycle between Yes/No buttons (focus trap)
-   - Shift+Tab: reverse cycle
-   - Enter: activate focused button (or default to No for safety)
-   ══════════════════════════════════════════════════════════════════════════════ */
-function _attachDialogKeyboard(notification, element, btnYes, btnNo, onNo) {
-    let _keyPending = false;
-
-    const handleKeydown = (e) => {
-        if (notification.isDead) return;
-        if (_keyPending) return;
-        _keyPending = true;
-        requestAnimationFrame(() => { _keyPending = false; });
-
-        // ESC → cancel
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            e.stopPropagation();
-            onNo();
-            return;
-        }
-
-        // Tab → focus trap (cycle between Yes and No only)
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            if (e.shiftKey) {
-                // Shift+Tab → go to Yes (or stay on Yes → go to No)
-                if (document.activeElement === btnYes) btnNo?.focus();
-                else btnYes?.focus();
-            } else {
-                // Tab → go to No (or stay on No → go to Yes)
-                if (document.activeElement === btnNo) btnYes?.focus();
-                else btnNo?.focus();
-            }
-            return;
-        }
-
-        // Enter → activate focused button
-        if (e.key === 'Enter') {
-            // Don't trigger hold buttons via Enter — hold requires pointer
-            if (btnYes && btnYes.classList.contains('hold-btn')) return;
-            e.preventDefault();
-            const focused = document.activeElement;
-            if (focused === btnYes && !btnYes?.disabled) {
-                btnYes.click();
-            } else if (focused === btnNo && !btnNo?.disabled) {
-                btnNo.click();
-            }
-            return;
-        }
-    };
-
-    document.addEventListener('keydown', handleKeydown);
-
-    // Return cleanup function to remove listener on dialog dismiss
-    return () => {
-        document.removeEventListener('keydown', handleKeydown);
-    };
-}
 
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -774,11 +709,7 @@ export function createConfirmDialog({
         ],
     };
 
-    // [Phase B a11y] Keyboard accessibility — ESC, Tab trap, Enter
-    const _cleanupKeyboard = _attachDialogKeyboard(notification, element, yesBtn, noBtn, handleNo);
-    notification._cleanupKeyboard = _cleanupKeyboard;
-
-    // [v8.0.0] Stamp BEFORE DOM insert — eliminates layout thrash in activateDialog()
+    // [1.0.5] Stamp BEFORE DOM insert — eliminates layout thrash in activateDialog()
     _stampDialogInitial(element);
     appendToContainer(container, element);
     lockScroll();
@@ -859,11 +790,7 @@ export function createAsyncConfirmDialog({
         ],
     };
 
-    // [Phase B a11y] Keyboard accessibility — ESC, Tab trap, Enter
-    const _cleanupKb = _attachDialogKeyboard(notification, element, yesBtn, noBtn, handleNo);
-    notification._cleanupKeyboard = _cleanupKb;
-
-    // [v8.0.0] Stamp BEFORE DOM insert — eliminates layout thrash in activateDialog()
+    // [1.0.5] Stamp BEFORE DOM insert — eliminates layout thrash in activateDialog()
     _stampDialogInitial(element);
     appendToContainer(container, element);
     lockScroll();
@@ -946,11 +873,7 @@ export function createHoldConfirmDialog({
     events.forEach(({ el, type, fn, options }) => el.addEventListener(type, fn, options));
     notification.handlers = { events };
 
-    // [Phase B a11y] Keyboard accessibility — ESC, Tab trap (Enter disabled for hold)
-    const _cleanupKb = _attachDialogKeyboard(notification, element, btnYes, btnNo, handleNo);
-    notification._cleanupKeyboard = _cleanupKb;
-
-    // [v8.0.0] Stamp BEFORE DOM insert — eliminates layout thrash
+    // [1.0.5] Stamp BEFORE DOM insert — eliminates layout thrash
     _stampDialogInitial(element);
     appendToContainer(container, element);
     lockScroll();
@@ -1070,11 +993,7 @@ export function createHoldAsyncConfirmDialog({
     events.forEach(({ el, type, fn, options }) => el.addEventListener(type, fn, options));
     notification.handlers = { events };
 
-    // [Phase B a11y] Keyboard accessibility — ESC, Tab trap (Enter disabled for hold)
-    const _cleanupKb = _attachDialogKeyboard(notification, element, btnYes, btnNo, handleNo);
-    notification._cleanupKeyboard = _cleanupKb;
-
-    // [v8.0.0] Stamp BEFORE DOM insert — eliminates layout thrash
+    // [1.0.5] Stamp BEFORE DOM insert — eliminates layout thrash
     _stampDialogInitial(element);
     appendToContainer(container, element);
     lockScroll();

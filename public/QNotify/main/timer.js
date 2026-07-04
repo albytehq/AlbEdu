@@ -1,7 +1,7 @@
 // timer.js — QNotify 1.0.5 For AlbEdu
 /**
  * ╔══════════════════════════════════════╗
- * ║  Qnotify — timer.js                 ║
+ * ║  QNotify — timer.js 1.0.5 For AlbEdu ║
  * ║  "Auto-dismiss manager"             ║
  * ╚══════════════════════════════════════╝
  *

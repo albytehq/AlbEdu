@@ -45,7 +45,10 @@ const PRECACHE_URLS = [
   '/src/platform/supabase-client.js',
   '/src/platform/repository.js',
   '/src/security/sanitize.js',
-  '/public/QNotify/ui/qnotify.css',
+  '/public/QNotify/ui/notify.css',
+  '/public/QNotify/ui/dialog.css',
+  '/public/QNotify/ui/label.css',
+  '/public/QNotify/ui/Readnote.css',
 ];
 
 // Patterns for stale-while-revalidate (static assets)

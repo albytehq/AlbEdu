@@ -1,7 +1,7 @@
 // spring.js — QNotify 1.0.5 For AlbEdu
 /**
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  Qnotify — spring.js                                        ║
+ * ║  QNotify — spring.js 1.0.5 For AlbEdu ║
  * ║  "Analytic Spring Solver — Damped Harmonic Oscillator"      ║
  * ╚══════════════════════════════════════════════════════════════╝
  *
