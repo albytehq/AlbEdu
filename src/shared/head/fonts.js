@@ -20,7 +20,7 @@
 //   - ~10-30ms total (same origin, no TLS handshake)
 //   - font-display: swap (text visible immediately, swap when ready)
 //
-// Font files (self-hosted at /public/fonts/):
+// Font files (self-hosted at {BASE_PATH}public/fonts/):
 //   - plus-jakarta-sans-latin.woff2      (27 KB) — Latin subset (U+0000-00FF)
 //   - plus-jakarta-sans-latin-ext.woff2  (22 KB) — Latin-ext (U+0100-02BA)
 //   - jetbrains-mono-latin.woff2         (31 KB) — JetBrains Mono Latin
@@ -41,31 +41,41 @@
 // everything else". This moves the font fetch to the earliest possible
 // moment — before HTML parsing even finishes.
 //
-// Combined with @font-face in critical CSS, the timeline becomes:
-//   0ms   — HTML parser sees <link rel="preload"> → starts woff2 fetch
-//   2ms   — critical-css.js injects @font-face (browser knows about font)
-//   5ms   — text renders with system fallback (font-display: swap)
-//   15ms  — woff2 arrives (27KB, same origin) → font swaps
-//   15ms  — user sees Plus Jakarta Sans
+// === DEPLOYMENT-AWARE PATHS ===
 //
-// Without preload:
-//   0ms   — HTML parser starts
-//   2ms   — critical-css.js injects @font-face
-//   5ms   — text renders with system fallback
-//   10ms  — DOM built, browser realizes it needs the font → starts fetch
-//   25ms  — woff2 arrives → font swaps
-//
-// Preload saves ~10ms on fast connections, ~100ms+ on slow ones.
+// AlbEdu can be deployed at root domain OR a subdirectory (e.g. GitHub Pages
+// /AlbEdu/). Font paths MUST be prefixed with BASE_PATH so preload hints
+// resolve correctly. Without this, fonts 404 in subdirectory deployments.
 // =============================================================================
 
 (function () {
   'use strict';
 
-  // Font file paths (same origin — no DNS, no TLS)
+  // ── Compute BASE_PATH (deployment-prefix aware) ─────────────────────────
+  // Same algorithm as critical-css.js and AUTH_CONFIG.BASE_PATH in main.js.
+  // Required so preload hints resolve correctly when AlbEdu is deployed at
+  // a subdirectory (e.g. https://albytehq.github.io/AlbEdu/).
+  var _computeBasePath = function () {
+    var p = window.location.pathname;
+    var base = p.substring(0, p.lastIndexOf('/') + 1);
+    var APP_SUBFOLDERS = [
+      '/pages/admin/pages/', '/pages/assessment/', '/pages/ujian/',
+      '/pages/admin/', '/pages/', '/admin/pages/', '/ujian/', '/admin/',
+    ];
+    for (var i = 0; i < APP_SUBFOLDERS.length; i++) {
+      var idx = base.indexOf(APP_SUBFOLDERS[i]);
+      if (idx !== -1) return base.substring(0, idx + 1);
+    }
+    return base || '/';
+  };
+  var BASE_PATH = _computeBasePath();
+
+  // Font file paths (same origin — no DNS, no TLS).
+  // Prefixed with BASE_PATH so they work in subdirectory deployments.
   var FONTS = [
-    '/public/fonts/plus-jakarta-sans-latin.woff2',
-    '/public/fonts/plus-jakarta-sans-latin-ext.woff2',
-    '/public/fonts/jetbrains-mono-latin.woff2',
+    BASE_PATH + 'public/fonts/plus-jakarta-sans-latin.woff2',
+    BASE_PATH + 'public/fonts/plus-jakarta-sans-latin-ext.woff2',
+    BASE_PATH + 'public/fonts/jetbrains-mono-latin.woff2',
   ];
 
   // Inject preload hints. Idempotent — safe to call multiple times.
