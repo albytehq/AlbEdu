@@ -42,7 +42,9 @@ window.SelfStorage = (() => {
   }
 
   function _getCurrentUserId() {
-    return window.Auth?.currentUser?.uid || null;
+    // NOTE: `.uid` is a Firebase-shaped field that no longer exists on the
+    // native Supabase AuthService user object (which exposes `.id`).
+    return window.Auth?.currentUser?.id || null;
   }
 
   // _promiseReady — single Promise that resolves once storage is provisioned.

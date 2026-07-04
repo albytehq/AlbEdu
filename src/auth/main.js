@@ -888,12 +888,21 @@ async function _handleAuthStateChange(user) {
     try {
         if (user) {
             // ── Patch A: Email Verification Gate ──────────────────────────────
-            // Phase 2.2 Fix 2: read from _supabaseUser — the SupabaseApi.js shim
-            // (_toFirebaseUser) does NOT map emailVerified or email_confirmed_at to
-            // the top-level user object. Both those fields are undefined at top level,
-            // making the old gate always false → every verified login was force-signed-out.
-            // The raw Supabase user is exposed as user._supabaseUser, so we read from there.
-            const isVerified = user._supabaseUser?.email_confirmed_at != null;
+            // BUG FOUND (this audit): this used to read `user._supabaseUser
+            // ?.email_confirmed_at`, a field that belonged to the OLD Firebase-
+            // shaped shim (SupabaseApi.js / _toFirebaseUser) that has since been
+            // replaced by the native platform layer in supabase-client.js.
+            // The current AuthService._toUser() does NOT set `_supabaseUser` at
+            // all — it exposes the raw Supabase user under `user.raw`, and
+            // ALREADY computes `user.emailVerified` at the top level. Reading
+            // the stale `_supabaseUser` path meant `isVerified` was undefined
+            // → always falsy, so EVERY Google login (verified or not) was
+            // force-signed-out here with no error shown to the user — this is
+            // exactly the "pilih akun Google, terus gak terjadi apa-apa" bug:
+            // the callback silently signs out and returns before any UI
+            // feedback or redirect happens.
+            const isVerified = user.emailVerified === true
+                || user.raw?.email_confirmed_at != null;
 
             if (!isVerified) {
                 // Force sign-out so the unverified session is cleared from local
@@ -902,12 +911,37 @@ async function _handleAuthStateChange(user) {
                 _stopProfileListener?.();
                 _stopProfileListener = null;
                 await _getAuth().signOut();
+                // Previously this returned with zero user-facing feedback — the
+                // login button just sat there forever with no explanation.
+                // Dispatch the same event user-auth-portal.js already listens
+                // for so the UI shows a real message instead of "nothing happens".
+                document.dispatchEvent(new CustomEvent('auth-completion-error', {
+                    detail: {
+                        backendCode: 'email_not_confirmed',
+                        message: _t(
+                            'auth.email_not_verified_msg',
+                            null,
+                            'Email akun Google ini belum terverifikasi. Silakan verifikasi email Anda terlebih dahulu, lalu coba login kembali.'
+                        ),
+                    },
+                }));
                 return;
             }
             // ── End Patch A ───────────────────────────────────────────────────
 
             _currentUser = user;
-            await _syncUserDocument(user.uid);
+            // BUG FOUND (this audit): `user.uid` is a Firebase-shaped field name
+            // that never existed on the native Supabase AuthService user object
+            // (_toUser() in supabase-client.js only sets `.id`). This meant
+            // _syncUserDocument(undefined) ran on every single login — the
+            // realtime subscribe filter became `id=eq.undefined` (never
+            // matches), it fell through to _createUserDocViaServer(undefined),
+            // whose defensive session-match guard then threw CompletionError
+            // ('invalid_token') because `session.user.id !== undefined`.
+            // Combined with Patch A above, this is the actual cause of
+            // "pilih akun Google, terus gak terjadi apa-apa" — the whole
+            // chain failed silently after a real, successful Google sign-in.
+            await _syncUserDocument(user.id);
             _authReady = true;
             // 'auth-ready' fires AFTER role is confirmed — byteward listens to this,
             // not 'albedu:platform-ready' (which fires before async role fetch completes).

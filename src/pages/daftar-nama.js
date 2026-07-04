@@ -44,7 +44,11 @@ window.DaftarNama = (() => {
   }
 
   function _getAdminId() {
-    return window.Auth?.currentUser?.uid || null;
+    // NOTE: `.uid` is a Firebase-shaped field that no longer exists on the
+    // native Supabase AuthService user object (which exposes `.id`). This
+    // always returned null before, silently breaking anything keyed on the
+    // admin's identity here.
+    return window.Auth?.currentUser?.id || null;
   }
 
   function _genTabId() {

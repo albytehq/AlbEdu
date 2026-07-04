@@ -579,9 +579,13 @@
 
     _proceedToAssessment(token, session) {
       // Save to sessionStorage
+      // NOTE: `.uid` is a Firebase-shaped field that no longer exists on the
+      // native Supabase AuthService user object (which exposes `.id`). This
+      // previously wrote the literal string "undefined" into sessionStorage,
+      // breaking anything downstream keyed on assessment_user_key.
       sessionStorage.setItem('assessment_token', token);
       sessionStorage.setItem('assessment_session_id', session.id);
-      sessionStorage.setItem('assessment_user_key', window.AlbEdu.supabase.auth.currentUser.uid);
+      sessionStorage.setItem('assessment_user_key', window.AlbEdu.supabase.auth.currentUser.id);
 
       // Redirect
       window.location.href = `take.html?token=${token}`;
