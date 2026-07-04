@@ -707,7 +707,10 @@
     "token_subtitle": "Masukkan token, 5 digit yang diberikan oleh guru",
     "token_submit": "Masuk Ujian",
     "token_back": "Kembali",
-    "profile_incomplete_badge": "Profil belum lengkap"
+    "profile_incomplete_badge": "Profil belum lengkap",
+    "profile_edit_sub": "Ubah nama dan foto profil",
+    "profile_admin_panel_sub": "Kembali ke dashboard",
+    "profile_logout_sub": "Logout dari akun"
   },
   "profile": {
     "desc": "Kelola informasi profil administrator Anda",
@@ -1069,5 +1072,12 @@
     "back_btn": "Kembali",
     "footer_note": "Anda dapat meminta akses/penghapusan data kapan saja. Lihat Kebijakan Privasi lengkap.",
     "privacy_link": "Kebijakan Privasi"
+  },
+  "admin": {
+    "profile": {
+      "btn_change_photo": "Ganti Foto",
+      "btn_change_photo_aria": "Ganti foto profil",
+      "role_badge": "Administrator"
+    }
   }
 }

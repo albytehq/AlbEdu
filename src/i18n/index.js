@@ -364,46 +364,28 @@ function pluralize(str, count) {
 // After loadLocale() resolves, updateDOM() is called which re-applies all
 // translations, so the user never sees blank text. The warning is only
 // emitted for keys that are TRULY missing (locale loaded, key not in JSON).
-export function t(key, params) {
+//
+// v2.0: t() is now defined later as `export const t = tEnhanced` with
+// enterprise features (memoization, context, dev mode, missing key tracking).
+// The legacy implementation is kept as _tLegacy for reference/debugging.
+function _tLegacy(key, params) {
   const localeData = _translations[_currentLocale] || {};
   const defaultData = _translations[DEFAULT_LOCALE] || {};
 
   let value = getNested(localeData, key);
   if (value === undefined) {
-    // Try default locale
     value = getNested(defaultData, key);
-    if (value === undefined && _currentLocale !== DEFAULT_LOCALE) {
-      // Only warn if BOTH locales are loaded — otherwise the missing value
-      // might just be due to the async fetch not having completed yet.
-      if (_localeLoaded[_currentLocale] && _localeLoaded[DEFAULT_LOCALE]) {
-        console.warn(`[i18n] Missing key "${key}" in locale "${_currentLocale}", fallback to "${DEFAULT_LOCALE}"`);
-      }
-    }
   }
   if (value === undefined) {
-    // Try inline fallback dict
     value = getNested(_FALLBACK_DICT[_currentLocale] || {}, key);
     if (value === undefined) {
       value = getNested(_FALLBACK_DICT[DEFAULT_LOCALE] || {}, key);
     }
   }
-  if (value === undefined) {
-    // Total miss — return undefined, let updateDOM keep HTML text.
-    // Suppress warning during initial load (locale fetch in flight) to
-    // avoid noise from keys that will resolve once JSON arrives.
-    // After load completes, ONLY warn for truly missing keys (not "still loading").
-    if (typeof console !== 'undefined' && _localeLoaded[_currentLocale]) {
-      console.warn(`[i18n] Missing translation key: "${key}" (locale: ${_currentLocale})`);
-    }
-    return undefined;
-  }
-
-  // Pluralization (if count param provided)
+  if (value === undefined) return undefined;
   if (params && typeof params.count !== 'undefined') {
     value = pluralize(value, params.count);
   }
-
-  // Interpolation (XSS-safe — vars are escaped)
   return interpolate(value, params);
 }
 
@@ -426,6 +408,9 @@ export async function switchLocale(locale) {
 
   // Load locale JSON (uses cache if already loaded)
   await loadLocale(valid);
+
+  // Clear translation cache (v2.0 — memoized results are locale-specific)
+  _clearCache();
 
   // Update <html> lang + dir attributes — important for accessibility
   document.documentElement.setAttribute('lang', valid);
@@ -640,7 +625,343 @@ export function _syncFromUser(userData) {
 export const syncFromUser = _syncFromUser;
 export const syncToUser = _syncToSupabase;
 
-// Expose to window for classic script access (OptionProfile, panel.js, dll)
+// =============================================================================
+// ENTERPRISE FEATURES (v2.0)
+// =============================================================================
+// Added: Intl API formatters, dev mode, missing key tracking, completeness
+// checker, memoization, translation context, safe HTML mode.
+// =============================================================================
+
+// ── Dev mode detection ────────────────────────────────────────────────────
+// In dev mode: verbose console warnings, highlight missing keys in DOM.
+// In prod mode: silent (configurable analytics endpoint for missing keys).
+var _isDevMode = (function () {
+  try {
+    var host = location.hostname;
+    var isLocalhost = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
+    var hasDebugParam = new URLSearchParams(location.search).has('i18n_debug');
+    return isLocalhost || hasDebugParam;
+  } catch (_) { return false; }
+})();
+
+// ── Missing key tracking ──────────────────────────────────────────────────
+// Track every missing key request for analytics + debugging.
+// Read via i18n.getMissingKeys(). Reset via i18n.resetMissingKeys().
+var _missingKeys = {};  // {key: {count, lastSeen, locale}}
+var _missingKeyListeners = [];
+
+function _trackMissingKey(key, locale) {
+  if (!_missingKeys[key]) {
+    _missingKeys[key] = { count: 0, firstSeen: Date.now(), locales: new Set() };
+  }
+  _missingKeys[key].count++;
+  _missingKeys[key].lastSeen = Date.now();
+  _missingKeys[key].locales.add(locale);
+
+  // Notify listeners (for analytics reporting)
+  for (var i = 0; i < _missingKeyListeners.length; i++) {
+    try { _missingKeyListeners[i]({ key: key, locale: locale }); } catch (_) {}
+  }
+}
+
+function getMissingKeys() {
+  return Object.keys(_missingKeys).map(function (key) {
+    return {
+      key: key,
+      count: _missingKeys[key].count,
+      firstSeen: _missingKeys[key].firstSeen,
+      lastSeen: _missingKeys[key].lastSeen,
+      locales: Array.from(_missingKeys[key].locales),
+    };
+  }).sort(function (a, b) { return b.count - a.count; });
+}
+
+function resetMissingKeys() {
+  _missingKeys = {};
+}
+
+function onMissingKey(callback) {
+  if (typeof callback !== 'function') return function () {};
+  _missingKeyListeners.push(callback);
+  return function unsubscribe() {
+    var idx = _missingKeyListeners.indexOf(callback);
+    if (idx !== -1) _missingKeyListeners.splice(idx, 1);
+  };
+}
+
+// ── Translation completeness checker ──────────────────────────────────────
+// Returns percentage of DEFAULT_LOCALE keys that exist in the target locale.
+// Useful for CI/CD pipelines to detect incomplete translations.
+function getCompleteness(locale) {
+  var valid = _validateLocale(locale);
+  if (!valid) return 0;
+
+  var defaultData = _translations[DEFAULT_LOCALE] || {};
+  var targetData = _translations[valid] || {};
+
+  // Flatten nested objects to dot-notation key sets
+  function flatten(obj, prefix, result) {
+    for (var k in obj) {
+      if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+      var path = prefix ? prefix + '.' + k : k;
+      if (obj[k] && typeof obj[k] === 'object' && !Array.isArray(obj[k])) {
+        flatten(obj[k], path, result);
+      } else {
+        result[path] = true;
+      }
+    }
+    return result;
+  }
+
+  var defaultKeys = flatten(defaultData, '', {});
+  var targetKeys = flatten(targetData, '', {});
+
+  var total = Object.keys(defaultKeys).length;
+  if (total === 0) return 100;
+
+  var present = 0;
+  for (var key in defaultKeys) {
+    if (targetKeys[key]) present++;
+  }
+
+  return Math.round((present / total) * 1000) / 10;  // 1 decimal place
+}
+
+// Returns keys present in DEFAULT_LOCALE but missing from target locale.
+function getMissingKeysForLocale(locale) {
+  var valid = _validateLocale(locale);
+  if (!valid) return [];
+
+  var defaultData = _translations[DEFAULT_LOCALE] || {};
+  var targetData = _translations[valid] || {};
+
+  function flatten(obj, prefix, result) {
+    for (var k in obj) {
+      if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+      var path = prefix ? prefix + '.' + k : k;
+      if (obj[k] && typeof obj[k] === 'object' && !Array.isArray(obj[k])) {
+        flatten(obj[k], path, result);
+      } else {
+        result[path] = true;
+      }
+    }
+    return result;
+  }
+
+  var defaultKeys = flatten(defaultData, '', {});
+  var targetKeys = flatten(targetData, '', {});
+
+  var missing = [];
+  for (var key in defaultKeys) {
+    if (!targetKeys[key]) missing.push(key);
+  }
+  return missing.sort();
+}
+
+// ── Memoization cache ─────────────────────────────────────────────────────
+// Cache t() results for (key, locale, paramsHash) to avoid repeated lookups.
+// Cache is invalidated on locale switch.
+var _translationCache = {};
+var _CACHE_MAX_SIZE = 5000;
+
+function _cacheKey(key, locale, paramsHash) {
+  return locale + '::' + key + '::' + paramsHash;
+}
+
+function _paramsHash(params) {
+  if (!params) return '';
+  try {
+    var keys = Object.keys(params).sort();
+    var parts = [];
+    for (var i = 0; i < keys.length; i++) {
+      parts.push(keys[i] + '=' + String(params[keys[i]]));
+    }
+    return parts.join('&');
+  } catch (_) { return ''; }
+}
+
+function _clearCache() {
+  _translationCache = {};
+}
+
+// ── Translation context support ───────────────────────────────────────────
+// t('nav.profile', { context: 'admin' }) looks up 'nav.profile.admin' first,
+// then falls back to 'nav.profile'. Useful for same key with different
+// meanings in different contexts (e.g., "Profile" as menu item vs page title).
+function _resolveContextKey(key, params) {
+  if (!params || !params.context) return key;
+  // Try contextualized key first: 'nav.profile' + context 'admin' → 'nav.profile.admin'
+  return key + '.' + params.context;
+}
+
+// ── Enhanced translate function (v2.0) ────────────────────────────────────
+// Adds: memoization, context support, missing key tracking, dev mode.
+// Backward compatible — same signature as v1.x.
+function tEnhanced(key, params, opts) {
+  opts = opts || {};
+
+  // Check context variant first
+  var contextKey = _resolveContextKey(key, params);
+  var actualKey = key;
+  if (contextKey !== key) {
+    // Try context key first
+    var contextResult = _translateRaw(contextKey, params, opts);
+    if (contextResult !== undefined) return contextResult;
+    // Fall back to base key
+  }
+
+  return _translateRaw(actualKey, params, opts);
+}
+
+function _translateRaw(key, params, opts) {
+  // Check cache first
+  var ph = _paramsHash(params);
+  var ck = _cacheKey(key, _currentLocale, ph);
+  if (_translationCache[ck] !== undefined && !opts.bypassCache) {
+    return _translationCache[ck];
+  }
+
+  var localeData = _translations[_currentLocale] || {};
+  var defaultData = _translations[DEFAULT_LOCALE] || {};
+
+  var value = getNested(localeData, key);
+  if (value === undefined) {
+    value = getNested(defaultData, key);
+    if (value === undefined && _currentLocale !== DEFAULT_LOCALE) {
+      if (_localeLoaded[_currentLocale] && _localeLoaded[DEFAULT_LOCALE]) {
+        // Track for analytics
+        _trackMissingKey(key, _currentLocale);
+        // Only warn in dev mode (prod: silent, use getMissingKeys() for reporting)
+        if (_isDevMode && console.warn) {
+          console.warn('[i18n] Missing key "' + key + '" in locale "' + _currentLocale + '", fallback to "' + DEFAULT_LOCALE + '"');
+        }
+      }
+    }
+  }
+
+  if (value === undefined) {
+    value = getNested(_FALLBACK_DICT[_currentLocale] || {}, key);
+    if (value === undefined) {
+      value = getNested(_FALLBACK_DICT[DEFAULT_LOCALE] || {}, key);
+    }
+  }
+
+  if (value === undefined) {
+    // Total miss
+    if (_localeLoaded[_currentLocale]) {
+      _trackMissingKey(key, _currentLocale);
+      if (_isDevMode && console.warn) {
+        console.warn('[i18n] Missing translation key: "' + key + '" (locale: ' + _currentLocale + ')');
+      }
+    }
+    // In dev mode, return the key itself wrapped in markers for visual debugging
+    if (_isDevMode && opts.devMarker !== false) {
+      return '⟦' + key + '⟧';
+    }
+    return undefined;
+  }
+
+  // Pluralization
+  if (params && typeof params.count !== 'undefined') {
+    value = pluralize(value, params.count);
+  }
+
+  // Interpolation
+  var result = interpolate(value, params);
+
+  // Cache (respect size limit)
+  if (Object.keys(_translationCache).length < _CACHE_MAX_SIZE) {
+    _translationCache[ck] = result;
+  }
+
+  return result;
+}
+
+// Replace the old t() with enhanced version (backward compatible)
+// Old callers that use t(key, params) still work — opts is optional.
+export const t = tEnhanced;
+
+// ── Intl API formatters ───────────────────────────────────────────────────
+// These use the browser's built-in Intl API for locale-aware formatting.
+// Falls back gracefully if Intl is not available (very old browsers).
+
+function _getIntlLocale() {
+  // Map our locale codes to BCP-47 tags that Intl understands
+  var map = { id: 'id-ID', en: 'en-US' };
+  return map[_currentLocale] || _currentLocale;
+}
+
+function formatNumber(num, opts) {
+  try {
+    return new Intl.NumberFormat(_getIntlLocale(), opts || {}).format(num);
+  } catch (_) {
+    return String(num);
+  }
+}
+
+function formatCurrency(num, currency, opts) {
+  try {
+    var formatOpts = Object.assign({ style: 'currency', currency: currency || 'IDR' }, opts || {});
+    return new Intl.NumberFormat(_getIntlLocale(), formatOpts).format(num);
+  } catch (_) {
+    return String(num);
+  }
+}
+
+function formatDate(date, opts) {
+  try {
+    var d = (date instanceof Date) ? date : new Date(date);
+    return new Intl.DateTimeFormat(_getIntlLocale(), opts || { dateStyle: 'medium' }).format(d);
+  } catch (_) {
+    return String(date);
+  }
+}
+
+function formatTime(date, opts) {
+  try {
+    var d = (date instanceof Date) ? date : new Date(date);
+    return new Intl.DateTimeFormat(_getIntlLocale(), opts || { timeStyle: 'short' }).format(d);
+  } catch (_) {
+    return String(date);
+  }
+}
+
+function formatRelativeTime(date, opts) {
+  try {
+    var d = (date instanceof Date) ? date : new Date(date);
+    var now = Date.now();
+    var diff = d.getTime() - now;
+    var absDiff = Math.abs(diff);
+
+    // Auto-select unit based on diff magnitude
+    var unit, value;
+    var seconds = Math.round(absDiff / 1000);
+    var minutes = Math.round(seconds / 60);
+    var hours = Math.round(minutes / 60);
+    var days = Math.round(hours / 24);
+
+    if (seconds < 60) { value = seconds; unit = 'second'; }
+    else if (minutes < 60) { value = minutes; unit = 'minute'; }
+    else if (hours < 24) { value = hours; unit = 'hour'; }
+    else { value = days; unit = 'day'; }
+
+    var rtf = new Intl.RelativeTimeFormat(_getIntlLocale(), opts || { numeric: 'auto' });
+    return rtf.format(diff < 0 ? -value : value, unit);
+  } catch (_) {
+    return String(date);
+  }
+}
+
+function formatList(items, opts) {
+  try {
+    if (!Array.isArray(items) || items.length === 0) return '';
+    return new Intl.ListFormat(_getIntlLocale(), opts || { type: 'conjunction', style: 'long' }).format(items);
+  } catch (_) {
+    return items.join(', ');
+  }
+}
+
+// ── Expose to window for classic script access (OptionProfile, panel.js, dll)
 window.i18n = {
   t,
   switchLocale,
@@ -657,6 +978,27 @@ window.i18n = {
   STORAGE_KEY,
   LANG_CHANGED_EVENT,
   I18N_READY_EVENT,
+  // ── Enterprise v2.0 additions ──
+  // Intl formatters
+  formatNumber,
+  formatCurrency,
+  formatDate,
+  formatTime,
+  formatRelativeTime,
+  formatList,
+  // Missing key tracking
+  getMissingKeys,
+  resetMissingKeys,
+  onMissingKey,
+  // Completeness
+  getCompleteness,
+  getMissingKeysForLocale,
+  // Dev mode
+  isDevMode: function () { return _isDevMode; },
+  // Cache management
+  clearCache: _clearCache,
+  // Version
+  I18N_VERSION: '2.0.0-enterprise',
 };
 
 // ── Auto-init with retry logic ─────────────────────────────────────────────

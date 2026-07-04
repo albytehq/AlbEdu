@@ -707,7 +707,10 @@
     "token_subtitle": "Enter the 5-digit token provided by your teacher",
     "token_submit": "Enter Exam",
     "token_back": "Back",
-    "profile_incomplete_badge": "Profile incomplete"
+    "profile_incomplete_badge": "Profile incomplete",
+    "profile_edit_sub": "Change name and profile photo",
+    "profile_admin_panel_sub": "Back to dashboard",
+    "profile_logout_sub": "Log out from account"
   },
   "profile": {
     "desc": "Manage your administrator profile information",
@@ -1069,5 +1072,12 @@
     "back_btn": "Back",
     "footer_note": "You can request data access/deletion anytime. See full Privacy Policy.",
     "privacy_link": "Privacy Policy"
+  },
+  "admin": {
+    "profile": {
+      "btn_change_photo": "Change Photo",
+      "btn_change_photo_aria": "Change profile photo",
+      "role_badge": "Administrator"
+    }
   }
 }
