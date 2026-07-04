@@ -1,5 +1,5 @@
 // =============================================================================
-// icons.d.ts — TypeScript definitions for AlbEdu Icon System (v6.0)
+// icons.d.ts — TypeScript Definitions for AlbEdu Icon System (v7.0 ENTERPRISE)
 // =============================================================================
 // Place this file alongside icons.js for IDE autocomplete + type checking.
 // =============================================================================
@@ -24,6 +24,26 @@ export interface IconMetrics {
   iconsRendered: number;
   /** Total number of icons bound via bindIcons(). */
   iconsBound: number;
+  /** Layer 1 memory cache hit count. */
+  cacheHits: number;
+  /** Layer 1 memory cache miss count. */
+  cacheMisses: number;
+  /** Layer 1 cache hit rate (0-1). */
+  cacheHitRate: number;
+  /** Layer 1 cache current entry count. */
+  cacheSize: number;
+  /** Layer 1 cache max entry count. */
+  cacheMaxEntries: number;
+  /** Average time per render in microseconds. */
+  avgRenderTimeUs: number;
+  /** Total time spent in renderer in microseconds. */
+  totalRenderTimeUs: number;
+  /** Time spent in last bindIcons() call (ms). */
+  bindTimeMs: number;
+  /** Time spent in module init (ms). */
+  initTimeMs: number;
+  /** Timestamp of last bindIcons() call. */
+  lastBindTimestamp: number | null;
   /** Map of missing icon names → request count. */
   missingIcons: Record<string, number>;
   /** Number of distinct missing icons requested. */
@@ -37,14 +57,10 @@ export interface IconMetrics {
     stack?: string;
     timestamp: number;
   }>;
-  /** Time spent in last bindIcons() call (ms). */
-  bindTimeMs: number;
-  /** Time spent in auto-init (ms). */
-  initTimeMs: number;
-  /** Timestamp of last bindIcons() call. */
-  lastBindTimestamp: number | null;
-  /** Total icons in registry. */
+  /** Total icons in registry (critical + secondary). */
   totalIconsInRegistry: number;
+  /** Number of critical icons (in inline sprite). */
+  criticalIconsCount: number;
 }
 
 /** Result of bindIcons() call. */
@@ -79,11 +95,11 @@ export interface IconErrorEvent {
 /** Event listener unsubscribe function. */
 export type Unsubscribe = () => void;
 
-/** AlbEdu Icon System public API. */
+/** AlbEdu Icon System public API (v7.0). */
 export interface AlbEduIcons {
   /** Render an icon as an HTML string. Never throws — returns fallback on error. */
   icon(name: string, opts?: IconOptions): string;
-  /** Set an icon on an existing DOM element. Mutates innerHTML. */
+  /** Set an icon on an existing DOM element. Uses cloneNode — no string parsing on repeat. */
   setIcon(el: Element, name: string, opts?: IconOptions): void;
   /** Register a custom icon at runtime. svgPath = inner SVG content. */
   registerIcon(name: string, svgPath: string): boolean;
@@ -95,7 +111,7 @@ export interface AlbEduIcons {
   hasIcon(name: string): boolean;
   /** Get performance metrics for debugging/observability. */
   getMetrics(): IconMetrics;
-  /** Reset all metrics to zero. */
+  /** Reset all metrics to zero and clear the cache. */
   resetMetrics(): void;
   /** Subscribe to an event. Returns unsubscribe function. */
   addEventListener(event: 'icon-missing', cb: (detail: IconMissingEvent) => void): Unsubscribe;
@@ -105,6 +121,10 @@ export interface AlbEduIcons {
   on(event: 'icon-missing', cb: (detail: IconMissingEvent) => void): Unsubscribe;
   on(event: 'icons-bound', cb: (detail: IconsBoundEvent) => void): Unsubscribe;
   on(event: 'icon-error', cb: (detail: IconErrorEvent) => void): Unsubscribe;
+  /** NEW v7.0: Preload specific icons into the Layer 1 cache during idle time. */
+  preloadIcons(names?: string[]): void;
+  /** NEW v7.0: Preload the entire registry into the Layer 1 cache. */
+  preloadAll(): void;
   /** Icon system version string. */
   ICONS_VERSION: string;
 }
@@ -123,6 +143,8 @@ declare global {
       resetMetrics: AlbEduIcons['resetMetrics'];
       addEventListener: AlbEduIcons['addEventListener'];
       on: AlbEduIcons['on'];
+      preloadIcons: AlbEduIcons['preloadIcons'];
+      preloadAll: AlbEduIcons['preloadAll'];
       ICONS_VERSION: string;
     };
   }

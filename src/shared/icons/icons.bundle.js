@@ -118,8 +118,10 @@
 
   // === BEGIN INLINE MODULES ===
   // (These are inlined by the build script for production. In dev, they
+  //  are loaded as separate files for easier debugging.)
+
   // ─── Module: performance/metrics.js ─────────────────────────────────
-// =============================================================================
+  // =============================================================================
 // metrics.js — AlbEdu Icon System · Performance Observability
 // =============================================================================
 // Responsibility:
@@ -324,8 +326,8 @@
 })();
 
 
-  // ─── Module: cache/cache.js ─────────────────────────────────
-// =============================================================================
+  // ─── Module: cache/cache.js ─────────────────────────────────────────
+  // =============================================================================
 // cache.js — AlbEdu Icon System · Layer 1: In-Memory Template Cache
 // =============================================================================
 // Responsibility:
@@ -430,8 +432,8 @@
 })();
 
 
-  // ─── Module: sprite/sprite.js ─────────────────────────────────
-// =============================================================================
+  // ─── Module: sprite/sprite.js ───────────────────────────────────────
+  // =============================================================================
 // sprite.js — AlbEdu Icon System · Inline SVG Sprite Manager
 // =============================================================================
 // Responsibility:
@@ -579,8 +581,8 @@
 })();
 
 
-  // ─── Module: registry/critical.js ─────────────────────────────────
-// =============================================================================
+  // ─── Module: registry/critical.js ───────────────────────────────────
+  // =============================================================================
 // critical.js — AlbEdu Icon System · Critical Icon Registry (Layer 1)
 // =============================================================================
 // 16 critical icons bundled into the main icons.js. These are ALSO injected
@@ -619,8 +621,8 @@ window.AlbEdu.__iconRegistryCritical = {
 };
 
 
-  // ─── Module: registry/secondary.js ─────────────────────────────────
-// =============================================================================
+  // ─── Module: registry/secondary.js ──────────────────────────────────
+  // =============================================================================
 // secondary.js — AlbEdu Icon System · Secondary Icon Registry (Layer 2)
 // =============================================================================
 // Secondary icons are bundled into the main icons.js (so they're available
@@ -724,8 +726,8 @@ window.AlbEdu.__iconRegistrySecondary = {
 };
 
 
-  // ─── Module: renderer/renderer.js ─────────────────────────────────
-// =============================================================================
+  // ─── Module: renderer/renderer.js ───────────────────────────────────
+  // =============================================================================
 // renderer.js — AlbEdu Icon System · Clone-Based SVG Renderer
 // =============================================================================
 // Responsibility:
@@ -832,29 +834,6 @@ window.AlbEdu.__iconRegistrySecondary = {
     return '<svg ' + attrs + '>' + innerPath + '</svg>';
   }
 
-  // ── String cache (Layer 1a) — for the icon() string API ─────────────
-  // Avoids DOM round-trip on cache hits. Keyed identically to _cache.
-  var _stringCache = new Map();
-  var STRING_CACHE_MAX = 256;
-
-  function _getString(cacheKey) {
-    var s = _stringCache.get(cacheKey);
-    if (s) {
-      // LRU refresh
-      _stringCache.delete(cacheKey);
-      _stringCache.set(cacheKey, s);
-    }
-    return s;
-  }
-
-  function _setString(cacheKey, s) {
-    if (_stringCache.size >= STRING_CACHE_MAX) {
-      var oldest = _stringCache.keys().next().value;
-      _stringCache.delete(oldest);
-    }
-    _stringCache.set(cacheKey, s);
-  }
-
   // ── Create a cached <template> for an icon ──────────────────────────
   // The template holds the parsed SVG element. Cloning this template
   // is dramatically faster than re-parsing the string.
@@ -862,13 +841,12 @@ window.AlbEdu.__iconRegistrySecondary = {
     var svgString = _buildSvgString(innerPath, opts, classes);
     var tpl = document.createElement('template');
     tpl.innerHTML = svgString;
-    return { tpl: tpl, str: svgString };
+    return tpl;
   }
 
   // ── Render: returns HTML string (for AlbEdu.icon API) ───────────────
-  // Uses a dedicated string cache (Layer 1a) — O(1) on cache hit, no
-  // DOM round-trip. This matches v6.0's string-concatenation speed
-  // while still benefiting from caching.
+  // For repeat renders, we clone the cached template's innerHTML —
+  // still faster than rebuilding the string with concatenation.
   function render(name, opts) {
     opts = opts || {};
     var startTime = _metrics ? performance.now() : 0;
@@ -888,23 +866,16 @@ window.AlbEdu.__iconRegistrySecondary = {
 
       var classes = 'albedu-icon';
       var cacheKey = _cache ? _cache._key(resolved.name, opts.size, opts.strokeWidth, opts.class, opts['aria-label']) : null;
+      var tpl = _cache ? _cache.get(cacheKey) : null;
 
-      // Try string cache FIRST (Layer 1a) — pure O(1), no DOM
-      var cachedString = cacheKey ? _getString(cacheKey) : null;
-      if (cachedString) {
-        if (_metrics) {
-          _metrics.incRender();
-          _metrics.incCacheHit();
-          _metrics.recordRenderTime((performance.now() - startTime) * 1000);
+      if (!tpl) {
+        tpl = _createTemplate(resolved.name, resolved.path, opts, classes);
+        if (_cache) {
+          _cache.set(cacheKey, tpl);
+          _metrics && _metrics.incCacheMiss();
         }
-        return cachedString;
-      }
-
-      // Cache miss — build the string and cache it
-      var svgString = _buildSvgString(resolved.path, opts, classes);
-      if (cacheKey) {
-        _setString(cacheKey, svgString);
-        _metrics && _metrics.incCacheMiss();
+      } else if (_metrics) {
+        _metrics.incCacheHit();
       }
 
       if (_metrics) {
@@ -912,7 +883,12 @@ window.AlbEdu.__iconRegistrySecondary = {
         _metrics.recordRenderTime((performance.now() - startTime) * 1000);
       }
 
-      return svgString;
+      // For string API: serialize the cloned SVG back to HTML.
+      // (cloneNode is still faster than rebuilding the string.)
+      var clone = tpl.content.cloneNode(true);
+      var div = document.createElement('div');
+      div.appendChild(clone);
+      return div.innerHTML;
     } catch (err) {
       if (_metrics) _metrics.recordError('renderer.render:' + name, err);
       return _buildSvgString(FALLBACK_SVG_INNER, opts || {}, 'albedu-icon albedu-icon--error');
@@ -920,8 +896,7 @@ window.AlbEdu.__iconRegistrySecondary = {
   }
 
   // ── Render Node: returns a cloned SVGElement ────────────────────────
-  // This is the FAST path for DOM insertion. Uses the template cache
-  // (Layer 1b) — cloneNode(true) is faster than string parsing.
+  // This is the FAST path for DOM insertion. No string serialization.
   function renderNode(name, opts) {
     opts = opts || {};
 
@@ -931,8 +906,8 @@ window.AlbEdu.__iconRegistrySecondary = {
       if (!resolved.path) {
         if (_metrics) _metrics.recordMissing(resolved.name);
         if (opts.fallback === false) return null;
-        var fb = _createTemplate('_fallback', FALLBACK_SVG_INNER, opts, 'albedu-icon albedu-icon--missing');
-        return fb.tpl.content.firstChild.cloneNode(true);
+        var fallbackTpl = _createTemplate('_fallback', FALLBACK_SVG_INNER, opts, 'albedu-icon albedu-icon--missing');
+        return fallbackTpl.content.firstChild.cloneNode(true);
       }
 
       var classes = 'albedu-icon';
@@ -940,8 +915,7 @@ window.AlbEdu.__iconRegistrySecondary = {
       var tpl = _cache ? _cache.get(cacheKey) : null;
 
       if (!tpl) {
-        var built = _createTemplate(resolved.name, resolved.path, opts, classes);
-        tpl = built.tpl;
+        tpl = _createTemplate(resolved.name, resolved.path, opts, classes);
         if (_cache) {
           _cache.set(cacheKey, tpl);
           _metrics && _metrics.incCacheMiss();
@@ -1021,13 +995,6 @@ window.AlbEdu.__iconRegistrySecondary = {
   // ── Allow access to the fallback constant (for testing) ─────────────
   function getFallback() { return FALLBACK_SVG_INNER; }
 
-  // Clear both string cache (Layer 1a) and template cache (Layer 1b).
-  // Called by registerIcon() to invalidate stale entries.
-  function clearCache() {
-    _stringCache.clear();
-    if (_cache) _cache.clear();
-  }
-
   if (!window.AlbEdu) window.AlbEdu = {};
   window.AlbEdu.__iconRenderer = {
     render: render,
@@ -1037,15 +1004,14 @@ window.AlbEdu.__iconRegistrySecondary = {
     has: has,
     setRegistry: setRegistry,
     getFallback: getFallback,
-    clearCache: clearCache,
     _normalizeName: _normalizeName,
     _resolve: _resolve,
   };
 })();
 
 
-  // ─── Module: loader/loader.js ─────────────────────────────────
-// =============================================================================
+  // ─── Module: loader/loader.js ───────────────────────────────────────
+  // =============================================================================
 // loader.js — AlbEdu Icon System · Lazy Loader + Idle Preloader
 // =============================================================================
 // Responsibility:
@@ -1218,8 +1184,8 @@ window.AlbEdu.__iconRegistrySecondary = {
       _mergedRegistry[normalized] = svgPath;
       // Re-wire the renderer with the updated registry
       _renderer.setRegistry(_mergedRegistry, _aliases);
-      // Invalidate both string cache (Layer 1a) and template cache (Layer 1b)
-      _renderer.clearCache();
+      // Invalidate cache for this name (in case it was rendered before)
+      if (_cache) _cache.clear();
       return true;
     } catch (err) {
       if (_metrics) _metrics.recordError('registerIcon:' + name, err);
@@ -1251,12 +1217,12 @@ window.AlbEdu.__iconRegistrySecondary = {
     if (!_metrics) return {};
     var snap = _metrics.snapshot();
     var cacheStats = _cache ? _cache.stats() : {};
-    // Merge: snap.cacheHits/cacheMisses come from the metrics module
-    // (incremented by both string cache and template cache paths).
-    // cacheStats provides the template-cache-specific size/maxEntries.
     return Object.assign(snap, {
       cacheSize: cacheStats.size || 0,
       cacheMaxEntries: cacheStats.maxEntries || 0,
+      cacheHits: cacheStats.hits || 0,
+      cacheMisses: cacheStats.misses || 0,
+      cacheHitRate: cacheStats.hitRate || 0,
       totalIconsInRegistry: Object.keys(_mergedRegistry).length,
       criticalIconsCount: _sprite ? _sprite.CRITICAL_NAMES.length : 0,
     });
@@ -1264,8 +1230,7 @@ window.AlbEdu.__iconRegistrySecondary = {
 
   function resetMetrics() {
     if (_metrics) _metrics.reset();
-    if (_renderer) _renderer.clearCache();
-    else if (_cache) _cache.clear();
+    if (_cache) _cache.clear();
   }
 
   // ── Public API: addEventListener / on ───────────────────────────────
@@ -1355,13 +1320,8 @@ window.AlbEdu.__iconRegistrySecondary = {
       if (node.querySelector('svg.albedu-icon')) continue;
 
       var rect = node.getBoundingClientRect();
-      // If rect is all zeros (no layout available — jsdom, hidden tab,
-      // display:none ancestor), bind immediately to be safe.
-      var noLayout = rect.top === 0 && rect.bottom === 0 &&
-                     rect.left === 0 && rect.right === 0;
-      var inViewport = noLayout ||
-                       (rect.top < window.innerHeight && rect.bottom > 0 &&
-                        rect.left < window.innerWidth && rect.right > 0);
+      var inViewport = rect.top < window.innerHeight && rect.bottom > 0 &&
+                       rect.left < window.innerWidth && rect.right > 0;
 
       if (inViewport) {
         immediate.push(node);
