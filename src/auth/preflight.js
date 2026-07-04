@@ -145,7 +145,25 @@ export async function extractBackendErrorCode(error) {
     if (error?.status === 429) return 'rate_limit_exceeded';
     if (error?.status === 401) return 'unauthorized';
 
-    // 4. Last resort: use error.message
+    // 4. Network / CORS error detection (BEFORE falling back to error.message).
+    // When the Supabase SDK fails to even send the request (CORS preflight blocked,
+    // DNS failure, offline, etc.), error.context is undefined and error.message is
+    // a generic English string like "Failed to send a request to the Edge Function".
+    // That string would otherwise become the i18n key (with spaces!) — never matches.
+    // Map to stable 'network_error' code so i18n can resolve it properly.
+    const msg = (error?.message || '').toLowerCase();
+    if (
+        msg.includes('failed to send a request') ||
+        msg.includes('failed to fetch') ||
+        msg.includes('network request failed') ||
+        msg.includes('cors') ||
+        msg.includes('load failed') ||
+        (error?.name === 'TypeError' && msg.includes('fetch'))
+    ) {
+        return 'network_error';
+    }
+
+    // 5. Last resort: use error.message
     return error?.message || 'unknown_error';
 }
 

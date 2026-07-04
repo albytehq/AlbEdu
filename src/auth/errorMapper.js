@@ -104,7 +104,10 @@ export const ERROR_MESSAGES = {
     
     method_not_allowed:
         'Metode tidak didukung.',
-    
+
+    network_error:
+        'Koneksi ke server gagal. Periksa koneksi internet Anda dan coba lagi.',
+
     // Generic fallback
     unknown_error:
         'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.',
