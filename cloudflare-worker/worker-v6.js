@@ -16,7 +16,7 @@
  * DEPLOY: Copy this file to Cloudflare Workers dashboard (or wrangler deploy).
  *         Set env vars: GITHUB_TOKEN, GITHUB_USERNAME=albytehq, SUPABASE_URL,
  *         SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY, AUTH_TOKEN (optional)
- *         Cron trigger: */15 * * * *  (every 15 min, was every hour)
+ *         Cron trigger: every 15 minutes (was every hour)
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
