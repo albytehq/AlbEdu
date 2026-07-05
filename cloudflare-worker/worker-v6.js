@@ -350,11 +350,40 @@ async function _handleUploadInner(request, env) {
 
   const githubUrl = `https://api.github.com/repos/${env.GITHUB_USERNAME}/${repo}/contents/${path}`;
 
+  // Check if file already exists — if so, get its SHA for update
+  let existingSha = null;
+  try {
+    const checkRes = await fetchWithRetry(githubUrl, {
+      method: 'GET',
+      headers: {
+        Authorization:  `token ${env.GITHUB_TOKEN}`,
+        Accept:         'application/vnd.github.v3+json',
+        'User-Agent':   'AlbEdu-Worker/6.0',
+      },
+    });
+    if (checkRes.ok) {
+      const existing = await checkRes.json();
+      existingSha = existing?.sha || null;
+    }
+  } catch (e) {
+    // 404 = file doesn't exist yet, that's OK
+  }
+
   const controller = new AbortController();
   const abortTimer = setTimeout(() => controller.abort(), GITHUB_PUT_TIMEOUT_MS);
 
   let githubRes;
   try {
+    const bodyObj = {
+      message: `upload ${hash.slice(0, 8)}.${ext}`,
+      content: base64,
+      branch: BRANCH,
+    };
+    // If file exists, include SHA for update (otherwise GitHub returns 422)
+    if (existingSha) {
+      bodyObj.sha = existingSha;
+    }
+
     githubRes = await fetchWithRetry(githubUrl, {
       method: 'PUT',
       signal: controller.signal,
@@ -364,7 +393,7 @@ async function _handleUploadInner(request, env) {
         'Content-Type': 'application/json',
         'User-Agent':   'AlbEdu-Worker/6.0',
       },
-      body: JSON.stringify({ message: `upload ${hash.slice(0, 8)}.${ext}`, content: base64, branch: BRANCH }),
+      body: JSON.stringify(bodyObj),
     });
   } finally {
     clearTimeout(abortTimer);

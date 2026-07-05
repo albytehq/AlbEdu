@@ -66,15 +66,16 @@ class AdminPanel {
             // `profil_lengkap` — migration 20260701_002_alter_users_snake_case.sql).
             const incomplete = data.profile_complete === false || data.profilLengkap === false || data.profil_lengkap === false;
 
-            const safeAvatarUrl = (avatarUrl && /^https:/.test(avatarUrl)) ? avatarUrl : '';
+            const safeAvatarUrl = (avatarUrl && /^https:/.test(avatarUrl) && !avatarUrl.endsWith('.html')) ? avatarUrl : '';
             const incompleteBadge = incomplete
                 ? `<span class="profile-status-mobile">${escape(t('nav.profile_incomplete', null, 'Profil belum lengkap'))}</span>`
                 : '';
+            const defaultAvatarIcon = '<span data-albedu-icon="manage_accounts"></span>';
             container.innerHTML = `
                 <div class="user-avatar-mobile" id="admin-index-avatar" aria-hidden="true">
                     ${safeAvatarUrl
-                        ? `<img src="${escape(safeAvatarUrl)}" alt="" data-avatar-fallback="true">`
-                        : '<span data-albedu-icon="manage_accounts"></span>'}
+                        ? `<img src="${escape(safeAvatarUrl)}" alt="" data-avatar-fallback="true" style="width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:0;transition:opacity 300ms ease">`
+                        : defaultAvatarIcon}
                 </div>
                 <div class="user-details-mobile">
                     <h3>${name}</h3>
@@ -86,8 +87,11 @@ class AdminPanel {
             const avatarImg = container.querySelector('img[data-avatar-fallback]');
             if (avatarImg) {
                 avatarImg.addEventListener('error', function() {
-                    this.style.display = 'none';
-                    this.parentElement.classList.add('avatar-fallback');
+                    // Restore default icon on error
+                    this.parentElement.innerHTML = defaultAvatarIcon;
+                });
+                avatarImg.addEventListener('load', function() {
+                    this.style.opacity = '1';
                 });
             }
 
