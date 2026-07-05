@@ -147,14 +147,14 @@
             <li>${'Email Google Anda'}</li>
             <li>${'Nama yang Anda input'}</li>
             <li>${'Jawaban Anda'}</li>
-            <li>${'Aktivitas selama ujian (untuk anti-cheat)'}</li>
+            <li>${'Aktivitas selama asesmen (untuk anti-cheat)'}</li>
             <li>${'Alamat IP dan perangkat'}</li>
           </ul>
           <p style="font-size: 14px; color: var(--albedu-body, #475569); line-height: 1.6; margin: 16px 0;">
             ${'Data digunakan untuk: menyimpan dan menilai jawaban, mencegah kecurangan, audit keamanan. Data disimpan sesuai kebijakan retensi (90 hari - 3 tahun).'}
           </p>
           <p style="font-size: 14px; color: var(--albedu-body, #475569); line-height: 1.6; margin: 16px 0;">
-            ${'Anda bisa request akses/hapus data kapan saja. Lihat Kebijakan Privasi lengkap.'} <a href="../pages/privacy-policy.html" target="_blank" style="color: var(--albedu-primary, #2563eb);">Kebijakan Privasi</a>
+            ${'Anda bisa request akses/hapus data kapan saja. Lihat Kebijakan Privasi lengkap.'} <a href="../privacy-policy.html" target="_blank" style="color: var(--albedu-primary, #2563eb);">Kebijakan Privasi</a>
           </p>
           <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
             <button id="consent-reject" type="button" style="

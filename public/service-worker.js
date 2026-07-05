@@ -1,5 +1,5 @@
 // =============================================================================
-// service-worker.js — AlbEdu v0.742.9 PWA Service Worker (Phase 5 Enhanced)
+// service-worker.js — AlbEdu v0.746.0 PWA Service Worker (Phase 5 Enhanced)
 // =============================================================================
 // Strategy: stale-while-revalidate for static assets, network-first for API.
 // Cache limit: ~5MB (Free Plan safe).

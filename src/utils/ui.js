@@ -352,7 +352,7 @@ UI.Profile = {
                     <div class="user-stats">
                         <div class="stat-item">
                             <span class="stat-value">${u.totalUjian || 0}</span>
-                            <span class="stat-label">Ujian Diselesaikan</span>
+                            <span class="stat-label">Asesmen Diselesaikan</span>
                         </div>
                     </div>
                 </div>

@@ -1,7 +1,7 @@
 {
   "name": "albedu",
-  "version": "0.742.9",
-  "description": "AlbEdu — Production-grade exam platform with AI-maintainable by-feature structure.",
+  "version": "0.746.0",
+  "description": "AlbEdu — Production-grade assessment platform for schools, campuses, and personal use. AI-maintainable by-feature structure.",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,7 +19,7 @@
   },
   "keywords": [
     "education",
-    "exam",
+    "assessment",
     "supabase",
     "vanilla-js",
     "by-feature"

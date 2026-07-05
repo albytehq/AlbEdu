@@ -1,6 +1,8 @@
-# Supabase — AlbEdu v1.0.0
+# Supabase — AlbEdu v0.746.0
 
-Database schema, Edge Functions, and migrations for AlbEdu v1.0.0 enterprise.
+Database schema, Edge Functions, and migrations for AlbEdu v0.746.0.
+
+**Note:** Live DB may have additional manual tables (admin_storages, assets_manifest, daftar_nama, rate_limit_heartbeats, rate_limit_submits, user_devices) created via Studio SQL editor, not in migrations.
 
 ---
 
@@ -15,9 +17,9 @@ Database schema, Edge Functions, and migrations for AlbEdu v1.0.0 enterprise.
 
 ---
 
-## 2. Schema Overview (v1.0.0)
+## 2. Schema Overview (v0.746.0)
 
-### 2.1 Tables (13 total)
+### 2.1 Tables (16 active, 1 dropped)
 
 | # | Table | Purpose | Replaces (v0.2.0) |
 |---|---|---|---|
@@ -110,7 +112,7 @@ psql "postgresql://postgres:[PASSWORD]@db.kzsrerxhhrtsxnpnmqgl.supabase.co:5432/
 
 ---
 
-## 5. Edge Functions (Phase 2 — pending)
+## 5. Edge Functions (12 deployed, all ACTIVE)
 
 ```
 supabase/functions/
@@ -124,12 +126,17 @@ supabase/functions/
 ├── register-admin/index.ts           # REFACTOR
 ├── user-auth-preflight/index.ts      # REFACTOR
 ├── user-auth-complete/index.ts       # REFACTOR
-├── access-code-attempt/index.ts      # RENAME from exam-token-attempt + Turnstile
+├── access-code-attempt/index.ts      # 6-digit access code validation + Turnstile + rate limit
 └── _shared/
     ├── auth.ts
     ├── audit.ts
-    ├── rls.ts
-    └── realtime.ts
+    ├── cors.ts
+    ├── db.ts
+    ├── error.ts
+    ├── rate-limit.ts
+    ├── realtime.ts
+    ├── turnstile.ts
+    └── types.ts
 ```
 
 **Deploy:**
@@ -242,7 +249,7 @@ SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public' AND row
 **Rollback procedure:**
 1. Supabase Dashboard → Database → Backups → Restore to pre-migration
 2. Git revert code to `v0.2.0-baseline` commit
-3. Redeploy Cloudflare Worker v5.1 (legacy)
+3. Redeploy Cloudflare Worker v6.0 (current)
 4. Max downtime: 2 hours
 
 ---
@@ -251,8 +258,8 @@ SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public' AND row
 
 **NEVER commit credentials to repo.** Store in:
 
-- `/home/z/my-project/AlbEdu/credentials/supabase-v1.json` (gitignored)
-- `/home/z/my-project/AlbEdu/.env.local` (gitignored)
+- `/home/z/my-project/extracted/AlbEdu-main/credentials/supabase-v1.json` (gitignored)
+- `/home/z/my-project/extracted/AlbEdu-main/.env.local` (gitignored)
 - Cloudflare Worker env vars (dashboard)
 - Supabase Dashboard → Settings → API
 

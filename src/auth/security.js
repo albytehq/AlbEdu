@@ -8,7 +8,7 @@
 //   2. Attr Escaper    — escape untuk href/data-* attributes
 //   3. Safe DOM Writer — ganti pola innerHTML berbahaya dengan wrapper aman
 //   4. Global Error Handler — tangkap semua uncaught error & promise rejection
-//   5. Violation Store — simpan state pelanggaran ujian ke Firestore,
+//   5. Violation Store — simpan state pelanggaran asesmen ke basis data,
 //                        bukan localStorage (tidak bisa dimanipulasi peserta)
 //
 // CARA PAKAI:
@@ -185,7 +185,7 @@
     //     - `assessment_view_peserta`: lookup view keyed by access_code (the `token`).
     //
     //   Methods kept on this object for backward-compat with legacy callers
-    //   (kerjakan-ujian.js, exam/logic.js). New v1.0.0 callers (take-assessment.js)
+    //   (kerjakan-ujian.js legacy, exam/logic.js). New v0.746.0 callers (take-assessment.js)
     //   talk to the new tables directly via Edge Functions.
 
     const ViolationStore = {
@@ -283,7 +283,7 @@
                     user_id:       userKey, // userKey is actually user.uid
                     user_email:    null,
                     user_name:     String(userName  || 'Peserta').slice(0, 80),
-                    exam_title:    String(examTitle || 'Ujian').slice(0, 100),
+                    exam_title:    String(examTitle || 'Asesmen').slice(0, 100),
                     event_type:    'keyboard_violation',
                     message:       String(message || 'Pelanggaran terdeteksi').slice(0, 300),
                     severity,

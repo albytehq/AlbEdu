@@ -1069,7 +1069,7 @@ function _initializeSystem() {
 // ── Debug (DevTools only) ─────────────────────────────────────────────────────
 function debugByteWard() {
     /* eslint-disable no-console */
-    console.group('ByteWard Auth v0.9.0');
+    console.group('ByteWard Auth v0.9.1');
     console.table({
         'BASE_PATH':        AUTH_CONFIG.BASE_PATH,
         'current page':     _getCurrentPage(),

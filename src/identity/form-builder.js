@@ -3,7 +3,7 @@
 // =============================================================================
 //
 // Admin-side form builder untuk mode "Manual" identity.
-// Menghasilkan konfigurasi fields[] yang akan disimpan di ujian.identity_config.
+// Menghasilkan konfigurasi fields[] yang akan disimpan di assessments.identity_config.
 //
 // Field types yang didukung:
 //   - text      → textbox biasa (Nama, NISN, dll)
@@ -16,7 +16,7 @@
 //   - Minimal 1 field harus ada
 //   - Minimal 1 field harus punya label yang mengandung "nama" (case-insensitive)
 //     → ini jadi _display_name key untuk peserta
-//   - Maksimal 10 fields per ujian
+//   - Maksimal 10 fields per asesmen
 //   - Label maksimal 30 karakter
 //   - Placeholder maksimal 80 karakter
 //   - max_length maksimal 200 (untuk text/textarea)
@@ -301,7 +301,7 @@ window.IdentityFormBuilder = (() => {
     hint.innerHTML = `
       <strong>Aturan:</strong>
       Minimal 1 field harus punya label mengandung kata <em>"nama"</em>
-      (digunakan sebagai display name peserta di hasil ujian).
+      (digunakan sebagai display name peserta di hasil asesmen).
     `;
     _container.appendChild(hint);
 

@@ -172,7 +172,7 @@ const ExamGuardian = (() => {
 
     if (devCombos.some(Boolean)) {
       e.preventDefault();
-      _triggerViolation('Shortcut keyboard ini tidak diizinkan saat ujian.');
+      _triggerViolation('Shortcut keyboard ini tidak diizinkan saat asesmen.');
     }
   }
 
@@ -190,7 +190,7 @@ const ExamGuardian = (() => {
       // Start debounce timer -- only fire violation if page stays hidden
       _visibilityTimer = setTimeout(() => {
         _visibilityTimer = null;
-        _triggerViolation('Kamu berpindah tab atau meninggalkan halaman ujian!');
+        _triggerViolation('Kamu berpindah tab atau meninggalkan halaman asesmen!');
       }, VISIBILITY_DEBOUNCE_MS);
     } else {
       // Page became visible again -- cancel the pending violation
@@ -243,7 +243,7 @@ const ExamGuardian = (() => {
 
   // --- deactivate -----------------------------------------------------------
   // FIX BUG-10: Reset warningCount saat deactivate agar state bersih
-  // untuk sesi ujian berikutnya. Sebelumnya warningCount persist
+  // untuk sesi asesmen berikutnya. Sebelumnya warningCount persist
   // dan bisa trigger false max-violation jika ExamGuardian di-reuse.
   function deactivate() {
     _isActive = false;

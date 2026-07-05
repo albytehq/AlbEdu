@@ -1,7 +1,7 @@
 # Contributing to AlbEdu
 
-**Version:** 2.0.0
-**Last updated:** 2026-06-28
+**Version:** 0.746.0
+**Last updated:** 2026-07-05
 
 ---
 
@@ -115,7 +115,8 @@ pages/admin/exam-archive.html
 </head>
 <body>
     <!-- Page content -->
-    <script src="../../src/utils/supabase-api.js" defer></script>
+    <script src="../../src/platform/supabase-client.js" defer></script>
+    <script src="../../src/platform/repository.js" defer></script>
     <script src="../../src/auth/main.js" defer></script>
     <script src="../../src/exam-archive/archive-controller.js" defer></script>
     <script src="../../src/exam-archive/archive-viewer.js" defer></script>
@@ -141,7 +142,7 @@ Edit `src/utils/navigasi.js` — tambah menu item di sidebar.
 
 #### Step 7: Update docs
 
-- `docs/ARCHITECTURE.md` — tambah ke module dependency graph
+- `docs/ARCHITECTURE-FINAL.md` — tambah ke module dependency graph
 - `docs/AI-CONTEXT.md` — tambah "Exam Archive" row di lookup table
 
 ---
@@ -183,7 +184,7 @@ Pakai [Conventional Commits](https://www.conventionalcommits.org/):
 ### Scopes
 
 - `auth` — Authentication & security
-- `wizard` — Exam creation wizard
+- `buat-ujian` — Assessment creation wizard (`src/pages/buat-ujian/`)
 - `exam` — Exam runtime
 - `identity` — Identity form system
 - `profile` — Profile management
@@ -199,7 +200,7 @@ Pakai [Conventional Commits](https://www.conventionalcommits.org/):
 ```bash
 feat(exam): add archive feature with filter by date
 fix(auth): handle null user on redirect after signOut
-refactor(wizard): split controller into submodules
+refactor(buat-ujian): split controller into submodules
 docs: update ARCHITECTURE.md with new ADR
 test: add phase5 exam archive tests
 chore: bump esbuild to 0.25.0
@@ -295,18 +296,18 @@ Add any other context or screenshots about the feature request here.
 ### Release Steps
 
 1. Update `package.json` version
-2. Update `docs/ARCHITECTURE.md` "Last updated" date
+2. Update `docs/ARCHITECTURE-FINAL.md` "Last updated" date
 3. Run full test suite
 4. Create git tag: `git tag v2.0.1`
 5. Push tag: `git push origin v2.0.1`
 6. Deploy `dist/` ke production
-7. Update `docs/UPDATE-GUIDE.md` dengan migration steps
+7. Update `rule-url-albedu.md` changelog dengan version baru
 
 ---
 
 ## Getting Help
 
 - **Documentation:** Start with [docs/README.md](./README.md)
-- **Architecture:** [docs/ARCHITECTURE.md](./ARCHITECTURE.md)
+- **Architecture:** [docs/ARCHITECTURE-FINAL.md](./ARCHITECTURE-FINAL.md) — three-stage refactor summary
 - **AI Assistant Guide:** [docs/AI-CONTEXT.md](./AI-CONTEXT.md)
-- **Migration Help:** [docs/MIGRATION.md](./MIGRATION.md)
+- **Migration Help:** [docs/ARCHITECTURE-FINAL.md](./ARCHITECTURE-FINAL.md) — three-stage refactor summary. (Note: `docs/MIGRATION.md` was planned but never created.)

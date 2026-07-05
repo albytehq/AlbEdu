@@ -65,7 +65,7 @@
 //   - workerBase required (throw if missing)
 //   - _bootstrapPEP resolves base path from current script src reliably
 //   - visibilitychange/blur closes dropdown
-//   - Footer version → "AlbEdu v0.8.0"
+//   - Footer version → "AlbEdu v0.746.0"
 //   - _user removed (dead state)
 //   - Focus restored to trigger on close
 //   - Close timer 200ms (matches CSS 180ms + 20ms margin)
@@ -784,7 +784,7 @@
         ${itemsHtml}
       </div>
 
-      <div class="op-footer">AlbEdu v0.8.0</div>
+      <div class="op-footer">AlbEdu v0.746.0</div>
     `;
 
     // Attach onerror via event listener (CSP-friendly)

@@ -24,7 +24,7 @@ Test setiap skenario secara manual di browser. Centang jika pass.
 
 - [ ] **11. 10.000 karakter esai** — Paste 10.000 karakter ke field esai. Tidak ada crash, text ter-truncate atau wrap gracefully.
 - [ ] **12. Emoji + RTL text** — Masukkan emoji + teks Arab ke field nama. Tidak ada encoding error, display correct.
-- [ ] **13. Malformed JSON import** — Import file JSON yang corrupt ke question bank. Error message jelas, tidak crash.
+- [ ] **13. Malformed JSON import** — Import file JSON yang corrupt ke Daftar Nama (max 3 daftar). Error message jelas, tidak crash.
 
 ### Timing Edge Cases
 
@@ -36,7 +36,7 @@ Test setiap skenario secara manual di browser. Centang jika pass.
 
 - [ ] **17. Low-end device (1GB RAM)** — Buka exam di device dengan 1GB RAM. Springs tidak cause OOM. will-change di-clean up.
 - [ ] **18. localStorage quota exceeded** — Fill localStorage sampai quota. QNotify draft save harus catch error, tidak crash.
-- [ ] **19. Image upload 50MB** — Upload image 50MB ke question bank. Validation harus reject dengan message jelas, tidak crash browser.
+- [ ] **19. Image upload 50MB** — Upload image 50MB ke profile avatar. Validation harus reject dengan message jelas, tidak crash browser. (Note: Bank Soal feature removed in v0.746.0.)
 
 ### Browser Edge Cases
 

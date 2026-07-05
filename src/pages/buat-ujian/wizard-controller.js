@@ -2,11 +2,11 @@
 // wizard-controller.js — Step navigation + list/wizard view toggle (v0.2.0)
 // =============================================================================
 // 3 steps:
-//   Step 1: Informasi Ujian + Identitas Peserta + Tema Visual (hybrid)
-//   Step 2: Soal Ujian (sections + questions)
+//   Step 1: Informasi Asesmen + Identitas Peserta + Tema Visual (hybrid)
+//   Step 2: Soal Asesmen (sections + questions)
 //   Step 3: Ringkasan & Publish
 //
-// List view is default. Clicking "Buat Ujian Baru" reveals the wizard view.
+// List view is default. Clicking "Buat Asesmen Baru" reveals the wizard view.
 // Clicking "Batal" returns to list view. PublishCard._publish() also returns
 // to list view after successful publish.
 //
@@ -93,12 +93,12 @@
 
       if (window.notify?.confirm) {
         window.notify.confirm({
-          title: t('wizard.cancel_title', null, 'Batalkan pembuatan ujian?'),
+          title: t('wizard.cancel_title', null, 'Batalkan pembuatan asesmen?'),
           message: t('wizard.cancel_msg', null, 'Semua perubahan akan hilang. Yakin batal?'),
           intent: 'danger',
           onYes: doClose,
         });
-      } else if (confirm(t('wizard.cancel_msg_short', null, 'Batalkan pembuatan ujian? Semua perubahan akan hilang.'))) {
+      } else if (confirm(t('wizard.cancel_msg_short', null, 'Batalkan pembuatan asesmen? Semua perubahan akan hilang.'))) {
         doClose();
       }
     },

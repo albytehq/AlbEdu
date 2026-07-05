@@ -1,7 +1,7 @@
 # SECURITY — Anti-Cheat Architecture
 
-> AlbEdu v1.0.0 enterprise-grade anti-cheat: server-side scoring, heartbeat, DevTools detection, instant block.
-> Replaces v0.2.0 Guardian.js (100% client-side, bypassable via DevTools menu).
+> AlbEdu v0.746.0 enterprise-grade anti-cheat: server-side scoring, heartbeat, DevTools detection, instant block.
+> Note: Guardian.js (`src/exam/guardian.js`) still exists — it's the client-side anti-cheat layer that complements server-side scoring.
 
 ---
 
@@ -18,7 +18,7 @@
 
 ### 1.2 Attack Vectors
 
-| # | Attack | v0.2.0 Vulnerability | v1.0.0 Mitigation |
+| # | Attack | v0.2.0 Vulnerability | v0.746.0 Mitigation |
 |---|---|---|---|
 | 1 | DevTools override `getHasil()` return 100 | Client-side scoring | Server-side scoring (Q5) — Edge Function re-scores independently |
 | 2 | Clear localStorage to re-take assessment | Submit lock in localStorage | Server-side check in `assessment_sessions` table + `submissions` table |
@@ -90,7 +90,7 @@
 - Visibility change tracking (800ms debounce → violation if hidden >800ms)
 - Max 4 violations → reset assessment + reshuffle
 
-**Added in v1.0.0:**
+**Added in v0.746.0:**
 - DevTools detector integration (see 3.2)
 - Block listener integration (see 3.4)
 - Heartbeat integration (see 3.3)
@@ -278,7 +278,7 @@ Service role key **never** exposed to client. Only in Edge Function environment.
 **Endpoints with Turnstile:**
 - `register-admin` — admin registration
 - `user-auth-preflight` — peserta login preflight
-- `access-code-attempt` — token entry (NEW in v1.0.0)
+- `access-code-attempt` — token entry (added v0.746.0)
 
 **Verification:**
 ```typescript

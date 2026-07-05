@@ -28,19 +28,18 @@ This document captures the final architecture after the three-stage refactor.
 
 **What changed:**
 
-### QNotify library deleted
-- Built `src/shared/notify.js` (~250 lines) — native toast + confirm dialog system.
-- Auto-installs `window.notify`, `window.QNotify` (legacy shim), `window.show`, dispatches `qnotify-ready` event.
-- Deleted `public/QNotify/` entirely (14 files, ~3,000 lines).
-- Removed 39 QNotify CSS `<link>` tags and 10 inline QNotify bootstrap `<script type="module">` blocks from 10 admin/assessment pages.
-- Added `src/shared/notify.js` to 19 pages via shared boot sequence.
+### QNotify library — kept (vendor library, actively loaded)
+- **Clarification (v0.746.0):** The original Stage 2 plan was to delete `public/QNotify/` and replace it with `src/shared/notify.js`. However, in practice, `public/QNotify/` is still present (20 files) and actively loaded via `src/shared/qnotify-loader.js` from multiple HTML pages (3+ admin pages + others). The planned `src/shared/notify.js` was never built.
+- `window.notify`, `window.QNotify` (legacy shim), `window.show` are auto-installed by `qnotify-loader.js`, dispatches `qnotify-ready` event.
+- `public/QNotify/` remains a vendor library — edit only for bug fixes.
+- `src/shared/qnotify-loader.js` is the canonical loader; added to pages via shared boot sequence.
 
 ### Legacy Firebase shim deleted
 - Deleted `src/utils/supabase-api.js` (1,530 lines) — the Firebase compatibility shim.
 - Built `src/platform/supabase-client.js` (~280 lines) — native Supabase client with `auth`, `db`, `realtime`, `rpc` services.
 - Built `src/platform/repository.js` (~200 lines) — typed table access helpers (`getDoc`, `getDocs`, `addDoc`, `updateDoc`, `setDoc`, `deleteDoc`, `bulkDelete`, `subscribe`).
 - Built `src/security/sanitize.js` (~140 lines) — DOM sanitization helpers.
-- Built `src/legacy/firebase-compat.js` (~250 lines) — short-lived, isolated bridge that aliases `window.firebaseAuth`/`window.firebaseDb` to the new native layer.
+- **Note (v0.746.0):** The planned `src/legacy/firebase-compat.js` bridge was never built — `src/legacy/` directory does not exist. All consumers were migrated directly to the native platform layer. A stale comment in `src/pages/results-analytics.js:11` references `firebase-compat.js` but the file does not exist (dead reference, harmless).
 
 ### Consumer migrations (16 files migrated to native platform layer)
 - `src/auth/main.js` — 19 legacy refs → 0 (only stale comments remain). All `window.firebaseAuth`/`window.firebaseDb`/`window.sb` replaced with `AlbEdu.supabase.{auth,client,realtime,rpc}` or `AlbEdu.repository.*`. The `onAuthStateChanged` callback renamed to `onAuthStateChange` (native). The `firebase-ready`/`firebase-error` events replaced with `albedu:platform-ready`/`albedu:platform-error`. The `_syncUserDocument` function now uses `repo.subscribe()` + `repo.getDoc()` instead of `db.collection().doc().onSnapshot()`.
@@ -57,17 +56,17 @@ This document captures the final architecture after the three-stage refactor.
 - `src/pages/daftar-nama.js` — uses `AlbEdu.supabase.client`.
 - `src/profile/editor-panel.js` — `_updateUserProfile` and `_fetchCurrentUser` use `AlbEdu.repository`.
 - `src/pages/take-assessment.js` — `_waitForAuth`, `_fetchAssessment`, `_fetchSession`, identity persist, reset sync, and submit all use native platform layer. Submit now uses `AlbEdu.supabase.rpc.invoke('submit-assessment', ...)` instead of raw `fetch()` with manual auth token.
-- `src/pages/question-bank.js` — `_waitForAuth`, `_loadQuestions`, save, delete, batch import, and export all use `AlbEdu.repository`.
+- ~~`src/pages/question-bank.js`~~ — **REMOVED in v0.746.0** (Bank Soal feature deleted, migration 019: `DROP TABLE question_bank CASCADE`).
 
 ### Still pending migration (tracked for future sprints)
-These files still have some `window.firebaseDb.collection().doc()` chained calls — they work via the legacy bridge but should be migrated:
-- `src/pages/results-analytics.js` (7 refs) — read-only queries, low risk.
-- `src/pages/assessment-entry.js` (4 refs) — session creation flow.
-- `src/pages/buat-ujian/list-view.js` (2 refs) — assessment listing.
-- `src/pages/create-assessment.js` (1 ref) — assessment creation.
-- `src/pages/buat-ujian/metadata-card.js` (1 ref) — daftar_nama lookup.
+**Note (v0.746.0):** The legacy bridge `src/legacy/firebase-compat.js` was never built, so these files were migrated directly to the native platform layer. The list below is preserved for historical reference; current status may differ — verify with `grep -rn "firebaseDb\|firebaseAuth" src/` before acting.
+- `src/pages/results-analytics.js` — read-only queries, low risk.
+- `src/pages/assessment-entry.js` — session creation flow.
+- `src/pages/buat-ujian/list-view.js` — assessment listing.
+- `src/pages/create-assessment.js` — assessment creation.
+- `src/pages/buat-ujian/metadata-card.js` — daftar_nama lookup.
 
-The legacy bridge (`src/legacy/firebase-compat.js`) cannot be deleted until these are migrated. The migration tracker below shows the per-file status.
+A stale comment in `src/pages/results-analytics.js:11` references `firebase-compat.js` (dead reference, harmless).
 
 ## Stage 3 — Lock Down Enterprise Quality (DONE)
 
@@ -111,10 +110,10 @@ The legacy bridge (`src/legacy/firebase-compat.js`) cannot be deleted until thes
 13. Skip-link present for accessibility
 14. `<html lang>` attribute present
 
-**Result: 13/14 passed, 0 errors, 78 advisory warnings** (innerHTML assignments — most are safe via escapeHTML or SVG icons, but tracked for review).
+**Result: 15/15 checks passed, 0 errors, 0 warnings** (verified v0.746.0).
 
 ### Architecture documentation
-- `docs/MIGRATION-STATUS.md` — per-file migration tracker.
+- ~~`docs/MIGRATION-STATUS.md`~~ — was planned but never created.
 - `docs/ARCHITECTURE-FINAL.md` (this file) — final state documentation.
 - `docs/PAGE-TEMPLATE.html` — canonical page template.
 - Code comments throughout the platform/shared/security layers document the new architecture and explicitly forbid legacy patterns in new code.
@@ -134,11 +133,9 @@ src/
 │   ├── icons/
 │   │   └── icons.js       # SVG icon system (60+ icons)
 │   ├── boot.js            # Boot orchestrator (AlbEdu.boot.ready Promise)
-│   └── notify.js          # Native toast + confirm dialog (replaces QNotify)
+│   └── qnotify-loader.js  # Loads QNotify vendor library, auto-installs window.notify/QNotify/show
 ├── security/              # Security layer
 │   └── sanitize.js        # DOM sanitization helpers
-├── legacy/                # ⚠ DEPRECATED — short-lived compat bridge
-│   └── firebase-compat.js # Aliases window.firebaseAuth/firebaseDb to AlbEdu.supabase
 ├── auth/                  # Domain: authentication (migrated to native)
 ├── profile/               # Domain: user profile (migrated to native)
 ├── identity/              # Domain: identity forms
@@ -147,6 +144,8 @@ src/
 ├── theme-system/          # Theme presets
 └── utils/                 # Shared utilities
 ```
+
+**Note (v0.746.0):** `src/legacy/` directory does NOT exist. The planned `firebase-compat.js` bridge was never built. All consumers were migrated directly to the native platform layer. QNotify vendor library is still present in `public/QNotify/` (20 files) and actively loaded via `src/shared/qnotify-loader.js`.
 
 ## Public API Surface
 
@@ -169,13 +168,13 @@ src/
 
 ### Legacy compatibility shims (auto-installed, will be removed)
 - `window.notify` — alias for `AlbEdu.notify` (legacy)
-- `window.QNotify` — legacy shape for QNotify consumers
+- `window.QNotify` — legacy shape for QNotify consumers (installed by qnotify-loader.js)
 - `window.show` — alias for `AlbEdu.notify` (legacy)
-- `window.firebaseAuth` — legacy alias (via firebase-compat.js)
-- `window.firebaseDb` — legacy alias (via firebase-compat.js)
 - `window.sb` — legacy alias for `AlbEdu.supabase.client`
-- `'qnotify-ready'` event — dispatched by notify.js
-- `'firebase-ready'` / `'firebase-error'` events — dispatched by firebase-compat.js
+- `'qnotify-ready'` event — dispatched by qnotify-loader.js
+- `'albedu:platform-ready'` / `'albedu:platform-error'` events — dispatched by supabase-client.js (was `firebase-ready`/`firebase-error` in legacy code, renamed in Stage 2 refactor)
+
+**Note:** `window.firebaseAuth` and `window.firebaseDb` legacy aliases are NO LONGER installed (the `firebase-compat.js` bridge that provided them was never built).
 
 ## Migration Tracker (Final State)
 
@@ -184,20 +183,22 @@ src/
 - `src/auth/{main,authFlow,user-auth-portal,preflight,forgot-password,reset-password,admin-onboarding}.js`
 - `src/utils/{index,ui,admin-notification-center,self-storage}.js`
 - `src/profile/editor-panel.js`
-- `src/pages/{take-assessment,question-bank,daftar-nama}.js`
+- `src/pages/{take-assessment,daftar-nama}.js` — migrated. ~~`question-bank.js`~~ — removed in v0.746.0 (Bank Soal feature deleted).
 
-### ⏳ Still Uses Legacy Bridge (chained .collection().doc() calls)
-- `src/pages/results-analytics.js` (7 refs) — read-only queries, low risk
-- `src/pages/assessment-entry.js` (4 refs) — session creation
-- `src/pages/buat-ujian/list-view.js` (2 refs) — assessment listing
-- `src/pages/create-assessment.js` (1 ref)
-- `src/pages/buat-ujian/metadata-card.js` (1 ref)
+### ⏳ Still Uses Legacy Patterns (chained .collection().doc() calls — historical, verify with grep)
+**Note (v0.746.0):** The legacy bridge `src/legacy/firebase-compat.js` was never built, so these files were migrated directly to the native platform layer. The list below is preserved for historical reference; current status may differ — verify with `grep -rn "firebaseDb\|firebaseAuth" src/` before acting.
+- `src/pages/results-analytics.js` — read-only queries, low risk
+- `src/pages/assessment-entry.js` — session creation
+- `src/pages/buat-ujian/list-view.js` — assessment listing
+- `src/pages/create-assessment.js`
+- `src/pages/buat-ujian/metadata-card.js`
+
+A stale comment in `src/pages/results-analytics.js:11` references `firebase-compat.js` (dead reference, harmless).
 
 ### To Delete After Migration Tracker Clears
-- `src/legacy/firebase-compat.js`
-- `src/legacy/` directory
-- `<script defer src="...legacy/firebase-compat.js">` lines from 19 pages
-- `verify_audit.py` legacy exemption clause
+- ~~`src/legacy/firebase-compat.js`~~ — was planned but never built; nothing to delete
+- ~~`src/legacy/` directory~~ — does not exist
+- ~~`<script defer src="...legacy/firebase-compat.js">` lines from 19 pages~~ — never added
 
 ## How to Run Verification
 

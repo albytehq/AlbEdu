@@ -1,6 +1,6 @@
 # THEME SYSTEM — Google Form-Like, Production-Grade
 
-> AlbEdu v1.0.0 theme system: 1 primary color → auto-derive everything.
+> AlbEdu v0.746.0 theme system: 1 primary color → auto-derive everything.
 > Simplicity of Google Form, quality of enterprise design system.
 
 ---

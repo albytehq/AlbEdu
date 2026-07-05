@@ -1,134 +1,1129 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <link rel="preload" href="../src/shared/icons/icons.js" as="script">
-
   <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kebijakan Privasi - AlbEdu</title>
-    <meta name="theme-color" content="#2563eb">
-    <link rel="icon" type="image/x-icon" href="../public/images/favicon/favicon.ico">
-        <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
-    <script src="../src/shared/head/critical-css.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kebijakan Privasi — AlbEdu v4.0.0</title>
+  <meta name="description" content="Kebijakan Privasi AlbEdu selaras dengan UU No. 27 Tahun 2022 tentang Perlindungan Data Pribadi (UU PDP). Dokumen ini menjelaskan data yang dikumpulkan, dasar hukum pemrosesan, retensi, hak subjek data, dan langkah keamanan teknis.">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="robots" content="index,follow">
+  <meta property="og:title" content="Kebijakan Privasi — AlbEdu">
+  <meta property="og:description" content="Komitmen AlbEdu terhadap perlindungan data pribadi selaras UU PDP Indonesia.">
+  <link rel="icon" type="image/svg+xml" href="../public/images/favicon/favicon.svg">
 
-    <!-- ═══ Design tokens ═══ -->
-    <link rel="stylesheet" href="../styles/tokens.css">
+  <style>
+    /* ============================================================
+       Privacy Policy v4.0.0 — Legal Document Style
+       Two-column: sticky sidebar TOC + reading-mode body.
+       Inline CSS, no external dependencies.
+       ============================================================ */
 
-    <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
-    <script defer src="../src/shared/head/fonts.js"></script>
-    <script defer src="../src/shared/icons/icons.js"></script>
-    <script defer src="../src/platform/supabase-client.js"></script>
-    <script type="module" src="../src/shared/resilience.js"></script>
-    <script defer src="../src/platform/repository.js"></script>
-    <script defer src="../src/security/sanitize.js"></script>
-    <link rel="stylesheet" href="../styles/albedu-v1.css"></head>
-<body>
-        <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
-<main style="max-width: 800px; margin: 0 auto; padding: 40px 24px; background: var(--albedu-surface-alt); min-height: 100vh;">
-        <div class="albedu-card">
-            <div class="albedu-card-header">
-                <div>
-                    <h1 style="font-size: 28px; font-weight: 700; margin: 0; color: var(--albedu-heading);">Kebijakan Privasi AlbEdu</h1>
-                    <p style="font-size: 14px; color: var(--albedu-body); margin: 8px 0 0;">Versi 1.0.0 — Berlaku sejak 1 Juli 2026</p>
-                </div>
-            </div>
-            <div class="albedu-card-body" style="line-height: 1.8; font-size: 15px; color: var(--albedu-body);">
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 24px; }
+    body {
+      margin: 0;
+      font-family: 'Source Serif 4', 'Source Serif Pro', 'Lora', 'Noto Serif SC', Georgia, 'Times New Roman', serif;
+      font-size: 17px;
+      line-height: 1.75;
+      color: #1e293b;
+      background: #fafaf9;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-feature-settings: 'kern', 'liga', 'calt';
+    }
+    @media (max-width: 1024px) {
+      body { font-size: 16px; }
+    }
 
-                <h2 style="color: var(--albedu-heading); font-size: 20px; margin-top: 32px; margin-bottom: 12px;">1. Pendahuluan</h2>
-                <p>AlbEdu ("kami") berkomitmen melindungi privasi data pribadi Anda ("peserta") sesuai dengan Undang-Undang No. 27 Tahun 2022 tentang Perlindungan Data Pribadi (UU PDP). Kebijakan ini menjelaskan data yang kami kumpulkan, bagaimana kami menggunakannya, dan hak Anda atas data tersebut.</p>
-
-                <h2 style="color: var(--albedu-heading); font-size: 20px; margin-top: 32px; margin-bottom: 12px;">2. Data yang Kami Kumpulkan</h2>
-                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
-                    <thead>
-                        <tr style="background: var(--albedu-surface-alt);">
-                            <th style="padding: 12px; text-align: left; border: 1px solid var(--albedu-border); color: var(--albedu-heading);">Data</th>
-                            <th style="padding: 12px; text-align: left; border: 1px solid var(--albedu-border); color: var(--albedu-heading);">Tujuan</th>
-                            <th style="padding: 12px; text-align: left; border: 1px solid var(--albedu-border); color: var(--albedu-heading);">Retensi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td style="padding: 12px; border: 1px solid var(--albedu-border);">Email Google</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Login, identifikasi</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Selama akun aktif</td></tr>
-                        <tr><td style="padding: 12px; border: 1px solid var(--albedu-border);">Nama</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Identitas saat asesmen</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Selama akun aktif</td></tr>
-                        <tr><td style="padding: 12px; border: 1px solid var(--albedu-border);">Device fingerprint</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Anti-fraud, rate limit</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">1 tahun</td></tr>
-                        <tr><td style="padding: 12px; border: 1px solid var(--albedu-border);">Alamat IP</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Audit log, anti-fraud</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">90 hari (lalu di-hash)</td></tr>
-                        <tr><td style="padding: 12px; border: 1px solid var(--albedu-border);">User agent</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Audit log, kompatibilitas</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">90 hari</td></tr>
-                        <tr><td style="padding: 12px; border: 1px solid var(--albedu-border);">Jawaban asesmen</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Scoring, history</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">3 tahun</td></tr>
-                        <tr><td style="padding: 12px; border: 1px solid var(--albedu-border);">Violation events</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Forensic, anti-cheat</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">90 hari</td></tr>
-                        <tr><td style="padding: 12px; border: 1px solid var(--albedu-border);">Audit log</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Forensic, compliance</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">1 tahun</td></tr>
-                        <tr><td style="padding: 12px; border: 1px solid var(--albedu-border);">Consent records</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Bukti persetujuan</td><td style="padding: 12px; border: 1px solid var(--albedu-border);">Selamanya</td></tr>
-                    </tbody>
-                </table>
-
-                <h2 style="color: var(--albedu-heading); font-size: 20px; margin-top: 32px; margin-bottom: 12px;">3. Dasar Hukum Pemrosesan</h2>
-                <p>Kami memproses data Anda berdasarkan:</p>
-                <ul style="padding-left: 24px;">
-                    <li><strong>Persetujuan (Consent)</strong> — Anda menyetujui Kebijakan Privasi ini saat login pertama.</li>
-                    <li><strong>Kepentingan yang sah (Legitimate Interest)</strong> — Anti-cheat, forensic, keamanan.</li>
-                    <li><strong>Kontrak (Contract)</strong> — Penyelesaian asesmen yang Anda ikuti.</li>
-                    <li><strong>Kewajiban hukum (Legal Obligation)</strong> — Audit log untuk compliance UU PDP.</li>
-                </ul>
-
-                <h2 style="color: var(--albedu-heading); font-size: 20px; margin-top: 32px; margin-bottom: 12px;">4. Hak Anda sebagai Peserta</h2>
-                <p>Sesuai UU PDP Article 5-13, Anda memiliki hak:</p>
-                <ul style="padding-left: 24px;">
-                    <li><strong>Hak Akses</strong> — Minta salinan semua data Anda.</li>
-                    <li><strong>Hak Koreksi</strong> — Perbaiki data yang tidak akurat.</li>
-                    <li><strong>Hak Hapus</strong> <span>— Hapus akun dan semua data terkait.</span></li>
-                    <li><strong>Hak Portabilitas</strong> — Export data dalam format machine-readable (JSON).</li>
-                    <li><strong>Hak Pembatasan</strong> — Batasi pemrosesan data (future).</li>
-                </ul>
-                <p>Untuk menggunakan hak ini, hubungi admin sekolah Anda atau kirim request melalui menu "Hak Data Anda" di profil peserta.</p>
-
-                <h2 style="color: var(--albedu-heading); font-size: 20px; margin-top: 32px; margin-bottom: 12px;">5. Keamanan Data</h2>
-                <p>Kami menerapkan langkah-langkah keamanan berikut:</p>
-                <ul style="padding-left: 24px;">
-                    <li>Row-Level Security (RLS) di semua tabel database</li>
-                    <li>Enkripsi TLS/SSL untuk semua transmisi data</li>
-                    <li>Service role key hanya untuk server-side (Edge Functions)</li>
-                    <li>IP anonymization setelah 90 hari (SHA-256 hash)</li>
-                    <li>Audit log untuk semua aksi penting</li>
-                    <li>Soft delete untuk akun (30 hari grace period sebelum hard delete)</li>
-                </ul>
-
-                <h2 style="color: var(--albedu-heading); font-size: 20px; margin-top: 32px; margin-bottom: 12px;">6. Retensi Data</h2>
-                <p>Data disimpan sesuai jangka waktu yang ditentukan, lalu dihapus otomatis:</p>
-                <ul style="padding-left: 24px;">
-                    <li>Registration attempts: 30 hari</li>
-                    <li>Violation events: 90 hari</li>
-                    <li>Alamat IP (raw): 90 hari (lalu di-hash)</li>
-                    <li>Audit logs: 1 tahun</li>
-                    <li>Submissions: 3 tahun</li>
-                    <li>Consents: Selamanya (immutable history)</li>
-                </ul>
-
-                <h2 style="color: var(--albedu-heading); font-size: 20px; margin-top: 32px; margin-bottom: 12px;">7. Notifikasi Pelanggaran Data</h2>
-                <p>Jika terjadi pelanggaran data (data breach), kami akan memberitahu Anda dan otoritas terkait dalam 72 jam sesuai UU PDP Article 46.</p>
-
-                <h2 style="color: var(--albedu-heading); font-size: 20px; margin-top: 32px; margin-bottom: 12px;">8. Kontak</h2>
-                <p>Untuk pertanyaan tentang privasi data Anda, hubungi:</p>
-                <ul style="padding-left: 24px;">
-                    <li>Email: admin@albedu.id</li>
-                    <li>Atau melalui menu "Hak Data Anda" di profil peserta</li>
-                </ul>
-
-                <h2 style="color: var(--albedu-heading); font-size: 20px; margin-top: 32px; margin-bottom: 12px;">9. Perubahan Kebijakan</h2>
-                <p>Kami dapat memperbarui Kebijakan Privasi ini dari waktu ke waktu. Jika ada perubahan material, kami akan memberi tahu Anda melalui email atau in-app notification.</p>
-
-                <hr style="border: none; border-top: 1px solid var(--albedu-border); margin: 32px 0;">
-                <p style="font-size: 13px; color: var(--albedu-body); text-align: center;">Versi 1.0.0 — Terakhir diperbarui: 1 Juli 2026</p>
-            </div>
-        </div>
-        <div style="text-align: center; margin-top: 24px;">
-            <button class="albedu-btn albedu-btn-secondary" onclick="window.close(); history.back();" type="button">
-                <span data-albedu-icon="arrow_back"></span>
-                <span>Kembali</span>
-            </button>
-        </div>
-    </main>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('../public/service-worker.js').catch(() => {}));
+    /* ── Layout grid ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 64px;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 56px 32px 96px;
+    }
+    @media (max-width: 1024px) {
+      .layout {
+        grid-template-columns: 1fr;
+        gap: 32px;
+        padding: 32px 20px 64px;
       }
-    </script>
+    }
+
+    /* ── Sidebar TOC ── */
+    .toc {
+      position: sticky;
+      top: 24px;
+      align-self: start;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      padding-right: 16px;
+      font-family: 'Inter', 'Helvetica Neue', system-ui, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #475569;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+    .toc::-webkit-scrollbar { width: 4px; }
+    .toc::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+    @media (max-width: 1024px) {
+      .toc {
+        position: static;
+        max-height: none;
+        padding: 16px;
+        background: #f1f5f9;
+        border-radius: 6px;
+        border-left: 3px solid #0f172a;
+      }
+    }
+    .toc-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin: 0 0 12px;
+    }
+    .toc ol {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      counter-reset: toc;
+    }
+    .toc > ol > li {
+      counter-increment: toc;
+      margin-bottom: 6px;
+    }
+    .toc > ol > li::before {
+      content: counter(toc) ".";
+      display: inline-block;
+      width: 24px;
+      color: #94a3b8;
+      font-variant-numeric: tabular-nums;
+    }
+    .toc a {
+      color: #475569;
+      text-decoration: none;
+      transition: color 120ms ease;
+    }
+    .toc a:hover { color: #0f172a; text-decoration: underline; }
+    .toc a.active { color: #0f172a; font-weight: 600; }
+
+    /* ── Main content ── */
+    .doc {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* ── Document header ── */
+    .doc-header {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 32px;
+      margin-bottom: 40px;
+    }
+    .doc-eyebrow {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #64748b;
+      margin: 0 0 12px;
+    }
+    .doc-title {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 40px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: #0f172a;
+      margin: 0 0 16px;
+    }
+    .doc-subtitle {
+      font-size: 18px;
+      color: #475569;
+      font-style: italic;
+      margin: 0 0 24px;
+      line-height: 1.5;
+    }
+    .doc-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px 24px;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 13px;
+      color: #475569;
+    }
+    .doc-meta dt {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin: 0 0 2px;
+    }
+    .doc-meta dd { margin: 0; color: #1e293b; font-weight: 500; }
+
+    /* ── Section ── */
+    .section {
+      margin: 0 0 56px;
+      scroll-margin-top: 24px;
+    }
+    .section-number {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      color: #94a3b8;
+      margin: 0 0 8px;
+    }
+    .section-title {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+      color: #0f172a;
+      margin: 0 0 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .section h3 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 19px;
+      font-weight: 600;
+      color: #0f172a;
+      margin: 32px 0 12px;
+    }
+    .section h4 {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      color: #334155;
+      margin: 24px 0 8px;
+    }
+    .section p {
+      margin: 0 0 16px;
+      text-align: justify;
+      hyphens: auto;
+    }
+    .section p:last-child { margin-bottom: 0; }
+
+    /* ── Numbered list (legal clauses) ── */
+    .clauses {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 16px;
+      counter-reset: clause;
+    }
+    .clauses > li {
+      counter-increment: clause;
+      position: relative;
+      padding-left: 44px;
+      margin-bottom: 12px;
+    }
+    .clauses > li::before {
+      content: counter(clause, decimal-leading-zero);
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      letter-spacing: 0.5px;
+      padding-top: 4px;
+    }
+
+    /* ── Pull quote (UU PDP article reference) ── */
+    .pullquote {
+      margin: 24px 0;
+      padding: 16px 20px 16px 24px;
+      background: #f1f5f9;
+      border-left: 3px solid #0f172a;
+      font-style: italic;
+      color: #334155;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .pullquote cite {
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+      font-style: normal;
+      color: #64748b;
+      font-family: 'Inter', system-ui, sans-serif;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Definition list (glossary) ── */
+    .glossary dl { margin: 0; }
+    .glossary dt {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+      margin-top: 20px;
+    }
+    .glossary dt:first-child { margin-top: 0; }
+    .glossary dd {
+      margin: 4px 0 0 16px;
+      color: #334155;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    /* ── Table ── */
+    .table-wrap {
+      margin: 24px 0;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    thead th {
+      font-weight: 600;
+      color: #0f172a;
+      background: #f8fafc;
+      border-bottom: 2px solid #0f172a;
+      font-size: 12px;
+      letter-spacing: 0.3px;
+    }
+    tbody tr:hover { background: #f8fafc; }
+
+    /* ── FAQ (collapsible) ── */
+    details {
+      margin: 16px 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      background: #fff;
+      overflow: hidden;
+    }
+    summary {
+      padding: 14px 20px;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      user-select: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: '+';
+      font-size: 18px;
+      font-weight: 400;
+      color: #64748b;
+      transition: transform 200ms ease;
+    }
+    details[open] summary::after { transform: rotate(45deg); }
+    details[open] summary { border-bottom: 1px solid #e2e8f0; }
+    .faq-answer {
+      padding: 14px 20px 18px;
+      font-size: 15px;
+      line-height: 1.65;
+      color: #334155;
+    }
+    .faq-answer p { margin: 0 0 10px; }
+    .faq-answer p:last-child { margin-bottom: 0; }
+
+    /* ── Callout ── */
+    .callout {
+      margin: 24px 0;
+      padding: 16px 20px;
+      background: #fef9c3;
+      border: 1px solid #fde68a;
+      border-radius: 4px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #713f12;
+    }
+    .callout strong { color: #422006; }
+    .callout.warn {
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      color: #7f1d1d;
+    }
+    .callout.warn strong { color: #450a0a; }
+
+    /* ── Footnote ── */
+    .footnote {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 12px;
+      color: #64748b;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 12px;
+      margin-top: 24px;
+      line-height: 1.5;
+    }
+    .footnote sup { font-size: 10px; vertical-align: super; }
+
+    /* ── Anchor link ── */
+    a {
+      color: #1d4ed8;
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+    }
+    a:hover { color: #1e3a8a; }
+
+    /* ── Document footer ── */
+    .doc-footer {
+      margin-top: 80px;
+      padding-top: 32px;
+      border-top: 2px solid #0f172a;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.6;
+    }
+    .doc-footer .signature {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-style: italic;
+      font-size: 15px;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+
+    /* ── Print ── */
+    @media print {
+      body { font-size: 11pt; background: #fff; }
+      .layout { display: block; max-width: none; padding: 0; }
+      .toc { display: none; }
+      .doc { max-width: none; }
+      .section { page-break-inside: avoid; }
+      a { color: #000; text-decoration: none; }
+      details { border: none; }
+      details[open] summary { border: none; }
+      summary::after { display: none; }
+      .faq-answer { display: block; }
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main-content" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;" onfocus="this.style.cssText='position:absolute;left:8px;top:8px;width:auto;height:auto;padding:8px 16px;background:#0f172a;color:#fff;z-index:9999;border-radius:4px;font-family:Inter,sans-serif;'">Langsung ke konten utama</a>
+
+  <div class="layout">
+
+    <!-- ─────────────── SIDEBAR TOC ─────────────── -->
+    <aside class="toc" aria-label="Daftar isi">
+      <p class="toc-label">Daftar Isi</p>
+      <ol>
+        <li><a href="#pendahuluan">Pendahuluan</a></li>
+        <li><a href="#definisi">Definisi &amp; Istilah</a></li>
+        <li><a href="#asas">Asas Pemrosesan</a></li>
+        <li><a href="#dasar-hukum">Dasar Hukum Pemrosesan</a></li>
+        <li><a href="#kategori-data">Kategori Data yang Dikumpulkan</a></li>
+        <li><a href="#persetujuan">Persetujuan</a></li>
+        <li><a href="#data-anak">Data Anak</a></li>
+        <li><a href="#keamanan">Langkah Keamanan</a></li>
+        <li><a href="#pemroses-data">Pemroses Data Pihak Ketiga</a></li>
+        <li><a href="#pelanggaran">Notifikasi Pelanggaran Data</a></li>
+        <li><a href="#hak-subjek">Hak Subjek Data</a></li>
+        <li><a href="#lintas-wilayah">Transfer Data Lintas Wilayah</a></li>
+        <li><a href="#retensi">Retensi &amp; Penghapusan</a></li>
+        <li><a href="#lokasi-data">Lokasi Data</a></li>
+        <li><a href="#limitasi">Limitasi &amp; Penyangkalan</a></li>
+        <li><a href="#faq">Pertanyaan Umum</a></li>
+        <li><a href="#changelog">Riwayat Perubahan</a></li>
+        <li><a href="#kontak">Kontak</a></li>
+      </ol>
+    </aside>
+
+    <!-- ─────────────── MAIN DOCUMENT ─────────────── -->
+    <main class="doc" id="main-content">
+
+      <!-- ===== Document header ===== -->
+      <header class="doc-header">
+        <p class="doc-eyebrow">Kebijakan Privasi · Versi 4.0.0</p>
+        <h1 class="doc-title">Kebijakan Privasi AlbEdu</h1>
+        <p class="doc-subtitle">Komitmen kami melindungi data pribadi pengguna selaras dengan UU No. 27 Tahun 2022 tentang Perlindungan Data Pribadi.</p>
+        <dl class="doc-meta">
+          <div><dt>Berlaku Sejak</dt><dd>5 Juli 2026</dd></div>
+          <div><dt>Versi</dt><dd>4.0.0</dd></div>
+          <div><dt>Pengendali Data</dt><dd>AlbEdu (AlbyteEducation)</dd></div>
+          <div><dt>Kontak</dt><dd>support@albedu.id</dd></div>
+          <div><dt>Bahasa</dt><dd>Bahasa Indonesia</dd></div>
+          <div><dt>Format</dt><dd>Dokumen Publik</dd></div>
+        </dl>
+      </header>
+
+      <!-- ===== 1. Pendahuluan ===== -->
+      <section class="section" id="pendahuluan">
+        <p class="section-number">Bagian 01</p>
+        <h2 class="section-title">Pendahuluan</h2>
+
+        <p>AlbEdu adalah platform asesmen berbasis web yang digunakan untuk menyelenggarakan evaluasi digital di berbagai konteks — mulai dari sekolah dasar hingga perguruan tinggi, serta penggunaan personal di luar konteks pendidikan formal. Layanan ini memungkinkan administrator membuat, menerbitkan, dan memantau asesmen, serta memungkinkan peserta mengerjakan asesmen dengan verifikasi identitas dan pengawasan anti-kecurangan. Dalam menjalankan layanannya, AlbEdu memproses sejumlah data pribadi milik administrator, peserta, dan pihak lain yang terkait.</p>
+
+        <p>Dokumen Kebijakan Privasi ini ("Kebijakan") menjelaskan secara terbuka jenis data yang kami kumpulkan, dasar hukum yang kami gunakan, tujuan pemrosesan, durasi penyimpanan, langkah keamanan teknis dan organisasi yang kami terapkan, hak-hak Anda sebagai subjek data, serta mekanisme pengajuan permintaan terkait data pribadi Anda. Kebijakan ini disusun selaras dengan prinsip-prinsip yang diatur dalam Undang-Undang Republik Indonesia Nomor 27 Tahun 2022 tentang Perlindungan Data Pribadi ("UU PDP"), yang mulai berlaku efektif pada 17 Oktober 2024.</p>
+
+        <p>Dokumen ini ditulis dengan dua prinsip utama: kejujuran dan keamanan. Kami berkomitmen untuk tidak membuat klaim yang melebihi kemampuan teknis kami, dan sebaliknya, kami berkomitmen untuk mengakui secara terbuka keterbatasan yang masih kami miliki. Beberapa hal yang masih dalam pengembangan atau yang belum sepenuhnya berfungsi sesuai harapan dijelaskan secara jelas di Bagian 15 (Limitasi &amp; Penyangkalan). Apabila terdapat perbedaan antara klaim dalam dokumen ini dengan praktik aktual, kami akan memperbaiki salah satunya begitu ditemukan.</p>
+
+        <p>Demi keamanan sistem dan pengguna, dokumen ini tidak mengungkapkan detail implementasi teknis internal seperti nama tabel basis data, nama fungsi, jadwal pemeliharaan terjadwal secara spesifik, atau alur kerja internal yang dapat dimanfaatkan oleh pihak yang berniat merusak. Informasi yang disajikan adalah informasi yang relevan bagi Anda sebagai subjek data untuk memahami hak dan kewajiban Anda, bukan informasi teknis yang tidak memberi manfaat langsung kepada Anda.</p>
+
+        <p>Dengan membuat akun, masuk, atau menggunakan layanan AlbEdu, Anda mengakui telah membaca, memahami, dan menyetujui praktik yang dijelaskan dalam Kebijakan ini. Apabila Anda tidak setuju dengan salah satu ketentuan, mohon untuk tidak menggunakan layanan kami dan menghubungi <a href="mailto:support@albedu.id">support@albedu.id</a> untuk penghapusan akun.</p>
+
+        <div class="footnote">
+          <sup>1</sup> Mengacu pada UU No. 27 Tahun 2022 tentang Perlindungan Data Pribadi, yang diundangkan dalam Lembaran Negara Republik Indonesia Tahun 2022 Nomor 196.
+        </div>
+      </section>
+
+      <!-- ===== 2. Definisi ===== -->
+      <section class="section glossary" id="definisi">
+        <p class="section-number">Bagian 02</p>
+        <h2 class="section-title">Definisi &amp; Istilah</h2>
+
+        <p>Untuk menghindari ambiguitas, berikut adalah definisi istilah teknis dan hukum yang digunakan dalam Kebijakan ini. Definisi disusun mengikuti terminologi UU PDP dan disesuaikan dengan konteks operasional AlbEdu.</p>
+
+        <dl>
+          <dt>Data Pribadi</dt>
+          <dd>Setiap data tentang orang perseorangan yang teridentifikasi atau dapat diidentifikasi secara tersendiri atau dikombinasikan dengan informasi lainnya, baik secara langsung maupun tidak langsung. Dalam konteks AlbEdu, ini mencakup nama, alamat email, pengenal unik akun, foto profil, jawaban asesmen, alamat IP, dan informasi perangkat.</dd>
+
+          <dt>Subjek Data</dt>
+          <dd>Orang perseorangan yang menjadi pemilik data pribadi yang diproses. Dalam konteks AlbEdu, subjek data adalah pengguna terdaftar, baik dalam peran administrator maupun peserta.</dd>
+
+          <dt>Pengendali Data</dt>
+          <dd>Pihak yang menentukan tujuan dan sarana pemrosesan data pribadi. AlbEdu bertindak sebagai Pengendali Data atas seluruh data yang diproses dalam layanannya.</dd>
+
+          <dt>Pemroses Data</dt>
+          <dd>Pihak yang memproses data pribadi atas instruksi Pengendali Data. Dalam konteks AlbEdu, pihak ketiga yang bertindak sebagai Pemroses Data dijelaskan di Bagian 9.</dd>
+
+          <dt>Pemrosesan Data</dt>
+          <dd>Setiap operasi terhadap data pribadi, termasuk namun tidak terbatas pada pengumpulan, perekaman, penyimpanan, pembaruan, pengubahan, pengungkapan, pengiriman, penyebarluasan, pemblokiran, penghapusan, atau pemusnahan.</dd>
+
+          <dt>Persetujuan</dt>
+          <dd>Pernyataan kehendak subjek data yang jelas, spesifik, bebas, dan terinformasi terhadap pemrosesan data pribadinya. Persetujuan harus dapat dicabut kapan saja dan pencabutan tidak boleh mengurangi keabsahan pemrosesan sebelumnya.</dd>
+
+          <dt>Anonimisasi</dt>
+          <dd>Proses pengubahan data pribadi sedemikian rupa sehingga data tersebut tidak dapat lagi dikaitkan dengan subjek data tertentu. Data yang telah dianonimisasi tidak lagi dianggap sebagai data pribadi dan tidak tunduk pada ketentuan UU PDP.</dd>
+
+          <dt>Pseudonimisasi</dt>
+          <dd>Proses penggantian atribut identitas dalam data pribadi dengan pseudonim (seperti kode atau token), sehingga data tersebut tidak dapat dikaitkan dengan subjek data tanpa informasi tambahan yang disimpan terpisah. Berbeda dengan anonimisasi, data yang dipseudonimisasi masih dianggap sebagai data pribadi.</dd>
+
+          <dt>Pelanggaran Data</dt>
+          <dd>Peristiwa pengungkapan, pengaksesan, pengubahan, penghapusan, atau kehilangan data pribadi secara tidak sah, baik akibat kesalahan teknis, kesalahan manusia, maupun tindakan jahat.</dd>
+
+          <dt>Permintaan Subjek Data (DSR)</dt>
+          <dd>Permintaan formal dari subjek data kepada Pengendali Data terkait pelaksanaan hak-haknya, termasuk hak akses, koreksi, penghapusan, dan pencabutan persetujuan. DSR adalah singkatan dari <em>Data Subject Request</em>.</dd>
+
+          <dt>UU PDP</dt>
+          <dd>Undang-Undang Republik Indonesia Nomor 27 Tahun 2022 tentang Perlindungan Data Pribadi, yang menjadi kerangka hukum utama bagi pemrosesan data pribadi di Indonesia.</dd>
+
+          <dt>Pengenal Unik Akun</dt>
+          <dd>Kode acak unik yang digunakan AlbEdu untuk mengidentifikasi setiap pengguna, sesi, dan entitas lain dalam sistem. Pengenal ini bersifat pseudonim dan tidak mengandung informasi identitas langsung.</dd>
+
+          <dt>Sidik Jari Perangkat</dt>
+          <dd>Kumpulan atribut teknis perangkat (seperti jenis peramban, sistem operasi, resolusi layar, dan lainnya) yang dikombinasikan untuk membentuk pengenal unik perangkat. Sidik jari perangkat digunakan untuk pencegahan penyalahgunaan dan deteksi kecurangan.</dd>
+        </dl>
+      </section>
+
+      <!-- ===== 3. Asas Pemrosesan ===== -->
+      <section class="section" id="asas">
+        <p class="section-number">Bagian 03</p>
+        <h2 class="section-title">Asas Pemrosesan Data</h2>
+
+        <p>Pemrosesan data pribadi oleh AlbEdu dilandaskan pada asas-asas umum yang diatur dalam Pasal 5 UU PDP. Asas-asas ini menjadi panduan operasional yang kami terapkan di setiap tahap siklus hidup data, mulai dari pengumpulan hingga pemusnahan.</p>
+
+        <ol class="clauses">
+          <li><strong>Sah dan Jujur.</strong> Pemrosesan data dilakukan atas dasar yang sah, dengan itikad baik, dan transparan terhadap subjek data. Kami tidak memproses data di luar kepentingan yang diumumkan dalam Kebijakan ini.</li>
+          <li><strong>Terbatas dan Tepat Sasaran.</strong> Data yang dikumpulkan terbatas pada apa yang diperlukan untuk tujuan operasional platform asesmen. Kami tidak mengumpulkan data yang tidak relevan dengan tujuan yang diumumkan.</li>
+          <li><strong>Tepat dan Relevan.</strong> Data yang diproses dijaga keakurasiannya. Subjek data dapat mengajukan permintaan koreksi atas data yang tidak akurat melalui mekanisme yang dijelaskan dalam Bagian 11.</li>
+          <li><strong>Aman dan Terjaga Kerahasiaannya.</strong> Data dilindungi dengan langkah teknis dan organisasi yang dijelaskan dalam Bagian 8, termasuk enkripsi dalam transit dan saat disimpan, kontrol akses berbasis peran, dan pencatatan audit.</li>
+          <li><strong>Retensi Terbatas.</strong> Data disimpan hanya selama diperlukan untuk tujuan pemrosesan, sesuai jadwal retensi yang dijelaskan dalam Bagian 13. Setelah masa retensi habis, data dihapus atau dianonimisasi.</li>
+          <li><strong>Akuntabel.</strong> Kami bertanggung jawab atas kepatuhan terhadap asas-asas ini dan dapat menunjukkan langkah-langkah yang diambil untuk memenuhinya melalui dokumentasi internal dan catatan audit.</li>
+        </ol>
+
+        <div class="pullquote">
+          "Pemrosesan Data Pribadi harus dilakukan secara sah dan jujur, terbatas sesuai tujuan, tepat dan relevan, serta dijaga kerahasiaan, keamanan, dan keutuhannya."
+          <cite>— Pasal 5 UU No. 27 Tahun 2022</cite>
+        </div>
+      </section>
+
+      <!-- ===== 4. Dasar Hukum ===== -->
+      <section class="section" id="dasar-hukum">
+        <p class="section-number">Bagian 04</p>
+        <h2 class="section-title">Dasar Hukum Pemrosesan</h2>
+
+        <p>Sesuai Pasal 14 UU PDP, AlbEdu memproses data pribadi berdasarkan satu atau lebih dasar hukum berikut. Dasar hukum yang berlaku bergantung pada kategori data dan konteks pemrosesan.</p>
+
+        <h3>4.1 Persetujuan</h3>
+        <p>Untuk pemrosesan data yang memerlukan persetujuan (termasuk pemrosesan data peserta, identitas peserta, dan data keamanan anti-kecurangan), kami memperoleh persetujuan yang jelas, spesifik, bebas, dan terinformasi dari subjek data sebelum pemrosesan dimulai. Persetujuan ini dicatat beserta timestamp, alamat IP, dan informasi perangkat sebagai bukti forensik. Subjek data dapat mencabut persetujuan kapan saja melalui mekanisme yang dijelaskan dalam Bagian 11.</p>
+
+        <h3>4.2 Pelaksanaan Kontrak</h3>
+        <p>Beberapa pemrosesan data diperlukan untuk melaksanakan kewajiban kontraktual antara AlbEdu dan pengguna, termasuk penyediaan akses ke fitur asesmen, penyimpanan jawaban asesmen, dan penerbitan skor. Tanpa pemrosesan ini, AlbEdu tidak dapat memberikan layanan inti.</p>
+
+        <h3>4.3 Kepentingan Legitim</h3>
+        <p>Untuk pemrosesan tertentu seperti pencatatan audit, deteksi kecurangan, dan pemeliharaan keamanan sistem, kami mengandalkan kepentingan legitimitas AlbEdu dan pengguna lain. Kami menyeimbangkan kepentingan ini dengan hak privasi subjek data, dan subjek data berhak mengajukan keberatan atas pemrosesan ini.</p>
+
+        <h3>4.4 Kewajiban Hukum</h3>
+        <p>Pemrosesan tertentu dilakukan untuk memenuhi kewajiban hukum yang berlaku di Indonesia, termasuk retensi catatan keamanan dan kerja sama dengan otoritas yang berwenang apabila diwajibkan oleh hukum.</p>
+
+        <h3>4.5 Kepentingan Vital</h3>
+        <p>Apabila diperlukan untuk melindungi kepentingan vital subjek data atau orang lain (misalnya dalam situasi darurat), pemrosesan dapat dilakukan tanpa persetujuan. AlbEdu belum mengidentifikasi skenario operasional yang memerlukan dasar hukum ini, namun dicantumkan untuk kelengkapan.</p>
+
+        <div class="footnote">
+          <sup>2</sup> Lihat Pasal 14 ayat (2) UU PDP untuk daftar lengkap dasar hukum pemrosesan yang sah.
+        </div>
+      </section>
+
+      <!-- ===== 5. Kategori Data ===== -->
+      <section class="section" id="kategori-data">
+        <p class="section-number">Bagian 05</p>
+        <h2 class="section-title">Kategori Data yang Dikumpulkan</h2>
+
+        <p>AlbEdu memproses delapan kategori data pribadi untuk tujuan operasional yang berbeda. Tabel berikut memberikan ringkasan, diikuti penjelasan detail per kategori.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Kategori</th>
+                <th>Dasar Hukum</th>
+                <th>Tujuan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>Identitas Akun</td><td>Kontrak + Persetujuan</td><td>Manajemen akun</td></tr>
+              <tr><td>2</td><td>Identitas Peserta</td><td>Persetujuan</td><td>Verifikasi peserta</td></tr>
+              <tr><td>3</td><td>Data Asesmen</td><td>Kontrak</td><td>Penilaian dan arsip</td></tr>
+              <tr><td>4</td><td>Data Anti-Cheat</td><td>Kepentingan Legitim</td><td>Pencegahan kecurangan</td></tr>
+              <tr><td>5</td><td>Catatan Audit</td><td>Kewajiban Hukum</td><td>Audit trail</td></tr>
+              <tr><td>6</td><td>Catatan Persetujuan</td><td>Kewajiban Hukum</td><td>Bukti persetujuan</td></tr>
+              <tr><td>7</td><td>Daftar Nama Peserta</td><td>Kontrak</td><td>Auto-fill identitas</td></tr>
+              <tr><td>8</td><td>Data Perangkat</td><td>Kepentingan Legitim</td><td>Verifikasi &amp; rate limiting</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>5.1 Identitas Akun</h3>
+        <p>Data ini diberikan oleh pengguna saat mendaftar akun AlbEdu. Mencakup alamat email, kata sandi (yang disimpan dalam bentuk terenkripsi satu arah dan tidak pernah dalam bentuk plain-text), nama lengkap, peran (administrator atau peserta), pengenal unik akun, dan URL foto profil apabila diunggah. Data ini disimpan selama akun aktif dan dapat diminta dihapus melalui mekanisme DSR.</p>
+
+        <h3>5.2 Identitas Peserta</h3>
+        <p>Ketika peserta memulai sesi asesmen, mereka mengisi formulir identitas yang dikonfigurasi oleh administrator (misalnya nama lengkap, NISN, kelas, dan foto — bidang formulir bersifat fleksibel dan dapat disesuaikan untuk berbagai konteks penggunaan, bukan hanya sekolah). Konfigurasi formulir ditentukan oleh administrator melalui fitur <em>identity form builder</em> dan dapat berbeda antar asesmen. Data identitas ini disimpan bersama catatan sesi peserta dan digunakan untuk verifikasi peserta serta pencetakan hasil. Akses ke data identitas peserta dijelaskan secara jujur di Bagian 15 mengenai limitasi isolasi multi-institusi.</p>
+
+        <h3>5.3 Data Asesmen</h3>
+        <p>Mencakup jawaban peserta (baikan draft maupun final), skor yang dihitung di sisi server, timestamp mulai dan submit, status sesi (aktif, dijeda, diblokir, selesai), dan progress percentage. Skor dihitung ulang di sisi server dan tidak pernah dipercaya dari sisi klien. Data asesmen dipertahankan selama masa retensi yang dijelaskan dalam Bagian 13 untuk keperluan arsip nilai sekolah.</p>
+
+        <h3>5.4 Data Anti-Cheat</h3>
+        <p>Selama asesmen berlangsung, AlbEdu mengumpulkan data berikut untuk mencegah kecurangan: sidik jari perangkat, alamat IP, informasi peramban, sinyal keaktifan sesi (<em>heartbeat</em>), dan peristiwa pelanggaran (termasuk perpindahan tab, deteksi alat pengembang, dan aktivitas mencurigakan lainnya). Alamat IP yang terkait dengan catatan audit di-anonimisasi menggunakan hash satu arah setelah 90 hari. Data ini disimpan terpisah dari data asesmen dan hanya dapat diakses oleh administrator untuk investigasi kecurangan.</p>
+
+        <h3>5.5 Catatan Audit</h3>
+        <p>Setiap tindakan administratif yang mengubah state sistem dicatat dalam catatan audit, termasuk identitas aktor, jenis tindakan, target tindakan, timestamp, dan metadata kontekstual. Catatan audit mencakup tindakan seperti pembuatan asesmen, pemblokiran peserta, penghapusan data, dan perubahan konfigurasi. Catatan ini tidak dapat dihapus oleh pengguna dan hanya dapat diakses oleh administrator untuk kepatuhan dan investigasi.</p>
+
+        <h3>5.6 Catatan Persetujuan</h3>
+        <p>Setiap kali pengguna memberikan persetujuan (misalnya saat menerima Kebijakan Privasi ini), catatan persetujuan disimpan beserta timestamp, versi kebijakan, alamat IP, dan informasi perangkat. Catatan ini bersifat <em>append-only</em> dengan timestamp pencabutan terpisah dan tidak dapat dihapus, sesuai persyaratan bukti forensik UU PDP Pasal 22.</p>
+
+        <h3>5.7 Daftar Nama Peserta</h3>
+        <p>Administrator dapat mengunggah hingga tiga daftar nama peserta untuk digunakan sebagai sumber <em>auto-fill</em> formulir identitas peserta. Daftar nama ini berisi nama lengkap dan atribut opsional (seperti kelas atau NISN). Data ini bersifat lokal per administrator dan tidak dibagikan antar akun.</p>
+
+        <h3>5.8 Data Perangkat</h3>
+        <p>Untuk verifikasi perangkat dan <em>rate limiting</em>, AlbEdu menyimpan hash sidik jari perangkat, timestamp verifikasi, dan jumlah upaya terdaftar. Data ini tidak mengandung informasi identitas langsung dan digunakan terutama untuk mencegah penyalahgunaan akun dan serangan otomatis. Pengumpulan data perangkat saat ini berada pada fase analisis (lihat Bagian 15 mengenai limitasi).</p>
+
+        <div class="footnote">
+          <sup>3</sup> Detail implementasi teknis dari setiap kategori tidak diungkapkan dalam dokumen ini demi keamanan sistem.
+        </div>
+      </section>
+
+      <!-- ===== 6. Persetujuan ===== -->
+      <section class="section" id="persetujuan">
+        <p class="section-number">Bagian 06</p>
+        <h2 class="section-title">Persetujuan (Pasal 20–22 UU PDP)</h2>
+
+        <p>Persetujuan adalah salah satu dasar hukum utama yang digunakan AlbEdu untuk memproses data pribadi, terutama data peserta. Sesuai Pasal 20–22 UU PDP, persetujuan yang sah harus memenuhi kriteria berikut, yang menjadi standar operasional AlbEdu.</p>
+
+        <h3>6.1 Kriteria Persetujuan yang Sah</h3>
+        <ol class="clauses">
+          <li><strong>Jelas.</strong> Permintaan persetujuan disajikan dalam bahasa yang mudah dipahami, terpisah dari syarat dan ketentuan lain, dan tidak menggunakan kalimat yang ambigu.</li>
+          <li><strong>Spesifik.</strong> Persetujuan hanya berlaku untuk tujuan pemrosesan yang dijelaskan pada saat permintaan disampaikan. Tujuan baru memerlukan persetujuan baru.</li>
+          <li><strong>Bebas.</strong> Penolakan terhadap permintaan persetujuan tidak boleh mengakibatkan kerugian bagi subjek data, kecuali apabila pemrosesan tersebut mutlak diperlukan untuk layanan inti.</li>
+          <li><strong>Terinformasi.</strong> Subjek data diberitahu tentang tujuan pemrosesan, kategori data, retensi, hak-hak mereka, dan kemungkinan transfer data lintas wilayah.</li>
+        </ol>
+
+        <h3>6.2 Pencatatan Persetujuan</h3>
+        <p>Setiap persetujuan yang diberikan dicatat dalam sistem AlbEdu dengan informasi berikut: pengenal subjek data, jenis persetujuan, versi kebijakan yang disetujui, timestamp pemberian, alamat IP, dan informasi perangkat. Pencatatan ini memenuhi persyaratan Pasal 22 UU PDP tentang bukti persetujuan yang dapat diaudit.</p>
+
+        <h3>6.3 Pencabutan Persetujuan</h3>
+        <p>Subjek data dapat mencabut persetujuan kapan saja melalui mekanisme yang dijelaskan dalam Bagian 11. Pencabutan dicatat dengan timestamp terpisah, tanpa menghapus catatan asli. Pencabutan tidak berlaku surut untuk pemrosesan yang telah dilakukan sebelumnya.</p>
+
+        <h3>6.4 Perubahan Versi Kebijakan</h3>
+        <p>Apabila Kebijakan ini diperbarui dengan perubahan material (misalnya kategori data baru, tujuan baru, atau retensi yang diperpanjang), AlbEdu akan meminta persetujuan ulang dari subjek data yang sudah terdaftar sebelum melanjutkan pemrosesan dengan versi baru. Subjek data yang tidak memberikan persetujuan ulang akan dibatasi aksesnya hingga persetujuan diberikan.</p>
+
+        <div class="pullquote">
+          "Persyaratan Persetujuan harus disampaikan secara jelas, mudah dipahami, dan tidak menggunakan kalimat yang memuat hal yang meragukan."
+          <cite>— Pasal 20 ayat (2) UU No. 27 Tahun 2022</cite>
+        </div>
+      </section>
+
+      <!-- ===== 7. Data Anak ===== -->
+      <section class="section" id="data-anak">
+        <p class="section-number">Bagian 07</p>
+        <h2 class="section-title">Pemrosesan Data Anak (Pasal 28 UU PDP)</h2>
+
+        <p>AlbEdu dapat digunakan dalam berbagai konteks — termasuk sekolah dasar, menengah, perguruan tinggi, dan penggunaan personal di luar konteks pendidikan formal. Apabila AlbEdu digunakan untuk memproses data anak (subjek di bawah usia 18 tahun), maka ketentuan Pasal 28 UU PDP berlaku, termasuk kewajiban memperoleh persetujuan dari orang tua atau wali yang sah. AlbEdu tidak membatasi penggunaannya hanya untuk pengguna dewasa, sehingga tanggung jawab perolehan persetujuan orang tua berada pada pihak yang mendaftarkan peserta anak di platform.</p>
+
+        <h3>7.1 Persetujuan Orang Tua atau Wali</h3>
+        <p>Untuk peserta yang berusia di bawah 18 tahun, persetujuan terhadap Kebijakan Privasi ini harus diberikan oleh orang tua atau wali yang sah. AlbEdu mengasumsikan bahwa persetujuan yang diberikan melalui akun yang dibuat oleh administrator (entah itu sekolah, kampus, institusi pelatihan, atau pengguna personal yang bertindak sebagai pengelola) telah memperoleh izin dari pihak yang berwenang. AlbEdu tidak melakukan verifikasi usia secara otomatis dan mengandalkan pernyataan administrator bahwa persetujuan yang sah telah diperoleh.</p>
+
+        <h3>7.2 Langkah Perlindungan Tambahan</h3>
+        <p>Untuk data anak, AlbEdu menerapkan langkah perlindungan tambahan berupa pembatasan akses (hanya administrator yang dapat melihat identitas peserta), retensi yang lebih pendek untuk data asesmen yang terkait dengan anak (mengikuti jadwal retensi umum di Bagian 13), dan penghapusan otomatis data identitas peserta apabila asesmen diarsipkan.</p>
+
+        <h3>7.3 Penyangkalan</h3>
+        <p>AlbEdu tidak mengklaim telah memenuhi seluruh persyaratan teknis yang diatur dalam Pasal 28 UU PDP secara penuh. Verifikasi usia, mekanisme persetujuan orang tua yang dapat diaudit, dan pemberitahuan khusus untuk anak masih menjadi area yang sedang kami kembangkan. Pihak yang mendaftarkan peserta anak di AlbEdu — baik itu sekolah, kampus, institusi pelatihan, maupun pengguna personal — bertanggung jawab atas perolehan persetujuan orang tua yang sah sebelum mendaftarkan peserta.</p>
+
+        <div class="callout">
+          <strong>Catatan untuk Administrator:</strong> Apabila Anda mendaftarkan peserta di bawah 18 tahun ke AlbEdu — baik di konteks sekolah, kampus, pelatihan, maupun penggunaan personal — pastikan persetujuan orang tua atau wali telah diperoleh dan didokumentasikan sebelum asesmen dimulai. AlbEdu menyediakan template formulir persetujuan yang dapat diminta ke <a href="mailto:support@albedu.id">support@albedu.id</a>.
+        </div>
+      </section>
+
+      <!-- ===== 8. Keamanan ===== -->
+      <section class="section" id="keamanan">
+        <p class="section-number">Bagian 08</p>
+        <h2 class="section-title">Langkah Keamanan Teknis &amp; Organisasi (Pasal 35 UU PDP)</h2>
+
+        <p>Sesuai Pasal 35 UU PDP, AlbEdu menerapkan langkah-langkah teknis dan organisasi yang wajar untuk melindungi data pribadi dari akses tidak sah, pengungkapan, perubahan, atau penghapusan. Bagian ini menjelaskan langkah-langkah yang <em>aktif</em> diterapkan, bukan klaim asumsi atau rencana masa depan.</p>
+
+        <h3>8.1 Enkripsi</h3>
+        <p>Seluruh komunikasi antara klien dan server dilakukan melalui HTTPS dengan enkripsi transport modern. Sertifikat TLS dikelola oleh penyedia infrastruktur dan diperbarui otomatis. Data yang disimpan di basis data dilindungi dengan enkripsi <em>at-rest</em> yang merupakan fitur bawaan infrastruktur. Kata sandi pengguna di-hash menggunakan algoritma satu arah yang kuat dan tidak pernah disimpan dalam bentuk plain-text di sistem kami.</p>
+
+        <h3>8.2 Kontrol Akses Berbasis Peran</h3>
+        <p>Akses ke data pribadi dikendalikan melalui kebijakan kontrol akses yang dikonfigurasi di level basis data. Setiap kategori data memiliki kebijakan akses yang membatasi berdasarkan peran pengguna (administrator atau peserta) dan kepemilikan data. Peserta hanya dapat mengakses data miliknya sendiri. Limitasi terkait isolasi antar institusi dijelaskan secara jujur di Bagian 15.</p>
+
+        <h3>8.3 Otentikasi dan Otorisasi</h3>
+        <p>Otentikasi pengguna dikelola oleh layanan otentikasi bawaan infrastruktur yang mendukung otentikasi email-kata sandi, dengan opsi verifikasi email dan pemulihan kata sandi. Sesi otentikasi menggunakan token dengan masa berlaku terbatas dan <em>refresh token</em> yang dirotasi. AlbEdu juga mengumpulkan data sidik jari perangkat untuk analisis keamanan, namun fitur pemblokiran akses berdasarkan perangkat belum aktif sepenuhnya — lihat Bagian 15 mengenai limitasi.</p>
+
+        <h3>8.4 Pencatatan Audit</h3>
+        <p>Setiap tindakan administratif yang mengubah state sistem dicatat dalam catatan audit yang tidak dapat dihapus oleh pengguna. Pencatatan ini mencakup identitas aktor, jenis tindakan, target, timestamp, dan metadata kontekstual. Catatan audit dipertahankan selama 365 hari dan dihapus secara otomatis melalui penjadwal internal sistem.</p>
+
+        <h3>8.5 Pencegahan Kecurangan</h3>
+        <p>Untuk menjaga integritas asesmen, AlbEdu mengumpulkan data perilaku peserta selama asesmen berlangsung, termasuk deteksi perpindahan tab, deteksi alat pengembang peramban, dan deteksi aktivitas mencurigakan lainnya. Data ini disimpan dengan alamat IP yang di-anonimisasi setelah 90 hari. Akses ke data ini terbatas pada administrator untuk investigasi kecurangan.</p>
+
+        <h3>8.6 Sistem Verifikasi Bot</h3>
+        <p>AlbEdu menggunakan sistem verifikasi bot pihak ketiga untuk mencegah penyalahgunaan otomatis pada halaman otentikasi (login, registrasi) dan halaman akses asesmen (token entry, runtime asesmen). Sistem ini mengumpulkan data interaksi pengguna (seperti gerakan kursor dan pola klik) dan alamat IP untuk menentukan apakah pengunjung adalah manusia atau otomatisasi. Data yang dikumpulkan oleh sistem ini diproses oleh penyedia pihak ketiga yang dijelaskan di Bagian 9.</p>
+
+        <h3>8.7 Penyangkalan</h3>
+        <p>AlbEdu tidak memiliki sertifikasi keamanan formal (seperti ISO/IEC 27001 atau SOC 2), belum menjalani audit keamanan independen, dan tidak mengklaim ketahanan terhadap ancaman tingkat lanjut (<em>advanced persistent threats</em>). Langkah-langkah keamanan yang dijelaskan di atas adalah yang aktif diterapkan, dan kami berkomitmen untuk meningkatkannya secara bertahap.</p>
+      </section>
+
+      <!-- ===== 9. Pemroses Data Pihak Ketiga ===== -->
+      <section class="section" id="pemroses-data">
+        <p class="section-number">Bagian 09</p>
+        <h2 class="section-title">Pemroses Data Pihak Ketiga</h2>
+
+        <p>AlbEdu menggunakan sejumlah layanan pihak ketiga yang bertindak sebagai Pemroses Data atas instruksi AlbEdu. Bagian ini menjelaskan secara transparan pihak ketiga mana yang memproses data pengguna, untuk tujuan apa, dan apa konsekuensinya bagi Anda sebagai subjek data.</p>
+
+        <h3>9.1 Penyedia Infrastruktur Basis Data dan Otentikasi</h3>
+        <p>AlbEdu menggunakan layanan basis data dan otentikasi terkelola dari penyedia infrastruktur pihak ketiga. Penyedia ini menyimpan seluruh data pengguna yang dikumpulkan AlbEdu (kecuali konten statis situs), mengelola otentikasi berbasis email-kata sandi (penyimpanan kata sandi ter-hash, manajemen sesi, verifikasi email), serta otentikasi pihak ketiga melalui Google (apabila pengguna memilih opsi "Masuk dengan Google"), dan menyediakan fungsi server-side untuk penilaian dan pemrosesan data. Penyedia ini berlokasi di region Southeast Asia (lihat Bagian 12 mengenai transfer lintas wilayah).</p>
+
+        <p>Apabila pengguna memilih opsi "Masuk dengan Google", AlbEdu akan menerima dari Google informasi dasar akun Google pengguna (alamat email, nama, dan URL foto profil) untuk keperluan pembuatan atau pencocokan akun AlbEdu. Google tidak memberikan akses ke isi email, kontak, kalender, atau data Google lainnya kepada AlbEdu. Pengguna dapat mencabut akses AlbEdu ke akun Google mereka kapan saja melalui pengaturan akun Google.</p>
+
+        <h3>9.2 Penyedia CDN dan Edge Computing</h3>
+        <p>AlbEdu menggunakan layanan CDN dan edge computing dari penyedia pihak ketiga untuk mempercepat pengiriman konten statis (HTML, CSS, JavaScript, gambar) dan menjalankan pekerjaan terjadwal (seperti pengarsipan asesmen). Penyedia ini juga menyimpan kredensial koneksi ke basis data di variabel lingkungan yang aman. Penyedia ini memproses metadata permintaan (seperti alamat IP dan header HTTP) untuk tujuan operasional CDN, namun tidak menyimpan data pribadi AlbEdu secara permanen.</p>
+
+        <h3>9.3 Sistem Verifikasi Bot</h3>
+        <p>Sebagaimana disebut di Bagian 8.6, AlbEdu menggunakan sistem verifikasi bot pihak ketiga pada halaman otentikasi (login, registrasi) dan halaman akses asesmen (token entry, runtime asesmen). Sistem ini mengumpulkan data interaksi pengguna, alamat IP, dan informasi perangkat. Data ini diproses oleh penyedia untuk menentukan skor risiko (manusia vs otomatisasi) dan tidak disimpan permanen oleh AlbEdu.</p>
+
+        <h3>9.4 Layanan Deteksi Alamat IP</h3>
+        <p>Saat pengguna memberikan persetujuan terhadap Kebijakan Privasi ini, AlbEdu menggunakan layanan pihak ketiga untuk mendeteksi alamat IP pengguna sebagai bagian dari bukti forensik persetujuan. Layanan ini menerima permintaan dari peramban pengguna dan mengembalikan alamat IP publik. Alamat IP ini kemudian disimpan dalam catatan persetujuan bersama timestamp dan informasi perangkat.</p>
+
+        <h3>9.5 Tidak Ada Pemroses Lain</h3>
+        <p>Selain keempat kategori di atas, AlbEdu tidak menggunakan layanan pihak ketiga lain yang memproses data pribadi pengguna. Tidak ada layanan analitik web, tidak ada pelacak iklan, tidak ada layanan pemetaan, dan tidak ada layanan media sosial yang dipasang di platform AlbEdu.</p>
+
+        <div class="footnote">
+          <sup>4</sup> Identitas penyedia pihak ketiga tidak disebutkan di dokumen publik ini untuk mengurangi risiko <em>supply chain attack</em>. Identitas lengkap dapat diminta oleh otoritas yang berwenang melalui proses hukum yang sah.
+        </div>
+      </section>
+
+      <!-- ===== 10. Pelanggaran Data ===== -->
+      <section class="section" id="pelanggaran">
+        <p class="section-number">Bagian 10</p>
+        <h2 class="section-title">Notifikasi Pelanggaran Data (Pasal 36 UU PDP)</h2>
+
+        <p>Pasal 36 UU PDP mewajibkan Pengendali Data untuk memberitahukan pelanggaran data pribadi kepada subjek data yang terdampak <strong>paling lambat dalam 3 × 24 jam</strong> sejak kegagalan diketahui. AlbEdu berkomitmen untuk memenuhi kewajiban ini sejauh yang memungkinkan secara teknis dan operasional.</p>
+
+        <h3>10.1 Definisi Pelanggaran Berdampak Serius</h3>
+        <p>Pelanggaran berdampak serius mencakup, namun tidak terbatas pada: pengungkapan data identitas peserta ke pihak yang tidak berwenang, kebocoran kata sandi (meskipun dalam bentuk ter-hash), akses tidak sah ke data asesmen atau skor, dan kehilangan data yang tidak dapat dipulihkan. Pelanggaran kecil yang tidak melibatkan data sensitif dan dapat ditangani secara internal mungkin tidak memerlukan notifikasi publik.</p>
+
+        <h3>10.2 Mekanisme Notifikasi</h3>
+        <p>Notifikasi akan disampaikan melalui email ke alamat yang terdaftar pada akun subjek data, dengan salinan publik di halaman utama AlbEdu apabila pelanggaran berdampak luas. Notifikasi akan menjelaskan: jenis pelanggaran, data yang terdampak, langkah yang sedang diambil, rekomendasi tindakan untuk subjek data, dan kontak untuk pertanyaan lebih lanjut.</p>
+
+        <h3>10.3 Komitmen dan Keterbatasan</h3>
+        <p>AlbEdu adalah tim kecil yang belum memiliki proses <em>incident response</em> formal yang teruji. Kami berkomitmen untuk menargetkan notifikasi dalam 72 jam, namun dalam praktik, notifikasi dapat terlambat apabila investigasi awal memerlukan waktu lebih panjang untuk memahami cakupan pelanggaran. Kami akan mengutamakan transparansi dan memberikan pembaruan berkala apabila notifikasi awal belum dapat menyertakan seluruh detail. Apabila keterlambatan terjadi, kami akan menjelaskan alasannya dalam notifikasi.</p>
+
+        <div class="pullquote">
+          "Dalam hal terjadi Kegagalan Pelindungan Data Pribadi, Pengendali Data Pribadi wajib memberitahukan secara tertulis kepada Subjek Data yang terdampak ... paling lambat dalam 3 x 24 jam."
+          <cite>— Pasal 36 ayat (1) UU No. 27 Tahun 2022</cite>
+        </div>
+      </section>
+
+      <!-- ===== 11. Hak Subjek Data ===== -->
+      <section class="section" id="hak-subjek">
+        <p class="section-number">Bagian 11</p>
+        <h2 class="section-title">Hak Subjek Data (Pasal 16 UU PDP)</h2>
+
+        <p>Sesuai Pasal 5 dan Pasal 16 UU PDP, subjek data memiliki sejumlah hak yang dapat dilaksanakan terhadap AlbEdu sebagai Pengendali Data. AlbEdu berkomitmen untuk memenuhi permintaan yang sah dalam waktu yang wajar. Berikut adalah hak yang <em>aktif</em> dapat dilaksanakan melalui mekanisme yang dijelaskan di Bagian 18.</p>
+
+        <h3>11.1 Hak Akses Data</h3>
+        <p>Subjek data berhak meminta salinan seluruh data pribadi yang AlbEdu simpan tentang mereka. Permintaan ini diproses melalui fitur ekspor data yang menghasilkan berkas JSON berisi data identitas akun, sesi asesmen, jawaban, catatan persetujuan, dan catatan audit terkait. Berkas dikirim ke alamat email terdaftar dalam waktu 7 hari kerja.</p>
+
+        <h3>11.2 Hak Koreksi Data</h3>
+        <p>Subjek data berhak meminta perbaikan atas data pribadi yang tidak akurat, tidak lengkap, atau tidak relevan. Untuk data yang dapat diperbarui oleh pengguna sendiri (nama, foto profil), perbaikan dapat dilakukan langsung melalui halaman profil. Untuk data yang memerlukan intervensi administrator (identitas peserta, data asesmen), permintaan diajukan melalui email ke <a href="mailto:support@albedu.id">support@albedu.id</a> dengan menyertakan pengenal akun dan deskripsi perubahan yang diminta.</p>
+
+        <h3>11.3 Hak Penghapusan Data</h3>
+        <p>Subjek data berhak meminta penghapusan data pribadi mereka (<em>right to be forgotten</em>). Penghapusan dilakukan secara bertahap: akun di-<em>soft delete</em> terlebih dahulu (ditandai dengan timestamp penghapusan tanpa menghapus data fisik), data asesmen dan identitas peserta dihapus permanen setelah konfirmasi, dan catatan audit dipertahankan selama masa retensi wajib. Permintaan penghapusan total memerlukan waktu hingga 30 hari untuk menyelesaikan propagasi ke seluruh sistem dan cadangan.</p>
+
+        <p>Mohon dicatat: anonimisasi pengenal pada catatan audit setelah soft delete saat ini masih dalam pengembangan dan belum sepenuhnya aktif. Sampai fitur ini aktif, pengenal pengguna pada catatan audit tetap tersedia dalam bentuk aslinya selama masa retensi 365 hari, sesuai kewajiban hukum. Lihat Bagian 15.5 untuk detail limitasi anonimisasi.</p>
+
+        <h3>11.4 Hak Pencabutan Persetujuan</h3>
+        <p>Subjek data berhak mencabut persetujuan yang telah diberikan kapan saja. Pencabutan dilakukan melalui permintaan email atau melalui menu pencabutan di halaman profil (apabila tersedia). Setelah pencabutan, AlbEdu akan menghentikan pemrosesan berdasarkan persetujuan tersebut, kecuali untuk data yang harus dipertahankan berdasarkan kewajiban hukum atau kepentingan legitimitas lain.</p>
+
+        <h3>11.5 Hak yang Belum Didukung Penuh</h3>
+        <p>Beberapa hak yang diatur dalam UU PDP belum didukung penuh oleh mekanisme AlbEdu saat ini, termasuk hak pembatasan pemrosesan, hak portabilitas data dalam format <em>machine-readable</em> standar, dan hak keberatan atas pemrosesan untuk kepentingan legitimitas. Permintaan terkait hak-hak ini akan ditangani secara <em>case-by-case</em> melalui email, dengan target respons 14 hari kerja. Kami berkomitmen untuk mengembangkan mekanisme yang lebih lengkap seiring pertumbuhan platform.</p>
+      </section>
+
+      <!-- ===== 12. Lintas Wilayah ===== -->
+      <section class="section" id="lintas-wilayah">
+        <p class="section-number">Bagian 12</p>
+        <h2 class="section-title">Transfer Data Lintas Wilayah (Pasal 56 UU PDP)</h2>
+
+        <p>AlbEdu menggunakan layanan infrastruktur basis data dan otentikasi dari penyedia pihak ketiga yang regionnya berada di Southeast Asia (Singapore). Artinya, seluruh data pribadi yang disimpan di basis data utama AlbEdu berada di server yang secara fisik berlokasi di Singapura, bukan Indonesia.</p>
+
+        <h3>12.1 Dasar Pemrosesan Lintas Wilayah</h3>
+        <p>Pasal 56 UU PDP mengatur bahwa transfer data pribadi ke luar wilayah Indonesia hanya dapat dilakukan apabila negara tujuan memiliki tingkat perlindungan data pribadi yang setara atau memadai, atau apabila terdapat jaminan perlindungan yang cukup. Singapura memiliki undang-undang perlindungan data sendiri (<em>Personal Data Protection Act 2012</em>, PDPA) yang diakui secara umum memiliki tingkat perlindungan yang memadai.</p>
+
+        <h3>12.2 Langkah Perlindungan Tambahan</h3>
+        <p>Untuk transfer data lintas wilayah ini, AlbEdu menerapkan langkah perlindungan tambahan berupa: kontrak pemroses data dengan penyedia yang mensyaratkan kepatuhan terhadap UU PDP Indonesia; enkripsi <em>at-rest</em> dan <em>in-transit</em> yang aktif; pembatasan akses berbasis peran; dan tidak ada sub-pemroses tambahan yang mengirim data ke wilayah ketiga. Apabila penyedia infrastruktur memperkenalkan region Jakarta, AlbEdu akan mengevaluasi migrasi untuk meminimalkan transfer lintas wilayah.</p>
+
+        <h3>12.3 Penyedia CDN</h3>
+        <p>Penyedia CDN yang digunakan AlbEdu memiliki jaringan global dan dapat memproses metadata permintaan (seperti alamat IP, header HTTP) di berbagai region. Konten statis (HTML, CSS, JS, gambar) di-cache di <em>edge nodes</em> yang lokasinya bergantung pada pola akses pengguna. Penyedia CDN tidak menyimpan data pribadi AlbEdu secara permanen.</p>
+
+        <div class="footnote">
+          <sup>5</sup> Daftar negara yang dianggap memiliki perlindungan data setara diatur dalam Peraturan Otoritas Perlindungan Data Pribadi Indonesia. AlbEdu memantau perkembangan regulasi ini dan akan menyesuaikan kebijakan transfer data apabila diperlukan.
+        </div>
+      </section>
+
+      <!-- ===== 13. Retensi ===== -->
+      <section class="section" id="retensi">
+        <p class="section-number">Bagian 13</p>
+        <h2 class="section-title">Retensi &amp; Penghapusan Data</h2>
+
+        <p>AlbEdu menyimpan data pribadi hanya selama diperlukan untuk tujuan pemrosesan yang dijelaskan dalam Kebijakan ini. Setelah masa retensi habis, data dihapus secara permanen atau di-anonimisasi. Tabel berikut merangkum masa retensi per kategori data, sesuai konfigurasi aktif di sistem.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Kategori</th>
+                <th>Retensi</th>
+                <th>Pemicu Penghapusan</th>
+                <th>Anonimisasi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Identitas akun</td><td>Selama akun aktif</td><td>Permintaan DSR</td><td>Pengenal di-hash setelah soft delete</td></tr>
+              <tr><td>Percobaan registrasi</td><td>30 hari</td><td>Otomatis terjadwal</td><td>Tidak ada</td></tr>
+              <tr><td>Catatan keamanan (anti-cheat)</td><td>90 hari</td><td>Otomatis terjadwal</td><td>Tidak ada (dihapus permanen)</td></tr>
+              <tr><td>Catatan audit</td><td>365 hari</td><td>Otomatis terjadwal</td><td>Alamat IP di-anonimisasi setelah 90 hari</td></tr>
+              <tr><td>Asesmen aktif</td><td>Selama aktif</td><td>Auto-archive setelah 365 hari</td><td>Tidak ada (arsip)</td></tr>
+              <tr><td>Catatan rate limiting</td><td>1 jam</td><td>Otomatis terjadwal</td><td>Tidak ada</td></tr>
+              <tr><td>Catatan persetujuan</td><td>Permanen</td><td>Tidak dihapus (bukti forensik)</td><td>Tidak ada</td></tr>
+              <tr><td>Jawaban &amp; data asesmen</td><td>Selama akun aktif</td><td>Permintaan DSR</td><td>Tidak ada</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>13.1 Penjadwalan Otomatis</h3>
+        <p>Penghapusan otomatis dijalankan melalui penjadwal internal sistem pada interval reguler (harian untuk sebagian besar kategori, per jam untuk catatan <em>rate limiting</em>). Penjadwalan ini tidak dapat dimatikan oleh pengguna dan berjalan terus-menerus untuk memastikan kepatuhan terhadap kebijakan retensi.</p>
+
+        <h3>13.2 Pengecualian</h3>
+        <p>Data yang sedang menjadi sumber investigasi kecurangan atau sengketa hukum dapat dipertahankan melampaui masa retensi standar, hingga investigasi selesai atau sengketa diselesaikan. Pemeliharaan semacam ini didokumentasikan dalam catatan audit.</p>
+      </section>
+
+      <!-- ===== 14. Lokasi Data ===== -->
+      <section class="section" id="lokasi-data">
+        <p class="section-number">Bagian 14</p>
+        <h2 class="section-title">Lokasi Data</h2>
+
+        <p>Infrastruktur yang menyimpan dan memproses data pribadi AlbEdu adalah sebagai berikut.</p>
+
+        <h3>14.1 Basis Data Utama</h3>
+        <p>Basis data yang menyimpan seluruh data pribadi (kecuali otentikasi) dihosting oleh penyedia infrastruktur pihak ketiga di region Southeast Asia (Singapore). Region ini dipilih untuk meminimalkan latensi bagi pengguna Indonesia dan karena penyedia belum menyediakan region Jakarta pada saat Kebijakan ini disusun. Cadangan basis data (<em>backups</em>) juga disimpan di region yang sama.</p>
+
+        <h3>14.2 Otentikasi</h3>
+        <p>Otentikasi pengguna (penyimpanan kata sandi ter-hash, manajemen sesi, dan verifikasi email) ditangani oleh layanan otentikasi bawaan penyedia infrastruktur yang juga berlokasi di region Singapore. AlbEdu juga mendukung otentikasi melalui Google sebagai opsi alternatif; apabila opsi ini digunakan, proses otentikasi diarahkan melalui server Google sebelum kembali ke AlbEdu. Tidak ada layanan otentikasi pihak ketiga lain selain penyedia infrastruktur utama dan Google yang digunakan.</p>
+
+        <h3>14.3 CDN dan Edge Computing</h3>
+        <p>Konten statis (HTML, CSS, JavaScript, gambar) di-cache di jaringan CDN yang terdistribusi secara global. Fungsi server-side untuk pemrosesan data berjalan di region Singapore. Pekerjaan terjadwal (seperti pengarsipan asesmen) berjalan di <em>edge node</em> terdekat dengan pengguna administrator.</p>
+
+        <h3>14.4 Penyimpanan Lokal Pengguna</h3>
+        <p>AlbEdu menggunakan <em>localStorage</em> dan <em>sessionStorage</em> pada peramban pengguna untuk menyimpan preferensi (seperti tema, status sidebar) dan data sesi sementara (seperti draft jawaban sebelum submit). Data ini disimpan secara lokal di perangkat pengguna dan tidak dikirim ke server kecuali diperlukan untuk operasi normal.</p>
+      </section>
+
+      <!-- ===== 15. Limitasi & Penyangkalan ===== -->
+      <section class="section" id="limitasi">
+        <p class="section-number">Bagian 15</p>
+        <h2 class="section-title">Limitasi &amp; Penyangkalan</h2>
+
+        <p>Bagian ini menjelaskan secara jujur dan terbuka keterbatasan teknis dan operasional AlbEdu yang relevan dengan perlindungan data pribadi. Tujuan bagian ini adalah memastikan Anda sebagai subjek data memiliki gambaran yang akurat tentang apa yang dapat dan tidak dapat dilakukan AlbEdu saat ini, tanpa overclaim.</p>
+
+        <h3>15.1 Isolasi Multi-Institusi Belum Penuh</h3>
+        <p>AlbEdu dirancang untuk digunakan oleh beberapa institusi secara terpisah. Namun, pada saat Kebijakan ini disusun, kebijakan kontrol akses yang membatasi administrator untuk hanya melihat data dari institusinya sendiri <strong>belum sepenuhnya aktif</strong>. Saat ini, seorang administrator yang terautentikasi dapat secara teknis mengakses data asesmen, sesi, jawaban, dan catatan keamanan milik institusi lain yang menggunakan AlbEdu.</p>
+
+        <p>Kami menyadari ini adalah keterbatasan serius dan sedang dalam proses mengembangkan isolasi multi-institusi berbasis pengenal organisasi. Sampai fitur ini sepenuhnya aktif, AlbEdu merekomendasikan agar setiap institusi atau pengguna personal mempertimbangkan risiko ini sebelum mengunggah data peserta yang sensitif. Apabila Anda adalah administrator dan ingin membatasi paparan data Anda, mohon hubungi <a href="mailto:support@albedu.id">support@albedu.id</a> untuk diskusi.</p>
+
+        <h3>15.2 Verifikasi Perangkat Belum Memblokir Akses</h3>
+        <p>AlbEdu mengumpulkan data sidik jari perangkat dan pengenal perangkat untuk analisis keamanan, namun <strong>fitur pemblokiran akses berdasarkan perangkat belum aktif</strong>. Saat ini, data ini dikumpulkan dalam mode <em>shadow collection</em> untuk analisis dan pengembangan, tanpa memblokir upaya login dari perangkat yang tidak dikenal. Kami berkomitmen untuk mengaktifkan fitur pemblokiran dalam pembaruan mendatang.</p>
+
+        <h3>15.3 Belum Ada Audit Independen</h3>
+        <p>AlbEdu belum menjalani audit keamanan independen oleh pihak ketiga (seperti audit SOC 2 atau ISO 27001). Klaim keamanan dalam Kebijakan ini adalah pernyataan komitmen sukarela yang belum diverifikasi oleh pihak eksternal. Kami berencana untuk menjalani audit semacam itu seiring pertumbuhan platform dan ketersediaan sumber daya.</p>
+
+        <h3>15.4 Belum Ada DPO Formal</h3>
+        <p>AlbEdu belum menunjuk Pejabat Pelindungan Data Pribadi (DPO) secara formal sebagaimana diatur dalam Pasal 53 UU PDP, mengingat skala operasional kami yang masih terbatas. Fungsi DPO untuk saat ini dijalankan oleh tim operasional melalui email dukungan. Apabila kebutuhan regulasi mengharuskan penunjukan DPO formal, kami akan melakukannya dan memperbarui Kebijakan ini.</p>
+
+        <h3>15.5 Anonimisasi IP Terbatas</h3>
+        <p>Anonimisasi alamat IP (penggantian alamat IP asli dengan hash satu arah) hanya berlaku untuk catatan audit, dan dilakukan setelah 90 hari. Untuk catatan keamanan (anti-cheat), alamat IP disimpan dalam bentuk plain-text selama 90 hari, kemudian dihapus bersama dengan catatan tersebut. Kami tidak melakukan anonimisasi IP untuk catatan persetujuan.</p>
+
+        <p>Selain itu, anonimisasi pengenal pengguna pada catatan audit setelah akun di-<em>soft delete</em> juga belum diimplementasikan. Saat ini, pengenal pengguna tetap tersedia dalam bentuk aslinya pada catatan audit selama masa retensi 365 hari, sesuai kewajiban hukum. Kami berkomitmen untuk mengembangkan fitur anonimisasi ini dalam pembaruan mendatang.</p>
+
+        <h3>15.6 Tidak Ada Garansi 100% Keamanan</h3>
+        <p>Tidak ada sistem yang 100% aman dari serangan. AlbEdu menerapkan langkah-langkah keamanan teknis yang dijelaskan di Bagian 8, namun kami tidak menjamin ketahanan terhadap ancaman tingkat lanjut (<em>advanced persistent threats</em>) atau eksploitasi kerentanan <em>zero-day</em>. Apabila terjadi pelanggaran data berdampak serius, kami akan memberitahu Anda sesuai mekanisme di Bagian 10.</p>
+
+        <h3>15.7 Penanganan DSR Bersifat Manual</h3>
+        <p>Saat ini, permintaan subjek data (akses, koreksi, penghapusan, pencabutan persetujuan) ditangani secara manual oleh tim AlbEdu melalui email. Tidak ada portal mandiri untuk pengajuan DSR. Target respons adalah 7 hari kerja untuk permintaan standar dan 14 hari kerja untuk permintaan kompleks, namun keterlambatan dapat terjadi bergantung pada volume permintaan.</p>
+
+        <div class="callout warn">
+          <strong>Permintaan Maaf &amp; Komitmen:</strong> Kami menyadari bahwa beberapa keterbatasan di atas — terutama isolasi multi-institusi (15.1) — tidak ideal. Kami berkomitmen untuk memperbaikinya secara bertahap, dengan prioritas pada isolasi multi-institusi dan verifikasi perangkat. Apabila Anda menemukan celah lain antara klaim dokumen ini dan praktik aktual, mohon lapor ke <a href="mailto:support@albedu.id">support@albedu.id</a>.
+        </div>
+      </section>
+
+      <!-- ===== 16. FAQ ===== -->
+      <section class="section" id="faq">
+        <p class="section-number">Bagian 16</p>
+        <h2 class="section-title">Pertanyaan Umum (FAQ)</h2>
+
+        <details>
+          <summary>Apakah AlbEdu menjual data pribadi saya?</summary>
+          <div class="faq-answer">
+            <p>Tidak. AlbEdu tidak pernah menjual, menyewakan, atau memperdagangkan data pribadi pengguna kepada pihak ketiga manapun. AlbEdu tidak memiliki model bisnis berbasis iklan atau monetisasi data.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Apakah AlbEdu menggunakan data saya untuk melatih model AI?</summary>
+          <div class="faq-answer">
+            <p>Tidak. AlbEdu tidak menggunakan data pribadi pengguna untuk melatih model kecerdasan buatan, baik model internal maupun untuk dikirim ke layanan AI pihak ketiga. Apabila di masa depan AlbEdu mempertimbangkan penggunaan semacam itu, kami akan meminta persetujuan eksplisit terpisah sebelum melakukan pemrosesan.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Bagaimana saya tahu data saya sedang diakses?</summary>
+          <div class="faq-answer">
+            <p>Setiap tindakan administratif yang mengakses atau mengubah data Anda dicatat dalam catatan audit. Catatan ini tidak dapat diakses langsung oleh pengguna biasa, namun Anda dapat mengajukan permintaan akses data (DSR) untuk mendapatkan salinan catatan aktivitas terkait akun Anda. Permintaan diproses dalam 7 hari kerja.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Bagaimana cara saya menghapus akun dan semua data saya?</summary>
+          <div class="faq-answer">
+            <p>Kirim email ke <a href="mailto:support@albedu.id">support@albedu.id</a> dengan subjek "Permintaan Penghapusan Akun" dan sertakan alamat email akun Anda. Kami akan memverifikasi identitas Anda, kemudian memproses penghapusan bertahap: <em>soft-delete</em> akun dalam 3 hari, penghapusan permanen data asesmen dalam 14 hari, dan anonimisasi catatan audit dalam 30 hari. Anda akan menerima konfirmasi email setelah proses selesai.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Apakah administrator dapat melihat jawaban asesmen saya?</summary>
+          <div class="faq-answer">
+            <p>Ya. Administrator yang membuat asesmen dapat melihat jawaban peserta, skor, dan catatan pelanggaran untuk tujuan penilaian dan investigasi kecurangan. Ini adalah bagian dari pelaksanaan kontrak antara AlbEdu dan pengelola asesmen. Mohon dicatat bahwa keterbatasan isolasi multi-institusi (lihat Bagian 15.1) berarti administrator dari institusi lain juga dapat secara teknis mengakses data Anda — kami sedang memperbaiki ini.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Apakah data saya aman dari peretas?</summary>
+          <div class="faq-answer">
+            <p>Tidak ada sistem yang 100% aman dari serangan. AlbEdu menerapkan langkah-langkah keamanan teknis yang dijelaskan di Bagian 8 (enkripsi, kontrol akses, audit, dll), namun kami tidak menjamin ketahanan terhadap ancaman tingkat lanjut. Apabila terjadi pelanggaran data berdampak serius, kami akan memberitahu Anda sesuai mekanisme di Bagian 10 dalam waktu yang wajar.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Bagaimana jika saya tidak setuju dengan perubahan kebijakan?</summary>
+          <div class="faq-answer">
+            <p>Apabila kami memperbarui Kebijakan ini dengan perubahan material, kami akan meminta persetujuan ulang sebelum melanjutkan pemrosesan dengan versi baru. Apabila Anda tidak memberikan persetujuan, akses Anda ke layanan akan dibatasi. Anda dapat memilih untuk menghapus akun sesuai mekanisme di FAQ sebelumnya.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Apakah AlbEdu patuh penuh dengan UU PDP?</summary>
+          <div class="faq-answer">
+            <p>Belum penuh. AlbEdu berkomitmen untuk selaras dengan prinsip-prinsip UU PDP, namun belum menjalani audit kepatuhan formal oleh otoritas atau pihak ketiga independen. Beberapa keterbatasan teknis dijelaskan secara jujur di Bagian 15, termasuk isolasi multi-institusi yang belum penuh, verifikasi perangkat yang belum memblokir akses, dan beberapa hak DSR yang belum didukung penuh. Kebijakan ini adalah pernyataan komitmen sukarela, dan kami terus meningkatkan praktik perlindungan data kami.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Apakah AlbEdu menerima permintaan data dari pemerintah atau kepolisian?</summary>
+          <div class="faq-answer">
+            <p>AlbEdu akan menanggapi permintaan data resmi dari otoritas yang berwenang (kepolisian, kejaksaan, atau pengadilan) sesuai kewajiban hukum yang berlaku di Indonesia. Permintaan semacam itu didokumentasikan dalam catatan audit dan, sejauh diizinkan oleh hukum, kami akan memberitahukan kepada subjek data yang terdampak.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Bagaimana cara saya melaporkan kerentanan keamanan?</summary>
+          <div class="faq-answer">
+            <p>Apabila Anda menemukan kerentanan keamanan di AlbEdu, mohon laporkan ke <a href="mailto:support@albedu.id">support@albedu.id</a> dengan subjek "Laporan Kerentanan". Mohon jangan menguji kerentanan secara aktif yang dapat mempengaruhi pengguna lain. Kami berkomitmen untuk merespons laporan dalam 72 jam dan memberikan pembaruan secara berkala hingga kerentanan ditangani.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Apakah AlbEdu akan pindah ke server di Indonesia?</summary>
+          <div class="faq-answer">
+            <p>Apabila penyedia infrastruktur kami membuka region Jakarta, AlbEdu akan mengevaluasi migrasi untuk meminimalkan transfer data lintas wilayah. Migrasi semacam itu memerlukan perencanaan teknis yang matang dan tidak dapat dilakukan dalam semalam. Kami akan memberitahu pengguna sebelum migrasi dilakukan.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Bagaimana cara saya melihat versi kebijakan yang saya setujui?</summary>
+          <div class="faq-answer">
+            <p>Versi kebijakan yang Anda setujui tercatat dalam catatan persetujuan. Anda dapat mengajukan permintaan akses data (DSR) untuk mendapatkan salinan catatan persetujuan Anda, termasuk timestamp, versi kebijakan, alamat IP, dan informasi perangkat pada saat persetujuan diberikan.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Mengapa dokumen ini tidak menyebutkan detail teknis seperti nama tabel atau jadwal pemeliharaan?</summary>
+          <div class="faq-answer">
+            <p>Demi keamanan sistem dan pengguna, dokumen ini sengaja tidak mengungkapkan detail implementasi teknis internal seperti nama tabel basis data, nama fungsi, jadwal pemeliharaan terjadwal secara spesifik, atau alur kerja internal yang dapat dimanfaatkan oleh pihak yang berniat merusak. Informasi yang disajikan adalah informasi yang relevan bagi Anda sebagai subjek data untuk memahami hak dan kewajiban Anda, bukan informasi teknis yang tidak memberi manfaat langsung kepada Anda.</p>
+          </div>
+        </details>
+      </section>
+
+      <!-- ===== 17. Changelog ===== -->
+      <section class="section" id="changelog">
+        <p class="section-number">Bagian 17</p>
+        <h2 class="section-title">Riwayat Perubahan</h2>
+
+        <p>Kebijakan Privasi ini diperbarui dari waktu ke waktu untuk mencerminkan perubahan praktik, regulasi, atau peningkatan kejelasan. Setiap versi dicatat di bawah, dengan ringkasan perubahan material. Subjek data yang telah memberikan persetujuan untuk versi sebelumnya akan diminta persetujuan ulang apabila perubahan bersifat material.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Versi</th>
+                <th>Tanggal</th>
+                <th>Ringkasan Perubahan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>4.0.0</td>
+                <td>5 Juli 2026</td>
+                <td>Repositioning identitas AlbEdu dari 'platform ujian sekolah menengah' menjadi 'platform asesmen untuk semua kebutuhan evaluasi — SD, SMP, SMA, kuliah, hingga penggunaan personal'. Penghapusan asumsi 'sekolah menengah' dari seluruh dokumen (Bagian 1, 2, 7). Pengubahan 18 referensi 'ujian' menjadi 'asesmen'. Pengubahan 7 referensi 'peserta ujian' menjadi 'peserta'. Pengubahan 2 referensi 'platform ujian' menjadi 'platform asesmen'. Bagian 7 (Data Anak) diubah dari asumsi 'digunakan oleh sekolah menengah' menjadi 'dapat digunakan dalam berbagai konteks'. Bagian 7.3 diubah: tanggung jawab persetujuan orang tua tidak lagi diasumsikan hanya pada sekolah, tetapi pada pihak yang mendaftarkan peserta anak (sekolah, kampus, institusi pelatihan, atau pengguna personal). FAQ 'Apakah administrator sekolah dapat melihat jawaban ujian saya?' diubah menjadi 'Apakah administrator dapat melihat jawaban asesmen saya?'.</td>
+              </tr>
+              <tr>
+                <td>3.0.0</td>
+                <td>5 Juli 2026</td>
+                <td>Revisi total kejujuran dan keamanan. Penambahan Bagian 9 (Pemroses Data Pihak Ketiga) yang menjelaskan transparan 4 kategori pemroses: infrastruktur basis data, CDN, sistem verifikasi bot, dan layanan deteksi IP. Penambahan Bagian 15 (Limitasi &amp; Penyangkalan) yang mengakui secara jujur 7 keterbatasan: isolasi multi-institusi belum penuh, verifikasi perangkat belum memblokir akses, belum ada audit independen, belum ada DPO formal, anonimisasi IP terbatas, tidak ada garansi 100% keamanan, dan penanganan DSR masih manual. Penghapusan semua nama teknis spesifik (tabel, fungsi, jadwal detail, struktur internal) untuk mengurangi risiko recon attacker. Penyesuaian klaim retensi IP yang sebelumnya keliru antara catatan keamanan dan catatan audit. Penyesuaian klaim 72 jam dari "target" menjadi "kewajiban hukum dengan komitmen terbaik".</td>
+              </tr>
+              <tr>
+                <td>2.0.0</td>
+                <td>5 Juli 2026</td>
+                <td>Redesign Kebijakan Privasi. Penambahan definisi istilah, referensi pasal UU PDP yang spesifik, tabel retensi per kategori data, FAQ, dan riwayat perubahan. Penjelasan lokasi data dan mekanisme transfer lintas wilayah. Penambahan penyangkalan eksplisit atas hal-hal yang belum didukung penuh.</td>
+              </tr>
+              <tr>
+                <td>1.1.0</td>
+                <td>4 Juli 2026</td>
+                <td>Perbaikan kebijakan kontrol akses untuk persetujuan admin. Sebelumnya, hanya peserta yang dapat memberikan persetujuan; admin ditolak kontrol akses.</td>
+              </tr>
+              <tr>
+                <td>1.0.0</td>
+                <td>1 Juli 2026</td>
+                <td>Versi awal Kebijakan Privasi. Mencakup kategori data dasar, persetujuan, retensi, dan kontak. Diterapkan bersamaan dengan peluncuran fitur consent gate di halaman assessment.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== 18. Kontak ===== -->
+      <section class="section" id="kontak">
+        <p class="section-number">Bagian 18</p>
+        <h2 class="section-title">Kontak</h2>
+
+        <p>Apabila Anda memiliki pertanyaan, permintaan, atau keluhan terkait Kebijakan Privasi ini atau pemrosesan data pribadi Anda oleh AlbEdu, silakan hubungi kami melalui:</p>
+
+        <h3>18.1 Email Dukungan</h3>
+        <p><a href="mailto:support@albedu.id">support@albedu.id</a></p>
+        <p>Email ini dipantau oleh tim AlbEdu. Target respons adalah 3 hari kerja untuk pertanyaan umum dan 7 hari kerja untuk permintaan DSR. Untuk laporan kerentanan keamanan atau pelanggaran data, mohon gunakan subjek yang jelas ("Laporan Kerentanan" atau "Laporan Pelanggaran Data") untuk penanganan prioritas.</p>
+
+        <h3>18.2 Permintaan Data Subject (DSR)</h3>
+        <p>Untuk permintaan terkait hak-hak subjek data (akses, koreksi, penghapusan, pencabutan persetujuan), kirim email dengan subjek "DSR — [Jenis Permintaan]" dan sertakan informasi berikut: alamat email akun AlbEdu Anda, deskripsi permintaan, dan (apabila relevan) data spesifik yang ingin dikoreksi atau dihapus. Kami akan memverifikasi identitas Anda sebelum memproses permintaan.</p>
+
+        <h3>18.3 Penyangkalan DPO</h3>
+        <p>AlbEdu belum menunjuk Pejabat Pelindungan Data Pribadi (DPO) secara formal sebagaimana diatur dalam Pasal 53 UU PDP, mengingat skala operasional kami yang masih terbatas. Fungsi DPO untuk saat ini dijalankan oleh tim operasional melalui email dukungan di atas. Apabila kebutuhan regulasi mengharuskan penunjukan DPO formal, kami akan melakukannya dan memperbarui Kebijakan ini.</p>
+
+        <h3>18.4 Otoritas yang Berwenang</h3>
+        <p>Apabila Anda merasa hak-hak Anda sebagai subjek data dilanggar dan ingin mengajukan komplain ke otoritas yang berwenang, Anda dapat menghubungi Otoritas Perlindungan Data Pribadi Indonesia melalui kanal resmi yang akan disediakan setelah otoritas tersebut beroperasi penuh. AlbEdu akan berkomitmen untuk berkoordinasi dengan otoritas sesuai kewajiban hukum yang berlaku.</p>
+      </section>
+
+      <!-- ===== Document footer ===== -->
+      <footer class="doc-footer">
+        <p class="signature">— Disusun untuk transparansi dan akuntabilitas.</p>
+        <p>Kebijakan Privasi AlbEdu v4.0.0 · Berlaku sejak 5 Juli 2026 · Disusun selaras dengan UU No. 27 Tahun 2022 tentang Perlindungan Data Pribadi.</p>
+        <p>Dokumen ini disediakan untuk tujuan informasi dan tidak merupakan nasihat hukum. Apabila Anda memerlukan nasihat hukum terkait hak Anda sebagai subjek data, mohon konsultasikan dengan penasihat hukum yang berlisensi di Indonesia.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    // ── Highlight active TOC item on scroll ──
+    (function () {
+      var sections = document.querySelectorAll('.section[id]');
+      var tocLinks = document.querySelectorAll('.toc a[href^="#"]');
+      if (!sections.length || !tocLinks.length) return;
+
+      var linkMap = {};
+      tocLinks.forEach(function (link) {
+        linkMap[link.getAttribute('href').slice(1)] = link;
+      });
+
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            tocLinks.forEach(function (l) { l.classList.remove('active'); });
+            var id = entry.target.getAttribute('id');
+            if (linkMap[id]) linkMap[id].classList.add('active');
+          }
+        });
+      }, {
+        rootMargin: '-80px 0px -70% 0px',
+        threshold: 0
+      });
+
+      sections.forEach(function (sec) { observer.observe(sec); });
+    })();
+  </script>
 </body>
 </html>

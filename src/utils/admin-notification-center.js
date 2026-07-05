@@ -155,7 +155,7 @@
       }
 
       const userName   = data.user_name   || data.user_id   || t('notif.default_user', null, 'Peserta');
-      const examTitle  = data.exam_title  || data.access_code || t('notif.default_exam', null, 'Ujian');
+      const examTitle  = data.exam_title  || data.access_code || t('notif.default_exam', null, 'Asesmen');
       const severity   = data.severity    || 'warning';
       // data.event_type (e.g. 'keyboard_violation', 'tab_switch') is available
       // for future per-type rendering; currently all events render as 'violation'.
@@ -467,10 +467,10 @@
                        : _activeTab === 'violation' ? t('notif.empty_violation_title', null, 'Tidak ada indikasi kecurangan')
                        : t('notif.empty_all_title', null, 'Tidak ada notifikasi');
       const emptySub = _activeTab === 'submitted'
-        ? t('notif.empty_submitted_sub', null, 'Notifikasi peserta yang mengumpulkan ujian akan muncul di sini secara otomatis.')
+        ? t('notif.empty_submitted_sub', null, 'Notifikasi peserta yang mengumpulkan asesmen akan muncul di sini secara otomatis.')
         : _activeTab === 'violation'
           ? t('notif.empty_violation_sub', null, 'Sistem memantau pelanggaran secara real-time. Notifikasi akan muncul di sini saat terdeteksi.')
-          : t('notif.empty_all_sub', null, 'Notifikasi pelanggaran dan pengumpulan ujian akan muncul di sini secara otomatis.');
+          : t('notif.empty_all_sub', null, 'Notifikasi pelanggaran dan pengumpulan asesmen akan muncul di sini secara otomatis.');
 
       body.innerHTML = `
         <div class="anc-empty-state">

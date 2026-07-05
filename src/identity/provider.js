@@ -156,7 +156,7 @@ window.IdentityProvider = (() => {
       <span class="ip-header__icon" data-albedu-icon="person"></span>
       <div class="ip-header__text">
         <div class="ip-header__title">Isi Identitas Peserta</div>
-        <div class="ip-header__sub">Lengkapi data berikut sebelum memulai ujian</div>
+        <div class="ip-header__sub">Lengkapi data berikut sebelum memulai asesmen</div>
       </div>
     `;
     mount.appendChild(header);
@@ -184,7 +184,7 @@ window.IdentityProvider = (() => {
     const submitBtn = document.createElement('button');
     submitBtn.type = 'button';
     submitBtn.className = 'ip-btn ip-btn--primary';
-    submitBtn.textContent = 'Mulai Ujian';
+    submitBtn.textContent = 'Mulai Asesmen';
     submitBtn.onclick = () => {
       const errors = window.IdentityFormRenderer.validate();
       if (errors.length > 0) {
@@ -367,7 +367,7 @@ window.IdentityProvider = (() => {
     const submitBtn = document.createElement('button');
     submitBtn.type = 'button';
     submitBtn.className = 'ip-btn ip-btn--primary';
-    submitBtn.innerHTML = '<span style="font-size:16px;margin-right:4px;" data-albedu-icon="play_arrow"></span> Mulai Ujian';
+    submitBtn.innerHTML = '<span style="font-size:16px;margin-right:4px;" data-albedu-icon="play_arrow"></span> Mulai Asesmen';
     actions.appendChild(submitBtn);
 
     mount.appendChild(actions);

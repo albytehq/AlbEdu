@@ -1,13 +1,13 @@
 # SCALING — Supabase Free Plan Limits & Upgrade Path
 
-> AlbEdu v1.0.0 is designed to run on Supabase Free Plan for up to 200 concurrent peserta.
+> AlbEdu v0.746.0 is designed to run on Supabase Free Plan for up to 200 concurrent peserta.
 > Code is scalable to 2000+ concurrent with Pro Plan upgrade (no rewrite needed).
 
 ---
 
 ## 1. Supabase Free Plan Limits
 
-| Resource | Free Plan Limit | AlbEdu v1.0.0 Usage (200 concurrent) | Status |
+| Resource | Free Plan Limit | AlbEdu v0.746.0 Usage (200 concurrent) | Status |
 |---|---|---|---|
 | Database storage | 500 MB | ~50 MB (normalized schema, 1000 assessments) | ✅ OK |
 | Database connections | 60 direct + 200 pool | 200 concurrent peserta via pool | ⚠️ Tight |
@@ -96,7 +96,7 @@ ALBEDU_BATCH_ANSWERS=true
 ```
 
 **Soft cap enforcement:**
-- Edge Function `start-session` checks active session count
+- Edge Function `access-code-attempt` checks active session count via rate limiting (10/IP/hour, 10/device/hour)
 - If active sessions >= MAX_CONCURRENT_PESERTA → return 429 "Kapasitas tercapai"
 - Admin sees warning in dashboard if approaching limit
 
@@ -128,7 +128,7 @@ ALBEDU_BATCH_ANSWERS=true
 
 ### 4.2 Code Scalability
 
-AlbEdu v1.0.0 code is **scalable to 10,000+ concurrent peserta** without rewrite:
+AlbEdu v0.746.0 code is **designed to scale to 10,000+ concurrent peserta** (aspirational — no load testing has been done yet):
 - Schema normalized (no embedded JSONB bloat)
 - Edge Functions stateless + cached
 - Realtime channels scoped per assessment (not global)

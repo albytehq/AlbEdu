@@ -1,6 +1,6 @@
 # COMPLIANCE — UU PDP (Indonesia) Implementation
 
-> AlbEdu v1.0.0 basic compliance with UU No. 27/2022 (Perlindungan Data Pribadi)
+> AlbEdu v0.746.0 basic compliance with UU No. 27/2022 (Perlindungan Data Pribadi)
 > Status: Basic implementation in Phase 1-3. Advanced features defer to Phase 9.
 
 ---
@@ -112,9 +112,9 @@
 - `restrict` — "Stop processing my data" (future)
 
 **Flow:**
-1. Peserta submit DSR via form (`pages/dsr.html` or profile section)
+1. Peserta submit DSR via email to support@albedu.id (no self-service portal yet — see privacy policy Section 15.7)
 2. DSR inserted ke `data_subject_requests` dengan status='pending'
-3. Admin lihat DSR queue di `profile.html` atau `dsr-management.html`
+3. Admin lihat DSR queue di `profile.html` (DSR requests appear in admin notification panel)
 4. Admin review + resolve (status → 'processing' → 'completed' atau 'rejected')
 5. Untuk `delete`: soft delete user (set `deleted_at`), 30 hari grace period, lalu hard delete + cascade
 
