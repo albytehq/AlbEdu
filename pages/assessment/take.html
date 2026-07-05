@@ -49,8 +49,7 @@
   <script async src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
           onload="window.__katexReady = true; window.dispatchEvent(new Event('katex-ready'))"></script>
 
-  <!-- Cloudflare Turnstile (explicit render — used by assessment runtime) -->
-  <script async src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>
+  <!-- v0.746.0: Turnstile removed from assessment runtime — using honeypot + timing + DB rate limiting instead -->
 
   <!-- Supabase SDK + Bridge --><!-- Auth baseline -->
   <script src="../../src/auth/security.js" defer></script>

@@ -130,27 +130,7 @@
         80% { transform: translateX(6px); }
       }
 
-      /* v0.742.7: Turnstile is now visually hidden (matching login.html).
-         The widget still needs DOM space to function — we use the same
-         clip technique as login.html's .turnstile-hidden class. The token
-         is still captured by assessment-entry.js and sent to the rate-limit
-         Edge Function. */
-      .turnstile-wrap {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0 0 0 0);
-        clip-path: inset(50%);
-        white-space: nowrap;
-        margin: 0;
-        padding: 0;
-        border: 0;
-        pointer-events: none;
-      }
-      .turnstile-wrap #turnstile-container {
-        pointer-events: auto;
-      }
+      /* v0.746.0: Turnstile removed — using honeypot + timing + DB rate limiting */
 
       .token-submit {
         width: 100%;

@@ -10,7 +10,7 @@
 //   - Scheduled not started → "Mulai: {time}" | Finished → "Selesai"
 //   - Paused → "Dijeda. Sisa: X menit" | Already submitted → "Sudah kumpulkan"
 //   - Cross-device resume → "Lanjutkan sesi?" | Blocked → "Diblokir: {reason}"
-//   - Rate limit (10/hr) → cooldown | Turnstile failed → error
+//   - Rate limit (5/hr) → cooldown | Honeypot + timing anti-bot
 //   - Network error → retry | Not logged in → redirect login
 //   - Admin logged in → redirect dashboard | Soft-deleted → "Akun dihapus"
 //   - Email not verified → "Verifikasi email" | No consent → show consent popup
@@ -34,6 +34,8 @@
     _turnstileToken: null,
     _isValidating: false,
     _deviceId: null,
+    _formOpenTime: 0,
+    _honeypotFilled: false,
 
     async init() {
       this._inputs = Array.from(document.querySelectorAll('.token-input'));
@@ -55,8 +57,11 @@
       // Wire events
       this._wireEvents();
 
-      // Render Turnstile
-      this._renderTurnstile();
+      // Record form open time for timing check (anti-bot)
+      this._formOpenTime = Date.now();
+
+      // Setup honeypot (hidden field that bots fill, humans don't)
+      this._setupHoneypot();
 
       // Focus first input
       this._inputs[0]?.focus();
@@ -174,46 +179,22 @@
       this._submitBtn.addEventListener('click', () => this._submit());
     },
 
-    _renderTurnstile() {
-      // v0.746.0: Turnstile uses appearance:'execute' (official invisible mode)
-      // instead of hiding a normal widget in a 1px container.
-      // This fixes error 600010 (widget not properly rendered) that occurred
-      // when the 1px clip container was detected as suspicious by Turnstile.
-      //
-      // The token is still captured and sent to the rate-limit Edge Function.
-      const tryRender = () => {
-        if (window.turnstile) {
-          this._turnstileWidget = window.turnstile.render('#turnstile-container', {
-            sitekey: '0x4AAAAAADtSMQt5KNMPWBzW',
-            appearance: 'execute',
-            callback: (token) => {
-              this._turnstileToken = token;
-              this._updateSubmitState();
-            },
-            'expired-callback': () => {
-              this._turnstileToken = null;
-              this._updateSubmitState();
-            },
-            'error-callback': () => {
-              this._turnstileToken = null;
-              this._updateSubmitState();
-            },
-            theme: 'light',
-          });
-        } else {
-          setTimeout(tryRender, 200);
-        }
-      };
-      tryRender();
+    _setupHoneypot() {
+      // Create hidden honeypot field — if filled, it's a bot
+      const honeypot = document.createElement('input');
+      honeypot.type = 'text';
+      honeypot.name = 'website_url'; // bots love filling "website" fields
+      honeypot.setAttribute('autocomplete', 'off');
+      honeypot.setAttribute('tabindex', '-1');
+      honeypot.setAttribute('aria-hidden', 'true');
+      honeypot.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);left:-9999px;top:-9999px;opacity:0;pointer-events:none;';
+      honeypot.addEventListener('input', () => { this._honeypotFilled = true; });
+      document.body.appendChild(honeypot);
     },
 
     _updateSubmitState() {
       const allFilled = this._inputs.every((i) => i.value);
-      // Submit enabled if all 6 digits filled AND turnstile token present
-      // (Turnstile may not load in dev — allow submit if Turnstile container is empty after 5s)
-      const turnstileReady = this._turnstileToken || !document.querySelector('#turnstile-container iframe');
-
-      this._submitBtn.disabled = !allFilled || !turnstileReady || this._isValidating;
+      this._submitBtn.disabled = !allFilled || this._isValidating;
     },
 
     _checkComplete() {
@@ -252,12 +233,6 @@
         i.classList.remove('filled');
       });
       this._inputs[0].focus();
-
-      // Reset Turnstile
-      if (this._turnstileWidget && window.turnstile) {
-        window.turnstile.reset(this._turnstileWidget);
-        this._turnstileToken = null;
-      }
       this._updateSubmitState();
     },
 
@@ -285,6 +260,24 @@
         return;
       }
 
+      // Anti-bot check 1: Honeypot — if filled, silently reject
+      if (this._honeypotFilled) {
+        console.warn('[assessment-entry] Honeypot triggered — likely bot');
+        this._showError('Kode akses tidak valid');
+        return;
+      }
+
+      // Anti-bot check 2: Timing — humans need at least 1.5s to type 6 digits
+      const elapsed = Date.now() - this._formOpenTime;
+      if (elapsed < 1500) {
+        console.warn('[assessment-entry] Submit too fast (' + elapsed + 'ms) — likely bot');
+        this._showError('Kode akses tidak valid');
+        return;
+      }
+
+      // Anti-bot check 3: Device fingerprint hash
+      const fingerprintHash = await this._generateFingerprintHash();
+
       this._setLoading(true);
 
       try {
@@ -292,7 +285,7 @@
         const rateLimitRes = await this._checkRateLimit();
         if (!rateLimitRes.allowed) {
           this._setLoading(false);
-          this._showCooldown(60);
+          this._showCooldown(rateLimitRes.retry_after || 60);
           return;
         }
 
@@ -373,24 +366,54 @@
 
     async _checkRateLimit() {
       try {
+        const fingerprintHash = await this._generateFingerprintHash();
         const res = await fetch('https://kzsrerxhhrtsxnpnmqgl.supabase.co/functions/v1/access-code-attempt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             device_id: this._deviceId,
-            turnstile_token: this._turnstileToken,
+            fingerprint_hash: fingerprintHash,
+            form_open_ms: Date.now() - this._formOpenTime,
           }),
         });
 
         if (res.status === 429) {
-          return { allowed: false };
+          const data = await res.json().catch(() => ({}));
+          return { allowed: false, retry_after: data.retry_after || 60 };
         }
 
         const data = await res.json();
         return { allowed: data.success || data.allowed };
       } catch (err) {
         console.warn('[assessment-entry] Rate limit check failed (fail-open):', err);
-        return { allowed: true }; // fail-open
+        return { allowed: true }; // fail-open — don't block legit users on network error
+      }
+    },
+
+    async _generateFingerprintHash() {
+      // Lightweight client fingerprint — NOT for tracking, for bot detection only
+      // Combines screen + timezone + language + platform into a simple hash
+      try {
+        const parts = [
+          screen.width + 'x' + screen.height,
+          screen.colorDepth,
+          Intl.DateTimeFormat().resolvedOptions().timeZone,
+          navigator.language,
+          navigator.platform,
+          navigator.hardwareConcurrency || 0,
+          new Date().getTimezoneOffset(),
+        ];
+        const str = parts.join('|');
+        // Simple hash (not crypto-secure, just for uniqueness)
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          const char = str.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash; // Convert to 32bit integer
+        }
+        return 'fp_' + Math.abs(hash).toString(36);
+      } catch {
+        return 'fp_unknown';
       }
     },
 
