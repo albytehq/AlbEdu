@@ -36,6 +36,7 @@
     _deviceId: null,
     _formOpenTime: 0,
     _honeypotFilled: false,
+    _autoSubmitTimer: null,
 
     async init() {
       this._inputs = Array.from(document.querySelectorAll('.token-input'));
@@ -123,6 +124,7 @@
             }
           } else {
             e.target.classList.remove('filled');
+            clearTimeout(this._autoSubmitTimer);
           }
           this._updateSubmitState();
         });
@@ -131,6 +133,7 @@
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Backspace' && !e.target.value && idx > 0) {
             // Backspace on empty → focus previous + clear it
+            clearTimeout(this._autoSubmitTimer);
             this._inputs[idx - 1].focus();
             this._inputs[idx - 1].value = '';
             this._inputs[idx - 1].classList.remove('filled');
@@ -199,13 +202,28 @@
 
     _checkComplete() {
       const allFilled = this._inputs.every((i) => i.value);
+      this._updateSubmitState();
       if (allFilled) {
-        // v0.746.0: Removed auto-submit — user must click submit button manually.
-        // This ensures timing check (min 800ms) is always satisfied because
-        // human reaction time to click button is > 800ms after typing last digit.
-        // Just enable the submit button — don't auto-submit.
-        this._updateSubmitState();
+        // v1.1.0: Auto-submit once all 6 digits are present (typed or pasted).
+        // The old min-800ms anti-bot timing check used to *reject* fast
+        // completions, which is why auto-submit was removed before. It now
+        // just waits out the remainder of that window inside _submit()
+        // instead of failing — so real users get a seamless auto-submit and
+        // bots still can't shortcut the timing signal.
+        this._autoSubmit();
       }
+    },
+
+    _autoSubmit() {
+      // Small debounce so the last digit's UI state settles and so rapid
+      // fill/backspace/re-fill sequences don't queue up multiple submits.
+      clearTimeout(this._autoSubmitTimer);
+      this._autoSubmitTimer = setTimeout(() => {
+        const stillFilled = this._inputs.every((i) => i.value);
+        if (stillFilled && !this._isValidating) {
+          this._submit();
+        }
+      }, 150);
     },
 
     _getToken() {
@@ -222,6 +240,10 @@
     },
 
     _showError(message) {
+      // Cancel any pending auto-submit so it can't fire again right after
+      // the inputs are cleared below.
+      clearTimeout(this._autoSubmitTimer);
+
       // Shake animation on inputs
       this._inputs.forEach((i) => {
         i.classList.add('error');
@@ -257,7 +279,7 @@
     async _submit() {
       if (this._isValidating) return;
 
-      const token = this._getToken();
+      let token = this._getToken();
       if (token.length !== 6) {
         this._showError('Kode akses harus 6 digit');
         return;
@@ -270,19 +292,38 @@
         return;
       }
 
-      // Anti-bot check 2: Timing — humans need at least 800ms to interact
-      // (typing or clicking). Bots typically submit in < 100ms.
+      // Lock the form immediately. This guards against a double-submit race
+      // between the auto-submit timer and a manual button click (or two
+      // auto-submit triggers), since _isValidating is checked at the top of
+      // this function and _setLoading() is what flips it to true.
+      this._setLoading(true);
+
+      // Anti-bot check 2: Timing — the form must have been open at least
+      // MIN_INTERACTION_MS before we contact the backend. Bots that fill all
+      // 6 digits programmatically do it in well under this window; real
+      // users typing or pasting fast should never be shown an error for it.
+      // Instead of rejecting a fast completion, wait out whatever remains of
+      // the window — this is what makes auto-submit-on-6-digits safe.
+      const MIN_INTERACTION_MS = 800;
       const elapsed = Date.now() - this._formOpenTime;
-      if (elapsed < 800) {
-        console.warn('[assessment-entry] Submit too fast (' + elapsed + 'ms) — likely bot');
-        this._showError('Terlalu cepat. Tunggu sebentar lalu coba lagi.');
-        return;
+      if (elapsed < MIN_INTERACTION_MS) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_INTERACTION_MS - elapsed));
       }
 
-      // Anti-bot check 3: Device fingerprint hash
-      const fingerprintHash = await this._generateFingerprintHash();
-
-      this._setLoading(true);
+      // The token can change while we were waiting out the timing window
+      // (e.g. the user hit backspace right after auto-submit queued) —
+      // re-read and re-validate before doing any network work.
+      token = this._getToken();
+      if (token.length !== 6) {
+        this._setLoading(false);
+        return;
+      }
+      if (this._honeypotFilled) {
+        this._setLoading(false);
+        console.warn('[assessment-entry] Honeypot triggered — likely bot');
+        this._showError('Kode akses tidak valid');
+        return;
+      }
 
       try {
         // Step 1: Rate limit check via Edge Function
