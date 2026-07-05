@@ -1,34 +1,64 @@
 /* ============================================================
    skeleton-loading.css — AlbEdu Skeleton Loading Extensions
    Extends the base .skeleton system in tokens.css with
-   page-specific skeleton patterns for profile page + sidebar.
+   page-specific skeleton patterns for profile page.
+
+   v0.746.0: Sidebar skeleton removed — user info shows instantly.
    ============================================================ */
 
 /* ──────────────────────────────────────────────────────────────
-   1. PROFILE PAGE SKELETONS
+   1. PROFILE PAGE SKELETON (optimized v0.746.0)
    Shown on initial load, hidden when _renderProfile() runs.
+
+   Design principles:
+   - Match real content layout closely (no jarring shift)
+   - Subtle shimmer (slower, lower contrast)
+   - Smooth pulse for avatar (feels alive, not aggressive)
+   - Proper spacing that matches final rendered state
    ────────────────────────────────────────────────────────────── */
 
-/* Profile avatar skeleton — large, rounded, in header section */
+/* Profile skeleton container — centers content like real profile-header-section */
+#profile-skeleton {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-2);
+    text-align: center;
+    padding: var(--sp-2) 0;
+}
+
+/* Profile avatar skeleton — large, rounded, with subtle ring */
 .profile-avatar-skeleton {
     width: 96px;
     height: 96px;
     border-radius: var(--radius-full);
-    margin: 0 auto var(--sp-3);
+    margin: 0 0 var(--sp-1);
+    position: relative;
+}
+
+/* Avatar glow ring — subtle accent that pulses */
+.profile-avatar-skeleton::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--color-surface-3);
+    opacity: 0.5;
+    animation: skeleton-pulse 2s ease-in-out infinite;
 }
 
 /* Profile name skeleton — appears under avatar */
 .profile-name-skeleton {
-    height: 26px;
+    height: 24px;
     width: 180px;
-    margin: 0 auto var(--sp-2);
+    margin: var(--sp-1) auto var(--sp-1);
 }
 
 /* Profile email skeleton — smaller, under name */
 .profile-email-skeleton {
-    height: 16px;
+    height: 15px;
     width: 220px;
-    margin: 0 auto var(--sp-3);
+    margin: 0 auto var(--sp-2);
 }
 
 /* Role badge skeleton — small pill under email */
@@ -44,6 +74,7 @@
     height: 18px;
     width: 100%;
     margin-top: var(--sp-1);
+    border-radius: var(--radius-xs);
 }
 
 .profile-detail-skeleton.short {
@@ -58,44 +89,33 @@
 }
 
 /* ──────────────────────────────────────────────────────────────
-   2. SIDEBAR USER PROFILE SKELETON
-   Shown in the sidebar user-profile section until auth data
-   is synced by _syncSidebarUser() in navigasi.js.
+   2. SKELETON ANIMATION REFINEMENTS
+   Slower, smoother shimmer — feels premium, not anxious.
+   Pulse for avatar ring — subtle breathing effect.
    ────────────────────────────────────────────────────────────── */
 
-.sidebar-user-skeleton {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-3);
-    padding: var(--sp-2) var(--sp-3);
-    width: 100%;
+/* Override base .skeleton animation for profile elements — slower + smoother */
+#profile-skeleton .skeleton,
+.profile-avatar-skeleton,
+.profile-name-skeleton,
+.profile-email-skeleton,
+.profile-role-skeleton,
+.profile-detail-skeleton,
+.profile-button-skeleton {
+    animation-duration: 1.8s;
+    animation-timing-function: ease-in-out;
 }
 
-.sidebar-avatar-skeleton {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-full);
-    flex-shrink: 0;
-}
-
-.sidebar-text-skeleton {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-1);
-}
-
-.sidebar-name-skeleton {
-    height: 14px;
-    width: 70%;
-    border-radius: var(--radius-xs);
-}
-
-.sidebar-role-skeleton {
-    height: 11px;
-    width: 50%;
-    border-radius: var(--radius-xs);
+/* Pulse animation for avatar ring */
+@keyframes skeleton-pulse {
+    0%, 100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scale(1.03);
+    }
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -127,11 +147,13 @@
     .profile-email-skeleton,
     .profile-role-skeleton,
     .profile-detail-skeleton,
-    .profile-button-skeleton,
-    .sidebar-avatar-skeleton,
-    .sidebar-name-skeleton,
-    .sidebar-role-skeleton {
+    .profile-button-skeleton {
         animation: none;
         background: var(--color-surface-2);
+    }
+
+    .profile-avatar-skeleton::after {
+        animation: none;
+        opacity: 0.4;
     }
 }
