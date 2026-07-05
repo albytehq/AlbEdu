@@ -227,7 +227,9 @@
         return;
       }
       if (window.OptionProfile?.open) {
-        window.OptionProfile.open({ trigger: fab, x: e.clientX, y: e.clientY });
+        // open() expects positional args: (triggerEl, cursorX, cursorY)
+        // NOT an object — passing object causes _activeTrigger.getBoundingClientRect error
+        window.OptionProfile.open(fab, e.clientX, e.clientY);
         return;
       }
       // Fallback: if OptionProfile not loaded, do nothing (script load error logged)

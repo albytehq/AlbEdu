@@ -175,19 +175,17 @@
     },
 
     _renderTurnstile() {
-      // v0.742.7: Turnstile is rendered INVISIBLE on participant-side pages
-      // (matching login.html behavior). The widget container is visually
-      // hidden via CSS (.turnstile-wrap — see assessment-entry.css) but still
-      // occupies layout space for the widget to function. The widget itself
-      // uses size:'normal' (Turnstile does NOT accept 'invisible' as a size
-      // value — see src/auth/turnstile.js header comment).
+      // v0.746.0: Turnstile uses appearance:'execute' (official invisible mode)
+      // instead of hiding a normal widget in a 1px container.
+      // This fixes error 600010 (widget not properly rendered) that occurred
+      // when the 1px clip container was detected as suspicious by Turnstile.
       //
-      // The token is still captured and sent to the rate-limit Edge Function;
-      // the user just doesn't see a visible challenge widget.
+      // The token is still captured and sent to the rate-limit Edge Function.
       const tryRender = () => {
         if (window.turnstile) {
           this._turnstileWidget = window.turnstile.render('#turnstile-container', {
             sitekey: '0x4AAAAAADtSMQt5KNMPWBzW',
+            appearance: 'execute',
             callback: (token) => {
               this._turnstileToken = token;
               this._updateSubmitState();
@@ -201,7 +199,6 @@
               this._updateSubmitState();
             },
             theme: 'light',
-            size: 'normal',
           });
         } else {
           setTimeout(tryRender, 200);
