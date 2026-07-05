@@ -29,7 +29,7 @@ Runs `sweepExpiredAssessments()` — deletes assessments that have been finished
 | Variable | Required | Example |
 |---|---|---|
 | `GITHUB_TOKEN` | Yes | `ghp_xxxxxxxxxxxx` |
-| `GITHUB_USERNAME` | Yes | `albytehq` (was `albedu-id`) |
+| `GITHUB_USERNAME` | Yes | `DBBYTE` (was `albytehq`, was `albedu-id`) |
 | `SUPABASE_URL` | Yes | `https://kzsrerxhhrtsxnpnmqgl.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | `sb_secret_xxxxxxxx` |
 | `SUPABASE_ANON_KEY` | Yes | `sb_publishable_xxxxxxxx` |
@@ -70,8 +70,8 @@ curl https://edu.albyte-inc.workers.dev/api/health
 ## GitHub Repos (image sharding)
 
 Worker uses 20 GitHub repos for image storage (sharding by hash prefix):
-- `albytehq/assets-1` through `albytehq/assets-20`
+- `DBBYTE/assets-1` through `DBBYTE/assets-20`
 
-CDN URLs: `https://cdn.jsdelivr.net/gh/albytehq/assets-{1-20}@main/{folder}/{hash}.{ext}`
+CDN URLs: `https://cdn.jsdelivr.net/gh/DBBYTE/assets-{1-20}@main/{folder}/{hash}.{ext}`
 
-**Action required:** Transfer repos from `albedu-id` to `albytehq` org (or recreate under `albytehq`). Update `GITHUB_USERNAME` env var to `albytehq`.
+**Action required:** Create repos `assets-1` through `assets-20` under `DBBYTE` org. Update `GITHUB_USERNAME` env var to `DBBYTE`.

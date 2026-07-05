@@ -398,49 +398,35 @@
     }
   }
 
-  // ── Upload via Supabase Storage ────────────────────────────
+  // ── Upload via Worker ──────────────────────────────────────
   async function _uploadImage(file) {
-    const client = window.AlbEdu?.supabase?.client;
-    if (!client) throw new Error('Supabase client belum siap. Coba lagi.');
+    const workerBase = _cfg?.workerBase;
+    if (!workerBase) throw new Error('workerBase tidak di-set di ProfileEditorPanel.init()');
 
-    const user = window.AlbEdu?.supabase?.auth?.currentUser;
-    if (!user) throw new Error('Sesi tidak ditemukan. Silakan login ulang.');
-
-    // Validate file type
+    // Validate file type (client-side pre-check)
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       throw new Error('Format file tidak didukung. Gunakan JPEG, PNG, atau WebP.');
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      throw new Error('Ukuran file terlalu besar (maks 5MB).');
+    // Validate file size (max 10MB — Worker also validates server-side)
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error('Ukuran file terlalu besar (maks 10MB).');
     }
 
-    // Upload path: {user_id}/avatar-{timestamp}.{ext}
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+    const form = new FormData();
+    form.append('file', file);
 
-    const { error: uploadError } = await client.storage
-      .from('avatars')
-      .upload(path, file, { upsert: true, contentType: file.type });
+    const res = await fetch(`${workerBase}/upload`, { method: 'POST', body: form });
 
-    if (uploadError) {
-      console.error('[ProfileEditorPanel] upload error:', uploadError);
-      throw new Error(`Upload gagal: ${uploadError.message}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Upload gagal (HTTP ${res.status})`);
     }
 
-    // Get public URL
-    const { data: urlData } = client.storage
-      .from('avatars')
-      .getPublicUrl(path);
-
-    if (!urlData?.publicUrl) {
-      throw new Error('Upload berhasil tapi URL tidak tersedia.');
-    }
-
-    console.log('[ProfileEditorPanel] ✓ Avatar uploaded:', urlData.publicUrl);
-    return urlData.publicUrl;
+    const data = await res.json();
+    // Worker return { cdn_url } — jsDelivr CDN URL
+    return data.cdn_url;
   }
 
   // ── Supabase update ────────────────────────────────────────
