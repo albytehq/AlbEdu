@@ -696,7 +696,7 @@
 
     const name       = user.nama || user.displayName || 'Pengguna';
     const email      = user.email || '';
-    const avatarUrl  = user.foto_profil || user.fotoProfil || '';
+    const avatarUrl  = user.avatar_url || user.foto_profil || user.fotoProfil || '';
     const role       = user.peran || 'peserta';
     const isAdmin    = role === 'admin';
     // NOTE: DB column is `profile_complete` (renamed from `profil_lengkap` by

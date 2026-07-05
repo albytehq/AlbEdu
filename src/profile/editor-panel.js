@@ -276,7 +276,7 @@
       <div class="pep-body">
         <div class="pep-avatar-wrap">
           <div class="pep-avatar-ring" id="pep-avatar-ring" role="button" aria-label="${t('pep.change_photo_aria', null, 'Ganti foto profil')}" tabindex="0">
-            <img class="pep-avatar-img" id="pep-avatar-img" src="" alt="${t('pep.photo_alt', null, 'Foto profil')}" />
+            <img class="pep-avatar-img" id="pep-avatar-img" alt="${t('pep.photo_alt', null, 'Foto profil')}" />
             <div class="pep-avatar-overlay">
               <span class="pep-avatar-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -401,7 +401,7 @@
     saveBtn.innerHTML = '<span class="pep-spinner"></span>Menyimpan…';
 
     try {
-      let fotoUrl = _user?.foto_profil || _user?.fotoProfil || '';
+      let fotoUrl = _user?.avatar_url || _user?.foto_profil || _user?.fotoProfil || '';
 
       // Upload foto baru jika ada — dengan progress ring animation
       if (_newFile) {
@@ -426,13 +426,14 @@
       // Update local state agar reopen panel pakai data baru
       if (_user) {
         _user.nama       = name;
+        _user.avatar_url  = fotoUrl;
         _user.foto_profil = fotoUrl;
         _user.fotoProfil  = fotoUrl;
       }
 
       _showToast('Profil berhasil disimpan.', 'success');
 
-      const savedUser = { ..._user, nama: name, foto_profil: fotoUrl, fotoProfil: fotoUrl };
+      const savedUser = { ..._user, nama: name, avatar_url: fotoUrl, foto_profil: fotoUrl, fotoProfil: fotoUrl };
 
       // Broadcast event sehingga halaman manapun bisa react tanpa tight coupling
       window.dispatchEvent(new CustomEvent('pep-saved', { detail: savedUser }));
@@ -592,12 +593,14 @@
     const nameEl  = _panel.querySelector('#pep-name-input');
 
     // Avatar — fade-in saat load, fallback ke initials kalau error
-    const foto = user?.foto_profil || user?.fotoProfil || '';
+    // Check avatar_url (DB column) + foto_profil (legacy alias set by normalizeUserDoc)
+    const foto = user?.avatar_url || user?.foto_profil || user?.fotoProfil || '';
     imgEl.classList.remove('pep-loaded');
     if (foto) {
-      // Validate URL scheme
+      // Validate URL scheme + block .html URLs (page URLs, not images)
       var fotoSafe = '';
-      if (/^https:/i.test(foto) || /^data:image\//i.test(foto) || !/^[a-z]+:/i.test(foto)) {
+      if ((/^https:/i.test(foto) || /^data:image\//i.test(foto) || !/^[a-z]+:/i.test(foto))
+          && !foto.endsWith('.html')) {
         fotoSafe = foto;
       }
       if (fotoSafe) {

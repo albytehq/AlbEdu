@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const roleEl   = document.querySelector('.user-profile .user-info p');
 
         if (avatarEl) {
-            const url = user.foto_profil || user.fotoProfil;
+            const url = user.avatar_url || user.foto_profil || user.fotoProfil;
             if (url) {
                 const safeUrl = (/^https:/i.test(url) || /^data:image\//i.test(url) || !/^[a-z]+:/i.test(url)) ? url : '';
                 if (safeUrl) {
@@ -616,8 +616,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         const nameEl   = document.getElementById('sidebar-user-name');
                         const avatarEl = document.getElementById('sidebar-avatar');
                         if (nameEl   && user.nama)        nameEl.textContent = user.nama;
-                        if (avatarEl && user.foto_profil) {
-                            const url = user.foto_profil;
+                        if (avatarEl && (user.avatar_url || user.foto_profil)) {
+                            const url = user.avatar_url || user.foto_profil;
                             const safeUrl = (/^https:/i.test(url) || /^data:image\//i.test(url) || !/^[a-z]+:/i.test(url)) ? url : '';
                             if (safeUrl) {
                                 avatarEl.innerHTML = `<img src="${_esc(safeUrl)}" alt="Avatar"
@@ -633,8 +633,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         const adminName   = document.getElementById('admin-name');
                         const adminAvatar = document.getElementById('admin-avatar');
                         if (adminName   && user.nama)        adminName.textContent = user.nama;
-                        if (adminAvatar && user.foto_profil) {
-                            const url2 = user.foto_profil;
+                        if (adminAvatar && (user.avatar_url || user.foto_profil)) {
+                            const url2 = user.avatar_url || user.foto_profil;
                             const safeUrl2 = (/^https:/i.test(url2) || /^data:image\//i.test(url2) || !/^[a-z]+:/i.test(url2)) ? url2 : '';
                             if (safeUrl2) {
                                 adminAvatar.innerHTML = `<img src="${_esc(safeUrl2)}" alt="Foto Profil"

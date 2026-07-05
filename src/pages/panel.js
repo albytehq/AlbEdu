@@ -60,7 +60,7 @@ class AdminPanel {
             const rawEmail = data.email || user?.email || '';
             const name = escape(rawName);
             const email = escape(rawEmail);
-            const avatarUrl = data.foto_profil || data.fotoProfil || '';
+            const avatarUrl = data.avatar_url || data.foto_profil || data.fotoProfil || '';
             const role = data.peran === 'admin' ? t('nav.role_admin', null, 'Administrator') : t('nav.role_admin_alt', null, 'Admin AlbEdu');
             // NOTE: DB column is `profile_complete` (renamed from
             // `profil_lengkap` — migration 20260701_002_alter_users_snake_case.sql).

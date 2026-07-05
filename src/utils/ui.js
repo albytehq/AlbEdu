@@ -337,7 +337,7 @@ UI.Profile = {
 
     _viewMode() {
         const u = window.Auth?.userData || {};
-        const avatarUrl = u.foto_profil || AvatarSystem.getDefaultAvatar(u.email || u.nama || 'User');
+        const avatarUrl = u.avatar_url || u.foto_profil || AvatarSystem.getDefaultAvatar(u.email || u.nama || 'User');
         const fallback  = AvatarSystem.buildSVG(u.nama || 'U');
         return `
             <div class="view-mode">
@@ -367,7 +367,7 @@ UI.Profile = {
     _editMode() {
         const u     = window.Auth?.userData || {};
         const state = window.Auth?.profileState || {};
-        const avatarUrl = state.tempAvatar || u.foto_profil || AvatarSystem.getDefaultAvatar(u.email || u.nama || 'User');
+        const avatarUrl = state.tempAvatar || u.avatar_url || u.foto_profil || AvatarSystem.getDefaultAvatar(u.email || u.nama || 'User');
         const fallback  = AvatarSystem.buildSVG(u.nama || 'U');
         return `
             <div class="edit-mode">
