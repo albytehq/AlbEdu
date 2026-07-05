@@ -200,8 +200,11 @@
     _checkComplete() {
       const allFilled = this._inputs.every((i) => i.value);
       if (allFilled) {
-        // Auto-submit after short delay
-        setTimeout(() => this._submit(), 300);
+        // v0.746.0: Removed auto-submit — user must click submit button manually.
+        // This ensures timing check (min 800ms) is always satisfied because
+        // human reaction time to click button is > 800ms after typing last digit.
+        // Just enable the submit button — don't auto-submit.
+        this._updateSubmitState();
       }
     },
 
@@ -267,11 +270,12 @@
         return;
       }
 
-      // Anti-bot check 2: Timing — humans need at least 1.5s to type 6 digits
+      // Anti-bot check 2: Timing — humans need at least 800ms to interact
+      // (typing or clicking). Bots typically submit in < 100ms.
       const elapsed = Date.now() - this._formOpenTime;
-      if (elapsed < 1500) {
+      if (elapsed < 800) {
         console.warn('[assessment-entry] Submit too fast (' + elapsed + 'ms) — likely bot');
-        this._showError('Kode akses tidak valid');
+        this._showError('Terlalu cepat. Tunggu sebentar lalu coba lagi.');
         return;
       }
 
