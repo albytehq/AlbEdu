@@ -398,24 +398,49 @@
     }
   }
 
-  // ── Upload via Worker ──────────────────────────────────────
+  // ── Upload via Supabase Storage ────────────────────────────
   async function _uploadImage(file) {
-    const workerBase = _cfg?.workerBase;
-    if (!workerBase) throw new Error('workerBase tidak di-set di ProfileEditorPanel.init()');
+    const client = window.AlbEdu?.supabase?.client;
+    if (!client) throw new Error('Supabase client belum siap. Coba lagi.');
 
-    const form = new FormData();
-    form.append('file', file);
+    const user = window.AlbEdu?.supabase?.auth?.currentUser;
+    if (!user) throw new Error('Sesi tidak ditemukan. Silakan login ulang.');
 
-    const res = await fetch(`${workerBase}/upload`, { method: 'POST', body: form });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Upload gagal (HTTP ${res.status})`);
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Format file tidak didukung. Gunakan JPEG, PNG, atau WebP.');
     }
 
-    const data = await res.json();
-    // Worker return { cdn_url } untuk format baru
-    return data.cdn_url;
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('Ukuran file terlalu besar (maks 5MB).');
+    }
+
+    // Upload path: {user_id}/avatar-{timestamp}.{ext}
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await client.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) {
+      console.error('[ProfileEditorPanel] upload error:', uploadError);
+      throw new Error(`Upload gagal: ${uploadError.message}`);
+    }
+
+    // Get public URL
+    const { data: urlData } = client.storage
+      .from('avatars')
+      .getPublicUrl(path);
+
+    if (!urlData?.publicUrl) {
+      throw new Error('Upload berhasil tapi URL tidak tersedia.');
+    }
+
+    console.log('[ProfileEditorPanel] ✓ Avatar uploaded:', urlData.publicUrl);
+    return urlData.publicUrl;
   }
 
   // ── Supabase update ────────────────────────────────────────
