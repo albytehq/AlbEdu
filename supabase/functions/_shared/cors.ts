@@ -2,19 +2,48 @@
 // _shared/cors.ts — CORS handler with origin whitelist
 // =============================================================================
 // AlbEdu v1.0.0: albedu-id → albytehq (owner rename)
-// Legacy origin kept for backward compat (old bookmarks, cached URLs)
+//
+// v1.1.0 FIX: this used to hardcode a 6-origin whitelist baked into the
+// source (github.io + a handful of localhost ports). Every other Edge
+// Function in this project (user-auth-complete, register-admin,
+// user-auth-preflight) reads its allowed origins from the ALLOWED_ORIGINS
+// env var instead — this module was the odd one out. Any deployment whose
+// real origin (production domain, a different dev port, a preview URL)
+// wasn't in the hardcoded list would get silently CORS-blocked here, with
+// no visible error beyond a generic "failed to fetch" in the browser.
+//
+// Fix: read ALLOWED_ORIGINS from the environment, same as the other
+// functions, with the old hardcoded list kept ONLY as a fallback for
+// deployments that haven't set the env var yet.
+// Set it in Supabase: Project Settings → Edge Functions → Secrets:
+//   ALLOWED_ORIGINS=https://your-domain.com,http://localhost:5500,...
 
 import { handleError } from './error.ts';
 
-const ALLOWED_ORIGINS = new Set([
+const FALLBACK_ORIGINS = new Set([
   'https://albytehq.github.io',
-  'https://albytehq.github.io',       // legacy backward compat
   'http://127.0.0.1:5500',
   'http://localhost:5500',
   'http://localhost:3000',
   'http://localhost:8765',
   'http://127.0.0.1:8765',
 ]);
+
+const ENV_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+if (ENV_ORIGINS.length === 0) {
+  console.warn(
+    '[cors] ALLOWED_ORIGINS env var is not set — falling back to the ' +
+    'hardcoded default list. Set ALLOWED_ORIGINS in your Edge Function ' +
+    'secrets to your real domain(s) or every request from an origin not ' +
+    'in the fallback list will be silently CORS-blocked.'
+  );
+}
+
+const ALLOWED_ORIGINS = ENV_ORIGINS.length > 0 ? new Set(ENV_ORIGINS) : FALLBACK_ORIGINS;
 
 export function corsHeaders(origin: string | null): Record<string, string> {
   const allowOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : 'null';

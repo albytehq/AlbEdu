@@ -37,6 +37,7 @@
     _formOpenTime: 0,
     _honeypotFilled: false,
     _autoSubmitTimer: null,
+    _submitGeneration: 0,
 
     async init() {
       this._inputs = Array.from(document.querySelectorAll('.token-input'));
@@ -325,81 +326,24 @@
         return;
       }
 
+      // v1.2.0: Run the actual network flow under a hard watchdog. No matter
+      // what hangs downstream (a slow query, a misbehaving RLS policy, a
+      // dead endpoint), the user gets their UI back within
+      // SUBMIT_WATCHDOG_MS instead of staring at "Memvalidasi..." forever.
+      const myGen = ++this._submitGeneration;
+      const SUBMIT_WATCHDOG_MS = 15000;
+
       try {
-        // Step 1: Rate limit check via Edge Function
-        const rateLimitRes = await this._checkRateLimit();
-        if (!rateLimitRes.allowed) {
-          this._setLoading(false);
-          this._showCooldown(rateLimitRes.retry_after || 60);
-          return;
-        }
-
-        // Step 2: Check if peserta already has active session (cross-device resume)
-        const existingSession = await this._checkExistingSession(token);
-
-        if (existingSession) {
-          if (existingSession.status === 'submitted') {
-            this._setLoading(false);
-            this._showError('Anda sudah mengumpulkan asesmen ini.');
-            return;
-          }
-          if (existingSession.status === 'blocked') {
-            this._setLoading(false);
-            this._showError(`Akses diblokir: ${existingSession.blocked_reason || 'Diblokir admin'}`);
-            return;
-          }
-          // Active or paused session — offer resume
-          const resume = await this._confirmResume();
-          if (resume) {
-            this._proceedToAssessment(token, existingSession);
-            return;
-          }
-          // Don't resume — but can't start new (UNIQUE constraint)
-          this._setLoading(false);
-          this._showError('Anda memiliki sesi aktif. Lanjutkan sesi tersebut.');
-          return;
-        }
-
-        // Step 3: Fetch assessment (via peserta view — strips admin fields)
-        const assessment = await this._fetchAssessment(token);
-        if (!assessment) {
-          this._setLoading(false);
-          this._showError('Kode akses tidak valid');
-          return;
-        }
-
-        // Step 4: Check assessment status
-        const accessCheck = this._checkAccess(assessment);
-        if (!accessCheck.allowed) {
-          this._setLoading(false);
-          this._showError(accessCheck.message);
-          return;
-        }
-
-        // Step 5: Check allow_retake
-        if (!assessment.allow_retake) {
-          const submissions = await this._checkSubmissions(assessment.id);
-          if (submissions > 0) {
-            this._setLoading(false);
-            this._showError('Anda sudah mengerjakan asesmen ini. Tidak bisa mengulang.');
-            return;
-          }
-        }
-
-        // Step 6: Create new session
-        const session = await this._createSession(assessment);
-        if (!session) {
-          this._setLoading(false);
-          return;
-        }
-
-        // Step 7: Proceed to assessment
-        this._proceedToAssessment(token, session);
+        await this._withTimeout(this._runSubmitFlow(token, myGen), SUBMIT_WATCHDOG_MS, 'SUBMIT_WATCHDOG');
       } catch (err) {
+        if (myGen !== this._submitGeneration) return; // a newer attempt has already taken over
+
         console.error('[assessment-entry] Submit error:', err);
         this._setLoading(false);
 
-        if (err.message?.includes('rate_limit') || err.message?.includes('RATE_LIMITED')) {
+        if (err.message === 'SUBMIT_WATCHDOG') {
+          this._showError('Server tidak merespons. Periksa koneksi internet Anda dan coba lagi.');
+        } else if (err.message?.includes('rate_limit') || err.message?.includes('RATE_LIMITED')) {
           this._showCooldown(60);
         } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
           this._showError('Kesalahan jaringan. Periksa koneksi internet Anda.');
@@ -409,30 +353,149 @@
       }
     },
 
+    /** True if a newer submit attempt has started since `myGen` began. */
+    _isStale(myGen) {
+      return myGen !== this._submitGeneration;
+    },
+
+    async _runSubmitFlow(token, myGen) {
+      // Step 1: Rate limit check via Edge Function
+      const rateLimitRes = await this._checkRateLimit();
+      if (this._isStale(myGen)) return;
+      if (!rateLimitRes.allowed) {
+        this._setLoading(false);
+        this._showCooldown(rateLimitRes.retry_after || 60);
+        return;
+      }
+
+      // Step 2: Check if peserta already has active session (cross-device resume)
+      const existingSession = await this._checkExistingSession(token);
+      if (this._isStale(myGen)) return;
+
+      if (existingSession) {
+        if (existingSession.status === 'submitted') {
+          this._setLoading(false);
+          this._showError('Anda sudah mengumpulkan asesmen ini.');
+          return;
+        }
+        if (existingSession.status === 'blocked') {
+          this._setLoading(false);
+          this._showError(`Akses diblokir: ${existingSession.blocked_reason || 'Diblokir admin'}`);
+          return;
+        }
+        // Active or paused session — offer resume
+        const resume = await this._confirmResume();
+        if (this._isStale(myGen)) return;
+        if (resume) {
+          this._proceedToAssessment(token, existingSession);
+          return;
+        }
+        // Don't resume — but can't start new (UNIQUE constraint)
+        this._setLoading(false);
+        this._showError('Anda memiliki sesi aktif. Lanjutkan sesi tersebut.');
+        return;
+      }
+
+      // Step 3: Fetch assessment (via peserta view — strips admin fields)
+      const assessment = await this._fetchAssessment(token);
+      if (this._isStale(myGen)) return;
+      if (!assessment) {
+        this._setLoading(false);
+        this._showError('Kode akses tidak valid');
+        return;
+      }
+
+      // Step 4: Check assessment status
+      const accessCheck = this._checkAccess(assessment);
+      if (!accessCheck.allowed) {
+        this._setLoading(false);
+        this._showError(accessCheck.message);
+        return;
+      }
+
+      // Step 5: Check allow_retake
+      if (!assessment.allow_retake) {
+        const submissions = await this._checkSubmissions(assessment.id);
+        if (this._isStale(myGen)) return;
+        if (submissions > 0) {
+          this._setLoading(false);
+          this._showError('Anda sudah mengerjakan asesmen ini. Tidak bisa mengulang.');
+          return;
+        }
+      }
+
+      // Step 6: Create new session
+      const session = await this._createSession(assessment);
+      if (this._isStale(myGen)) return;
+      if (!session) {
+        this._setLoading(false);
+        return;
+      }
+
+      // Step 7: Proceed to assessment
+      this._proceedToAssessment(token, session);
+    },
+
     async _checkRateLimit() {
+      // v1.2.0 FIX: this used to fetch a HARDCODED Supabase project URL
+      // ('kzsrerxhhrtsxnpnmqgl.supabase.co') that has nothing to do with
+      // the project this app actually connects to (that URL is loaded
+      // dynamically from the Cloudflare Worker config in
+      // supabase-client.js). If that hardcoded project is unreachable,
+      // paused, or simply not yours, the fetch had NO TIMEOUT and could
+      // hang indefinitely — which is exactly what froze the submit button
+      // on "Memvalidasi..." forever.
+      //
+      // Fix: call the Edge Function through window.AlbEdu.supabase, which
+      // always targets the correctly configured project, AND wrap it in a
+      // hard timeout so this check can never block the submit flow again.
       try {
         const fingerprintHash = await this._generateFingerprintHash();
-        const res = await fetch('https://kzsrerxhhrtsxnpnmqgl.supabase.co/functions/v1/access-code-attempt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            device_id: this._deviceId,
-            fingerprint_hash: fingerprintHash,
-            form_open_ms: Date.now() - this._formOpenTime,
-          }),
-        });
+        const body = {
+          device_id: this._deviceId,
+          fingerprint_hash: fingerprintHash,
+          form_open_ms: Date.now() - this._formOpenTime,
+        };
 
-        if (res.status === 429) {
-          const data = await res.json().catch(() => ({}));
-          return { allowed: false, retry_after: data.retry_after || 60 };
+        if (!window.AlbEdu?.supabase?.rpc?.invoke) {
+          throw new Error('Supabase client not ready');
         }
 
-        const data = await res.json();
-        return { allowed: data.success || data.allowed };
+        const { data, error } = await this._withTimeout(
+          window.AlbEdu.supabase.rpc.invoke('access-code-attempt', body),
+          8000,
+          'RATE_LIMIT_TIMEOUT'
+        );
+
+        if (error) {
+          // supabase-js surfaces non-2xx Edge Function responses as `error`,
+          // with the actual HTTP response reachable via error.context.
+          const status = error.context?.status;
+          if (status === 429) {
+            const payload = await error.context?.json?.().catch(() => ({})) || {};
+            return { allowed: false, retry_after: payload.retry_after || 60 };
+          }
+          throw error;
+        }
+
+        return { allowed: data?.success ?? data?.allowed ?? true };
       } catch (err) {
         console.warn('[assessment-entry] Rate limit check failed (fail-open):', err);
         return { allowed: true }; // fail-open — don't block legit users on network error
       }
+    },
+
+    /**
+     * Race a promise against a timeout so slow/hanging network calls can
+     * never freeze the UI forever. Rejects with an Error whose message is
+     * `label` if the timeout wins.
+     */
+    _withTimeout(promise, ms, label) {
+      let timer;
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(label)), ms);
+      });
+      return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
     },
 
     async _generateFingerprintHash() {
