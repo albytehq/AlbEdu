@@ -102,14 +102,19 @@
       }
       .pep-avatar-ring {
         position: relative; width: 88px; height: 88px; cursor: pointer;
+        transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
       }
+      .pep-avatar-ring:hover { transform: scale(1.05); }
+      .pep-avatar-ring:active { transform: scale(0.98); }
       .pep-avatar-img {
         width: 88px; height: 88px; border-radius: 50%;
         object-fit: cover; display: block;
         border: 2.5px solid #e2e8f0;
-        transition: filter 180ms, border-color 180ms;
+        transition: filter 200ms, border-color 200ms, opacity 300ms ease;
         background: #f1f5f9;
+        opacity: 0;
       }
+      .pep-avatar-img.pep-loaded { opacity: 1; }
       .pep-avatar-ring:hover .pep-avatar-img {
         filter: brightness(0.72);
         border-color: #2563eb;
@@ -117,18 +122,50 @@
       .pep-avatar-overlay {
         position: absolute; inset: 0; border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        opacity: 0; transition: opacity 180ms; pointer-events: none;
+        opacity: 0; transition: opacity 200ms; pointer-events: none;
       }
       .pep-avatar-ring:hover .pep-avatar-overlay { opacity: 1; }
       .pep-avatar-icon {
         color: #ffffff; background: rgba(37,99,235,0.85);
         border-radius: 50%; padding: 7px;
+        transform: scale(0.8); transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
       }
+      .pep-avatar-ring:hover .pep-avatar-icon { transform: scale(1); }
       .pep-avatar-icon svg { display: block; }
       .pep-avatar-hint {
         font-size: 12px; color: #94a3b8; text-align: center;
         line-height: 1.4;
       }
+      /* Upload progress ring */
+      .pep-avatar-progress {
+        position: absolute; inset: -4px; border-radius: 50%;
+        opacity: 0; transition: opacity 200ms;
+        pointer-events: none;
+      }
+      .pep-avatar-progress.pep-active { opacity: 1; }
+      .pep-avatar-progress svg { transform: rotate(-90deg); }
+      .pep-avatar-progress circle {
+        fill: none; stroke-width: 3; stroke-linecap: round;
+      }
+      .pep-avatar-progress .pep-track { stroke: #e2e8f0; }
+      .pep-avatar-progress .pep-fill {
+        stroke: #2563eb; stroke-dasharray: 283;
+        stroke-dashoffset: 283;
+        transition: stroke-dashoffset 300ms ease;
+      }
+      /* Success checkmark */
+      .pep-avatar-success {
+        position: absolute; inset: 0; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(34, 197, 94, 0.9);
+        opacity: 0; pointer-events: none;
+        transform: scale(0.8);
+        transition: opacity 200ms, transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .pep-avatar-success.pep-show {
+        opacity: 1; transform: scale(1);
+      }
+      .pep-avatar-success svg { color: white; width: 32px; height: 32px; }
       .pep-file-input { display: none; }
 
       /* Name field */
@@ -248,6 +285,17 @@
                 </svg>
               </span>
             </div>
+            <div class="pep-avatar-progress" id="pep-avatar-progress">
+              <svg width="96" height="96" viewBox="0 0 100 100">
+                <circle class="pep-track" cx="50" cy="50" r="45"/>
+                <circle class="pep-fill" id="pep-progress-fill" cx="50" cy="50" r="45"/>
+              </svg>
+            </div>
+            <div class="pep-avatar-success" id="pep-avatar-success">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+            </div>
           </div>
           <span class="pep-avatar-hint">${t('pep.avatar_hint', null, 'Klik foto untuk mengubah<br>JPG, PNG, WebP · maks 4 MB')}</span>
           <input class="pep-file-input" id="pep-file-input" type="file" accept="image/jpeg,image/png,image/webp" />
@@ -316,7 +364,10 @@
 
     _newFile    = file;
     _previewUrl = URL.createObjectURL(file);
-    _panel.querySelector('#pep-avatar-img').src = _previewUrl;
+    var imgEl = _panel.querySelector('#pep-avatar-img');
+    imgEl.classList.remove('pep-loaded');
+    imgEl.src = _previewUrl;
+    imgEl.onload = function() { this.classList.add('pep-loaded'); };
   }
 
   // ── Save ───────────────────────────────────────────────────
@@ -352,19 +403,25 @@
     try {
       let fotoUrl = _user?.foto_profil || _user?.fotoProfil || '';
 
-      // Upload foto baru jika ada
+      // Upload foto baru jika ada — dengan progress ring animation
       if (_newFile) {
         _setProgress(10);
+        _showAvatarProgress(30);
         fotoUrl = await _uploadImage(_newFile);
         _setProgress(70);
+        _showAvatarProgress(80);
       }
 
       // Update Supabase
       await _updateUserProfile({ nama: name, foto_profil: fotoUrl });
       _setProgress(100);
+      _showAvatarProgress(100);
+
+      // Success checkmark animation
+      _showAvatarSuccess();
 
       // Sembunyikan progress setelah selesai
-      setTimeout(() => _setProgress(0, false), 600);
+      setTimeout(() => { _setProgress(0, false); _hideAvatarProgress(); }, 800);
 
       // Update local state agar reopen panel pakai data baru
       if (_user) {
@@ -477,6 +534,33 @@
     bar.style.width = pct + '%';
   }
 
+  // ── Avatar progress ring ───────────────────────────────────
+  function _showAvatarProgress(pct) {
+    if (!_panel) return;
+    const ring = _panel.querySelector('#pep-avatar-progress');
+    const fill = _panel.querySelector('#pep-progress-fill');
+    if (!ring || !fill) return;
+    ring.classList.add('pep-active');
+    // circumference = 2 * π * 45 ≈ 283
+    const offset = 283 - (283 * pct / 100);
+    fill.style.strokeDashoffset = offset;
+  }
+
+  function _hideAvatarProgress() {
+    if (!_panel) return;
+    const ring = _panel.querySelector('#pep-avatar-progress');
+    if (ring) ring.classList.remove('pep-active');
+  }
+
+  // ── Avatar success checkmark ───────────────────────────────
+  function _showAvatarSuccess() {
+    if (!_panel) return;
+    const success = _panel.querySelector('#pep-avatar-success');
+    if (!success) return;
+    success.classList.add('pep-show');
+    setTimeout(() => success.classList.remove('pep-show'), 1200);
+  }
+
   // ── Toast ──────────────────────────────────────────────────
   // Pakai QNotify kalau tersedia, fallback ke minimal toast sendiri.
   function _showToast(msg, type = 'info') {
@@ -507,10 +591,30 @@
     const imgEl   = _panel.querySelector('#pep-avatar-img');
     const nameEl  = _panel.querySelector('#pep-name-input');
 
-    // Avatar
+    // Avatar — fade-in saat load, fallback ke initials kalau error
     const foto = user?.foto_profil || user?.fotoProfil || '';
-    imgEl.src   = foto || _fallbackAvatar(user?.nama || user?.email || '?');
-    imgEl.onerror = () => { imgEl.src = _fallbackAvatar(user?.nama || '?'); };
+    imgEl.classList.remove('pep-loaded');
+    if (foto) {
+      // Validate URL scheme
+      var fotoSafe = '';
+      if (/^https:/i.test(foto) || /^data:image\//i.test(foto) || !/^[a-z]+:/i.test(foto)) {
+        fotoSafe = foto;
+      }
+      if (fotoSafe) {
+        imgEl.src = fotoSafe;
+        imgEl.onload = function() { this.classList.add('pep-loaded'); };
+        imgEl.onerror = function() {
+          this.src = _fallbackAvatar(user?.nama || '?');
+          this.classList.add('pep-loaded');
+        };
+      } else {
+        imgEl.src = _fallbackAvatar(user?.nama || '?');
+        imgEl.classList.add('pep-loaded');
+      }
+    } else {
+      imgEl.src = _fallbackAvatar(user?.nama || '?');
+      imgEl.classList.add('pep-loaded');
+    }
 
     // Nama
     nameEl.value = user?.nama || '';

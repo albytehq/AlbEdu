@@ -299,16 +299,23 @@
 
             if (avatarEl && user && user.foto_profil) {
                 // Validate URL scheme — only https: or data:image/ allowed.
-                // Prevents empty/invalid src that resolves to current page URL.
                 var fpUrl = user.foto_profil;
                 var fpSafe = '';
                 if (/^https:/i.test(fpUrl) || /^data:image\//i.test(fpUrl) || !/^[a-z]+:/i.test(fpUrl)) {
                     fpSafe = fpUrl;
                 }
                 if (fpSafe) {
-                    avatarEl.innerHTML = '<img src="' + fpSafe + '" alt="Foto Profil"'
-                        + ' style="width:100%;height:100%;object-fit:cover;border-radius:50%;"'
-                        + ' onerror="this.style.display=\'none\'">';
+                    // Save default icon HTML for fallback
+                    var defaultIcon = avatarEl.innerHTML;
+                    var safeIcon = defaultIcon.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    var img = document.createElement('img');
+                    img.src = fpSafe;
+                    img.alt = 'Foto Profil';
+                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:0;transition:opacity 300ms ease';
+                    img.onerror = function() { this.parentElement.innerHTML = defaultIcon; };
+                    img.onload = function() { this.style.opacity = '1'; };
+                    avatarEl.innerHTML = '';
+                    avatarEl.appendChild(img);
                 }
             }
 

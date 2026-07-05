@@ -450,13 +450,21 @@ document.addEventListener('DOMContentLoaded', function () {
             if (url) {
                 const safeUrl = (/^https:/i.test(url) || /^data:image\//i.test(url) || !/^[a-z]+:/i.test(url)) ? url : '';
                 if (safeUrl) {
-                    avatarEl.innerHTML = `<img src="${_esc(safeUrl)}" alt="Avatar" data-nav-avatar>`;
-                    const img = avatarEl.querySelector('img[data-nav-avatar]');
-                    if (img) {
-                        img.addEventListener('error', function () {
-                            this.style.display = 'none';
-                        }, { once: true });
-                    }
+                    // Save default icon HTML for fallback
+                    const defaultIcon = avatarEl.innerHTML;
+                    const img = document.createElement('img');
+                    img.src = _esc(safeUrl);
+                    img.alt = 'Avatar';
+                    img.setAttribute('data-nav-avatar', '');
+                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:0;transition:opacity 300ms ease';
+                    img.addEventListener('error', function () {
+                        this.parentElement.innerHTML = defaultIcon;
+                    }, { once: true });
+                    img.addEventListener('load', function () {
+                        this.style.opacity = '1';
+                    }, { once: true });
+                    avatarEl.innerHTML = '';
+                    avatarEl.appendChild(img);
                 }
             }
         }
