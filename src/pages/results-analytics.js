@@ -1,67 +1,36 @@
-// =============================================================================
-// results-analytics.js — AlbEdu Hasil & Analitik v1.0.0
-// =============================================================================
+// results-analytics.js — admin "Hasil & Analitik" dashboard.
+// Loads submissions for an assessment, computes stats, renders a CSS-only
+// histogram, item-difficulty table with distractor analysis, and per-class
+// breakdown. Exports to PDF (print), Excel (CSV), and JSON.
 //
-// Analytics dashboard for admin. Loads submissions for a given assessment,
-// computes statistics, renders CSS-only histogram, item-difficulty table with
-// distractor analysis, and per-class breakdown. Exports to PDF (print),
-// Excel (CSV), and JSON.
-//
-// DB access: AlbEdu.repository (native Supabase).
-//            See /src/legacy/firebase-compat.js for the bridge layer.
-//
-// Schema (already exists):
-//   submissions(
-//     id uuid PK,
-//     assessment_id uuid,
-//     session_id uuid,
-//     user_id uuid,
-//     identity_snapshot jsonb,     -- { nama, kelas, isManual, ... }
-//     answers jsonb,               -- { "section_0": { "1": "A", "2": "B" } }
-//     score numeric(5,2),
-//     max_score int DEFAULT 100,
-//     correct_count int,
-//     total_count int,
-//     grading_detail jsonb,        -- [{ section_idx, idq, peserta_answer, jawaban_benar, is_correct, status, points }]
-//     duration_seconds int,
-//     submitted_at timestamptz,
-//     attempt_number int DEFAULT 1
-//   )
-//
+// Schema reference (already exists in DB):
+//   submissions(id, assessment_id, session_id, user_id, identity_snapshot jsonb,
+//               answers jsonb, score numeric(5,2), max_score int DEFAULT 100,
+//               correct_count int, total_count int, grading_detail jsonb,
+//               duration_seconds int, submitted_at timestamptz, attempt_number int)
 //   assessments(id, access_code, title, subject, sections jsonb, status)
-//
-// Depends on:
-//   - AlbEdu.repository             (typed table access)
-//   - AlbEdu.supabase.auth          (native auth)
-//   - window.notify / .confirm     (QNotify bridge)
-// =============================================================================
 
 (function () {
   'use strict';
 
   const t = (key, vars, fallback) => fallback;
 
-  // ─── Constants ──────────────────────────────────────────────────────────
   const COLLECTION_ASSESSMENTS = 'assessments';
   const COLLECTION_SUBMISSIONS = 'submissions';
   const AUTH_WAIT_TIMEOUT_MS   = 10_000;
-  const HISTOGRAM_BIN_COUNT    = 10;   // 10 bins of width 10
+  const HISTOGRAM_BIN_COUNT    = 10;
   const OPTION_KEYS            = ['A', 'B', 'C', 'D'];
   const QUESTION_TRUNCATE_LEN  = 80;
 
-  // ─── State ──────────────────────────────────────────────────────────────
   const _state = {
     user:                  null,
-    assessments:           [],   // [{ id, title, access_code, subject, status, sections, ... }]
+    assessments:           [],
     selectedAssessmentId:  '',
-    selectedAssessment:    null, // full assessment object (with sections)
-    submissions:           [],   // normalized submissions
+    selectedAssessment:    null,
+    submissions:           [],
   };
 
-  // ─── DOM cache ──────────────────────────────────────────────────────────
   const _dom = {};
-
-  // ─── Helpers ────────────────────────────────────────────────────────────
 
   function _t(key, params) { return key; }
 
@@ -123,7 +92,7 @@
     return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
   }
 
-  // ─── Firebase / Auth wait ───────────────────────────────────────────────
+  // Platform / Auth wait
 
   async function _waitForFirebase(timeout) {
     if (window.AlbEdu?.supabase?.isReady?.()) return true;
@@ -182,7 +151,7 @@
     });
   }
 
-  // ─── DOM cache + wiring ─────────────────────────────────────────────────
+  // DOM cache + wiring
 
   function _cacheDom() {
     _dom.selectAssessment = document.getElementById('ra-assessment-select');
@@ -225,7 +194,7 @@
     if (_dom.btnExportJson)  _dom.btnExportJson.addEventListener('click',  () => _exportJson());
   }
 
-  // ─── Load assessments ───────────────────────────────────────────────────
+  // Load assessments
 
   async function _loadAssessments() {
     const repo = window.AlbEdu?.repository;
@@ -237,8 +206,8 @@
       return;
     }
     try {
-      // Native repository — note: 'in' filter not directly supported in our helper,
-      // so we fetch all and filter client-side (small dataset: assessments per admin).
+      // The repository helper doesn't support `in` filters, so we fetch all
+      // and filter client-side. Dataset per admin is small enough to be fine.
       const snap = await repo.getDocs(COLLECTION_ASSESSMENTS, {
         order: { column: 'created_at', ascending: false },
       });
@@ -298,7 +267,7 @@
     }
   }
 
-  // ─── Load submissions ───────────────────────────────────────────────────
+  // Load submissions
 
   async function _loadSubmissions() {
     const repo = window.AlbEdu?.repository;
@@ -369,7 +338,7 @@
     };
   }
 
-  // ─── Statistics ─────────────────────────────────────────────────────────
+  // Statistics
 
   function _computeStats(subs) {
     const scores = subs
@@ -410,7 +379,7 @@
     if (_dom.statCount)  _dom.statCount.textContent  = String(stats.count);
   }
 
-  // ─── Histogram ──────────────────────────────────────────────────────────
+  // Histogram
 
   function _binIndex(score) {
     if (score <= 0)   return 0;
@@ -436,7 +405,6 @@
       const bar = document.createElement('div');
       bar.className = 'ra-histo-bar';
       const pct = totalCount > 0 ? ((count / totalCount) * 100) : 0;
-      // Height proportional to count (at least 2px so empty bars are visible)
       const heightPct = max > 0 ? (count / max) * 100 : 0;
       bar.style.height = count === 0 ? '2px' : `${Math.max(4, heightPct)}%`;
       bar.setAttribute('data-count', String(count));
@@ -448,14 +416,11 @@
     });
   }
 
-  // ─── Item difficulty ────────────────────────────────────────────────────
+  // Item difficulty
 
-  /**
-   * Build a flat list of all questions across all sections:
-   *   [{ section_idx, idq, type, pertanyaan, pilihan, jawaban_benar, skor }]
-   * Defensive against missing/oddly-shaped sections (Firestore shim lowercases
-   * keys — we normalize defensively).
-   */
+  // Build a flat list of all questions across all sections. Defensive
+  // against missing/oddly-shaped sections (older rows may have differently-
+  // cased keys — we normalize here).
   function _flattenQuestions(sections) {
     if (!Array.isArray(sections)) return [];
     const out = [];
@@ -481,10 +446,8 @@
     return out;
   }
 
-  /**
-   * Find a grading_detail entry for a given (section_idx, idq) within one
-   * submission's grading_detail array. Defensive against case differences.
-   */
+  // Find a grading_detail entry for (section_idx, idq) within one submission's
+  // grading_detail. Defensive against case differences in the stored keys.
   function _findGradingEntry(grading, sectionIdx, idq) {
     if (!Array.isArray(grading)) return null;
     const idqStr = String(idq);
@@ -644,7 +607,7 @@
     return s.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
-  // ─── Per-class breakdown ────────────────────────────────────────────────
+  // Per-class breakdown
 
   function _computeClassBreakdown(subs) {
     const groups = new Map(); // kelas → array of subs
@@ -687,7 +650,7 @@
       </tr>`).join('');
   }
 
-  // ─── Render orchestration ───────────────────────────────────────────────
+  // Render orchestration
 
   function _renderAll() {
     const subs = _state.submissions;
@@ -713,7 +676,7 @@
     _enableExports(true);
   }
 
-  // ─── View toggles ───────────────────────────────────────────────────────
+  // View toggles
 
   function _hideAll() {
     if (_dom.statsGrid)        _dom.statsGrid.hidden        = true;
@@ -756,7 +719,7 @@
     if (_dom.btnExportJson)  _dom.btnExportJson.disabled  = !enable;
   }
 
-  // ─── Exports ────────────────────────────────────────────────────────────
+  // Exports
 
   function _exportPdf() {
     if (!_state.submissions.length) {
@@ -878,10 +841,10 @@
     }, 100);
   }
 
-  // ─── Init ───────────────────────────────────────────────────────────────
+  // Init
 
   async function init() {
-    console.info('[ResultsAnalytics] v1.0.0 init');
+    console.info('[ResultsAnalytics] init');
     _cacheDom();
     _wireEvents();
     _showEmptySelect();
@@ -908,10 +871,8 @@
     await _loadAssessments();
   }
 
-  // ─── Public API ─────────────────────────────────────────────────────────
   const ResultsAnalytics = {
     init,
-    // Exposed for testing / external refresh
     reloadAssessments: () => _loadAssessments(),
     reloadSubmissions: () => _state.selectedAssessmentId ? _loadSubmissions() : Promise.resolve(),
     getState: () => _state,

@@ -1,13 +1,10 @@
-// =============================================================================
-// soal-editor-modal.js — Modal editor for single question
-// =============================================================================
-// Schema-accurate:
-//   - pilihan is OBJECT {A,B,C,D}, NOT array
-//   - jawaban_benar is letter 'A'/'B'/'C'/'D', NOT index
-//   - media { video: {enabled, src}, gambar: [] } — gambar not editable here
-//     in v2.2.0 (placeholder for future image upload integration)
-// Loaded as classic <script defer>. Exposes window.SoalEditorModal.
-// =============================================================================
+// soal-editor-modal.js — modal editor for a single question.
+//
+// Schema reminders (these have tripped up past rewrites):
+//   - `pilihan` is an OBJECT {A,B,C,D}, not an array
+//   - `jawaban_benar` is the letter 'A'/'B'/'C'/'D', not an index
+//   - `media.gambar` is not editable here yet (placeholder until image
+//     upload is wired in)
 
 (function () {
   'use strict';
@@ -95,7 +92,7 @@
         <div class="albedu-soal-editor">
           <div class="albedu-soal-editor-section">
             <label class="albedu-soal-editor-label" for="q-pertanyaan">${t('create.question_label', null, 'Pertanyaan')} <span class="albedu-required">*</span></label>
-            <textarea id="q-pertanyaan" class="albedu-soal-textarea" placeholder="${t('create.question_placeholder', null, 'Tulis pertanyaan...')}">${this._esc(this._draft.pertanyaan || '')}</textarea>
+            <textarea id="q-pertanyaan" class="albedu-textarea albedu-soal-textarea" placeholder="${t('create.question_placeholder', null, 'Tulis pertanyaan...')}">${this._esc(this._draft.pertanyaan || '')}</textarea>
             <span class="albedu-field-hint">${t('create.question_hint', null, 'Mendukung HTML sederhana. Min. 3 karakter setelah tag di-strip.')}</span>
           </div>
 
@@ -108,7 +105,7 @@
                   <div class="albedu-soal-option ${this._draft.jawaban_benar === letter ? 'albedu-option-correct' : ''}" data-letter="${letter}">
                     <input type="radio" name="jawaban-benar" value="${letter}" ${this._draft.jawaban_benar === letter ? 'checked' : ''} aria-label="${t('create.correct_answer_aria', { letter }, 'Jawaban benar: ' + letter)}">
                     <span class="albedu-soal-option-letter">${letter}</span>
-                    <input type="text" class="albedu-soal-option-input" data-letter="${letter}" value="${this._esc(this._draft.pilihan[letter] || '')}" placeholder="${t('create.option_placeholder', { letter }, 'Opsi ' + letter)}">
+                    <input type="text" class="albedu-input albedu-soal-option-input" data-letter="${letter}" value="${this._esc(this._draft.pilihan[letter] || '')}" placeholder="${t('create.option_placeholder', { letter }, 'Opsi ' + letter)}">
                   </div>
                 `).join('')}
               </div>
@@ -123,7 +120,7 @@
               <span class="albedu-toggle-label">${t('create.include_youtube', null, 'Sertakan video YouTube')}</span>
             </label>
             <div id="q-video-url-field" ${!this._draft.media?.video?.enabled ? 'hidden' : ''}>
-              <input type="url" id="q-video-url" class="albedu-field-input" value="${this._esc(this._draft.media?.video?.src || '')}" placeholder="https://youtube.com/watch?v=...">
+              <input type="url" id="q-video-url" class="albedu-input albedu-field-input" value="${this._esc(this._draft.media?.video?.src || '')}" placeholder="https://youtube.com/watch?v=...">
               <span class="albedu-field-hint">${t('create.video_url_hint', null, 'URL harus diawali http:// atau https://')}</span>
             </div>
           </div>
@@ -135,12 +132,11 @@
         this._draft.pertanyaan = e.target.value;
       });
 
-      // Wire options (PG only)
       if (isPG) {
         this._body.querySelectorAll('input[name="jawaban-benar"]').forEach((radio) => {
           radio.addEventListener('change', (e) => {
             this._draft.jawaban_benar = e.target.value;
-            // Re-render to update .albedu-option-correct highlight
+            // Re-render to update the .albedu-option-correct highlight
             this._renderForm();
           });
         });
@@ -151,7 +147,6 @@
         });
       }
 
-      // Wire video toggle + url
       const videoEnabled = document.getElementById('q-video-enabled');
       const videoUrlField = document.getElementById('q-video-url-field');
       const videoUrl = document.getElementById('q-video-url');
@@ -167,14 +162,13 @@
     _save() {
       if (!this._draft) return;
 
-      // Validate pertanyaan (HTML-stripped min 3 chars)
+      // Validate pertanyaan (HTML-stripped, min 3 chars)
       const cleanQ = (this._draft.pertanyaan || '').replace(/<[^>]*>/g, '').trim();
       if (cleanQ.length < 3) {
         window.notify?.error(t('wizard.validation_failed', null, 'Validasi gagal'), t('wizard.question_too_short', null, 'Pertanyaan minimal 3 karakter'));
         return;
       }
 
-      // PG-specific validation
       if (this._draft.pilihan) {
         if (!this._draft.jawaban_benar) {
           window.notify?.error(t('wizard.validation_failed', null, 'Validasi gagal'), t('wizard.pick_correct_answer', null, 'Pilih jawaban benar'));
@@ -205,7 +199,7 @@
           return;
         }
         const qIdx = window.CreateAssessment.getState().examData.sections[this._sectionIndex].questions.length - 1;
-        // Preserve assigned idq, take everything else from draft
+        // Preserve the assigned idq; take everything else from the draft.
         const newIdq = added.idq;
         const draftCopy = { ...this._draft, idq: newIdq };
         window.CreateAssessment.updateQuestion(this._sectionIndex, qIdx, draftCopy);
@@ -222,11 +216,12 @@
     },
 
     _esc(str) {
-      return String(str || '')
+      return String(str ?? '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     },
   };
 

@@ -1,6 +1,4 @@
-// =============================================================================
-// _shared/types.ts — Shared TypeScript types for AlbEdu v1.0.0 Edge Functions
-// =============================================================================
+// _shared/types.ts — Shared TypeScript types for AlbEdu Edge Functions.
 
 export interface Env {
   SUPABASE_URL: string;
@@ -11,7 +9,7 @@ export interface Env {
   TURNSTILE_SITE_KEY?: string;
   CF_WORKER_URL?: string;
   AUTH_TOKEN?: string;
-  // Feature flags (Free Plan safe defaults)
+  // Free Plan tunables. Defaults stay below Supabase limits.
   ALBEDU_MAX_CONCURRENT_PESERTA?: string;  // default 200
   ALBEDU_HEARTBEAT_INTERVAL_MS?: string;   // default 15000
   ALBEDU_HEARTBEAT_CACHE_TTL_MS?: string;  // default 60000
@@ -133,7 +131,7 @@ export interface AuditLog {
   created_at: string;
 }
 
-// Standard API response shapes
+// Standard API response shapes.
 export interface SuccessResponse<T = any> {
   success: true;
   data: T;

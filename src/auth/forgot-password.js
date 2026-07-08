@@ -1,52 +1,12 @@
-// =============================================================================
-// ForgotPassword.js — Production-grade password reset request flow v2.0
-// =============================================================================
+// forgot-password.js — password reset request flow
 //
-// STATE MACHINE:
-//   ┌─────────────────────────────────────────────────────────────────┐
-//   │                                                                 │
-//   │   [INIT] ──► [FORM] ──submit──► [LOADING] ──┐                  │
-//   │                ▲                            │                  │
-//   │                │                            ▼                  │
-//   │                │     ┌─── [SUCCESS] ◄─── 200 OK                │
-//   │                │     │                                            │
-//   │                │     │      (cooldown 60s, show resend btn)     │
-//   │                │     │                                            │
-//   │                │     └─── [ERROR] ◄── rate-limit / network      │
-//   │                │                       (show msg, no cooldown   │
-//   │                │                        unless rate-limit)      │
-//   │                │                                            │
-//   │                └──── user clicks "edit email" ─────────────    │
-//   │                                                                 │
-//   └─────────────────────────────────────────────────────────────────┘
+// Flow: FORM → LOADING → SUCCESS (60s cooldown, resend button) or ERROR
+// (rate-limit / network / SMTP). On "user not found" / "email not confirmed"
+// we still show SUCCESS for anti-enumeration (see shouldSuppressForgotPasswordError
+// in errorMapper.js).
 //
-// FIXES vs v1:
-//   - Bug #1 (rate-limit shows "Terjadi kesalahan"): pakai
-//     getForgotPasswordErrorMessage() yang mengenali semua pattern rate-limit
-//     Supabase (over_email_send_rate_limit, "For security purposes...",
-//     "Email rate limit exceeded", HTTP 429, dll).
-//
-//   - Bug #2 (refresh halaman = fake success): persist status 'success' atau
-//     'failed' di sessionStorage. Saat reload, hanya tampilkan success state
-//     jika request SEBELUMNYA berhasil. Kalau failed, kembali ke form.
-//
-//   - Bug #3 (cooldown tidak sinkron antara tombol primary & resend):
-//     saat di state success, tombol primary juga disable dengan countdown
-//     yang sama.
-//
-//   - Bug #4 (race condition dengan checkExistingSession): init sekarang
-//     sequential, bukan paralel. checkExistingSession tidak signOut kalau
-//     ada recovery marker (sedang dalam flow reset).
-//
-//   - Bug #5 (state confusion): tiga state eksplisit — FORM, SUCCESS,
-//     LOADING. Tidak ada lagi keadaan ambiguous.
-//
-// ANTI-ENUMERATION:
-//   Untuk error yang menunjukkan email TIDAK ADA di sistem (user not found,
-//   email not confirmed), tetap tampilkan success state supaya attacker
-//   tidak bisa menebak email mana yang terdaftar. Lihat
-//   shouldSuppressForgotPasswordError() di errorMapper.js.
-// =============================================================================
+// Persisted state in sessionStorage survives page refresh so a successful
+// request doesn't fake-success on reload.
 
 import {
     getForgotPasswordErrorMessage,
@@ -59,7 +19,6 @@ import {
 
 const t = (key, vars, fallback) => fallback;
 
-// ── DOM references ──────────────────────────────────────────────────────────
 const form            = document.getElementById('forgotPasswordForm');
 const emailInput      = document.getElementById('email');
 const resetBtn        = document.getElementById('resetBtn');
@@ -72,77 +31,47 @@ const resendCountdown = document.getElementById('resendCountdown');
 const resendBtn       = document.getElementById('resendBtn');
 const backToLogin     = document.getElementById('backToLogin');
 
-// ── Constants ───────────────────────────────────────────────────────────────
 const RESEND_COOLDOWN_MS   = 60_000;  // 60 detik antar request reset
-// Storage keys — gunakan prefix 'albedu_' untuk namespace konsisten
-const STORAGE_KEY_TS       = 'albedu_reset_requested_at';     // timestamp request terakhir
+const STORAGE_KEY_TS       = 'albedu_reset_requested_at';
 const STORAGE_KEY_STATUS   = 'albedu_reset_last_status';       // 'success' | 'failed' | ''
-const STORAGE_KEY_EMAIL    = 'albedu_reset_last_email';        // email yang dipakai (untuk display masked)
+const STORAGE_KEY_EMAIL    = 'albedu_reset_last_email';
 
 const BTN_TEXT_DEFAULT  = t('auth.forgot.submit', null, 'Kirim Link Reset');
 const BTN_TEXT_LOADING  = LOADING_LABELS.sending_reset_email;
 
-// ── State ───────────────────────────────────────────────────────────────────
-// _currentState melacak mode UI saat ini: 'form' | 'loading' | 'success'
-let _currentState      = 'form';
+let _currentState      = 'form';   // 'form' | 'loading' | 'success'
 let isSubmitting       = false;
 let resendTimerId      = null;
-// Simpan timestamp cooldown yang sedang aktif — dipakai tombol primary & resend
 let _cooldownEndsAt    = 0;
 
-// ── DOM: button text reference ──────────────────────────────────────────────
 const btnTextEl = resetBtn?.querySelector('.btn-text');
 
-// =============================================================================
-// UI state transitions
-// =============================================================================
-
-/**
- * Pindah ke state FORM. Semua elemen lain disembunyikan.
- * Tombol primary di-enable (kecuali sedang cooldown).
- */
 function showFormState() {
     _currentState = 'form';
     if (formContent)    formContent.classList.remove('hidden');
     if (successContent) successContent.classList.remove('visible');
-    // Reset button text
     if (btnTextEl) btnTextEl.textContent = BTN_TEXT_DEFAULT;
     if (resetBtn)  resetBtn.disabled = false;
-    // Apply cooldown jika ada
     _applyCooldownToPrimaryButton();
 }
 
-/**
- * Pindah ke state SUCCESS (anti-enumeration: tampil meski email tidak ada).
- * Sembunyikan form, tampilkan success card.
- * Mulai countdown tombol resend.
- */
 function showSuccessState(email) {
     _currentState = 'success';
     if (formContent)    formContent.classList.add('hidden');
     if (successContent) successContent.classList.add('visible');
-    // Sembunyikan pesan error jika ada
     clearMessage();
 
-    // Tampilkan email yang dituju (masked untuk privacy)
     if (successDesc && email) {
         const masked = maskEmail(email);
         successDesc.textContent =
             `Link reset kata sandi telah dikirim ke ${masked}. Silakan periksa inbox dan folder spam Anda.`;
     }
 
-    // Mulai countdown tombol resend
     startResendCooldown();
 }
 
-// =============================================================================
-// Cooldown management — sinkron antara tombol primary (form) & tombol resend (success)
-// =============================================================================
-
-/**
- * Set cooldown timestamp & persist ke sessionStorage.
- * @param {number} endsAt - epoch ms ketika cooldown berakhir
- */
+// Cooldown sync between the primary form button and the resend button so
+// they always show the same countdown.
 function _setCooldown(endsAt) {
     _cooldownEndsAt = endsAt;
     try {
@@ -150,11 +79,6 @@ function _setCooldown(endsAt) {
     } catch (_) {}
 }
 
-/**
- * Apply cooldown ke tombol primary (#resetBtn) di state FORM.
- * Saat cooldown aktif, tombol disable + label countdown.
- * Saat habis, tombol enable + label default.
- */
 function _applyCooldownToPrimaryButton() {
     if (_currentState !== 'form') return;
     if (!resetBtn || !btnTextEl) return;
@@ -169,12 +93,6 @@ function _applyCooldownToPrimaryButton() {
     }
 }
 
-/**
- * Mulai countdown untuk tombol resend (state SUCCESS) + sinkron tombol primary.
- *
- * Baca timestamp dari _cooldownEndsAt (yang sudah di-set sebelumnya oleh _setCooldown).
- * Setiap detik, update UI countdown. Saat habis, tampilkan tombol resend.
- */
 function startResendCooldown() {
     const remaining0 = Math.max(0, Math.ceil((_cooldownEndsAt - Date.now()) / 1000));
 
@@ -207,10 +125,6 @@ function showResendButton() {
     if (resendBtn)   resendBtn.disabled = false;
 }
 
-// =============================================================================
-// Message helpers
-// =============================================================================
-
 function showMessage(text, type = 'error') {
     if (!messageEl) return;
     messageEl.textContent = text || '';
@@ -229,19 +143,12 @@ function clearMessage() {
     messageEl.className = 'message message-error';
 }
 
-/**
- * Mask email untuk privacy: "n***@sekolah.sch.id"
- */
 function maskEmail(email) {
     const [local, domain] = email.split('@');
     if (!domain) return email;
     const visible = local.length <= 2 ? local[0] : local.slice(0, 2);
     return `${visible}***@${domain}`;
 }
-
-// =============================================================================
-// Loading state
-// =============================================================================
 
 function setLoading(loading) {
     if (!resetBtn) return;
@@ -253,15 +160,10 @@ function setLoading(loading) {
         _currentState = 'loading';
     } else {
         resetBtn.classList.remove('loading');
-        // Kembali ke state yang sesuai (form kalau bukan success)
         if (_currentState === 'loading') _currentState = 'form';
         _applyCooldownToPrimaryButton();
     }
 }
-
-// =============================================================================
-// Validation
-// =============================================================================
 
 function validateEmail() {
     const email = emailInput?.value?.trim() || '';
@@ -273,10 +175,6 @@ function validateEmail() {
     }
     return '';
 }
-
-// =============================================================================
-// Storage helpers
-// =============================================================================
 
 function _persistSuccessStatus(email) {
     try {
@@ -311,24 +209,18 @@ function _getPersistedStatus() {
     }
 }
 
-// =============================================================================
-// Submit handler
-// =============================================================================
-
 async function handleSubmit(event) {
     event.preventDefault();
     clearMessage();
 
     if (isSubmitting) return;
 
-    // Double-guard: jika sedang cooldown, jangan proses
     if (_cooldownEndsAt > Date.now()) {
         const remaining = Math.ceil((_cooldownEndsAt - Date.now()) / 1000);
         showMessage(`Tunggu ${remaining} detik sebelum mencoba lagi.`);
         return;
     }
 
-    // Client-side validation
     const validationError = validateEmail();
     if (validationError) {
         showMessage(validationError);
@@ -347,8 +239,8 @@ async function handleSubmit(event) {
             throw new Error('Sistem autentikasi belum siap. Silakan muat ulang halaman.');
         }
 
-        // Build redirect URL dynamically dari origin saat ini
-        // Validasi: redirectTo HARUS same-origin untuk mencegah open redirect
+        // Build redirect URL dynamically from current origin. Validate that
+        // it's same-origin to prevent open-redirect abuse.
         const redirectPath = window.location.pathname.replace(/forgot-password\.html.*/, 'reset-password.html');
         const redirectTo = `${window.location.origin}${redirectPath}`;
         if (!redirectTo.startsWith(window.location.origin)) {
@@ -360,31 +252,24 @@ async function handleSubmit(event) {
         });
 
         if (error) {
-            // ── Kategorisasi error ────────────────────────────────────────────
-            //
-            // Dua kategori:
+            // Two categories:
             //   A. SUPPRESS (anti-enumeration): "user not found", "email not
-            //      confirmed" → tetap tampilkan success state seolah email
-            //      terkirim. Mencegah attacker menebak email terdaftar.
-            //
-            //   B. SHOW ERROR: rate limit, network, SMTP, redirect misconfig
-            //      → tampilkan pesan error ASLI ke user.
+            //      confirmed" → still show success state so attackers can't
+            //      probe registered emails.
+            //   B. SHOW: rate limit, network, SMTP, redirect misconfig — show
+            //      the real error so the user knows the email wasn't sent.
             const shouldSuppress = shouldSuppressForgotPasswordError(error);
 
             if (shouldSuppress) {
                 console.warn('[ForgotPassword] suppressed error for anti-enumeration:',
                     error.message || error.code);
-                // Persist success status & email (untuk recovery saat refresh)
                 _persistSuccessStatus(email);
                 _setCooldown(Date.now() + RESEND_COOLDOWN_MS);
-                // Reset loading state dulu sebelum show success (tombol ada di
-                // formContent yang akan di-hidden, tapi DOM state harus konsisten)
                 setLoading(false);
                 showSuccessState(email);
                 return;
             }
 
-            // Kategori B: tampilkan error asli ke user
             const errorCode = error.message || error.code || 'unknown_error';
             const friendlyMessage = getForgotPasswordErrorMessage(errorCode);
 
@@ -394,20 +279,16 @@ async function handleSubmit(event) {
                 backendCode: errorCode,
             });
 
-            // Pastikan state kembali ke form (bukan loading)
             setLoading(false);
             showMessage(friendlyMessage);
 
-            // Untuk rate-limit: set cooldown + persist failed status
-            // (supaya refresh tidak fake-success)
             if (isRateLimitError(errorCode)) {
                 _setCooldown(Date.now() + RESEND_COOLDOWN_MS);
                 _persistFailedStatus();
-                // Disable tombol primary + tampilkan countdown
                 _applyCooldownToPrimaryButton();
             } else {
-                // Error non-rate-limit: user boleh coba lagi, TANPA cooldown
-                // tapi status tetap 'failed' supaya refresh tidak fake-success
+                // Non-rate-limit error: user can retry immediately, but
+                // persist failed status so refresh doesn't fake-success.
                 _persistFailedStatus();
                 _cooldownEndsAt = 0;
                 try { sessionStorage.removeItem(STORAGE_KEY_TS); } catch (_) {}
@@ -415,15 +296,14 @@ async function handleSubmit(event) {
             return;
         }
 
-        // Berhasil — persist success status + mulai cooldown
         _persistSuccessStatus(email);
         _setCooldown(Date.now() + RESEND_COOLDOWN_MS);
-        setLoading(false);  // reset tombol ke state idle (meski di-hidden oleh success card)
+        setLoading(false);
         showSuccessState(email);
 
     } catch (err) {
-        // Catch block: error dari fetch() (network), error validasi client,
-        // atau error yang tidak ditangani oleh Supabase SDK.
+        // Catch block: fetch() network errors, client-side validation errors,
+        // or anything Supabase SDK didn't already wrap.
         logAuthError({
             flow: 'forgot-password',
             error: err,
@@ -432,35 +312,26 @@ async function handleSubmit(event) {
 
         setLoading(false);
 
-        // Tampilkan error yang spesifik via mapper
         const friendly = getForgotPasswordErrorMessage(err.message || 'unknown_error');
         showMessage(friendly);
 
-        // Untuk rate-limit yang throw (jarang tapi mungkin): set cooldown
         if (isRateLimitError(err.message || '')) {
             _setCooldown(Date.now() + RESEND_COOLDOWN_MS);
             _applyCooldownToPrimaryButton();
         }
 
-        // Persist failed status supaya refresh tidak fake-success
         _persistFailedStatus();
     } finally {
         isSubmitting = false;
-        // Jangan setLoading(false) di sini kalau sudah di-handle di atas
         if (_currentState === 'loading') {
             setLoading(false);
         }
     }
 }
 
-// =============================================================================
-// Resend handler — mirrors handleSubmit tapi untuk tombol resend (state SUCCESS)
-// =============================================================================
-
 async function handleResend() {
     if (isSubmitting) return;
 
-    // Cek cooldown — tombol resend harusnya sudah disabled, tapi double-guard
     if (_cooldownEndsAt > Date.now()) {
         const remaining = Math.ceil((_cooldownEndsAt - Date.now()) / 1000);
         showMessage(`Tunggu ${remaining} detik sebelum mencoba lagi.`);
@@ -471,7 +342,6 @@ async function handleResend() {
 
     const email = emailInput?.value?.trim();
     if (!email || !emailInput?.validity?.valid) {
-        // Email tidak valid — kembali ke form state
         showFormState();
         showMessage(t('auth.forgot.email_invalid', null, 'Masukkan email yang valid terlebih dahulu.'));
         return;
@@ -522,15 +392,12 @@ async function handleResend() {
                 _persistFailedStatus();
                 startResendCooldown();
             } else {
-                // Non-rate-limit: user bisa coba lagi tanpa cooldown,
-                // tapi tetap persist failed status
                 _persistFailedStatus();
                 if (resendBtn) resendBtn.disabled = false;
             }
             return;
         }
 
-        // Berhasil — persist + cooldown
         _persistSuccessStatus(email);
         _setCooldown(Date.now() + RESEND_COOLDOWN_MS);
         startResendCooldown();
@@ -545,7 +412,6 @@ async function handleResend() {
         const friendly = getForgotPasswordErrorMessage(err.message || 'unknown_error');
         showMessage(friendly);
 
-        // Untuk rate-limit: set cooldown
         if (isRateLimitError(err.message || '')) {
             _setCooldown(Date.now() + RESEND_COOLDOWN_MS);
             startResendCooldown();
@@ -559,26 +425,17 @@ async function handleResend() {
     }
 }
 
-// =============================================================================
-// Check if user already logged in
-// =============================================================================
-
-// Production-grade behavior:
-//   - NEVER auto-redirect to admin panel from this page.
-//   - If a session exists, sign it out (best-effort) so the recovery flow
-//     has a clean slate. But DON'T sign out if URL has recovery marker —
-//     that means user is in the middle of a recovery flow.
+// If a session already exists on this page, sign it out (best-effort) so
+// the recovery flow has a clean slate. DON'T sign out if the URL has a
+// recovery marker — that means the user just clicked the email link and
+// is mid-flow.
 async function checkExistingSession() {
-    // Jangan signOut kalau URL punya recovery marker — artinya user baru
-    // saja klik link dari email dan redirect ke sini (kasus edge: redirect
-    // misconfigured ke forgot-password.html).
     const hasRecoveryMarker =
         window.location.hash.includes('type=recovery') ||
         window.location.search.includes('type=recovery') ||
         window.location.search.includes('code=');
 
     if (hasRecoveryMarker) {
-        // User datang dari email link — biarkan session-nya, jangan signOut.
         return;
     }
 
@@ -597,11 +454,7 @@ async function checkExistingSession() {
     }
 }
 
-// =============================================================================
-// Init
-// =============================================================================
-
-// ── Pre-fill email dari sessionStorage (link dari login page) ───────────────
+// Pre-fill email from sessionStorage (link from login page).
 try {
     const savedEmail = sessionStorage.getItem('albedu_forgot_email');
     if (savedEmail && emailInput) {
@@ -610,28 +463,24 @@ try {
     }
 } catch (_) {}
 
-// ── Restore state berdasarkan persisted status ──────────────────────────────
-// FIX BUG #2: Sebelumnya, init block selalu showSuccess() kalau ada timestamp
-// cooldown di sessionStorage — padahal timestamp itu di-set WALAUPUN request
-// gagal (rate-limit). Sekarang: cek status persisted. Hanya showSuccess()
-// kalau request sebelumnya benar-benar BERHASIL.
+// Restore state based on persisted status. Previously the init block always
+// called showSuccess() if a cooldown timestamp existed in sessionStorage —
+// but that timestamp was set even when the request FAILED (rate-limit). Now
+// we check the persisted status: only show success if the previous request
+// actually succeeded.
 //
-// State machine:
-//   - status='success' + cooldown masih aktif → tampilkan success state (resume)
-//   - status='success' + cooldown sudah habis → tampilkan form (user bisa minta lagi)
-//   - status='failed' + cooldown masih aktif → tampilkan form dengan tombol disabled
-//   - status='failed' + cooldown sudah habis → tampilkan form normal
-//   - status='' (fresh) → tampilkan form normal
-//
-// Selalu juga jalankan countdown tick untuk tombol primary (state form).
-
+// Decision matrix:
+//   status='success' + cooldown active → resume success state
+//   status='success' + cooldown over   → form (user can request again)
+//   status='failed'  + cooldown active → form with disabled button
+//   status='failed'  + cooldown over   → normal form
+//   status=''        (fresh)           → normal form
 (async function initRestoreState() {
     const { status, email, ts } = _getPersistedStatus();
     const now = Date.now();
 
-    // Hitung _cooldownEndsAt dari timestamp persisted.
-    // ts adalah "started at" (kapan request terakhir di-submit, baik sukses maupun gagal).
-    // Cooldown berakhir di ts + RESEND_COOLDOWN_MS.
+    // ts is "started at" (when the last request was submitted, success or
+    // fail). Cooldown ends at ts + RESEND_COOLDOWN_MS.
     if (ts > 0) {
         const endsAt = ts + RESEND_COOLDOWN_MS;
         _cooldownEndsAt = endsAt > now ? endsAt : 0;
@@ -639,14 +488,7 @@ try {
         _cooldownEndsAt = 0;
     }
 
-    // Decision matrix:
-    //   status='success' + cooldown aktif → resume success state
-    //   status='success' + cooldown habis → form (user boleh minta lagi)
-    //   status='failed'  + cooldown aktif → form + tombol disabled
-    //   status='failed'  + cooldown habis → form normal
-    //   status=''        (fresh)          → form normal
     if (status === 'success' && _cooldownEndsAt > now) {
-        // Resume success state — pre-fill email kalau ada
         if (email && emailInput && !emailInput.value) {
             emailInput.value = email;
         }
@@ -654,11 +496,8 @@ try {
         return;
     }
 
-    // Untuk semua kasus lain: tampilkan form state.
     showFormState();
 
-    // Jika cooldown masih aktif, mulai tick untuk update label tombol primary
-    // setiap detik (countdown "Tunggu 60s... Tunggu 59s...").
     if (_cooldownEndsAt > now) {
         _applyCooldownToPrimaryButton();
         const tickId = setInterval(() => {
@@ -668,14 +507,11 @@ try {
             }
         }, 1000);
     } else {
-        // Cooldown sudah habis — clear timestamp biar tidak mengganggu sesi berikutnya
         try { sessionStorage.removeItem(STORAGE_KEY_TS); } catch (_) {}
     }
 })();
 
-// ── Attach event listeners ──────────────────────────────────────────────────
 form?.addEventListener('submit', handleSubmit);
 resendBtn?.addEventListener('click', handleResend);
 
-// ── Check existing session (sequential, setelah state restored) ─────────────
 checkExistingSession();

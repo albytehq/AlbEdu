@@ -1,8 +1,5 @@
-// =============================================================================
-// icons.d.ts — TypeScript Definitions for AlbEdu Icon System (v7.0 ENTERPRISE)
-// =============================================================================
-// Place this file alongside icons.js for IDE autocomplete + type checking.
-// =============================================================================
+// icons.d.ts — TypeScript definitions for the AlbEdu icon system.
+// Place alongside icons.js for IDE autocomplete + type checking.
 
 /** Options for rendering an icon. */
 export interface IconOptions {
@@ -121,9 +118,9 @@ export interface AlbEduIcons {
   on(event: 'icon-missing', cb: (detail: IconMissingEvent) => void): Unsubscribe;
   on(event: 'icons-bound', cb: (detail: IconsBoundEvent) => void): Unsubscribe;
   on(event: 'icon-error', cb: (detail: IconErrorEvent) => void): Unsubscribe;
-  /** NEW v7.0: Preload specific icons into the Layer 1 cache during idle time. */
+  /** Preload specific icons into the Layer 1 cache during idle time. */
   preloadIcons(names?: string[]): void;
-  /** NEW v7.0: Preload the entire registry into the Layer 1 cache. */
+  /** Preload the entire registry into the Layer 1 cache. */
   preloadAll(): void;
   /** Icon system version string. */
   ICONS_VERSION: string;

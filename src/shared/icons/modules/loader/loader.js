@@ -1,38 +1,8 @@
-// =============================================================================
-// loader.js — AlbEdu Icon System · Lazy Loader + Idle Preloader
-// =============================================================================
-// Responsibility:
-//   Coordinate WHEN icon binding happens to minimize impact on first paint
-//   and interactive time.
-//
-// Loading strategy (enterprise-grade):
-//
-//   App Start (HTML parse begins)
-//     ↓
-//   critical-css.js (sync, in <head>)
-//     ↓ injects inline sprite (25 critical icons available IMMEDIATELY)
-//     ↓ injects critical CSS (shell paints)
-//     ↓
-//   First Paint (icons visible via <use href="#i-...">)
-//     ↓
-//   icons.js loads (deferred, ~10-30ms after parse)
-//     ↓ runs _autoInit() — binds visible icons immediately
-//     ↓
-//   requestIdleCallback (after first interaction)
-//     ↓ preload secondary icons into cache
-//     ↓ bind off-screen icons via IntersectionObserver
-//     ↓
-//   User scrolls / dynamic content added
-//     ↓ IntersectionObserver fires → bind on demand
-//     ↓ MutationObserver fires → bind new content
-//
-// Public API (attached to window.AlbEdu.__iconLoader):
-//   .onIdle(cb, opts)         → schedule callback when browser is idle
-//   .preloadIcons(names)      → pre-render icons into cache (Layer 1)
-//   .preloadCriticalSet()     → pre-render the 25 critical icons
-//   .preloadAll()             → pre-render entire registry (warm cache)
-//   .scheduleBind(fn)         → schedule a bind operation (rAF + idle)
-// =============================================================================
+// loader.js — schedules icon binding to minimize impact on first paint and
+// interactive time. critical-css.js injects the sprite synchronously, then
+// icons.js (deferred) binds visible icons immediately, defers off-screen
+// binding to IntersectionObserver, and preloads secondary icons into the
+// cache during requestIdleCallback.
 
 (function () {
   'use strict';
@@ -54,14 +24,13 @@
 
   var _raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
 
-  // ── Schedule a callback when the browser is idle ────────────────────
+  // Schedule a callback when the browser is idle.
   function onIdle(cb, opts) {
     opts = opts || {};
     return _ric(cb, { timeout: opts.timeout || 2000 });
   }
 
-  // ── Pre-render icons into the cache (Layer 1) ───────────────────────
-  // This warms the cache so subsequent renders are pure cloneNode.
+  // Pre-render icons into the cache so subsequent renders are pure cloneNode.
   function preloadIcons(names) {
     if (!names || !names.length) return;
     var renderer = window.AlbEdu && window.AlbEdu.__iconRenderer;
@@ -77,18 +46,15 @@
     }, { timeout: 3000 });
   }
 
-  // ── Pre-render the 25 critical icons ────────────────────────────────
-  // (These are usually already in the sprite, but this populates the
-  //  renderer cache for setIcon() calls.)
+  // Pre-render the critical icons. They're usually already in the sprite,
+  // but this warms the renderer cache for setIcon() calls.
   function preloadCriticalSet() {
     var sprite = window.AlbEdu && window.AlbEdu.__iconSprite;
     if (!sprite) return;
     preloadIcons(sprite.CRITICAL_NAMES);
   }
 
-  // ── Pre-render the entire registry (warm cache) ─────────────────────
-  // Useful for SPA navigation — after this completes, every icon render
-  // is a pure cache hit (~0.005ms per render).
+  // Pre-render the entire registry — useful for SPA navigation.
   function preloadAll() {
     var listFn = window.AlbEdu && window.AlbEdu.listIcons;
     if (!listFn) return;
@@ -98,9 +64,8 @@
     }, { timeout: 5000 });
   }
 
-  // ── Schedule a bind operation ───────────────────────────────────────
-  // Uses rAF for visual sync, then idle callback for the actual work.
-  // This prevents bind operations from blocking animation frames.
+  // rAF for visual sync, then idle callback for the actual work — keeps
+  // bind operations from blocking animation frames.
   function scheduleBind(fn) {
     if (typeof fn !== 'function') return;
     _raf(function () {

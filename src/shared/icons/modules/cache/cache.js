@@ -1,32 +1,6 @@
-// =============================================================================
-// cache.js — AlbEdu Icon System · Layer 1: In-Memory Template Cache
-// =============================================================================
-// Responsibility:
-//   Cache parsed SVG <template> elements keyed by (name + size + strokeWidth).
-//   Subsequent renders clone the cached template via `cloneNode(true)` —
-//   zero string parsing, zero attribute serialization, zero layout thrash.
-//
-// Architecture:
-//   request icon → cache.get(key) → if hit: cloneNode → else: build → cache.set
-//
-// Cache layers (defense-in-depth):
-//   Layer 1: This module — in-memory DocumentFragment cache (sub-millisecond)
-//   Layer 2: Browser HTTP cache — immutable assets (handled by service worker)
-//   Layer 3: Service Worker cache — offline support (public/service-worker.js)
-//   Layer 4: HTTP cache — long-term immutable caching (Cache-Control headers)
-//
-// Eviction:
-//   LRU with default cap of 256 entries. Each entry is a <template> element
-//   (~200 bytes). 256 × 200B = ~50KB max memory — negligible.
-//
-// Public API (attached to window.AlbEdu.__iconCache):
-//   .get(key)                → HTMLTemplateElement | null
-//   .set(key, template)      → void
-//   .has(key)                → boolean
-//   .size                    → number (current entry count)
-//   .clear()                 → void
-//   .stats()                 → { hits, misses, hitRate, size }
-// =============================================================================
+// cache.js — in-memory LRU cache of parsed SVG <template> elements.
+// Subsequent renders clone the cached template via cloneNode(true) — zero string parsing,
+// zero attribute serialization. LRU with default cap of 256 entries (~50KB max memory).
 
 (function () {
   'use strict';
@@ -40,8 +14,8 @@
   var _misses = 0;
 
   function _key(name, size, strokeWidth, classes, label) {
-    // Build a composite cache key. Includes all options that affect the
-    // rendered SVG output so the cache is never wrong.
+    // Composite cache key. Includes all options that affect rendered SVG output,
+    // so the cache is never wrong.
     return name + '|' + (size || '') + '|' + (strokeWidth || '') +
            '|' + (classes || '') + '|' + (label ? '1' : '0');
   }

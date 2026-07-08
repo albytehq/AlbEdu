@@ -1,40 +1,30 @@
-/* ═══════════════════════════════════════════════════════════════
- * navigasi.js v2.0 — AlbEdu Admin Sidebar Navigation
- * ───────────────────────────────────────────────────────────────
- * REBUILD FROM SCRATCH.
- *
- * Design contract:
- *   1. No idle / looping animations. Every visual transition is
- *      triggered by a user action (hover, focus, active, click,
- *      touch, resize). Removed all staggered animateIn/animateOut
- *      timeouts from v1.
- *   2. Two-state logo behaviour:
- *        EXPANDED → .logo-icon-link is a normal <a> link to admin home.
- *                   .sidebar-collapse-toggle button is visible
- *                   floating at the sidebar edge.
- *        COLLAPSED → .logo-icon-link becomes the expand button (clicks
- *                    are intercepted, navigation prevented). The
- *                    separate .sidebar-collapse-toggle is hidden
- *                    via CSS — visually "melebur" into the logo.
- *      On hover/focus/active while collapsed, CSS cross-fades the
- *      default AlbEdu icon → chevron icon. No JS needed for that.
- *   3. Mobile breakpoint pinned at 1023px — MUST match the
- *      @media (max-width: 1023px) rule in navigasi.css. Below this
- *      the sidebar becomes an off-canvas drawer and "collapsed"
- *      no longer applies.
- *   4. State is persisted to localStorage so a refresh keeps the
- *      user's preference (desktop only).
- *   5. All logic is centralised here — no inline <script> copies
- *      on individual admin pages.
- * ═══════════════════════════════════════════════════════════════ */
+// navigasi.js — AlbEdu admin sidebar navigation.
+//
+// Design contract:
+//   1. No idle / looping animations. Every visual transition is triggered by
+//      a user action (hover, focus, active, click, touch, resize).
+//   2. Two-state logo behaviour:
+//        EXPANDED → .logo-icon-link is a normal <a> link to admin home.
+//                   .sidebar-collapse-toggle button is visible floating at
+//                   the sidebar edge.
+//        COLLAPSED → .logo-icon-link becomes the expand button (clicks are
+//                    intercepted, navigation prevented). The separate
+//                    .sidebar-collapse-toggle is hidden via CSS.
+//      On hover/focus/active while collapsed, CSS cross-fades the default
+//      AlbEdu icon → chevron icon. No JS needed for that.
+//   3. Mobile breakpoint pinned at 1023px — MUST match the
+//      @media (max-width: 1023px) rule in navigasi.css. Below this the
+//      sidebar becomes an off-canvas drawer and "collapsed" no longer applies.
+//   4. State is persisted to localStorage so a refresh keeps the user's
+//      preference (desktop only).
+//   5. All logic is centralised here — no inline <script> copies on
+//      individual admin pages.
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    /* ── Constants ─────────────────────────────────────────────── */
     const MOBILE_BREAKPOINT = 1023;
     const STORAGE_KEY       = 'albedu-sidebar-collapsed';
 
-    /* ── DOM ───────────────────────────────────────────────────── */
     const sidebar    = document.querySelector('.sidebar');
     if (!sidebar) return; // Not an admin page with a sidebar.
 
@@ -45,7 +35,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const notifBtn   = document.querySelector('.header-right .notification-btn, .notification-btn');
     const badge      = document.querySelector('.header-right .badge, .notification-btn .badge');
 
-    /* ── Sidebar overlay (mobile) ──────────────────────────────── */
     let sidebarOverlay = document.querySelector('.sidebar-overlay');
     if (!sidebarOverlay) {
         sidebarOverlay = document.createElement('div');
@@ -53,7 +42,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.body.appendChild(sidebarOverlay);
     }
 
-    /* ── Native tooltips on menu items (visible when collapsed) ── */
     function _t(key, fallback) {
         return fallback;
     }
@@ -72,8 +60,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Re-update tooltips when locale changes (so they reflect the new lang)
 
-    // [Item 2 Memory Leak Fix] Named handlers for document/window listeners
-    // so they can be removed on pagehide. Anonymous functions can't be removed.
+    // Named handlers for document/window listeners so they can be removed
+    // on pagehide. Anonymous functions can't be removed.
     const _onKeydown = function (e) {
         if (e.key !== 'Escape') return;
         if (!isMobile()) return;
@@ -121,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('keydown', _onKeydown);
     window.addEventListener('resize', _onResize);
 
-    // [Item 2] Cleanup on page hide — prevents ghost listeners in bfcache
+    // Cleanup on page hide — prevents ghost listeners in bfcache.
     function _cleanup() {
         document.removeEventListener('keydown', _onKeydown);
         window.removeEventListener('resize', _onResize);
@@ -130,7 +118,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     window.addEventListener('pagehide', _cleanup, { once: true });
 
-    /* ── State helpers ─────────────────────────────────────────── */
     function isMobile() {
         return window.innerWidth <= MOBILE_BREAKPOINT;
     }
@@ -138,11 +125,9 @@ document.addEventListener('DOMContentLoaded', function () {
         return sidebar.classList.contains('collapsed');
     }
 
-    /**
-     * Apply collapsed/expanded state and persist to localStorage
-     * (desktop only — mobile never persists since the drawer
-     * system takes over below MOBILE_BREAKPOINT).
-     */
+    // Apply collapsed/expanded state and persist to localStorage
+    // (desktop only — mobile never persists since the drawer system takes
+    // over below MOBILE_BREAKPOINT).
     function setCollapsed(collapsed) {
         if (collapsed) {
             sidebar.classList.add('collapsed');
@@ -157,17 +142,11 @@ document.addEventListener('DOMContentLoaded', function () {
         syncAriaLabels();
     }
 
-    /**
-     * Sync aria-label / aria-expanded / role / title on the toggle
-     * button and the logo link based on the current state.
-     *
-     * - When collapsed (desktop), the logo link announces itself as
-     *   a button ("Buka sidebar") because that's what it now is.
-     * - When expanded, the logo link is a normal link to home.
-     * - On mobile, the logo link is always a normal link — the
-     *   sidebar is a drawer that's either open or closed, and the
-     *   "collapsed" concept doesn't apply.
-     */
+    // Sync aria-label / aria-expanded / role / title on the toggle button and
+    // the logo link based on the current state. When collapsed (desktop), the
+    // logo link announces itself as a button ("Buka sidebar"). When expanded,
+    // it's a normal link to home. On mobile, the logo link is always a normal
+    // link — the sidebar is a drawer that's either open or closed.
     function syncAriaLabels() {
         const collapsed = isCollapsed();
         const mobile    = isMobile();
@@ -177,11 +156,10 @@ document.addEventListener('DOMContentLoaded', function () {
             toggleBtn.setAttribute('aria-label',    label);
             toggleBtn.setAttribute('aria-expanded', String(!collapsed));
             toggleBtn.title = label;
-            // FIX i1.5: When collapsed + desktop, the toggle is
-            // visually hidden (visibility:hidden + opacity:0 via CSS).
-            // Mark it aria-hidden so screen readers don't announce a
-            // hidden "Buka sidebar" button that the user can't see.
-            // The logo link now carries that role instead.
+            // When collapsed + desktop, the toggle is visually hidden
+            // (visibility:hidden + opacity:0 via CSS). Mark it aria-hidden so
+            // screen readers don't announce a hidden "Buka sidebar" button the
+            // user can't see. The logo link carries that role instead.
             if (collapsed && !mobile) {
                 toggleBtn.setAttribute('aria-hidden', 'true');
             } else {
@@ -191,11 +169,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (logoLink) {
             if (collapsed && !mobile) {
-                // COLLAPSED STATE: icon AlbEdu berfungsi sebagai tombol EXPAND.
-                // Hapus href supaya <a> TIDAK bisa navigate sama sekali —
-                // defensive approach. Even if JS click handler fails/races,
-                // browser won't navigate to panel admin. Click handler
-                // (registered separately) will call expand().
+                // COLLAPSED: icon AlbEdu acts as the EXPAND button. Drop href so
+                // the <a> can't navigate even if the click handler races — browser
+                // won't navigate to panel admin. The click handler calls expand().
                 logoLink.removeAttribute('href');
                 logoLink.setAttribute('aria-label', _t('nav.open_sidebar', null, 'Buka sidebar'));
                 logoLink.setAttribute('role', 'button');
@@ -203,10 +179,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 logoLink.title = _t('nav.open_sidebar', null, 'Buka sidebar');
                 logoLink.style.cursor = 'pointer';
             } else {
-                // EXPANDED STATE (or mobile): icon AlbEdu berfungsi sebagai
-                // LINK ke panel administrator. Restore href.
-                // v0.742.0: fallback is 'index.html' (same folder) since all
-                // admin pages now live at pages/admin/*.html (flat structure).
+                // EXPANDED (or mobile): icon AlbEdu is a LINK to the admin
+                // panel. Restore href — fallback is 'index.html' (same folder)
+                // since admin pages live at pages/admin/*.html (flat structure).
                 logoLink.setAttribute('href', logoLink.dataset.href || 'index.html');
                 logoLink.setAttribute('aria-label', 'AlbEdu Creates — Ke beranda');
                 logoLink.removeAttribute('role');
@@ -217,19 +192,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    /* ── Toggle handlers ───────────────────────────────────────── */
     function toggleCollapsed() {
         setCollapsed(!isCollapsed());
-        // FIX i1.1: When the toggle button is clicked, it becomes
-        // visibility:hidden + opacity:0 in collapsed state, which
-        // causes focus to fall back to <body>. Move focus to the
-        // logo link so keyboard users can continue tabbing from a
-        // sensible anchor — the logo is now the next logical
-        // interactive element (it acts as the expand button when
-        // collapsed, or as the home link when expanded).
+        // When the toggle is clicked it becomes visibility:hidden + opacity:0
+        // in collapsed state, which causes focus to fall back to <body>. Move
+        // focus to the logo link so keyboard users can continue tabbing from a
+        // sensible anchor — the logo is the next logical interactive element
+        // (expand button when collapsed, home link when expanded).
         if (logoLink) {
-            // Use a microtask to let the CSS transition + visibility
-            // change settle before moving focus.
+            // Microtask lets the CSS transition + visibility change settle.
             Promise.resolve().then(() => logoLink.focus());
         }
     }
@@ -244,15 +215,12 @@ document.addEventListener('DOMContentLoaded', function () {
         toggleBtn.addEventListener('click', toggleCollapsed);
     }
 
-    /* ── Logo click handler — link when expanded, button when collapsed ──
-     * This is the core "two-state logo" behaviour. When the sidebar
-     * is collapsed (desktop only), clicking the logo must NOT
-     * navigate to home — it must expand the sidebar instead. We
-     * intercept the click and prevent default navigation.
-     *
-     * On mobile, the logo is always a normal link — the drawer's
-     * open/close is handled by the menu-toggle button.
-     */
+    // Logo click handler — link when expanded, button when collapsed.
+    // Core "two-state logo" behaviour. When the sidebar is collapsed (desktop
+    // only), clicking the logo must NOT navigate to home — it must expand the
+    // sidebar instead. We intercept the click and prevent default navigation.
+    // On mobile, the logo is always a normal link — the drawer's open/close is
+    // handled by the menu-toggle button.
     if (logoLink) {
         logoLink.addEventListener('click', function (e) {
             if (isCollapsed() && !isMobile()) {
@@ -276,15 +244,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /* ── Restore persisted state (desktop only) ──────────────────
-     * FIX i1.4: If the user is on mobile, clear any stale 'true'
-     * value from localStorage. The previous version left the stale
-     * value in storage on mobile reload — it was only cleaned up
-     * later by the resize handler. Cleaning immediately on init
-     * keeps the storage value consistent with the actual rendered
-     * state, and prevents a confusing "collapsed=true restored"
-     * log on a subsequent desktop reload.
-     */
+    // Restore persisted state (desktop only). If the user is on mobile, clear
+    // any stale 'true' value from localStorage — the previous version left the
+    // stale value in storage on mobile reload (only cleaned later by the resize
+    // handler). Cleaning immediately on init keeps storage consistent with the
+    // actual rendered state and prevents a confusing "collapsed=true restored"
+    // log on a subsequent desktop reload.
     try {
         if (isMobile()) {
             // Mobile: collapsed doesn't apply, drop stale value.
@@ -295,7 +260,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (_) { /* ignore */ }
     syncAriaLabels();
 
-    /* ── Mobile sidebar drawer ─────────────────────────────────── */
     function setMenuIcon(name) {
         if (!menuToggle) return;
         // Use the SVG icon system (AlbEdu.icon) instead of font-based icons.
@@ -324,19 +288,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     sidebarOverlay.addEventListener('click', closeSidebar);
 
-    /* FIX i1.2: ESC key closes the mobile drawer. Standard a11y
-     * pattern for off-canvas overlays. Listener is on document
-     * (not on the overlay) because the overlay has tabindex=-1
-     * and won't receive key events when the sidebar itself holds
-     * focus. */
-    /* ── Navigation click handler ─────────────────────────────────
-     * FIX i1.3: v2 erroneously called e.preventDefault() unconditionally
-     * in some branches, which blocked the default navigation to the
-     * target page. The click handler should only intervene for:
-     *   - placeholder hrefs ('#', 'javascript:')
-     *   - mobile drawer closing before navigate (no preventDefault)
-     * Otherwise let the browser do its native <a href> navigation.
-     */
+    // ESC closes the mobile drawer. Standard a11y pattern for off-canvas
+    // overlays. Listener is on document (not on the overlay) because the
+    // overlay has tabindex=-1 and won't receive key events when the sidebar
+    // itself holds focus.
+    //
+    // Navigation click handler — only intervene for placeholder hrefs ('#',
+    // 'javascript:') and mobile drawer closing before navigate. Otherwise let
+    // the browser do its native <a href> navigation.
     menuItems.forEach(item => {
         const link = item.querySelector('.menu-item-content');
         if (!link) return;
@@ -352,13 +311,11 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    /* ── Active state from URL ───────────────────────────────────
-     * v0.742.0: Mapping extended to cover every admin page so the
-     * sidebar "active" highlight works uniformly across both legacy
-     * redirect stubs (buat-ujian, data-hasil, ujian-peserta) and the
-     * new v2 admin pages. Legacy stubs still map to their canonical
-     * destination tab so the user lands on the right highlighted
-     * entry even when they hit an old bookmark. */
+    // Active state from URL — pageMapping covers every admin page so the
+    // sidebar "active" highlight works uniformly across legacy redirect stubs
+    // (buat-ujian, data-hasil, ujian-peserta) and current admin pages. Legacy
+    // stubs still map to their canonical destination tab so the user lands on
+    // the right highlighted entry even from an old bookmark.
     const pageMapping = {
         'profile.html':          'profil',
         'create-assessment.html': 'create-assessment',
@@ -380,43 +337,27 @@ document.addEventListener('DOMContentLoaded', function () {
         activeItem.classList.add('active');
     }
 
-    /* ── Resize: reset state when crossing the breakpoint ────────
-     * Debounced — prevents thrashing during drag-resize. The
-     * previous version had race conditions where drawer state and
-     * collapsed state could fight each other in the 993–1023px
-     * "dead zone". Now both states are reset cleanly whenever the
-     * viewport crosses MOBILE_BREAKPOINT.
-     *
-     * FIX i2.1: When crossing into mobile, ALSO clear the
-     * localStorage value. The init-time cleanup (fix i1.4) only
-     * handles reload; the resize handler previously left the stale
-     * 'true' value intact, so a user who resized mobile→desktop
-     * would unexpectedly see the sidebar collapsed even if they
-     * had been on mobile for a while.
-     */
-    // [Item 2] Old anonymous resize listener removed — merged into named _onResize above
+    // Resize: reset state when crossing the breakpoint. Debounced — prevents
+    // thrashing during drag-resize. Both drawer and collapsed state are reset
+    // cleanly whenever the viewport crosses MOBILE_BREAKPOINT.
+    //
+    // When crossing into mobile, also clear the localStorage value. The
+    // init-time cleanup only handles reload; the resize handler previously
+    // left the stale 'true' value intact, so a user who resized mobile→desktop
+    // would unexpectedly see the sidebar collapsed even if they had been on
+    // mobile for a while.
 
-    /* ── Page transition overlay — defensive cleanup ────────────
-     * v0.742.1: loading.css was changed so `.page-transition` is
-     * now HIDDEN BY DEFAULT (opacity:0, visibility:hidden). This
-     * means the overlay no longer flashes on every navigation
-     * between admin pages — fixing the "flash pages" complaint.
-     *
-     * The overlay only becomes visible if JS explicitly adds the
-     * `.visible` class (no caller does this currently, but the
-     * hook is preserved for future use).
-     *
-     * The old hidePageTransition() logic (waiting for window.load
-     * + 300ms timeout) is no longer needed — the overlay starts
-     * hidden. We still strip any stale `.visible` class as a
-     * defensive measure in case a previous page set it before
-     * navigation (BFCache restore, etc.). */
+    // Page transition overlay — defensive cleanup. loading.css now hides
+    // .page-transition by default (opacity:0, visibility:hidden), so the
+    // overlay no longer flashes between admin pages. The overlay only becomes
+    // visible if JS explicitly adds the .visible class. We still strip any
+    // stale .visible as a defensive measure in case a previous page set it
+    // before navigation (BFCache restore, etc.).
     const pageTransition = document.querySelector('.page-transition');
     if (pageTransition) {
         pageTransition.classList.remove('visible');
     }
 
-    /* ── Notification badge ────────────────────────────────────── */
     if (badge) badge.style.display = 'none';
     if (notifBtn) {
         notifBtn.addEventListener('click', function () {
@@ -424,14 +365,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /* ── Remove logout-btn from header — handled by OptionProfile ── */
     const logoutBtn = document.getElementById('logout-btn-header');
     if (logoutBtn) logoutBtn.remove();
 
-    /* ═══════════════════════════════════════════════════════════
-     * Auth integration — kept from v1, unchanged.
-     * Syncs sidebar avatar + name from window.Auth.userData.
-     * ═══════════════════════════════════════════════════════════ */
+    // Auth integration — syncs sidebar avatar + name from window.Auth.userData.
     function _esc(str) {
         return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
                                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -507,7 +444,6 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
-    /* ── Toast helper (kept from v1) ── */
     function showToast(message, type = 'info') {
         const qn = window.QNotify || window.notify;
         if (qn?.notify?.[type]) { qn.notify[type]('', message, 3000); return; }
@@ -515,81 +451,43 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     window.showToast = showToast;
 
-    /* ═══════════════════════════════════════════════════════════
-     * _resolveProfileScriptBase() — v2.1 helper.
-     *
-     * Computes the base URL for loading scripts from `src/profile/`.
-     * Used by both _bootstrapProfilePanel() and _bootstrapOptionProfile()
-     * to avoid duplicating the path-resolution logic.
-     *
-     * Algorithm:
-     *   1. Find the <script> tag that loaded navigasi.js (this file).
-     *      Its `src` attribute is a full URL like
-     *      `https://albytehq.github.io/AlbEdu/src/utils/navigasi.js`.
-     *   2. Strip `utils/navigasi.js` and everything after, replace with
-     *      `profile/`. Result: `.../src/profile/`.
-     *   3. If navigasi.js can't be found in the DOM (defensive — should
-     *      never happen since this code IS running from navigasi.js),
-     *      fall back to `window.Auth.getBasePath()` + `src/profile/`
-     *      (root-relative, e.g. `/AlbEdu/src/profile/`).
-     *   4. Final fallback: assume 2-level page depth (pages/admin/*.html)
-     *      and use `../../src/profile/`. This matches the actual depth
-     *      of every page that loads navigasi.js (v0.742.0+).
-     *
-     * Returns a string suitable for `script.src = base + 'editor-panel.js'`.
-     * ═══════════════════════════════════════════════════════════ */
+    // _resolveProfileScriptBase() — computes the base URL for loading scripts
+    // from `src/profile/`. Used by both _bootstrapProfilePanel() and
+    // _bootstrapOptionProfile() to avoid duplicating the path-resolution logic.
+    //
+    // 1. Find the <script> tag that loaded navigasi.js (this file). Its `src`
+    //    is a full URL like `https://albytehq.github.io/AlbEdu/src/utils/navigasi.js`.
+    // 2. Strip `utils/navigasi.js` and everything after, replace with `profile/`.
+    //    Result: `.../src/profile/`.
+    // 3. If navigasi.js can't be found in the DOM, fall back to
+    //    `window.Auth.getBasePath()` + `src/profile/` (root-relative, for
+    //    example `/AlbEdu/src/profile/`).
+    // 4. Final fallback: assume 2-level page depth (pages/admin/*.html) and use
+    //    `../../src/profile/`.
     function _resolveProfileScriptBase() {
         const navSrc = document.querySelector('script[src*="navigasi.js"]')?.src || '';
         if (navSrc) {
             // navigasi.js lives at {BASE_PATH}src/utils/navigasi.js.
             // editor-panel.js / option-profile.js live at {BASE_PATH}src/profile/.
             // Strip 'utils/navigasi.js...' and replace with 'profile/'.
-            // Regex: matches 'utils/navigasi.js' followed by any query/hash, to end.
             return navSrc.replace(/utils\/navigasi\.js.*$/, 'profile/');
         }
-        // Fallback 1: use Auth BASE_PATH (root-relative, e.g. '/AlbEdu/')
+        // Fallback 1: Auth BASE_PATH (root-relative, for example '/AlbEdu/').
         const authBase = window.Auth?.getBasePath?.();
         if (authBase) return authBase + 'src/profile/';
-        // Fallback 2: assume 2-level page depth (all pages that load
-        // navigasi.js are at pages/admin/*.html = 2 levels deep, v0.742.0+).
+        // Fallback 2: assume 2-level page depth (pages/admin/*.html).
         return '../../src/profile/';
     }
 
-    /* ═══════════════════════════════════════════════════════════
-     * ProfileEditorPanel bootstrap — kept from v1, FIXED in v2.1.
-     * Loads once here so every admin page gets the panel without
-     * each page loading its own copy. onSaved updates sidebar
-     * avatar + name without a reload.
-     *
-     * v2.1 FIX: The original regex `navSrc.replace(/navigasi\.js.*$/, '')`
-     * strips only the filename from `src/utils/navigasi.js`, leaving
-     * `src/utils/`. Appending `editor-panel.js` then tried to load
-     * `src/utils/editor-panel.js` — a 404, because editor-panel.js
-     * actually lives at `src/profile/editor-panel.js`. The script
-     * silently failed to load on 4 of 5 admin sub-pages (only
-     * profile.html worked, because it also loads editor-panel.js
-     * directly via a <script> tag). The fix: strip `utils/navigasi.js`
-     * and replace with `profile/` to land in the correct directory.
-     * See rule-url-albedu.md §3 (always use Auth BASE_PATH helpers).
-     * ═══════════════════════════════════════════════════════════ */
+    // Lazy-load ProfileEditorPanel + OptionProfile scripts on first interaction.
+    // Both scripts are fetched + parsed only when the user actually opens the
+    // profile panel — previously they were loaded eagerly on every admin page,
+    // costing 2 extra round-trips and competing for the main thread on every
+    // navigation. profile.html has its own "Edit Profil" / "Ganti Foto"
+    // buttons that call window.ProfileEditorPanel.open() directly (not through
+    // the sidebar avatar), so the loader is exposed as a shared, idempotent
+    // window.AlbEdu.ensureProfileScripts() API that any trigger can call.
     (function _bootstrapProfileScriptsLazy() {
-        // FIX: previously both editor-panel.js AND option-profile.js were
-        // fetched + parsed + initialised on EVERY admin page load, even
-        // when the user never touches the avatar/profile button on that
-        // visit. That's 2 extra network round-trips and 2 extra scripts
-        // competing for the main thread on every single navigation —
-        // part of why switching between admin pages felt heavy. Neither
-        // script does anything until the user opens the profile options
-        // panel or the profile editor, so we now defer loading both
-        // until first interaction.
-        //
-        // IMPORTANT: profile.html has its OWN "Edit Profil" / "Ganti
-        // Foto" buttons that call window.ProfileEditorPanel.open()
-        // directly — not through the sidebar avatar. So the loader is
-        // exposed as a shared, idempotent window.AlbEdu.ensureProfileScripts()
-        // API that ANY trigger can call, instead of being private to the
-        // sidebar avatar listeners below.
-        let _loadPromise = null;
 
         function ensureProfileScripts(triggerEvent) {
             if (_loadPromise) return _loadPromise;

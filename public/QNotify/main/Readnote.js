@@ -1,59 +1,12 @@
-// Readnote.js — QNotify 1.0.5 For AlbEdu
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  QNotify — Readnote.js 1.0.5 For AlbEdu [v7.4.0 UPGRADE]                   ║
- * ║  "Label Family — ReadNote Factory"                          ║
- * ╚══════════════════════════════════════════════════════════════╝
- *
- * CHANGES v7.4.0:
- *
- *  [U1] REMOVED 40ms setTimeout delay before content reveal.
- *       Content items now animate in immediately when card springs settle.
- *       onPartRest fires _animateContentIn_Testing directly — zero gap.
- *
- *  [U2] Easing stagger — item delays accelerate (55→40→28ms) rather
- *       than flat 55ms per item. First item is always instant (0ms).
- *       Formula: delay[i] = sum of gaps[0..i-1], gaps shrink by 0.72x each step.
- *
- *  [U3] Shadow spring on card enter — card box-shadow "rises" from
- *       near-zero to full as card scales in. Compositor-safe: uses
- *       a single CSS custom property (--rn-shadow-lift, 0→1) that
- *       drives a CSS interpolation via inline style. Cleared after rest.
- *
- *  [U4] Close button deferred enter animation — rn-close-btn is hidden
- *       (opacity:0, translateX:14px) until ALL content items finish
- *       revealing. Then fades in from the right via spring.
- *       Prevents accidental tap before user has seen the content.
- *
- *  [U5] Continue button jiggly-bounce on unlock — single physics bounce
- *       (scale 0.88 → 1.12 → 1.0) via underdamped spring, fires once.
- *       No pulse, no repeat. Replaces old scale-pop.
- *
- *  [U6] Multi-step ReadNote — optional steps[] array.
- *       - steps: [{ title, body }]  — if provided, enables paginated mode.
- *       - Footer shows "Lanjut 1/3 →" / "Continue 1/3 →", last step → "Selesai/Done".
- *       - Step transition: current content exits left (translateX -32px + fade),
- *         next content enters right (translateX +32px + fade). Spring driven.
- *       - Progress bar auto-advances per step.
- *       - scroll-progress re-wired per step if readType === 'required'.
- *       - single-step (no steps[] or steps.length===1) → behavior identical to v7.3.
- *
- *  [UNCHANGED] All Family-other files (label.js, dialog.js, motion.js,
- *       notify.css, label.css) are not touched.
- *       spring.js is only consumed, never modified.
- *       engine.js: one targeted addition in readNote() for steps[] passthrough.
- */
+// Readnote.js — QNotify ReadNote factory: DOM builder + spring animations +
+// markdown parser. Multi-step support via optional steps[] array.
 
 import { acquireSpring } from './spring.js';
 import { escapeHtml, sanitizeUrl } from '../security/sanitize.js';
-// [v7.5.0] glitch.js: stampInitialState already ran before DOM insert (from engine.js).
-// animateReadNoteEnter must NOT re-write card opacity/transform — it conflicts.
-// clearInitialState is called on exit to release GPU compositor layer.
+// glitch.js owns the pre-DOM-insert stamp; we only clear it on exit to release
+// the GPU compositor layer. animateReadNoteEnter does NOT re-write card
+// opacity/transform — that would conflict with the stamp.
 import { clearInitialState } from './glitch.js';
-
-// ════════════════════════════════════════════════════════════
-//  HELPERS
-// ════════════════════════════════════════════════════════════
 
 const _clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -61,12 +14,8 @@ function _aSpring(cfg) {
     return acquireSpring(cfg, 'analytic');
 }
 
-// ════════════════════════════════════════════════════════════
-//  EASING STAGGER  [U2]
-//  Gaps shrink by 0.72x each step: 55, 39, 28, 20, 14 …
-//  First item always instant (delay=0).
-// ════════════════════════════════════════════════════════════
-
+// Stagger delays — gaps shrink by 0.72x each step (55, 39, 28, 20, 14 …).
+// First item is always instant (delay=0). Gives an accelerating cascade feel.
 function _buildStaggerDelays(count) {
     const delays = [];
     let acc  = 0;
@@ -79,21 +28,15 @@ function _buildStaggerDelays(count) {
     return delays;
 }
 
-// ════════════════════════════════════════════════════════════
-//  SHADOW SPRING UTILS  [U3]
-//  We interpolate between two shadow strings using a 0-1 scalar.
-//  Only opacity/blur values shift — no layout properties.
-// ════════════════════════════════════════════════════════════
+// Shadow spring utils — interpolate between two shadow strings using a 0-1
+// scalar. Only opacity/blur values shift; no layout properties touched.
 
 function _applyShadowLift(card, t) {
     // t: 0 (card just appeared) → 1 (fully settled)
     const t2 = _clamp(t, 0, 1);
-    // Layer 1: ambient — always present but lighter at start
     const a1 = (0.02 + 0.04 * t2).toFixed(3);
-    // Layer 2: blue mid — scale blur from 8 to 24
     const blur2 = (8 + 16 * t2).toFixed(1);
     const a2    = (0.06 + 0.08 * t2).toFixed(3);
-    // Layer 3: blue deep — scale blur from 20 to 64
     const blur3 = (20 + 44 * t2).toFixed(1);
     const a3    = (0.04 + 0.06 * t2).toFixed(3);
     card.style.boxShadow = [
@@ -105,18 +48,12 @@ function _applyShadowLift(card, t) {
 }
 
 function _clearShadowLift(card) {
-    // Remove inline shadow so CSS var takes over again
     card.style.boxShadow = '';
 }
 
-// ════════════════════════════════════════════════════════════
-//  MARKDOWN PARSER  (lightweight, no dependencies)
-// ════════════════════════════════════════════════════════════
+// Lightweight markdown parser — no dependencies. Output is sanitized via
+// _sanitizeHTML + sanitizeUrl before interpolation.
 
-/**
- * Sanitize raw string — escapes HTML special chars to prevent injection.
- * Applied to every text node before any markdown transformation.
- */
 function _sanitizeHTML(str) {
     return str
         .replace(/&/g, '&amp;')
@@ -126,31 +63,12 @@ function _sanitizeHTML(str) {
         .replace(/'/g, '&#39;');
 }
 
-/**
- * Parse a subset of Markdown into safe HTML.
- *
- * Supported syntax:
- *   Block:
- *     # H1  ## H2  ### H3  #### H4
- *     > blockquote
- *     --- / *** / ___  → <hr>
- *     ```code block```
- *     - item / * item / + item   → <ul>
- *     1. item                    → <ol>
- *     blank line                 → paragraph break
- *   Inline:
- *     **bold** / __bold__
- *     *italic* / _italic_
- *     ~~strikethrough~~
- *     `inline code`
- *     [text](url)
- *
- * Text wrapping: long words are naturally broken by CSS (word-break: break-word).
- * No horizontal scroll is produced — overflow-x: hidden on .rn-content.
- *
- * @param {string} raw  — raw user-supplied string (may contain markdown)
- * @returns {string}    — safe HTML string
- */
+// Parse a subset of Markdown into safe HTML.
+//
+// Supported block: #/##/###/#### headings, > blockquote, --- | *** | ___ → <hr>,
+// ```code block```, - * + → <ul>, 1. → <ol>, blank line → paragraph break.
+// Inline: **bold**, __bold__, *italic*, _italic_, ~~strikethrough~, `code`,
+// [text](url). Long words are broken by CSS word-break; .rn-content hides overflow-x.
 function _parseMarkdown(raw) {
     if (!raw || typeof raw !== 'string') return '';
 
@@ -170,24 +88,23 @@ function _parseMarkdown(raw) {
 
     // Inline transformer — runs after block structure is parsed
     const inline = (text) => {
-        // 1. Sanitize first
+        // Sanitize first
         let s = _sanitizeHTML(text);
-        // 2. Links  [text](url)
-        // Q5 fix: replaced blacklist (only stripped javascript:) with whitelist
-        // sanitizer — blocks data:, vbscript:, file:, tab-prefixed variants too.
+        // Links [text](url) — sanitizeUrl uses a whitelist that drops
+        // javascript:, data:, vbscript:, file:, and tab-prefixed variants.
         s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, t, u) => {
             const safeU = sanitizeUrl(u);
-            if (!safeU) return ''; // drop unsafe URL entirely
+            if (!safeU) return '';
             return `<a href="${safeU}" target="_blank" rel="noopener noreferrer">${t}</a>`;
         });
-        // 3. Bold **text** or __text__
+        // Bold **text** or __text__
         s = s.replace(/\*\*(.+?)\*\*|__(.+?)__/g, (_, a, b) => `<strong>${a || b}</strong>`);
-        // 4. Italic *text* or _text_ (single, not double)
+        // Italic *text* or _text_ (single, not double)
         s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)|(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g,
             (_, a, b) => `<em>${a || b}</em>`);
-        // 5. Strikethrough ~~text~~
+        // Strikethrough ~~text~~
         s = s.replace(/~~(.+?)~~/g, (_, a) => `<s>${a}</s>`);
-        // 6. Inline code `code`
+        // Inline code `code`
         s = s.replace(/`([^`]+)`/g, (_, a) => `<code>${a}</code>`);
         return s;
     };
@@ -196,7 +113,7 @@ function _parseMarkdown(raw) {
         const line = lines[i];
         const trimmed = line.trim();
 
-        // ── Code block (``` ... ```) ─────────────────────────
+        // Code block (``` ... ```)
         if (trimmed.startsWith('```')) {
             flushBlock();
             const lang = trimmed.slice(3).trim();
@@ -211,7 +128,7 @@ function _parseMarkdown(raw) {
             continue;
         }
 
-        // ── HR ───────────────────────────────────────────────
+        // HR
         if (/^(---+|\*\*\*+|___+)$/.test(trimmed)) {
             flushBlock();
             out.push('<hr>');
@@ -219,7 +136,7 @@ function _parseMarkdown(raw) {
             continue;
         }
 
-        // ── Headings ─────────────────────────────────────────
+        // Headings
         const hMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
         if (hMatch) {
             flushBlock();
@@ -229,7 +146,7 @@ function _parseMarkdown(raw) {
             continue;
         }
 
-        // ── Blockquote ───────────────────────────────────────
+        // Blockquote
         if (trimmed.startsWith('> ') || trimmed === '>') {
             flushBlock();
             const bqText = trimmed.replace(/^>\s?/, '');
@@ -238,7 +155,7 @@ function _parseMarkdown(raw) {
             continue;
         }
 
-        // ── Unordered list ───────────────────────────────────
+        // Unordered list
         const ulMatch = trimmed.match(/^[-*+]\s+(.+)$/);
         if (ulMatch) {
             closePara();
@@ -248,7 +165,7 @@ function _parseMarkdown(raw) {
             continue;
         }
 
-        // ── Ordered list ─────────────────────────────────────
+        // Ordered list
         const olMatch = trimmed.match(/^\d+\.\s+(.+)$/);
         if (olMatch) {
             closePara();
@@ -258,14 +175,14 @@ function _parseMarkdown(raw) {
             continue;
         }
 
-        // ── Blank line → paragraph break ─────────────────────
+        // Blank line → paragraph break
         if (trimmed === '') {
             flushBlock();
             i++;
             continue;
         }
 
-        // ── Normal text → paragraph ──────────────────────────
+        // Normal text → paragraph
         closeList();
         if (!inPara) { out.push('<p>'); inPara = true; }
         else         { out.push('<br>'); }  // soft line break within paragraph
@@ -276,10 +193,6 @@ function _parseMarkdown(raw) {
     flushBlock();
     return out.join('');
 }
-
-// ════════════════════════════════════════════════════════════
-//  DOM BUILDER
-// ════════════════════════════════════════════════════════════
 
 const NO_SELECT = [
     '-webkit-user-select:none',
@@ -302,21 +215,21 @@ export function createReadNoteElement({
     lang      = 'id',
     closeText,
     continueText,
-    steps,           // [U6] optional array of { title, body }
+    steps,           // optional array of { title, body } for paginated mode
 }) {
     const finalUiType   = ['default', 'text_only'].includes(uiType)   ? uiType   : 'default';
     const finalReadType = ['required', 'optional'].includes(readType) ? readType : 'required';
     const hasProgress   = typeof progress === 'number' && progress >= 0;
 
-    // [U6] Multi-step detection
+    // Multi-step detection.
     const hasSteps      = Array.isArray(steps) && steps.length > 1;
     const stepCount     = hasSteps ? steps.length : 1;
 
-    // In step mode, first step's content is the initial render
+    // In step mode, first step's content is the initial render.
     const activeTitle   = hasSteps ? steps[0].title   : title;
     const activeBody    = hasSteps ? steps[0].body     : bodyText;
 
-    // scroll-progress only on required + bodyText (first step or single)
+    // scroll-progress only on required + bodyText (first step or single).
     const hasScrollProgress = finalReadType === 'required' && !!activeBody && !hasSteps;
 
     const el = document.createElement('div');
@@ -339,7 +252,7 @@ export function createReadNoteElement({
 
     const closeLabel    = closeText    || (lang === 'en' ? 'Close'    : 'Tutup');
 
-    // [U6] Footer label for steps vs single
+    // Footer label for steps vs single.
     const continueLabel = hasSteps
         ? _stepBtnLabel(1, stepCount, lang)
         : (continueText || (lang === 'en' ? 'Continue' : 'Lanjutkan'));
@@ -347,8 +260,8 @@ export function createReadNoteElement({
     const showFooter = hasSteps || finalReadType === 'optional' || hasScrollProgress;
     const btnLocked  = !hasSteps && hasScrollProgress;
 
-    // [U4] Close button starts hidden — revealed after content anim
-    // Q4 fix (Phase 12 Security L2): escape all user-controlled text fields
+    // Close button starts hidden — revealed after content animates in.
+    // All user-controlled text fields are escaped (title, message, icon, label).
     el.innerHTML = `
         <div class="rn-backdrop"></div>
         <div class="rn-card" id="${id}-card">
@@ -405,7 +318,7 @@ export function createReadNoteElement({
     return el;
 }
 
-// [U6] Step button label helper
+// Step button label helper — "Continue 1/3 →" / "Lanjut 1/3 →", last step → Done/Selesai.
 function _stepBtnLabel(currentStep, total, lang) {
     if (currentStep >= total) {
         return lang === 'en' ? 'Done' : 'Selesai';
@@ -417,7 +330,7 @@ function _stepBtnLabel(currentStep, total, lang) {
 }
 
 function _buildDefaultContent(id, title, logoSrc, logoIcon, bodyText) {
-    // Q4 fix: sanitize logoSrc URL (block javascript:, data: schemes), escape title/logoIcon
+    // Sanitize logoSrc URL (block javascript:, data: schemes); escape title/logoIcon.
     const safeLogoSrc = sanitizeUrl(logoSrc);
     const logoHTML = safeLogoSrc
         ? `<img class="rn-logo-img rn-anim-item" src="${safeLogoSrc}" alt="logo" />`
@@ -436,7 +349,7 @@ function _buildDefaultContent(id, title, logoSrc, logoIcon, bodyText) {
 }
 
 function _buildTextOnlyContent(id, title, subtitle, bodyText) {
-    // Q4 fix: escape user-controlled title + subtitle
+    // Escape user-controlled title + subtitle.
     return `
         <div class="rn-title rn-anim-item" id="${id}-title">${escapeHtml(title)}</div>
         ${subtitle ? `<div class="rn-subtitle rn-anim-item" id="${id}-subtitle">${escapeHtml(subtitle)}</div>` : ''}
@@ -445,9 +358,7 @@ function _buildTextOnlyContent(id, title, subtitle, bodyText) {
     `;
 }
 
-// ════════════════════════════════════════════════════════════
-//  ANIMATION ENGINE
-// ════════════════════════════════════════════════════════════
+// ANIMATION ENGINE
 
 export function animateReadNoteEnter(el, uiType, onReady) {
     const card     = el.querySelector('.rn-card');
@@ -457,52 +368,49 @@ export function animateReadNoteEnter(el, uiType, onReady) {
     if (el._rnAnimating) return { cancel: () => {} };
     el._rnAnimating = true;
 
-    // [1.0.5] Element-level cancel flag — shared with setTimeout callbacks inside
+    // Element-level cancel flag — shared with setTimeout callbacks inside
     // _animateContentIn / _animateCloseBtnIn. Prevents ghost springs from running
     // after animateReadNoteExit fires while stagger timeouts are still pending.
     el._rnAnimCancelled = false;
 
     let cancelled = false;
 
-    // Card enter
-    // [v7.5.0 FOIS Fix — ReadNote]
-    // engine.js does NOT call stampInitialState (it breaks translate(-50%,-50%) centering).
-    // CSS .label-readnote.spawn .rn-card { visibility:hidden } = FOUC guard.
-    // We write the full initial state HERE with correct centering transform included.
-    // Springs start from these values → zero discontinuity on first frame.
+    // Card enter — engine.js does NOT call stampInitialState because it breaks
+    // translate(-50%,-50%) centering. CSS .label-readnote.spawn .rn-card
+    // { visibility:hidden } is the FOUC guard. We write the full initial state
+    // HERE with the correct centering transform included so springs start from
+    // these exact values → zero discontinuity on the first frame.
     card.style.willChange = 'transform, opacity';
     card.style.opacity    = '0';
-    // [1.0.5] Reduced initial translateY: 28px instead of 60px.
-    // 60px caused a visible "position spike" on first frame — browser had to paint the
-    // card far off its resting position, triggering a layout stutter. 28px gives a clear
-    // "rising into place" feel without the jarring initial position.
+    // Initial translateY is 28px (was 60). 60px caused a visible position spike
+    // on the first frame — browser had to paint the card far off its resting
+    // position, triggering a layout stutter. 28px still gives a clear "rising
+    // into place" feel without the jarring initial position.
     card.style.transform  = 'translate(-50%, -50%) scale(0.97) translateY(28px)';
     card.style.height     = '';
     card.style.overflow   = '';
 
-    // [U3] Shadow starts near-zero
+    // Shadow starts near-zero, rises to full as card scales in.
     _applyShadowLift(card, 0);
 
     _hideContentItems(el);
 
     const scaleSpring   = _aSpring({ k: 300, c: 24, m: 0.9 });
     const txYSpring     = _aSpring({ k: 280, c: 22, m: 0.9 });
-    // [FIX] Same params as bdSpring → card opacity + backdrop perfectly synced
+    // Same params as bdSpring → card opacity + backdrop stay perfectly synced.
     const opacitySpring = _aSpring({ k: 240, c: 20, m: 1.0 });
-    // [U3] Shadow decoupled — never gates anything else
+    // Shadow spring is decoupled — never gates anything else.
     const shadowSpring  = _aSpring({ k: 180, c: 22, m: 1.0 });
 
-    // [1.0.5] Jump values match inline style above.
-    // txYSpring now starts at 28 (was 60) — consistent with card.style.transform.
+    // Jump values match the inline style above so the first frame has no discontinuity.
     scaleSpring.jump(0.97);
     txYSpring.jump(28);
     opacitySpring.jump(0);
     shadowSpring.jump(0);
 
-    // [FIX][v7.5.0] Backdrop: identical spring to opacitySpring, initialized here.
-    // Note: backdrop visibility:hidden is controlled by .label-readnote.spawn CSS.
-    // After .spawn is removed by afterTwoFrames(), visibility becomes visible,
-    // and the spring drives opacity from 0→1.
+    // Backdrop uses the same spring as opacitySpring. backdrop visibility:hidden
+    // is controlled by .label-readnote.spawn CSS; once .spawn is removed by
+    // afterTwoFrames(), visibility becomes visible and the spring drives 0→1.
     if (backdrop) {
         backdrop.style.opacity    = '0';
         backdrop.style.willChange = 'opacity';
@@ -519,16 +427,11 @@ export function animateReadNoteEnter(el, uiType, onReady) {
         },
     });
 
-    // [1.0.5] CONTENT TIMING OVERHAUL — fixes content delay + "blank card" glitch.
-    //
-    // OLD: wait for ALL 3 card springs to rest (~550-620ms), then start content.
-    //      → Card visible but empty for >500ms. Users saw a blank card appear.
-    //      → setTimeout-based stagger had no cancel guard → ghost springs after exit.
-    //
-    // NEW: trigger content once opacity crosses 0.72 threshold (~160ms into animation).
-    //      → Card clearly visible, springs still settling → content flows in AS card lands.
-    //      → Feels alive, not dead. Zero blank-card period.
-    //      → onRest is a guaranteed safety fallback if threshold is never crossed.
+    // Content trigger: start content reveal once opacity crosses 0.72 (~160ms in).
+    // Waiting for ALL 3 card springs to rest left a visible "blank card" period
+    // of ~500ms — card visible but empty. Triggering at 72% opacity means content
+    // starts flowing in AS the card lands, which feels alive. onRest is the safety
+    // fallback if the threshold is somehow missed.
     let contentTriggered = false;
     const triggerContent = () => {
         if (contentTriggered || cancelled) return;
@@ -564,7 +467,7 @@ export function animateReadNoteEnter(el, uiType, onReady) {
         onRest: () => triggerContent(),
     });
 
-    // [U3] Shadow: independent, clears inline style on rest
+    // Shadow spring: independent — clears inline style on rest so CSS var takes over.
     shadowSpring.to(1, {
         onUpdate: v => { if (!cancelled) _applyShadowLift(card, v); },
         onRest:   () => { if (!cancelled) _clearShadowLift(card); },
@@ -574,7 +477,7 @@ export function animateReadNoteEnter(el, uiType, onReady) {
         cancel: () => {
             cancelled = true;
             // Mark element so all pending setTimeout callbacks bail immediately.
-            // This is the critical fix for ghost springs after rapid open→close.
+            // This is the fix for ghost springs after rapid open→close.
             contentTriggered   = true;
             el._rnAnimCancelled = true;
             scaleSpring.stop();
@@ -596,7 +499,7 @@ function _hideContentItems(el) {
         t.style.opacity   = '0';
         t.style.transform = 'translateY(12px) scale(0.97)';
     });
-    // [U4] Close button hidden until content done
+    // Close button hidden until content is done revealing.
     const closeBtn = el.querySelector('.rn-close-btn');
     if (closeBtn) {
         closeBtn.style.opacity   = '0';
@@ -604,9 +507,7 @@ function _hideContentItems(el) {
     }
 }
 
-/**
- * Content reveal — easing stagger [U2], close button deferred [U4].
- */
+// Content reveal — easing stagger + deferred close button.
 function _animateContentIn(el, uiType, onDone) {
     const items = Array.from(el.querySelectorAll('.rn-anim-item'));
     if (items.length === 0) {
@@ -614,7 +515,6 @@ function _animateContentIn(el, uiType, onDone) {
         return;
     }
 
-    // [U2] Easing stagger delays
     const delays  = _buildStaggerDelays(items.length);
     let doneCount = 0;
 
@@ -622,8 +522,8 @@ function _animateContentIn(el, uiType, onDone) {
         const delay = delays[i];
 
         const run = () => {
-            // [1.0.5] Check element-level cancel flag. If exit animation fired while
-            // stagger timeouts were pending, bail immediately — no ghost springs.
+            // Check the element-level cancel flag. If exit fired while stagger
+            // timeouts were pending, bail — no ghost springs.
             if (el._rnAnimCancelled) return;
 
             const ySpring  = _aSpring({ k: 220, c: 18, m: 1.0 });
@@ -651,7 +551,7 @@ function _animateContentIn(el, uiType, onDone) {
                 item.style.opacity    = '';
                 doneCount++;
                 if (doneCount >= items.length) {
-                    // [U4] All content done — now reveal close button
+                    // All content done — now reveal the close button.
                     _animateCloseBtnIn(el, onDone);
                 }
             };
@@ -669,11 +569,10 @@ function _animateContentIn(el, uiType, onDone) {
     });
 }
 
-/**
- * [U4] Close button enter — slides in from right after content settles.
- */
+// Close button enter — slides in from right after content settles.
+// Prevents accidental tap before the user has seen the content.
 function _animateCloseBtnIn(el, onDone) {
-    // [1.0.5] Guard: if exit fired while content stagger was in flight, skip btn animation.
+    // If exit fired while content stagger was in flight, skip the button animation.
     if (el._rnAnimCancelled) { if (onDone) onDone(); return; }
 
     const closeBtn = el.querySelector('.rn-close-btn');
@@ -711,9 +610,7 @@ function _animateCloseBtnIn(el, onDone) {
     });
 }
 
-// ════════════════════════════════════════════════════════════
-//  EXIT ANIMATION
-// ════════════════════════════════════════════════════════════
+// EXIT ANIMATION
 
 export function animateReadNoteExit(el, onDone) {
     const card     = el.querySelector('.rn-card');
@@ -730,8 +627,8 @@ export function animateReadNoteExit(el, onDone) {
 
     if (backdrop) {
         backdrop.style.willChange = 'opacity';
-        // [FIX] Always jump from 1 — avoids desync if inline opacity is mid-animation.
-        // Same spring params as card opacity → backdrop and card fade out in lockstep.
+        // Always jump from 1 — avoids desync if inline opacity is mid-animation.
+        // Same spring params as card opacity → backdrop and card fade in lockstep.
         const bdSpring = _aSpring({ k: 260, c: 22, m: 1.0 });
         bdSpring.jump(1);
         backdrop.style.opacity = '1';
@@ -759,16 +656,14 @@ export function animateReadNoteExit(el, onDone) {
         onUpdate: v => { card.style.opacity = v.toFixed(3); },
         onRest: () => {
             card.style.willChange = 'auto';
-            // [v7.5.0] Release compositor layer stamped by glitch.js
+            // Release the compositor layer stamped by glitch.js.
             clearInitialState(el);
             if (onDone) onDone();
         },
     });
 }
 
-// ════════════════════════════════════════════════════════════
-//  PROGRESS BAR UPDATER
-// ════════════════════════════════════════════════════════════
+// PROGRESS BAR UPDATER
 
 export function updateReadNoteProgress(notificationId, targetPercent) {
     const el   = document.getElementById(notificationId);
@@ -783,9 +678,7 @@ export function updateReadNoteProgress(notificationId, targetPercent) {
     });
 }
 
-// ════════════════════════════════════════════════════════════
-//  SCROLL-PROGRESS SYSTEM
-// ════════════════════════════════════════════════════════════
+// SCROLL-PROGRESS SYSTEM — locks Continue button until user scrolls to bottom.
 
 export function wireScrollProgress(notificationId, lang, onUnlock) {
     const el = document.getElementById(notificationId);
@@ -827,7 +720,7 @@ export function wireScrollProgress(notificationId, lang, onUnlock) {
                     continueBtn.removeAttribute('aria-disabled');
                     continueBtn.classList.remove('rn-btn-locked');
 
-                    // [U5] Jiggly bounce — single underdamped spring, fires once
+                    // Single underdamped bounce — overshoots ~1.12 then settles.
                     _bounceUnlock(continueBtn);
                 }
 
@@ -851,13 +744,9 @@ export function wireScrollProgress(notificationId, lang, onUnlock) {
     };
 }
 
-/**
- * [U5] Jiggly bounce on continue button unlock.
- * Single underdamped spring: scale 0.88 → 1.12 → ~1.0 (overshoots once).
- * Low damping = one natural bounce, settles cleanly. No pulse, no repeat.
- */
+// Single underdamped spring bounce on the Continue button when it unlocks.
+// k=500 (stiff), c=12 (low damp) → scale 0.88 → 1.12 → ~1.0. One bounce, no repeat.
 function _bounceUnlock(btn) {
-    // k=500 (stiff), c=12 (low damp) → overshoot ~1.12 then settle
     const spring = _aSpring({ k: 500, c: 12, m: 0.9 });
     spring.jump(0.88);
     btn.style.willChange = 'transform';
@@ -870,18 +759,10 @@ function _bounceUnlock(btn) {
     });
 }
 
-// ════════════════════════════════════════════════════════════
-//  MULTI-STEP SYSTEM  [U6]
-// ════════════════════════════════════════════════════════════
+// MULTI-STEP SYSTEM — paginated ReadNote with optional steps[] array.
 
-/**
- * Advance ReadNote to the next step.
- * Called by engine.js when continue button is clicked in step mode.
- *
- * @param {HTMLElement} el          — the readnote element
- * @param {number}      nextIdx     — index of the step to show
- * @param {Function}    [onDismiss] — called when last step is confirmed
- */
+// Advance ReadNote to the next step. Called by engine.js when Continue is
+// clicked in step mode.
 export function advanceReadNoteStep(el, nextIdx, onDismiss) {
     const steps    = el._rnSteps;
     const uiType   = el._rnUiType   || 'default';
@@ -927,16 +808,15 @@ export function advanceReadNoteStep(el, nextIdx, onDismiss) {
         txSp.to(-32, { onUpdate: v => { item.style.transform = `translateX(${v.toFixed(2)}px)`; } });
     });
 
-    // Swap content after exit (~160ms)
+    // Swap content after exit (~160ms).
     setTimeout(() => {
-        // [1.0.5] Safety: if readnote was dismissed during step transition, bail.
+        // If the readnote was dismissed during the step transition, bail.
         if (el._rnAnimCancelled) return;
 
         const step = steps[nextIdx];
 
-        // Update title + body content regardless of uiType
-        // WHY: both 'default' and 'text_only' share the same id-based title/body elements.
-        // The original if/else had identical branches — collapsed to avoid dead code.
+        // Both 'default' and 'text_only' uiTypes share the same id-based title/body
+        // elements, so a single update path handles both.
         const titleEl = content.querySelector(`#${id}-title`);
         const bodyEl  = content.querySelector(`#${id}-body`);
         if (titleEl) titleEl.textContent = step.title;
@@ -954,10 +834,10 @@ export function advanceReadNoteStep(el, nextIdx, onDismiss) {
 
         el._rnStepIdx = nextIdx;
 
-        // Re-wire scroll progress for required steps with body
+        // Re-wire scroll progress for required steps with body content.
         if (readType === 'required' && step.body) {
             if (el._rnCleanupScroll) { el._rnCleanupScroll(); el._rnCleanupScroll = null; }
-            // Lock button until scrolled
+            // Lock button until scrolled.
             if (contBtn) {
                 contBtn.disabled = true;
                 contBtn.setAttribute('aria-disabled', 'true');
@@ -980,7 +860,7 @@ export function advanceReadNoteStep(el, nextIdx, onDismiss) {
         const delays = _buildStaggerDelays(newItems.length);
         newItems.forEach((item, i) => {
             const run = () => {
-                // [1.0.5] Check cancel before creating springs in stagger
+                // Check cancel before creating springs in stagger.
                 if (el._rnAnimCancelled) return;
 
                 item.style.willChange = 'transform, opacity';

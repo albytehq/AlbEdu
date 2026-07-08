@@ -1,10 +1,4 @@
-// config.js — QNotify 1.0.5 For AlbEdu
-/**
- * ╔══════════════════════════════════════╗
- * ║  QNotify — config.js 1.0.5 For AlbEdu ║
- * ║  "Data Only. Zero Logic."           ║
- * ╚══════════════════════════════════════╝
- */
+// config.js — QNotify config: types, text, springs, timing.
 
 export const NOTIFICATION_TYPES = {
     success: {
@@ -100,11 +94,7 @@ export const DEFAULT_DURATION = 4000;
 export const VERSION = '1.0.5';
 
 
-// ════════════════════════════════════════════════════════════
-//  ANIMATION TIMING CONSTANTS
-//  All setTimeout/duration values in one place.
-//  Never use raw numbers — always reference these.
-// ════════════════════════════════════════════════════════════
+// All setTimeout/duration values in one place — never use raw numbers.
 
 export const TIMING = {
     // dialog.js morphTitle animation durations (matches CSS keyframe durations)
@@ -125,47 +115,25 @@ export const TIMING = {
     CSS_EXIT_DURATION_MS:      400,
 };
 
-// ════════════════════════════════════════════════════════════
-//  SPAWN POSITION CONSTANTS
-//  Initial off-screen positions for stamp-before-insert pipeline.
-// ════════════════════════════════════════════════════════════
+// Initial off-screen positions for stamp-before-insert pipeline.
 
 export const SPAWN = {
     DESKTOP_TRANSLATE_X: 450,   // px right of viewport — slides in from right
     DESKTOP_SCALE:       0.85,  // slightly smaller at spawn
     MOBILE_TRANSLATE_Y: -130,   // px above viewport — drops from top
 };
-// ════════════════════════════════════════════════════════════
-//  SOLVER CONFIGURATION
-// ════════════════════════════════════════════════════════════
-//
-//  'analytic' → AnalyticSpring (default, recommended)
-//               Frame-rate independent, zero drift, cheaper per-frame.
-//
-//  'rk4'      → RK4Spring (legacy fallback)
-//               Step-based integration, kept for compatibility.
-//
-//  'hybrid'   → Analytic for UI/enter/exit/hover animations,
-//               RK4 for interactive physics (bump/drag) where
-//               the step-based feel may be preferred.
-//
-//  Change at runtime:  import { SOLVER } from './config.js'; SOLVER.mode = 'rk4';
-//  Or before init:     set SOLVER.mode before first QNotifyEngine construction.
+// SOLVER: 'hybrid' is enforced everywhere — Analytic handles UI animations
+// (frame-rate independent, no drift), RK4 handles gesture physics (bump/drag)
+// because the step-based feel is more tactile. Each patches the other's weak spot.
+// The other modes are documented for historical reasons but not actually selectable
+// at runtime — api/index.js forces SOLVER.mode = 'hybrid'.
 
 export const SOLVER = {
-    /**
-     * v7.3.3 HYBRID ONLY — two solvers working together:
-     *   Analytic: UI animations (enter/exit/hover/stack/morph) — exact, frame-rate independent
-     *   RK4:      Gesture physics (bump/drag/tilt) — step-based, tactile feel
-     * Analytic patches RK4's drift weakness; RK4 patches Analytic's gesture feel weakness.
-     * @type {'hybrid'}
-     */
     mode: 'hybrid',
 
-    // Debug mode — logs solver choice and timing diagnostics
+    // Logs solver choice and timing diagnostics when true.
     debug: false,
 
-    // Completion thresholds — same for both solvers
     posEpsilon: 1e-4,
     velEpsilon: 1e-4,
 };

@@ -1,73 +1,44 @@
-// motion.js — QNotify 1.0.5 For AlbEdu
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  QNotify — motion.js 1.0.5 For AlbEdu ║
- * ║  "Physics Engine — Analytic Spring + Hybrid Solver"         ║
- * ╚══════════════════════════════════════════════════════════════╝
- *
- * All animation physics live here: enter, exit, morph, bump, shadow.
- *
- * v7.3.0 MIGRATION: RK4 → Analytic Spring
- *  ✓  AnalyticSpring used for all UI animations by default
- *  ✓  RK4Spring preserved via SOLVER.mode = 'rk4' | 'hybrid'
- *  ✓  Hybrid mode: analytic for enter/exit/hover, RK4 for bump
- *  ✓  Frame-rate independent — identical feel at 60 / 120 / 240 Hz
- *  ✓  Zero numerical drift — exact closed-form solution
- *
- * SOLVER MODES (set SOLVER.mode in config.js before init):
- *   'analytic' → All springs analytic  (default)
- *   'rk4'      → All springs RK4       (legacy)
- *   'hybrid'   → UI analytic, bump RK4
- *
- * OPTIMIZATIONS PRESERVED:
- *  [2]  Global RAF loop
- *  [3]  Time-based evaluation — safe at any refresh rate
- *  [4]  Visibility API — RAF pause, analytic springs resync on resume
- *  [8]  will-change cleared after animation
- *  [9]  Spring object pool
- *  [11] Early-exit on epsilon threshold
- *  [13] Zero array alloc in RK4 path
- *  [14] Spring constants precomputed
- *  [15] WeakMap for DOM shadow refs
- *  [18] Registry cleared on cancel
- *  [20] pointermove throttled
- *  [21] Bump events detached before exit
- */
+// motion.js — QNotify animation physics: enter, exit, morph, bump, shadow.
+//
+// Hybrid architecture: AnalyticSpring for UI animations (enter/exit/hover/
+// stack/morph) — frame-rate independent, zero drift, cheaper per-frame.
+// RK4Spring for gesture-driven motion (bump/drag/tilt) — step-based integration
+// feels more tactile for interactive physics. SOLVER.mode in config.js can be
+// set to 'analytic' (all analytic), 'rk4' (all RK4, legacy), or 'hybrid'
+// (default — analytic UI + RK4 gestures).
+//
+// Optimizations: shared global RAF loop, time-based evaluation (safe at any
+// refresh rate), visibility-aware pause + resync, will-change cleared after
+// animation, spring object pool, epsilon-threshold early exit, WeakMap for DOM
+// shadow refs, registry cleared on cancel, throttled pointermove.
 
 import { SPRING_CONFIG, SHADOW_BASE, BUMP_CONFIG, STACK_SPRING, MOBILE_STACK, SOLVER, TIMING } from './config.js';
 import { AnalyticSpring, RK4Spring, acquireSpring } from './spring.js';
 import { applyShadowVars } from './render.js';
 
-// ════════════════════════════════════════════════════════════
-//  SOLVER FACTORY
+// SOLVER FACTORY
 //
-//  Hybrid Architecture (architecture spec):
-//    _spring()         → UI animations (enter/exit/hover/stack/morph)
-//                        Always analytic in 'hybrid' and 'analytic' modes.
-//                        Only RK4 when explicitly set to mode='rk4'.
-//
-//    _interactSpring() → Gesture-driven motion (bump/drag/tilt)
-//                        Always RK4 in 'hybrid' mode.
-//                        Follows global mode otherwise.
-// ════════════════════════════════════════════════════════════
+// _spring()         → UI animations (enter/exit/hover/stack/morph)
+//                     Always analytic in 'hybrid' and 'analytic' modes.
+//                     Only RK4 when explicitly set to mode='rk4'.
+// _interactSpring() → Gesture-driven motion (bump/drag/tilt)
+//                     Always RK4 in 'hybrid' mode. Follows global mode otherwise.
 
 function _spring(config) {
-    // UI springs: analytic unless legacy rk4 mode is explicitly set
+    // UI springs: analytic unless legacy rk4 mode is explicitly set.
     const mode = (SOLVER.mode === 'rk4') ? 'rk4' : 'analytic';
     if (SOLVER.debug) console.debug('[QNotify spring] UI mode=' + mode, config);
     return acquireSpring(config, mode);
 }
 
 function _interactSpring(config) {
-    // Gesture/bump springs: always RK4 in hybrid mode (fast interactive response)
+    // Gesture/bump springs: always RK4 in hybrid mode (fast interactive response).
     const mode = (SOLVER.mode === 'hybrid' || SOLVER.mode === 'rk4') ? 'rk4' : 'analytic';
     if (SOLVER.debug) console.debug('[QNotify spring] interact mode=' + mode, config);
     return acquireSpring(config, mode);
 }
 
-// ════════════════════════════════════════════════════════════
-//  SPRING REGISTRY  [Opt #18]
-// ════════════════════════════════════════════════════════════
+// SPRING REGISTRY — track active springs per notification so cancel() can stop them all.
 
 const _registry = new Map();
 
@@ -77,9 +48,7 @@ function _reg(id, ...springs) {
     springs.forEach(s => set.add(s));
 }
 
-// ════════════════════════════════════════════════════════════
-//  MOBILE MORPH — circle → pill animation
-// ════════════════════════════════════════════════════════════
+// MOBILE MORPH — circle → pill animation.
 
 const MORPH = {
     collapsedW:  70,
@@ -123,9 +92,7 @@ function applyMobileMorph(notification, t, vel = 0) {
     updateElementTransform(notification);
 }
 
-// ════════════════════════════════════════════════════════════
-//  INIT MOBILE STATE
-// ════════════════════════════════════════════════════════════
+// INIT MOBILE STATE
 
 function _initMobileState(notification) {
     const slideSpring  = _spring({ k: 220, c: 22, m: 1.0 });
@@ -146,39 +113,35 @@ function _initMobileState(notification) {
 
     _reg(notification.id, slideSpring, stackSpring, expandSpring);
 
-    // [v7.5.0 FOIS Fix] DOM writes for opacity/transition removed.
-    // glitch.js stampInitialState() already sets opacity:0 + off-screen transform
-    // BEFORE the element enters the DOM. Writing opacity:'0' here again would:
-    //   a) create a redundant write (harmless but wasteful)
-    //   b) fight with the stamped transform if timing differs
-    // We only set morph geometry (width/height/borderRadius) — these are
-    // intentional layout properties for the pill morphing animation,
-    // NOT initial state that stampInitialState handles.
+    // glitch.js stampInitialState() already set opacity:0 + off-screen transform
+    // BEFORE the element enters the DOM. We do NOT re-write opacity here — it
+    // would be a redundant write and fight with the stamped transform if timing
+    // differs. We only set morph geometry (width/height/borderRadius) — these
+    // are intentional layout properties for the pill morphing animation, NOT
+    // initial state that stampInitialState handles.
     const el = notification.element;
 
-    // Morph geometry initial state — pill starts as circle
+    // Morph geometry initial state — pill starts as circle.
     el.style.width        = MORPH.collapsedW + 'px';
     el.style.height       = MORPH.collapsedH + 'px';
     el.style.borderRadius = MORPH.collapsedBR + 'px';
-    // opacity is already 0 from glitch.stampInitialState() — do NOT override
+    // opacity is already 0 from glitch.stampInitialState() — do NOT override.
 
-    // Icon: visible, reset transform — it never hides during mobile morph
+    // Icon: visible, reset transform — it never hides during mobile morph.
     const iconEl = el.querySelector('.notification-icon');
     if (iconEl) {
         iconEl.style.opacity   = '1';
         iconEl.style.transform = 'none';
     }
 
-    // Text stagger: starts hidden, revealed during expand animation
+    // Text stagger: starts hidden, revealed during expand animation.
     el.querySelectorAll('.notification-text .stagger').forEach(se => {
         se.style.opacity   = '0';
         se.style.transform = 'translateX(8px)';
     });
 }
 
-// ════════════════════════════════════════════════════════════
-//  INIT BUMP STATE
-// ════════════════════════════════════════════════════════════
+// INIT BUMP STATE
 
 export function initBumpState(notification) {
     if (['confirmation', 'hold', 'hold-async', 'alert'].includes(notification.type)) return;
@@ -221,24 +184,15 @@ export function initBumpState(notification) {
     updateElementTransform(notification);
 }
 
-// ════════════════════════════════════════════════════════════
-//  UNIFIED TRANSFORM SYSTEM
-// ════════════════════════════════════════════════════════════
+// UNIFIED TRANSFORM SYSTEM
 
 export function updateElementTransform(notification) {
     const el = notification.element;
     if (!el) return;
-    // [1.0.5] GUARD FIX: replaced isDead+state='exit' check with el.isConnected.
-    //
-    // OLD (WRONG): if (notification.isDead && notification.state === 'exit') return;
-    // BUG: dismiss() sets isDead=true + state='exit' BEFORE calling animateDesktopExit.
-    // Result: every upd() call from txSpring/scSpring hit this guard and returned early.
-    // Transform was never written. Only opacity worked (it writes el.style.opacity directly).
-    // Animation looked like a pure fade-out because the slide was silently blocked.
-    //
-    // NEW (CORRECT): skip only when element is truly detached from the DOM.
-    // el.isConnected = false AFTER removeElement() in _cleanup — correct timing.
-    // el.isConnected = true DURING exit animation — transform updates proceed normally.
+    // Skip only when the element is truly detached — dismiss() sets isDead=true
+    // and state='exit' BEFORE calling animateDesktopExit, so checking those would
+    // block transform updates during the exit animation. el.isConnected is false
+    // only after removeElement() in _cleanup, which is the correct timing.
     if (!el.isConnected) return;
     if (['confirmation', 'hold', 'hold-async', 'alert'].includes(notification.type)) return;
 
@@ -287,9 +241,7 @@ export function updateElementTransform(notification) {
     }
 }
 
-// ════════════════════════════════════════════════════════════
-//  MOBILE LAYER
-// ════════════════════════════════════════════════════════════
+// MOBILE LAYER
 
 const _DEPTHS = [1, 0.95, 0.90, 0.85];
 
@@ -300,20 +252,18 @@ export function updateMobileLayer(notification, layerIndex) {
     updateElementTransform(notification);
 }
 
-// ════════════════════════════════════════════════════════════
-//  MOBILE ENTER
-// ════════════════════════════════════════════════════════════
+// MOBILE ENTER
 
 export function animateMobileEnter(notification) {
     if (notification.isDesktop) return;
     const el  = notification.element;
     const upd = () => updateElementTransform(notification);
 
-    // [BUG FIX v7.5.1] Element harus terlihat SEKARANG saat slide spring mulai.
-    // stampInitialState() menyetel opacity:0 sebelum append — ini benar untuk FOUC guard.
-    // Tapi setelah .spawn dihapus dan animasi dimulai, opacity harus jadi 1 agar
-    // circle terlihat saat slide masuk dari atas. Sebelumnya opacity tetap 0 sampai
-    // expand spring onRest (150ms+ kemudian) — notifikasi tidak terlihat sama sekali.
+    // Element harus terlihat SEKARANG saat slide spring mulai. stampInitialState()
+    // menyetel opacity:0 sebelum append — ini benar untuk FOUC guard. Tapi setelah
+    // .spawn dihapus dan animasi dimulai, opacity harus jadi 1 agar circle terlihat
+    // saat slide masuk dari atas. Sebelumnya opacity tetap 0 sampai expand spring
+    // onRest (150ms+ kemudian) — notifikasi tidak terlihat sama sekali.
     el.style.opacity = '1';
 
     notification.mobileSlide.to(MOBILE_STACK.BASE_Y, { onUpdate: upd });
@@ -340,14 +290,12 @@ export function animateMobileEnter(notification) {
     notification._enterTimeout = expandTimeout;
 }
 
-// ════════════════════════════════════════════════════════════
-//  MOBILE EXIT — 3-phase rAF (pill → icon → gone)
-// ════════════════════════════════════════════════════════════
+// MOBILE EXIT — 3-phase rAF (pill → icon → gone).
 
 export function animateMobileExit(notification, onDone) {
     if (notification.isDesktop) {
         notification.element.classList.add('exit');
-        // CSS .exit transition = 280ms + 120ms safety margin (see TIMING.CSS_EXIT_DURATION_MS)
+        // CSS .exit transition = 280ms + 120ms safety margin (see TIMING.CSS_EXIT_DURATION_MS).
         setTimeout(onDone, TIMING.CSS_EXIT_DURATION_MS);
         return;
     }
@@ -415,9 +363,7 @@ export function animateMobileExit(notification, onDone) {
     raf = requestAnimationFrame(frame);
 }
 
-// ════════════════════════════════════════════════════════════
-//  DESKTOP ENTER / EXIT
-// ════════════════════════════════════════════════════════════
+// DESKTOP ENTER / EXIT
 
 export function animateDesktopEnter(notification) {
     if (!notification.isDesktop) return;
@@ -439,8 +385,8 @@ export function animateDesktopEnter(notification) {
     if (icon) {
         icon.style.opacity   = '0';
         icon.style.transform = 'translateX(20px)';
-        // [1.0.5] Store handle so animateDesktopExit can cancel before it fires.
-        // OLD: anonymous setTimeout — exit had no way to prevent ghost springs.
+        // Store the timeout handle so animateDesktopExit can cancel it before it
+        // fires — otherwise ghost springs would fight the exit.
         notification._enterIconTimeout = setTimeout(() => {
             notification._enterIconTimeout = null;
             if (notification.isDead) return;
@@ -460,7 +406,7 @@ export function animateDesktopEnter(notification) {
     if (text) {
         text.style.opacity   = '0';
         text.style.transform = 'translateX(15px)';
-        // [1.0.5] Same cancel-safety pattern as icon timeout above.
+        // Same cancel-safety pattern as the icon timeout above.
         notification._enterTextTimeout = setTimeout(() => {
             notification._enterTextTimeout = null;
             if (notification.isDead) return;
@@ -480,20 +426,19 @@ export function animateDesktopEnter(notification) {
 export function animateDesktopExit(notification, onDone) {
     if (!notification.isDesktop) {
         notification.element.classList.add('exit');
-        // CSS .exit transition = 280ms + 120ms safety margin (see TIMING.CSS_EXIT_DURATION_MS)
+        // CSS .exit transition = 280ms + 120ms safety margin (see TIMING.CSS_EXIT_DURATION_MS).
         setTimeout(onDone, TIMING.CSS_EXIT_DURATION_MS);
         return;
     }
 
-    // [1.0.5] GHOST SPRING FIX — cancel pending enter stagger timeouts FIRST.
-    // If exit fires before the 60ms/120ms icon+text enter timeouts, those callbacks
-    // would have created new springs that fight the exit (icon going opacity:0→1
-    // while exit drives card opacity:1→0). By cancelling here and cleaning up
-    // inline styles, we guarantee a clean exit regardless of timing.
+    // Cancel pending enter stagger timeouts FIRST. If exit fires before the
+    // 60ms/120ms icon+text enter timeouts, those callbacks would have created
+    // new springs that fight the exit (icon going opacity:0→1 while exit drives
+    // card opacity:1→0). By cancelling here and cleaning up inline styles, we
+    // guarantee a clean exit regardless of timing.
     if (notification._enterIconTimeout) {
         clearTimeout(notification._enterIconTimeout);
         notification._enterIconTimeout = null;
-        // Clean up any inline styles the enter animation set before it was cancelled
         const icon = notification.element.querySelector('.notification-icon');
         if (icon) { icon.style.opacity = ''; icon.style.transform = ''; }
     }
@@ -508,31 +453,29 @@ export function animateDesktopExit(notification, onDone) {
 
     const upd = () => updateElementTransform(notification);
 
-    // [1.0.5] DYNAMIC EXIT DIRECTION — calculate exit X from element's actual width.
-    // OLD: hardcoded 380px — could leave card partially visible on narrow screens,
-    //      and didn't reflect "each notification exits from its own position".
-    // NEW: exit to (element width + right anchor offset + 32px safety buffer).
-    //      Notification is right:40px anchored, so exitX = elWidth + 40 + 32 = fully offscreen.
-    //      This gives each notification a clean sweep off its own right edge.
+    // Exit X is computed from the element's actual width so the card fully exits
+    // its own right edge. Notification is right:40px anchored, so exitX =
+    // elWidth + 40 + 32 = fully offscreen. The old hardcoded 380px could leave
+    // the card partially visible on narrow screens.
     const elWidth  = notification.element.offsetWidth || 390;
     const exitX    = elWidth + 72; // 40px right anchor + 32px safety
 
-    // [1.0.5] PHASED EXIT — Slide-right IS the primary motion. Opacity trails.
+    // Phased exit — slide-right is the primary motion, opacity trails.
     //
-    // ROOT CAUSE (v7.6.0 bug): opacity spring (k=200,c=22) and tx spring (k=240,c=24)
-    // shared nearly identical damping ratios (~0.78). Since opacity travels 1→0 (short)
-    // while tx travels 0→exitX (~460px, long), opacity hit near-zero in ~180ms while the
-    // card had barely moved ~50px. Card disappeared before the slide was visible.
-    // onRest was wired to opSpring → cleanup fired before card was off-screen.
+    // Opacity spring (k=200,c=22) and tx spring (k=240,c=24) shared nearly
+    // identical damping ratios (~0.78). Since opacity travels 1→0 (short)
+    // while tx travels 0→exitX (~460px, long), opacity hit near-zero in ~180ms
+    // while the card had barely moved ~50px — card disappeared before the slide
+    // was visible, and onRest (wired to opSpring) fired cleanup before the card
+    // was off-screen.
     //
-    // FIX STRATEGY:
-    //   1. txSpring OWNS onDone — cleanup only after card is actually off-screen.
-    //   2. Opacity spring starts DELAYED (130ms) — slide is clearly visible first.
-    //   3. txSpring is snappier (k=300, ζ=0.58) — decisive flick-to-right feel.
-    //   4. opSpring is slower (k=140) — graceful fade trailing the slide.
+    // Fix: txSpring owns onDone (cleanup after card is actually off-screen),
+    // opacity spring starts delayed (130ms) so the slide is visible first,
+    // txSpring is snappier (k=300, ζ≈0.58) for a decisive flick-to-right feel,
+    // opSpring is slower (k=140) for a graceful fade trailing the slide.
 
-    // Phase 1: SLIDE — snappy, slightly underdamped for a satisfying exit flick.
-    // ζ = 20/(2√300) ≈ 0.577 — underdamped, will overshoot exitX by ~5-8% before settling.
+    // SLIDE — snappy, slightly underdamped.
+    // ζ = 20/(2√300) ≈ 0.577 — overshoots exitX by ~5-8% before settling.
     // Overshoot is off-screen so it's invisible; net effect is a crisp, elastic snap-out.
     const txSpring = _spring({ k: 300, c: 20, m: 1 });
     txSpring.x = notification.currentTranslateX || 0;
@@ -543,7 +486,7 @@ export function animateDesktopExit(notification, onDone) {
         onRest: onDone,
     });
 
-    // Phase 2: SCALE — card compresses slightly as it exits, like being absorbed by edge.
+    // SCALE — card compresses slightly as it exits, like being absorbed by edge.
     // Matches tx spring stiffness so both settle together.
     const scSpring = _spring({ k: 280, c: 22, m: 1 });
     scSpring.x = notification.currentScale || 1;
@@ -551,13 +494,13 @@ export function animateDesktopExit(notification, onDone) {
 
     _reg(notification.id, txSpring, scSpring);
 
-    // Phase 3: OPACITY — deliberately delayed so the slide has 130ms head start.
+    // OPACITY — deliberately delayed so the slide has 130ms head start.
     // The user sees the card visibly moving right before any fade begins.
     // Slower spring (k=140, ζ=0.76) = gradual dissolve trailing the slide.
     // No onRest needed here — cleanup is handled by txSpring above.
     notification._exitOpTimeout = setTimeout(() => {
         notification._exitOpTimeout = null;
-        // Guard: if cleanup already ran (edge case), don't write to detached element
+        // Guard: if cleanup already ran (edge case), don't write to detached element.
         if (!notification.element || notification.element.style.display === 'none') return;
         const opSpring = _spring({ k: 140, c: 18, m: 1 });
         opSpring.x = parseFloat(notification.element.style.opacity) || 1;
@@ -568,9 +511,7 @@ export function animateDesktopExit(notification, onDone) {
     }, 130);
 }
 
-// ════════════════════════════════════════════════════════════
-//  DYNAMIC BUMP  [Opt #20, #21]
-// ════════════════════════════════════════════════════════════
+// DYNAMIC BUMP — pointer-driven tilt/scale on press.
 
 export function attachBumpEvents(notification) {
     if (['confirmation', 'hold', 'hold-async', 'alert'].includes(notification.type)) return;
@@ -599,9 +540,8 @@ export function attachBumpEvents(notification) {
         const dy = _clamp((e.clientY - (rect.top  + rect.height / 2)) / (rect.height / 2), -1, 1);
         bump.downDx = dx; bump.downDy = dy;
 
-        // Jangan langsung set rotasi dari posisi klik —
-        // rotasi diperbarui real-time lewat onMove agar arah
-        // langsung responsif tanpa delay persepsi.
+        // Rotation is updated real-time via onMove — don't set it from the click
+        // position here, so the direction is immediately responsive.
         bump.scaleX.to(cfg.holdScaleX,         { onUpdate: upd });
         bump.scaleY.to(cfg.holdScaleY,         { onUpdate: upd });
         bump.translateY.to(cfg.holdTranslateY, { onUpdate: upd });
@@ -613,10 +553,11 @@ export function attachBumpEvents(notification) {
         if (!bump.pointerDown || notification.isDead || e.pointerId !== bump.pointerId) return;
         e.preventDefault();
 
-        // [20] Throttle: skip if delta < 3px (max 3px sesuai spesifikasi)
+        // Throttle: skip if delta < 3px (3² = 9). Keeps pointermove from
+        // flooding the spring system on high-frequency pointers.
         const dx2 = e.clientX - (bump.lastMoveX != null ? bump.lastMoveX : e.clientX);
         const dy2 = e.clientY - (bump.lastMoveY != null ? bump.lastMoveY : e.clientY);
-        if (dx2 * dx2 + dy2 * dy2 < 9) return;  // 3² = 9 — lebih responsif
+        if (dx2 * dx2 + dy2 * dy2 < 9) return;
         bump.lastMoveX = e.clientX;
         bump.lastMoveY = e.clientY;
 
@@ -624,7 +565,7 @@ export function attachBumpEvents(notification) {
         const dx = _clamp((e.clientX - (rect.left + rect.width  / 2)) / (rect.width  / 2), -1, 1);
         const dy = _clamp((e.clientY - (rect.top  + rect.height / 2)) / (rect.height / 2), -1, 1);
 
-        // Arah dideteksi langsung dari pointer position — tidak ada delay
+        // Rotation follows pointer position directly — no delay.
         bump.rotateX.to(dy * cfg.maxRotation, { onUpdate: upd });
         bump.rotateY.to(dx * cfg.maxRotation, { onUpdate: upd });
 
@@ -715,13 +656,10 @@ function _startTap(notification, duration, dx, dy, upd) {
     }, cfg.tapPressDuration);
 }
 
-// ════════════════════════════════════════════════════════════
-//  HOVER SHADOW SYSTEM
-// ════════════════════════════════════════════════════════════
+// HOVER SHADOW SYSTEM
 //
-//  Always analytic — pure UI, not interactive physics.
-//  Retargets (does not restart) on rapid hover in/out: no jitter,
-//  no CSS transition queue, continuous motion.
+// Always analytic — pure UI, not interactive physics. Retargets (does not
+// restart) on rapid hover in/out: no jitter, no CSS transition queue, continuous motion.
 
 const _HOVER_DEPTH_IN   = 1.6;
 const _HOVER_DEPTH_OUT  = 1.0;
@@ -733,7 +671,6 @@ export function attachHoverShadow(notification) {
 
     const el = notification.element;
 
-    // Always analytic for shadow — visual only
     const depthSpring = acquireSpring(_HOVER_SPRING_CFG, 'analytic');
     depthSpring.jump(notification.depthFactor || 1.0);
     notification._hoverDepthSpring = depthSpring;
@@ -778,9 +715,7 @@ export function detachHoverShadow(notification) {
     notification._hoverDepthSpring = null;
 }
 
-// ════════════════════════════════════════════════════════════
-//  CANCEL ALL SPRINGS  [Opt #18]
-// ════════════════════════════════════════════════════════════
+// CANCEL ALL SPRINGS — stop every spring tracked for a notification.
 
 export function cancelNotificationSprings(notificationId) {
     const springs = _registry.get(notificationId);
@@ -791,9 +726,7 @@ export function cancelNotificationSprings(notificationId) {
     }
 }
 
-// ════════════════════════════════════════════════════════════
-//  SHADOW FUNCTIONS  [Opt #15]
-// ════════════════════════════════════════════════════════════
+// SHADOW FUNCTIONS — set depth/spawn/exit shadow CSS vars on the element.
 
 export function applySpawnShadow(notification) {
     const b = notification.shadowBase;
@@ -834,7 +767,7 @@ export function makeShadowBase(isDesktop) {
     return { ...SHADOW_BASE[isDesktop ? 'desktop' : 'mobile'] };
 }
 
-// animateSpring — helper for animating a single property via spring
+// Helper: animate a single property via spring.
 export function animateSpring(notification, property, fromValue, toValue, onComplete, config = {}, delay = 0) {
     const { stiffness = 160, damping = 16, mass = 1 } = { ...SPRING_CONFIG, ...config };
     const spring = _spring({ k: stiffness, c: damping, m: mass });
@@ -864,8 +797,6 @@ export function animateSpring(notification, property, fromValue, toValue, onComp
     if (delay > 0) setTimeout(start, delay); else start();
 }
 
-// ════════════════════════════════════════════════════════════
-//  BACKWARD COMPAT — re-export RK4Spring for external consumers
-// ════════════════════════════════════════════════════════════
+// BACKWARD COMPAT — re-export RK4Spring for external consumers.
 
 export { RK4Spring } from './spring.js';

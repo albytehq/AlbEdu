@@ -6,9 +6,9 @@
 
   <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daftar Administrator — AlbEdu</title>
+    <title>Daftar Akun Admin — AlbEdu</title>
     <meta name="description" content="Daftarkan akun administrator AlbEdu.">
-    <meta name="theme-color" content="#1E40AF">
+    <meta name="theme-color" content="#2563eb">
     <link rel="icon" type="image/x-icon" href="../public/images/favicon/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="../public/images/favicon/favicon.svg">
     <link rel="icon" type="image/png" sizes="96x96" href="../public/images/favicon/favicon-96x96.png">
@@ -19,6 +19,7 @@
 
     <!-- ═══ Design tokens ═══ -->
     <link rel="stylesheet" href="../styles/tokens.css">
+    <link rel="stylesheet" href="../styles/albedu-components.css">
 
     <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
     <script defer src="../src/shared/head/fonts.js"></script>
@@ -28,6 +29,7 @@
     <script type="module" src="../src/shared/resilience.js"></script>
     <script defer src="../src/platform/repository.js"></script>
     <script defer src="../src/security/sanitize.js"></script>
+    <script defer src="../src/shared/boot.js"></script>
 
     <!-- ═══ Async third-party (Turnstile + Supabase SDK) — non-blocking ═══ -->
     <script async src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script><!-- ═══ Page-specific ═══ -->
@@ -50,8 +52,21 @@
                         <img src="../public/images/logo.svg" alt="AlbEdu" width="36" height="36">
                         <span class="form-logo-name">AlbEdu</span>
                     </div>
-                    <h1 class="form-title">Buat Akun Administrator</h1>
-                    <p class="form-subtitle">Kelola platform asesmen dengan akses penuh</p>
+                    <h1 class="form-title">Buat Akun Admin</h1>
+                    <p class="form-subtitle">Halaman ini khusus admin — peserta tidak perlu mendaftar</p>
+                </div>
+
+                <!-- Admin-only warning banner -->
+                <div class="albedu-alert albedu-alert--warning">
+                    <svg class="albedu-alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <div class="albedu-alert__body">
+                        <div class="albedu-alert__title">Registrasi khusus admin</div>
+                        <p>Halaman ini untuk membuat akun admin (pengelola asesmen). Peserta masuk langsung dengan Google — tidak perlu registrasi.</p>
+                    </div>
                 </div>
 
                 <!-- Registration form — IDs preserved for AdminOnboarding.js -->
@@ -59,13 +74,13 @@
                     <div class="field">
                         <label for="email">Email</label>
                         <input id="email" name="email" type="email" autocomplete="email"
-                            class="input" placeholder="nama@email.com" required>
+                            class="albedu-input" placeholder="nama@email.com" required>
                     </div>
 
                     <div class="field field-password">
                         <label for="password">Kata Sandi</label>
                         <input id="password" name="password" type="password" autocomplete="new-password" minlength="8"
-                            class="input" placeholder="Minimal 8 karakter" required>
+                            class="albedu-input" placeholder="Minimal 8 karakter" required>
                         <button type="button" class="toggle-visibility" data-target="password"
                             aria-label="Tampilkan kata sandi">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -92,7 +107,7 @@
                     <div class="field field-password">
                         <label for="confirmPassword">Konfirmasi Kata Sandi</label>
                         <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password"
-                            minlength="8" class="input" placeholder="Ulangi kata sandi" required>
+                            minlength="8" class="albedu-input" placeholder="Ulangi kata sandi" required>
                         <button type="button" class="toggle-visibility" data-target="confirmPassword"
                             aria-label="Tampilkan kata sandi">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -114,7 +129,7 @@
                     </div>
 
                     <!-- Submit button -->
-                    <button id="registerBtn" type="submit" aria-busy="false">
+                    <button id="registerBtn" class="albedu-btn albedu-btn-primary albedu-btn--block" type="submit" aria-busy="false">
                         Daftar Sekarang
                     </button>
 
@@ -144,8 +159,8 @@
                 <div class="branding-logo" aria-hidden="true">
                     <img src="../public/images/logo.svg" alt="" width="40" height="40">
                 </div>
-                <h2 class="branding-title">Bergabung dengan AlbEdu</h2>
-                <p class="branding-tagline">Daftarkan diri Anda sebagai administrator dan mulai kelola platform asesmen secara digital — untuk sekolah, kampus, maupun kebutuhan personal.</p>
+                <h2 class="branding-title">Bergabung sebagai Admin</h2>
+                <p class="branding-tagline">Daftarkan akun admin untuk membuat dan mengelola asesmen secara digital — untuk sekolah, kampus, maupun kebutuhan personal.</p>
 
                 <div class="feature-list">
                     <div class="feature-item">
@@ -158,8 +173,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Akses Penuh</span>
-                            <span class="feature-desc">Kelola peserta, asesmen, dan seluruh sistem</span>
+                            <span class="feature-label">Kelola Peserta & Asesmen</span>
+                            <span class="feature-desc">Buat asesmen, jadwalkan, dan pantau peserta</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -170,8 +185,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Keamanan Terjamin</span>
-                            <span class="feature-desc">Verifikasi email & proteksi perangkat</span>
+                            <span class="feature-label">Verifikasi Email & Perangkat</span>
+                            <span class="feature-desc">Konfirmasi email + batas 2 akun admin per perangkat</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -181,8 +196,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Siap dalam Hitungan Menit</span>
-                            <span class="feature-desc">Pendaftaran cepat, langsung aktif</span>
+                            <span class="feature-label">Pendaftaran Singkat</span>
+                            <span class="feature-desc">Email + kata sandi, verifikasi email sebelum login</span>
                         </div>
                     </div>
                 </div>

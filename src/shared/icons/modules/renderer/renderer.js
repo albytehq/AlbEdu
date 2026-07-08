@@ -1,33 +1,8 @@
-// =============================================================================
-// renderer.js — AlbEdu Icon System · Clone-Based SVG Renderer
-// =============================================================================
-// Responsibility:
-//   Render SVG icons as fast as physically possible in a browser.
-//
-// Strategy (enterprise-grade — comparable to Linear / Vercel / Stripe):
-//   1. Cache parsed SVG as a <template> element (one-time string parse).
-//   2. On subsequent renders, use `template.content.cloneNode(true)` —
-//      this is O(1) DOM cloning, no string parsing, no attribute serialization.
-//   3. For batch binding (bindIcons), use DocumentFragment to batch DOM writes.
-//   4. Never touch innerHTML for repeat renders — only for cache misses.
-//
-// Performance characteristics:
-//   - First render of icon X:  ~0.05ms (string parse + template creation)
-//   - Repeat render of icon X: ~0.005ms (cloneNode only) — 10x faster
-//   - Batch bind of 100 icons: ~2ms total (DocumentFragment batching)
-//
-// Why <template>?
-//   - `<template>.content` is a DocumentFragment — inert, not in DOM tree.
-//   - `cloneNode(true)` on DocumentFragment is highly optimized in V8/JSC/SpiderMonkey.
-//   - Avoids createElement+setAttribute for every node in the SVG.
-//
-// Public API (attached to window.AlbEdu.__iconRenderer):
-//   .render(name, opts)           → HTMLString (for AlbEdu.icon API)
-//   .renderNode(name, opts)       → SVGElement (cloned, ready to insert)
-//   .renderBatch(items)           → DocumentFragment
-//   .bindToElement(el, name, opts) → void (mutates el)
-//   .has(name)                    → boolean
-// =============================================================================
+// renderer.js — clone-based SVG renderer.
+// Strategy: cache parsed SVG as a <template> (one-time string parse), then
+// cloneNode(true) on subsequent renders — O(1) DOM cloning, no string
+// parsing, no attribute serialization. <template>.content is an inert
+// DocumentFragment, and cloneNode on it is highly optimized in V8/JSC/SpiderMonkey.
 
 (function () {
   'use strict';
@@ -47,7 +22,6 @@
     + '<text x="12" y="16" font-size="10" font-family="monospace" '
     + 'text-anchor="middle" fill="currentColor" opacity="0.6">?</text>';
 
-  // ── Name normalization ──────────────────────────────────────────────
   // Accepts: account_circle, account-circle, accountCircle → account_circle
   function _normalizeName(name) {
     if (typeof name !== 'string') return name;
@@ -58,7 +32,7 @@
       .replace(/-/g, '_');
   }
 
-  // ── Resolve icon name through alias chain (max depth 5) ─────────────
+  // Resolve icon name through alias chain (max depth 5)
   function _resolve(name) {
     var normalized = _normalizeName(name);
     var seen = Object.create(null);
@@ -76,7 +50,7 @@
     return { name: current, path: path };
   }
 
-  // ── Attribute escaping (XSS prevention) ─────────────────────────────
+  // Attribute escaping (XSS prevention)
   function _escapeAttr(s) {
     return String(s)
       .replace(/&/g, '&amp;')
@@ -85,8 +59,7 @@
       .replace(/>/g, '&gt;');
   }
 
-  // ── Build the full SVG string for a given inner path ────────────────
-  // This is the SLOW path — only called on cache miss.
+  // Build the full SVG string for a given inner path. SLOW path — only called on cache miss.
   function _buildSvgString(innerPath, opts, classes) {
     var size = opts.size != null ? opts.size : null;
     var label = opts['aria-label'];
@@ -105,8 +78,7 @@
     return '<svg ' + attrs + '>' + innerPath + '</svg>';
   }
 
-  // ── String cache (Layer 1a) — for the icon() string API ─────────────
-  // Avoids DOM round-trip on cache hits. Keyed identically to _cache.
+  // String cache (Layer 1a) — for the icon() string API. Avoids DOM round-trip on cache hits. Keyed identically to _cache.
   var _stringCache = new Map();
   var STRING_CACHE_MAX = 256;
 
@@ -128,9 +100,7 @@
     _stringCache.set(cacheKey, s);
   }
 
-  // ── Create a cached <template> for an icon ──────────────────────────
-  // The template holds the parsed SVG element. Cloning this template
-  // is dramatically faster than re-parsing the string.
+  // Build a cached <template> for an icon. Cloning the template is much faster than re-parsing the string.
   function _createTemplate(name, innerPath, opts, classes) {
     var svgString = _buildSvgString(innerPath, opts, classes);
     var tpl = document.createElement('template');
@@ -138,10 +108,7 @@
     return { tpl: tpl, str: svgString };
   }
 
-  // ── Render: returns HTML string (for AlbEdu.icon API) ───────────────
-  // Uses a dedicated string cache (Layer 1a) — O(1) on cache hit, no
-  // DOM round-trip. This matches v6.0's string-concatenation speed
-  // while still benefiting from caching.
+  // render() — returns HTML string. Uses the string cache (Layer 1a), pure O(1) on cache hit, no DOM round-trip.
   function render(name, opts) {
     opts = opts || {};
     var startTime = _metrics ? performance.now() : 0;
@@ -192,9 +159,8 @@
     }
   }
 
-  // ── Render Node: returns a cloned SVGElement ────────────────────────
-  // This is the FAST path for DOM insertion. Uses the template cache
-  // (Layer 1b) — cloneNode(true) is faster than string parsing.
+  // renderNode() — returns a cloned SVGElement. FAST path for DOM insertion.
+  // Uses the template cache (Layer 1b) — cloneNode(true) is faster than string parsing.
   function renderNode(name, opts) {
     opts = opts || {};
 
@@ -232,8 +198,7 @@
     }
   }
 
-  // ── Render Batch: build many icons into a DocumentFragment ──────────
-  // Used by bindIcons() to batch DOM writes — minimizes reflow.
+  // renderBatch() — build many icons into a DocumentFragment. Used by bindIcons() to batch DOM writes — minimizes reflow.
   function renderBatch(items) {
     // items: Array<{ el: Element, name: string, opts: Object }>
     var fragment = document.createDocumentFragment();
@@ -250,9 +215,7 @@
     return fragment;
   }
 
-  // ── Bind To Element: replace element's content with the icon ────────
-  // Used by setIcon() and bindIcons(). Uses cloneNode — no innerHTML
-  // serialization when the template is cached.
+  // bindToElement() — replace element's content with the icon. Used by setIcon() and bindIcons(). Uses cloneNode — no innerHTML serialization when the template is cached.
   function bindToElement(el, name, opts) {
     if (!el) return;
     opts = opts || {};
@@ -285,13 +248,13 @@
     return !!resolved.path;
   }
 
-  // ── Allow orchestrator to wire in the registry + aliases ────────────
+  // Allow orchestrator to wire in the registry + aliases.
   function setRegistry(registry, aliases) {
     _registry = registry || _registry;
     _aliases = aliases || _aliases;
   }
 
-  // ── Allow access to the fallback constant (for testing) ─────────────
+  // Allow access to the fallback constant (for testing).
   function getFallback() { return FALLBACK_SVG_INNER; }
 
   // Clear both string cache (Layer 1a) and template cache (Layer 1b).

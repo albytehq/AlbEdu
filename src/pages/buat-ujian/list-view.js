@@ -1,22 +1,7 @@
-// =============================================================================
-// list-view.js — Assessment list view for create-assessment page (v1.0.0)
-// =============================================================================
-// Default view when user opens create-assessment.html. Shows existing
-// assessments owned by the current admin, loaded from Supabase table
-// `assessments` (was `ujian` in v0.2.0). Read-only — all assessment
-// management (start/stop/delete) lives on ujian-peserta.html.
-//
-// Subscription via onSnapshot keeps the list live: when a new assessment is
-// published from the wizard view, the list refreshes automatically.
-//
-// Field mappings (v0.2.0 → v1.0.0):
-//   ujian.judul            → assessments.title
-//   ujian.mata_pelajaran   → assessments.subject
-//   ujian.time             → assessments.duration_minutes
-//   ujian.kode_id          → assessments.access_code
-//
-// Loaded as classic <script defer>. Exposes window.ListView.
-// =============================================================================
+// list-view.js — default view of the buat-ujian page. Lists the admin's
+// published assessments from the `assessments` table (read-only — start/stop/
+// delete lives on ujian-peserta.html). Subscribes to realtime so newly
+// published assessments appear without a manual refresh.
 
 (function () {
   'use strict';
@@ -31,7 +16,7 @@
         return;
       }
 
-      // Defer load until firebaseDb + auth are ready
+      // Defer load until the platform layer + auth are ready.
       this._waitForAuthThenLoad();
     },
 
@@ -60,7 +45,6 @@
         const user = window.AlbEdu?.supabase?.auth?.currentUser;
         if (!repo || !user) return;
 
-        // Initial fetch — native repository
         const snap = await repo.getDocs('assessments', {
           eq: { created_by: user.id },
           order: { column: 'created_at', ascending: false },
@@ -69,7 +53,7 @@
         const exams = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         this._render(exams);
 
-        // Subscribe to changes (live update) — native realtime
+        // Live updates: refetch on any change to my assessments.
         repo.subscribe(
           'list-view:assessments',
           'assessments',
@@ -90,7 +74,6 @@
         );
       } catch (err) {
         console.warn('[ListView] failed to load assessments:', err);
-        // Show empty state on error
         this._render([]);
       }
     },
@@ -106,7 +89,7 @@
       this._empty.hidden = true;
 
       this._grid.innerHTML = exams.map((e) => {
-        // v1.0.0 — fields are flat on the assessment doc (no nested `ujian` object)
+        // Fields are flat on the assessment doc.
         const judul = e.title || 'Tanpa Judul';
         const mapel = e.subject || '-';
         const durasi = e.duration_minutes || 0;
@@ -143,17 +126,18 @@
       }
     },
 
-    // Public API — called by WizardController to refresh after publish
+    // Called by WizardController to refresh after publish.
     refresh() {
       this._loadExams();
     },
 
     _esc(str) {
-      return String(str || '')
+      return String(str ?? '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     },
   };
 

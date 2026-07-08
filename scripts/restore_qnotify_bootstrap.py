@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-"""
-restore_qnotify_bootstrap.py — Restore QNotify CSS + bootstrap script ke
-10 halaman yang sebelumnya pakai QNotify.
-
-Ini adalah restore sementara sampai Phase A (qnotify-loader.js) siap.
-Setelah qnotify-loader.js ready, bootstrap ini akan diganti dengan 1 baris
-<script defer src="...qnotify-loader.js"></script>.
-"""
+# restore_qnotify_bootstrap.py — Restore QNotify CSS + bootstrap script ke
+# 10 halaman yang sebelumnya pakai QNotify. Sementara sampai qnotify-loader.js
+# siap; begitu loader ready, bootstrap ini akan diganti dengan satu baris
+# <script defer src="...qnotify-loader.js"></script>.
 import re
 from pathlib import Path
 

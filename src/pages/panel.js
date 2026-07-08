@@ -1,14 +1,5 @@
-// =============================================================================
-// panel.js - Admin Panel v1.4.0
-// =============================================================================
-//
-// Tanggung jawab:
-//   - Tampilkan profil admin dari Auth.userData/currentUser
-//   - Navigasi kartu mobile
-//   - Jam berjalan di header
-//   - Salam berdasarkan waktu
-//   - OptionProfile integration (profile actions via OptionProfile.js)
-// =============================================================================
+// panel.js — admin dashboard: profile header, mobile nav cards, clock, greeting.
+// Profile editing is delegated to OptionProfile + ProfileEditorPanel.
 
 class AdminPanel {
     constructor() {
@@ -28,8 +19,12 @@ class AdminPanel {
         this._bootstrapProfilePanel();
         this._bootstrapOptionProfile();
         this._startClock();
+        this._setupDashboard();
 
-        document.addEventListener('albedu:platform-ready', () => this._renderUserInfo(), { once: true });
+        document.addEventListener('albedu:platform-ready', () => {
+            this._renderUserInfo();
+            this._loadDashboardData();
+        }, { once: true });
         document.addEventListener('auth-ready', () => this._renderUserInfo());
         window.addEventListener('pep-saved', (e) => {
             if (e.detail && window.Auth) window.Auth.userData = e.detail;
@@ -39,6 +34,26 @@ class AdminPanel {
             if (e.detail && window.Auth) window.Auth.userData = e.detail;
             this._renderUserInfo();
         });
+    }
+
+    // Hide skeleton + show empty state on dashboard. Once real data loads
+    // (future: recent assessments feed), this can be replaced with actual
+    // content rendering.
+    _setupDashboard() {
+        const skeleton = document.getElementById('dashboard-skeleton');
+        const empty = document.getElementById('dashboard-empty');
+        if (!skeleton && !empty) return;
+        // Defer to next tick so platform-ready has a chance to fire first.
+        setTimeout(() => {
+            if (skeleton) skeleton.hidden = true;
+            if (empty) empty.hidden = false;
+        }, 1500);
+    }
+
+    async _loadDashboardData() {
+        // Placeholder for future dashboard data loading. For now, just
+        // ensures the skeleton is hidden after platform is ready.
+        this._setupDashboard();
     }
 
     _renderUserInfo() {
@@ -62,8 +77,8 @@ class AdminPanel {
             const email = escape(rawEmail);
             const avatarUrl = data.avatar_url || data.foto_profil || data.fotoProfil || '';
             const role = data.peran === 'admin' ? t('nav.role_admin', null, 'Administrator') : t('nav.role_admin_alt', null, 'Admin AlbEdu');
-            // NOTE: DB column is `profile_complete` (renamed from
-            // `profil_lengkap` — migration 20260701_002_alter_users_snake_case.sql).
+            // DB column is `profile_complete` (renamed from `profil_lengkap`
+            // by migration 20260701_002_alter_users_snake_case.sql).
             const incomplete = data.profile_complete === false || data.profilLengkap === false || data.profil_lengkap === false;
 
             const safeAvatarUrl = (avatarUrl && /^https:/.test(avatarUrl) && !avatarUrl.endsWith('.html')) ? avatarUrl : '';
@@ -112,31 +127,18 @@ class AdminPanel {
     }
 
     _attachOptionProfileTrigger(container) {
-        // v3.0 FIX: Previously this method was called from _renderUserInfo()
-        // BEFORE _bootstrapOptionProfile() had finished loading the
-        // OptionProfile.js script. This meant window.OptionProfile was
-        // undefined on first call → trigger was never attached → admin
-        // panel dropdown appeared "broken" until auth-ready fired later
-        // (and even then, only if OptionProfile had loaded by then).
-        //
-        // Now: if OptionProfile is loaded, attach immediately. If not,
-        // listen for the `option-profile-ready` event (dispatched by
-        // OptionProfile.init) and attach then. Once: true ensures we
-        // don't stack deferred listeners.
+        // If OptionProfile is already loaded, attach immediately. Otherwise
+        // wait for its `option-profile-ready` event (or poll briefly as a
+        // safety net for the race where the event already fired).
         if (window.OptionProfile && typeof window.OptionProfile.addTrigger === 'function') {
             window.OptionProfile.addTrigger(container);
             return;
         }
 
-        // Defer — OptionProfile.js hasn't finished loading yet.
-        // We attach a one-shot listener; when OptionProfile dispatches
-        // `option-profile-ready`, we attach the trigger. If the container
-        // has been replaced by then (re-render), the listener is a no-op
-        // because the container is detached from the DOM.
         const deferredAttach = () => {
             if (window.OptionProfile && typeof window.OptionProfile.addTrigger === 'function') {
-                // Only attach if container is still connected to the DOM
-                // (otherwise we'd bind a handler to a detached element).
+                // Only attach if container is still in the DOM (re-render may
+                // have replaced it).
                 if (container.isConnected) {
                     window.OptionProfile.addTrigger(container);
                 }
@@ -144,8 +146,7 @@ class AdminPanel {
         };
         document.addEventListener('option-profile-ready', deferredAttach, { once: true });
 
-        // Safety net: if `option-profile-ready` was already fired before
-        // we registered the listener (race condition), poll briefly.
+        // Safety net: if `option-profile-ready` already fired, poll briefly.
         if (!window.OptionProfile) {
             let polls = 0;
             const poll = setInterval(() => {

@@ -1,10 +1,7 @@
-// =============================================================================
-// cleanup-assessment/index.ts — Archive assessment with pre-delete check
-// =============================================================================
+// cleanup-assessment/index.ts — Archive assessment with pre-delete active-participant check.
 // POST /functions/v1/cleanup-assessment
 // Headers: Authorization: Bearer <admin_token>
 // Body: { assessment_id: string, force?: boolean }
-// =============================================================================
 
 import { handler } from '../_shared/cors.ts';
 import { HTTPError, successResponse } from '../_shared/error.ts';
@@ -33,13 +30,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
 
   const db = new SupabaseDB(env);
 
-  // Check for active sessions (peserta currently taking the assessment)
-  const activeSessions = await db.select<{ count: number }[]>(
-    'assessment_sessions',
-    `id&assessment_id=eq.${body.assessment_id}&status=eq.active`
-  );
-
-  // Actually use count endpoint
+  // Use the PostgREST count endpoint to check for active participants.
   const countRes = await fetch(
     `${env.SUPABASE_URL}/rest/v1/assessment_sessions?assessment_id=eq.${body.assessment_id}&status=eq.active&select=id&limit=100`,
     {
@@ -66,7 +57,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     });
   }
 
-  // Soft delete (archive)
+  // Soft delete (archive).
   const { updated } = await db.updateIf(
     'assessments',
     `id=eq.${body.assessment_id} AND status=neq.archived`,
@@ -74,7 +65,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
   );
 
   if (updated === 0) {
-    // Already archived — idempotent
+    // Already archived — idempotent.
     return successResponse({
       assessment_id: body.assessment_id,
       status: 'archived',
@@ -82,7 +73,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     });
   }
 
-  // Audit log
+  // Audit log.
   logAudit(env, {
     action: 'ARCHIVE_ASSESSMENT',
     targetType: 'assessment',

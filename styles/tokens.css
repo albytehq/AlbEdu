@@ -363,7 +363,7 @@ main, p, h1, h2, h3, h4, h5, h6, li, blockquote, [contenteditable] {
 }
 
 /* ═══ Skip Link ═══ */
-.skip-to-main {
+.albedu-skip-link {
   position: absolute;
   top: -100%;
   left: var(--sp-4);
@@ -377,7 +377,7 @@ main, p, h1, h2, h3, h4, h5, h6, li, blockquote, [contenteditable] {
   text-decoration: none;
   transition: top var(--duration-fast) var(--ease-default);
 }
-.skip-to-main:focus {
+.albedu-skip-link:focus {
   top: 0;
   outline: 3px solid var(--amber-500);
   outline-offset: 2px;
@@ -745,82 +745,6 @@ main, p, h1, h2, h3, h4, h5, h6, li, blockquote, [contenteditable] {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Material Symbols (icon font) — global base
-   Loaded per-page via Google Fonts <link>. This base class makes
-   <i class="material-symbols-outlined">name</i> render consistently
-   anywhere in the app. Local contextual overrides (size, color,
-   FILL axis) may still be applied via more specific selectors.
-   ═══════════════════════════════════════════════════════════════ */
-.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-weight: normal;
-  font-style: normal;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-flex;
-  vertical-align: middle;
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
-  -webkit-font-feature-settings: 'liga';
-  -webkit-font-smoothing: antialiased;
-  user-select: none;
-  white-space: nowrap;
-  font-size: 20px; /* default; override per-context */
-}
-
-/* Spinner — replacement for Font Awesome .fa-spin.
-   Apply .ms-spin to a <i class="material-symbols-outlined ms-spin">
-   progress_activity</i>. */
-.ms-spin { animation: ms-rotate 1s linear infinite; }
-@keyframes ms-rotate { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-  .ms-spin { animation-duration: 2.5s; }
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   Buat Ujian — AlbEdu white-blue tokens (updated v0.2.0)
-   Replaces the v2.2.0 Vercel black/white palette with AlbEdu's
-   signature white-blue (#2563eb). Prefixed --bu-* to avoid
-   clashing with existing AlbEdu tokens.
-   ═══════════════════════════════════════════════════════════════ */
-:root {
-  --bu-page-bg:              #ffffff;
-  --bu-page-bg-subtle:       #f8fafc;
-  --bu-text-primary:         #0f172a;
-  --bu-text-secondary:       #475569;
-  --bu-text-tertiary:        #94a3b8;
-  --bu-border:               #e2e8f0;
-  --bu-border-strong:        #cbd5e1;
-  --bu-accent:               #2563eb;       /* AlbEdu blue */
-  --bu-accent-hover:         #1d4ed8;
-  --bu-accent-bg:            #eff6ff;       /* very light blue background */
-  --bu-accent-bg-strong:     #dbeafe;       /* light blue background */
-  --bu-accent-text:          #ffffff;
-  --bu-success:              #10b981;
-  --bu-success-bg:           #ecfdf5;
-  --bu-warning:              #f59e0b;
-  --bu-warning-bg:           #fffbeb;
-  --bu-danger:               #ef4444;
-  --bu-danger-bg:            #fef2f2;
-  --bu-radius:               10px;
-  --bu-radius-sm:            6px;
-  --bu-radius-lg:            14px;
-  --bu-shadow-sm:            0 1px 2px rgba(15, 23, 42, .04);
-  --bu-shadow-md:            0 4px 12px rgba(15, 23, 42, .08);
-  --bu-shadow-lg:            0 12px 32px rgba(15, 23, 42, .12);
-  --bu-shadow-modal:         0 24px 64px rgba(15, 23, 42, .16);
-  --bu-font:                 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --bu-font-mono:            'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --bu-spacing-page:         32px;
-  --bu-spacing-card:         24px;
-  --bu-spacing-section:      16px;
-  --bu-transition:           150ms cubic-bezier(.4, 0, .2, 1);
-  --bu-transition-slow:      250ms cubic-bezier(.4, 0, .2, 1);
-  --bu-z-modal:              9000;
-  --bu-z-overlay:            8999;
-}
-
-/* ═══════════════════════════════════════════════════════════════
    AlbEdu v1.0.0 — Enterprise Design Tokens (--albedu-*)
    White-blue palette. Auto-derived from --albedu-primary by theme-system.
    ============================================================================= */
@@ -844,10 +768,11 @@ main, p, h1, h2, h3, h4, h5, h6, li, blockquote, [contenteditable] {
   /* Typography */
   --albedu-font: 'Plus Jakarta Sans', system-ui, sans-serif;
 
-  /* Radius */
+  /* Radius — subtle enterprise. 6px for inputs/buttons, 8px for cards,
+     999px for pills only. NOT too rounded. */
   --albedu-radius-sm: 6px;
-  --albedu-radius: 10px;
-  --albedu-radius-lg: 14px;
+  --albedu-radius: 8px;
+  --albedu-radius-lg: 8px;
 
   /* Shadows */
   --albedu-shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
@@ -869,13 +794,57 @@ main, p, h1, h2, h3, h4, h5, h6, li, blockquote, [contenteditable] {
   --albedu-z-overlay: 8999;
 }
 
-/* Dark mode overrides */
+/* Dark mode — both [data-theme="dark"] (manual toggle) AND
+   @media (prefers-color-scheme: dark) (OS-level) flip the full AlbEdu
+   token set. Previously only 5 of 19 tokens flipped via [data-theme],
+   and the media query only flipped legacy --color-* — so OS-dark users
+   saw mixed light/dark UI. */
+[data-theme="dark"],
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --albedu-primary: #3b82f6;
+    --albedu-primary-hover: #60a5fa;
+    --albedu-primary-muted: rgba(59, 130, 246, 0.12);
+    --albedu-primary-ring: rgba(59, 130, 246, 0.35);
+
+    --albedu-heading: #f1f5f9;
+    --albedu-body: #cbd5e1;
+    --albedu-surface: #1e293b;
+    --albedu-surface-alt: #0f172a;
+    --albedu-border: #334155;
+
+    --albedu-success: #34d399;
+    --albedu-warning: #fbbf24;
+    --albedu-danger: #f87171;
+
+    --albedu-shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+    --albedu-shadow-md: 0 4px 12px rgba(0, 0, 0, .4);
+    --albedu-shadow-lg: 0 12px 32px rgba(0, 0, 0, .5);
+    --albedu-shadow-modal: 0 24px 64px rgba(0, 0, 0, .6);
+  }
+}
+
+/* Manual toggle takes precedence over OS preference. */
 [data-theme="dark"] {
-  --albedu-surface: #1e293b;
-  --albedu-surface-alt: #0f172a;
+  --albedu-primary: #3b82f6;
+  --albedu-primary-hover: #60a5fa;
+  --albedu-primary-muted: rgba(59, 130, 246, 0.12);
+  --albedu-primary-ring: rgba(59, 130, 246, 0.35);
+
   --albedu-heading: #f1f5f9;
   --albedu-body: #cbd5e1;
+  --albedu-surface: #1e293b;
+  --albedu-surface-alt: #0f172a;
   --albedu-border: #334155;
+
+  --albedu-success: #34d399;
+  --albedu-warning: #fbbf24;
+  --albedu-danger: #f87171;
+
+  --albedu-shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+  --albedu-shadow-md: 0 4px 12px rgba(0, 0, 0, .4);
+  --albedu-shadow-lg: 0 12px 32px rgba(0, 0, 0, .5);
+  --albedu-shadow-modal: 0 24px 64px rgba(0, 0, 0, .6);
 }
 
 /* ═══════════════════════════════════════════════════════════════

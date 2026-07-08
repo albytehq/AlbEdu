@@ -5,7 +5,7 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daftar Nama – AlbEdu</title>
+  <title>Daftar Nama — AlbEdu</title>
   <meta name="description" content="AlbEdu — Kelola daftar nama peserta per kelas untuk pencocokan otomatis saat asesmen.">
   <meta name="theme-color" content="#2563eb">
 
@@ -17,16 +17,16 @@
   <link rel="manifest" href="../../public/images/favicon/site.webmanifest">
 
   <!-- Design System -->
-      <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
+    <!-- Critical CSS (synchronous, tiny — paints shell in first paint) -->
     <script src="../../src/shared/head/critical-css.js"></script>
 
-    <!-- ═══ Design tokens ═══ -->
+    <!-- Design tokens -->
     <link rel="stylesheet" href="../../styles/tokens.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/notify.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/dialog.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/label.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/Readnote.css">
-    <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
+    <!-- Deferred shared modules (run after parse, in order) -->
     <script defer src="../../src/shared/head/fonts.js"></script>
     <script defer src="../../src/shared/icons/icons.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -41,8 +41,8 @@
     <link rel="stylesheet" href="../../styles/skeleton-loading.css">
     <link rel="stylesheet" href="../../styles/navigasi.css">
     <link rel="stylesheet" href="../../styles/notification-panel.css">
-    <!-- v0.746.0 — Enterprise design system -->
     <link rel="stylesheet" href="../../styles/albedu-v1.css">
+    <link rel="stylesheet" href="../../styles/albedu-components.css">
     <link rel="stylesheet" href="../../styles/daftar-nama.css"><!-- Fonts --><!-- Supabase SDK --><!-- Auth baseline -->
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
@@ -55,7 +55,7 @@
     <script src="../../src/pages/daftar-nama.js" defer></script>
 </head>
 <body>
-<a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
+<a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
 
 <!-- Page Load -->
 
@@ -194,7 +194,7 @@
 
     <footer class="footer">
       <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
-      <p>v0.746.0</p>
+      <p>v0.816.0</p>
     </footer>
   </main>
 </div>
@@ -203,7 +203,7 @@
 <script src="../../src/utils/admin-notification-center.js" defer></script>
 
 <script type="module" src="../../src/theme-system/index.js"></script>
-<!-- v0.746.0 — Apply default theme on load (prevents FOUC) -->
+<!-- Apply default theme on load (prevents FOUC) -->
 <script>
   (function () {
     try {
@@ -215,7 +215,6 @@
 
 <!-- Main page logic -->
 <script>
-// ============================================================
 // DaftarNama Page Controller — v2 (match DaftarNama.js schema + CSS asli)
 //
 // Schema:
@@ -231,12 +230,11 @@
 //   .dn-tabs-bar, .dn-tab-pill (.active), .dn-add-tab-btn,
 //   .dn-tab-editor, .dn-tab-editor__head, .dn-tab-editor__body,
 //   .dn-nama-row, .dn-add-nama-btn, .dn-action-bar, .dn-count-chip
-// ============================================================
 
 (function () {
   'use strict';
 
-  // ── State ────────────────────────────────────────────────────
+  // State
   let _daftarList   = [];
   let _activeDaftar = null;
   let _activeTabId  = null;
@@ -244,7 +242,7 @@
   let _createTipe   = null;        // 'Kelas' | 'Sekolah' | 'Negara' | 'Custom'
   let _createTipeCustom = '';
 
-  // ── DOM refs ─────────────────────────────────────────────────
+  // DOM refs
   const $list   = () => document.getElementById('dnList');
   const $editor = () => document.getElementById('dnEditor');
   const $load   = () => document.getElementById('dnLoading');
@@ -259,7 +257,7 @@
     'Custom':  { icon: 'label',   label: 'Custom' },
   };
 
-  // ── Boot ─────────────────────────────────────────────────────
+  // Boot
   function _boot() {
     if (!window.SelfStorage || !window.DaftarNama) {
       setTimeout(_boot, 80);
@@ -274,7 +272,7 @@
     document.addEventListener('auth-ready', _boot, { once: true });
   }
 
-  // ── Load ─────────────────────────────────────────────────────
+  // Load
   async function _load() {
     $load().style.display = '';
     $list().style.display = 'none';
@@ -297,7 +295,7 @@
     }
   }
 
-  // ── Render list ───────────────────────────────────────────────
+  // Render list
   function _renderList() {
     const list = $list();
     if (!list) return;
@@ -380,7 +378,7 @@
     _renderList();
   }
 
-  // ── Update header state ──────────────────────────────────────
+  // Update header state
   function _updateHeaderState() {
     const btn = $btn();
     if (!btn) return;
@@ -389,7 +387,7 @@
     btn.style.opacity = _daftarList.length >= MAX_DAFTAR ? '0.5' : '1';
   }
 
-  // ── Create daftar ────────────────────────────────────────────
+  // Create daftar
   $btn().addEventListener('click', () => {
     const MAX_DAFTAR = window.DaftarNama.MAX_DAFTAR || 3;
     if (_daftarList.length >= MAX_DAFTAR) return;
@@ -419,7 +417,7 @@
         <div class="dn-panel__body">
           <div class="dn-field">
             <label for="dnCreateNama">Nama Daftar *</label>
-            <input type="text" id="dnCreateNama" placeholder="Contoh: Daftar Kelas 7A" maxlength="30">
+            <input type="text" id="dnCreateNama" class="albedu-input" placeholder="Contoh: Daftar Kelas 7A" maxlength="30">
             <div class="char-count"><span id="dnCreateNamaCount">0</span>/30</div>
           </div>
           <div class="dn-field">
@@ -435,7 +433,7 @@
           </div>
           <div class="dn-field dn-custom-input" id="dnTipeCustomWrap">
             <label for="dnCreateTipeCustom">Nama Tipe Custom *</label>
-            <input type="text" id="dnCreateTipeCustom" placeholder="Contoh: Ekskul, Tim Futsal" maxlength="20">
+            <input type="text" id="dnCreateTipeCustom" class="albedu-input" placeholder="Contoh: Ekskul, Tim Futsal" maxlength="20">
             <div class="char-count"><span id="dnCreateTipeCustomCount">0</span>/20 — minimal 2 karakter</div>
           </div>
         </div>
@@ -542,7 +540,7 @@
     }
   }
 
-  // ── Edit daftar ──────────────────────────────────────────────
+  // Edit daftar
   function _openEditor(d) {
     _activeDaftar = JSON.parse(JSON.stringify(d));
     _activeTabId = d.tabs && d.tabs[0] ? d.tabs[0].id : null;
@@ -617,7 +615,7 @@
           ` : '<div class="dn-empty"><p>Tidak ada tab. Tambah tab baru.</p></div>'}
         </div>
         <div class="dn-action-bar">
-          <span style="margin-right:auto;font-size:12px;color:#64748b;">
+          <span style="margin-right:auto;font-size:12px;color: var(--albedu-body);">
             <span style="font-size:12px;vertical-align:middle;" data-albedu-icon="info"><svg class="albedu-icon" aria-hidden="true"><use href="#i-info"/></svg></span>
             Total ${anggotaCount} nama di tab ini
           </span>
@@ -724,7 +722,7 @@
   function _renderEntries(tab) {
     const anggota = Array.isArray(tab.anggota) ? tab.anggota : [];
     if (anggota.length === 0) {
-      return '<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">Belum ada nama. Klik "Tambah Nama" untuk menambahkan.</div>';
+      return '<div class="albedu-empty-state" id="dn-empty"><span data-albedu-icon="person_add"><svg class="albedu-icon" aria-hidden="true"><use href="#i-person_add"/></svg></span><h3>Belum ada nama</h3><p>Tambahkan nama peserta untuk digunakan pada asesmen identitas manual.</p></div>';
     }
     return anggota.map((nama, idx) => `
       <div class="dn-nama-row" data-idx="${idx}">
@@ -818,7 +816,7 @@
     }
   }
 
-  // ── Delete daftar ────────────────────────────────────────────
+  // Delete daftar
   async function _deleteDaftar(id) {
     const confirmed = await window.notify?.confirm({
       title: 'Hapus Daftar?',
@@ -841,14 +839,14 @@
     }
   }
 
-  // ── Close editor ─────────────────────────────────────────────
+  // Close editor
   function _closeEditor() {
     _isCreating = false;
     $editor().style.display = 'none';
     $editor().innerHTML = '';
   }
 
-  // ── Escape HTML ──────────────────────────────────────────────
+  // Escape HTML
   function _esc(str) {
     return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
                              .replace(/>/g,'&gt;').replace(/"/g,'&quot;');

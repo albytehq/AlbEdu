@@ -1,8 +1,4 @@
-// =============================================================================
-// SelfStorage.js — AlbEdu Self Storage v1.0.0
-// =============================================================================
-//
-// Satu tanggung jawab: provisioning & manajemen private storage per admin.
+// SelfStorage.js — provisioning & management of per-admin private storage.
 //
 // PRINSIP DESAIN:
 //   1. Storage terbentuk otomatis saat admin login — admin tidak tahu storage ada.
@@ -20,7 +16,6 @@
 //   SupabaseApi.js → auth.js → SelfStorage.js
 //   SelfStorage mendengar event 'auth-ready' — saat admin login, storage
 //   langsung di-provision secara background tanpa user notice.
-// =============================================================================
 
 const MAX_ACTIVE_EXAMS = 5;   // draft + active max per admin
 const EXAM_LIMIT = MAX_ACTIVE_EXAMS;
@@ -31,7 +26,6 @@ window.SelfStorage = (() => {
   let _ready       = false;
   let _readyResolvers = [];
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   function _getSb() {
     return window.AlbEdu?.supabase?.client;
@@ -42,8 +36,6 @@ window.SelfStorage = (() => {
   }
 
   function _getCurrentUserId() {
-    // NOTE: `.uid` is a Firebase-shaped field that no longer exists on the
-    // native Supabase AuthService user object (which exposes `.id`).
     return window.Auth?.currentUser?.id || null;
   }
 
@@ -69,7 +61,6 @@ window.SelfStorage = (() => {
     window.dispatchEvent(new CustomEvent('selfstorage-ready', { detail: { storageId } }));
   }
 
-  // ── Provisioning ──────────────────────────────────────────────────────────
 
   async function _provision(adminId) {
     const sb = _getSb();
@@ -118,7 +109,6 @@ window.SelfStorage = (() => {
     }
   }
 
-  // ── Boot: listen for auth-ready ───────────────────────────────────────────
 
   async function _handleAuthReady(e) {
     const role = e?.detail?.role;
@@ -142,12 +132,11 @@ window.SelfStorage = (() => {
   // Register listener — auth-ready fires from auth.js after role is confirmed.
   document.addEventListener('auth-ready', _handleAuthReady, { once: true });
 
-  // BUGFIX K: Replaced the single 800ms setTimeout with a retry loop.
-  // The old approach would miss auth-ready if it fired later than 800ms
-  // (slow network, cold start) AND Auth.authReady was still false at
-  // the 800ms mark. The { once: true } event listener still catches
-  // late events, but this retry provides a visible warning if
-  // provisioning never happens -- instead of silently hanging.
+  // Retry loop instead of a single setTimeout. The old 800ms setTimeout
+  // would miss auth-ready if it fired later (slow network, cold start) AND
+  // Auth.authReady was still false at the 800ms mark. The { once: true }
+  // listener still catches late events; this retry surfaces a visible warning
+  // if provisioning never happens — instead of silently hanging.
   let _safetyRetries = 0;
   const _SAFETY_MAX_RETRIES = 20; // 20 x 500ms = 10 seconds
   function _safetyNetCheck() {
@@ -171,7 +160,6 @@ window.SelfStorage = (() => {
   }
   setTimeout(_safetyNetCheck, 500);
 
-  // ── Exam limit ────────────────────────────────────────────────────────────
 
   async function getExamCount() {
     const adminId = _adminId || _getCurrentUserId();
@@ -181,10 +169,9 @@ window.SelfStorage = (() => {
     if (!sb) return 0;
 
     try {
-      // v1.0.0: 'ujian' table was renamed to 'assessments' (snake_case schema).
-      // Filter on `created_by` (was `createdBy`) and status in {draft, active}
-      // — 'expired' was removed; archived assessments live in `archived` status now
-      // and don't count against the active limit.
+      // 'assessments' table (was 'ujian' pre-snake_case migration). Filter on
+      // `created_by` and status in {draft, active} — archived assessments no
+      // longer count against the active limit.
       const { count, error } = await sb
         .from('assessments')
         .select('*', { count: 'exact', head: true })
@@ -204,7 +191,6 @@ window.SelfStorage = (() => {
     return count >= EXAM_LIMIT;
   }
 
-  // ── Public API ────────────────────────────────────────────────────────────
 
   return {
     /** Menunggu storage siap. Resolve dengan storageId (string) atau null jika bukan admin. */

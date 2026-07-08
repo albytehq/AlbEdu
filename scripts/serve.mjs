@@ -1,5 +1,5 @@
-// AlbEdu dev server v2.1.0 — serves source on http://localhost:8765 for local testing.
-// v2.1.0: Landing page is now at root index.html (no redirect to /pages/).
+// AlbEdu dev server — serves source on http://localhost:8765 for local testing.
+// Landing page is at root index.html (no redirect to /pages/).
 import http from 'http';
 import fs from 'fs';
 import path from 'path';

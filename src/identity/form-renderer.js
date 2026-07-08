@@ -1,11 +1,8 @@
-// =============================================================================
-// IdentityFormRenderer.js — AlbEdu Identity Form Renderer v1.0.0
-// =============================================================================
+// IdentityFormRenderer.js — peserta-side form renderer for "Manual" identity
+// mode. Renders the form dynamically based on fieldsConfig produced by
+// IdentityFormBuilder.
 //
-// Peserta-side form renderer untuk mode "Manual" identity.
-// Render form dynamic berdasarkan fieldsConfig yang dibuat admin via IdentityFormBuilder.
-//
-// Supported field types: text, number, select, textarea, email
+// Supported field types: text, number, select, textarea, email.
 //
 // Public API:
 //   - mount(container, fieldsConfig)  → render form ke container
@@ -14,14 +11,13 @@
 //   - getDisplayName()                 → return string (ambil dari field label "nama")
 //   - reset()                          → clear all values
 //   - destroy()                        → cleanup
-// =============================================================================
 
 window.IdentityFormRenderer = (() => {
   let _container = null;
   let _fields    = [];
   let _values    = {}; // field_id → value
 
-  // ── Helpers ───────────────────────────────────────────────────────────
+  // Helpers
 
   function _findNamaField() {
     return _fields.find(f =>
@@ -50,7 +46,7 @@ window.IdentityFormRenderer = (() => {
     return null;
   }
 
-  // ── Validation ────────────────────────────────────────────────────────
+  // Validation
 
   function validate() {
     const errors = [];
@@ -101,7 +97,7 @@ window.IdentityFormRenderer = (() => {
     return errors;
   }
 
-  // ── Get values ────────────────────────────────────────────────────────
+  // Get values
 
   function getValues() {
     const result = {};
@@ -127,7 +123,7 @@ window.IdentityFormRenderer = (() => {
     };
   }
 
-  // ── Rendering ─────────────────────────────────────────────────────────
+  // Rendering
 
   function _render() {
     if (!_container) return;
@@ -163,7 +159,7 @@ window.IdentityFormRenderer = (() => {
     // Input by type
     let input;
     if (f.type === 'select') {
-      // v2.0.0: Custom dropdown (replaces native <select>)
+      // Custom dropdown (replaces native <select>)
       const dd = _createCustomDropdown({
         placeholder: '-- Pilih --',
         options: (f.options || []).map(opt => ({ value: opt, label: opt })),
@@ -190,7 +186,7 @@ window.IdentityFormRenderer = (() => {
       input.value = _values[f.id] != null ? _values[f.id] : '';
       if (f.placeholder) input.placeholder = f.placeholder;
       const ml = _getMaxlength(f);
-      if (ml) input.maxlength = ml;
+      if (ml) input.maxLength = ml;
       if (_isRequired(f)) input.required = true;
       input.oninput = e => {
         _values[f.id] = e.target.value;
@@ -205,7 +201,7 @@ window.IdentityFormRenderer = (() => {
       input.value = _values[f.id] != null ? _values[f.id] : '';
       if (f.placeholder) input.placeholder = f.placeholder;
       const ml = _getMaxlength(f);
-      if (ml) input.maxlength = ml;
+      if (ml) input.maxLength = ml;
       if (_isRequired(f)) input.required = true;
       input.oninput = e => {
         _values[f.id] = e.target.value;
@@ -238,10 +234,8 @@ window.IdentityFormRenderer = (() => {
     wrap?.classList.add('ifr-field--error');
   }
 
-  /**
-   * v2.0.0 — Custom dropdown component (replaces native <select>).
-   * Returns: { element, setOptions, setValue, clear }
-   */
+  // Custom dropdown component (replaces native <select>).
+  // Returns: { element, setOptions, setValue, clear }
   function _createCustomDropdown({ placeholder = '-- Pilih --', options = [], onChange = () => {} } = {}) {
     const wrap = document.createElement('div');
     wrap.className = 'ifr-dropdown';
@@ -375,7 +369,7 @@ window.IdentityFormRenderer = (() => {
     }
   }
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────
+  // Lifecycle
 
   function mount(container, fieldsConfig) {
     if (!container) throw new Error('Container required');
@@ -391,7 +385,7 @@ window.IdentityFormRenderer = (() => {
       _container.querySelectorAll('input, textarea').forEach(el => {
         el.value = '';
       });
-      // v2.0.0: reset custom dropdowns
+      // Reset custom dropdowns
       _container.querySelectorAll('.ifr-dropdown').forEach(dd => {
         const labelEl = dd.querySelector('.ifr-dropdown__label');
         const selected = dd.querySelector('.ifr-dropdown__selected');
@@ -418,7 +412,7 @@ window.IdentityFormRenderer = (() => {
     _values = {};
   }
 
-  // ── Public API ────────────────────────────────────────────────────────
+  // Public API
 
   return {
     mount, destroy, reset,

@@ -1,20 +1,12 @@
-// =============================================================================
-// create-assessment.js — v1.0.0 Page Controller
-// =============================================================================
-// Full rewrite with:
-//   - Google Form-like theme editor (1 color → auto-derive)
-//   - New schema (assessments table, 6-digit access_code, allow_retake)
-//   - Server-side publish via direct Supabase insert (assessments table)
-//   - Live WCAG AA validation
-//   - List view + 3-step wizard
-// =============================================================================
+// create-assessment.js — page controller for the "Buat Asesmen" wizard.
+// Owns the wizard state (examData), score recalculation, access-code
+// generation, validation, and publish to the `assessments` table.
 
 (function () {
   'use strict';
 
   const t = (key, vars, fallback) => fallback;
 
-  // ─── Constants ──────────────────────────────────────────────────────────
   const SCHEMA_VERSION = '1.0.0';
   const GLOBAL_SKOR = 100;
   const MAX_SECTIONS = 2;
@@ -22,7 +14,6 @@
   const MAX_TOTAL_QUESTIONS = 100;
   const ACCESS_CODE_LENGTH = 6;
 
-  // ─── Default identity fields ────────────────────────────────────────────
   function defaultIdentityFields() {
     return [
       {
@@ -43,7 +34,6 @@
     ];
   }
 
-  // ─── State ──────────────────────────────────────────────────────────────
   const _state = {
     examData: {
       access_code: null,
@@ -78,7 +68,8 @@
   const _listeners = new Set();
   let _lastTotalQ = 0, _lastBase = 0, _lastRem = 0;
 
-  // ─── Score recalculation ────────────────────────────────────────────────
+  // Score recalculation. Memoizes by (totalQ, base, rem) so a no-op setState
+  // (for example typing in a non-score field) doesn't churn the questions array.
   function recalculateScores(state) {
     const totalQ = state.examData.sections.reduce((sum, sec) => sum + sec.questions.length, 0);
     if (totalQ === 0) return state;
@@ -104,7 +95,7 @@
     return state;
   }
 
-  // ─── Generate 6-digit access code ───────────────────────────────────────
+  // 6-digit access code; ensure it's unique within this session's seen set.
   function generateAccessCode() {
     let code;
     do {
@@ -115,7 +106,6 @@
     return code;
   }
 
-  // ─── Public API ─────────────────────────────────────────────────────────
   const CreateAssessment = {
     SCHEMA_VERSION,
     GLOBAL_SKOR,
@@ -142,7 +132,7 @@
       return () => _listeners.delete(fn);
     },
 
-    // ── Section operations ──
+    // Section operations
     addSection() {
       if (_state.examData.sections.length >= MAX_SECTIONS) return null;
       const id = _state.examData.sections.length + 1;
@@ -171,7 +161,7 @@
       this.setState({});
     },
 
-    // ── Question operations ──
+    // Question operations
     addQuestion(sectionIndex, type) {
       const sec = _state.examData.sections[sectionIndex];
       if (!sec) return null;
@@ -208,14 +198,14 @@
       this.setState({});
     },
 
-    // ── Access code ──
+    // Access code
     generateToken() { return generateAccessCode(); },
     getToken() { return _state.examData.access_code; },
 
-    // ── Export for Supabase ──
+    // Export for Supabase
     exportAssessmentData() {
       const data = JSON.parse(JSON.stringify(_state.examData));
-      // Compute scheduled end from start + duration
+      // Scheduled end = scheduled start + duration (minutes).
       if (data.access_mode === 'scheduled' && _state.scheduled_start) {
         const start = new Date(_state.scheduled_start);
         if (!isNaN(start.getTime())) {
@@ -225,7 +215,7 @@
       return data;
     },
 
-    // ── Validate ──
+    // Validate
     validate() {
       const errors = [];
       const u = _state.examData;
@@ -304,14 +294,13 @@
       return { valid: errors.length === 0, errors };
     },
 
-    // ── Publish to Supabase (assessments table) ──
+    // Publish to Supabase (assessments table)
     async publishToSupabase() {
       const { valid, errors } = this.validate();
       if (!valid) {
         throw new Error(errors[0]?.message || 'Validasi gagal');
       }
 
-      // Ensure access code exists
       if (!this.getToken()) {
         this.generateToken();
       }
@@ -324,8 +313,7 @@
       const data = this.exportAssessmentData();
       const now = new Date().toISOString();
 
-      // Insert into assessments table (native repository — addDoc returns the
-      // inserted row with its generated UUID PK).
+      // addDoc returns the inserted row with its generated UUID PK.
       const payload = {
         access_code: data.access_code,
         organization_id: null, // single-tenant mode
@@ -358,7 +346,8 @@
 
       const docRef = await repo.addDoc('assessments', payload);
 
-      // Audit log via native RPC service (non-blocking, auth token auto-attached)
+      // Audit log via the native RPC service (non-blocking; auth token is
+      // auto-attached by the platform layer).
       try {
         await window.AlbEdu?.supabase?.rpc?.invoke('assessment-lifecycle', {
           assessment_id: docRef.id,
@@ -373,19 +362,17 @@
   };
 
   window.CreateAssessment = CreateAssessment;
-  window.BuatUjian = CreateAssessment; // backward compat with v0.2.0 modules
+  window.BuatUjian = CreateAssessment; // back-compat alias
 
-  // ─── Bootstrap ──────────────────────────────────────────────────────────
+  // Bootstrap
   document.addEventListener('DOMContentLoaded', () => {
-    // Init theme system with default
     if (window.ThemeSystem) {
       window.ThemeSystem.apply(_state.examData.theme_config);
     }
 
-    // Init theme editor
     initThemeEditor();
 
-    // Init v0.2.0 modules (still working — backward compat)
+    // Wizard modules auto-init if loaded.
     if (window.MetadataCard) window.MetadataCard.init();
     if (window.SoalCard) window.SoalCard.init();
     if (window.PublishCard) window.PublishCard.init();
@@ -395,12 +382,10 @@
     if (window.ListView) window.ListView.init();
     if (window.KeyboardShortcuts) window.KeyboardShortcuts.init();
 
-    console.info('[CreateAssessment] v1.0.0 initialized');
+    console.info('[CreateAssessment] initialized');
   });
 
-  // ─── Language Switcher ──────────────────────────────────────────────────
-  
-  // ─── Theme Editor (Google Form-like) ────────────────────────────────────
+  // Theme Editor (Google Form-like)
   function initThemeEditor() {
     const presetChips = document.querySelectorAll('.albedu-preset-chip');
     const colorPicker = document.getElementById('color-picker');
@@ -417,20 +402,17 @@
       return;
     }
 
-    // Render quick-pick colors
     const quickColors = window.ThemeSystem.getQuickColors();
     colorQuickpicks.innerHTML = quickColors.map((c) =>
       `<button class="albedu-color-swatch-btn" data-color="${c.hex}" style="background: ${c.hex};" title="${c.name}" type="button"></button>`
     ).join('');
 
-    // Mark active color
     function updateActiveColor(hex) {
       colorQuickpicks.querySelectorAll('.albedu-color-swatch-btn').forEach((btn) => {
         btn.classList.toggle('albedu-active', btn.dataset.color.toLowerCase() === hex.toLowerCase());
       });
     }
 
-    // Apply theme + update state + validate WCAG
     function applyThemeChange(primary, font, mode, preset) {
       const theme = {
         version: '1.0',
@@ -440,16 +422,12 @@
         mode: mode || _state.examData.theme_config.mode,
       };
       window.ThemeSystem.apply(theme);
-
-      // Update state
       _state.examData.theme_config = theme;
 
-      // Update UI
       colorPicker.value = theme.primary;
       colorHex.textContent = theme.primary;
       updateActiveColor(theme.primary);
 
-      // WCAG validation
       const validation = window.ThemeSystem.validate(theme.primary);
       if (validation.allPass) {
         wcagStatus.className = 'albedu-wcag-status albedu-wcag-pass';
@@ -460,7 +438,6 @@
       }
     }
 
-    // Preset chips
     presetChips.forEach((chip) => {
       chip.addEventListener('click', () => {
         presetChips.forEach((c) => c.classList.remove('albedu-active'));
@@ -470,35 +447,29 @@
       });
     });
 
-    // Quick-pick colors
     colorQuickpicks.addEventListener('click', (e) => {
       const btn = e.target.closest('.albedu-color-swatch-btn');
       if (!btn) return;
       applyThemeChange(btn.dataset.color, null, null, 'custom');
     });
 
-    // Custom color picker
     colorPicker.addEventListener('input', (e) => {
       applyThemeChange(e.target.value, null, null, 'custom');
     });
 
-    // Reset color to default
     colorReset.addEventListener('click', () => {
       applyThemeChange('#2563eb', 'Plus Jakarta Sans', 'auto', 'default');
       presetChips.forEach((c) => c.classList.toggle('albedu-active', c.dataset.preset === 'default'));
     });
 
-    // Font select
     fontSelect.addEventListener('change', (e) => {
       applyThemeChange(null, e.target.value, null, _state.examData.theme_config.preset);
     });
 
-    // Mode select
     modeSelect.addEventListener('change', (e) => {
       applyThemeChange(null, null, e.target.value, _state.examData.theme_config.preset);
     });
 
-    // Reset all
     resetAllBtn.addEventListener('click', () => {
       applyThemeChange('#2563eb', 'Plus Jakarta Sans', 'auto', 'default');
       fontSelect.value = 'Plus Jakarta Sans';
@@ -506,7 +477,6 @@
       presetChips.forEach((c) => c.classList.toggle('albedu-active', c.dataset.preset === 'default'));
     });
 
-    // Initial apply
     applyThemeChange(
       _state.examData.theme_config.primary,
       _state.examData.theme_config.font,

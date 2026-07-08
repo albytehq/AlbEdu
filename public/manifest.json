@@ -1,8 +1,8 @@
 {
   "name": "AlbEdu — Assessment Platform",
   "short_name": "AlbEdu",
-  "description": "Platform asesmen online untuk semua kebutuhan evaluasi — SD, SMP, SMA, kuliah, hingga personal use. Buat, kelola, dan pantau asesmen dengan anti-cheat enterprise-grade.",
-  "version": "0.746.0",
+  "description": "Platform asesmen online untuk semua kebutuhan evaluasi — SD, SMP, SMA, kuliah, hingga personal use. Buat, kelola, dan pantau asesmen dengan anti-cheat berlapis.",
+  "version": "0.816.0",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

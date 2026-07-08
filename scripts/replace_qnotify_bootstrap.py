@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
-"""
-replace_qnotify_bootstrap.py — Phase A: Replace 10 per-page inline QNotify
-bootstrap <script type="module"> blocks with a single <script defer> tag
-that loads src/shared/qnotify-loader.js.
-
-This makes QNotify boot deterministic — no more per-page timing variations.
-"""
+# replace_qnotify_bootstrap.py — Replace 10 per-page inline QNotify bootstrap
+# <script type="module"> blocks with a single <script defer> tag that loads
+# src/shared/qnotify-loader.js. Makes QNotify boot deterministic — no more
+# per-page timing variations.
 import re
 from pathlib import Path
 

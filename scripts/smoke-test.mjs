@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-/**
- * Deep smoke test: Verify all HTML pages load AND their referenced assets resolve.
- * Uses Node.js path.resolve() for correct path resolution.
- */
+// Deep smoke test: verify all HTML pages load AND their referenced assets resolve.
+// Uses Node.js path.resolve() for correct path resolution.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,14 +11,14 @@ const ROOT = path.resolve(__dirname, '..');
 
 const PAGES_TO_TEST = [
   '/',
-  '/404.html',                          // v2.1: canonical root 404 (GitHub Pages auto-serves this)
+  '/404.html',                          // canonical root 404 (GitHub Pages auto-serves this)
   '/pages/login.html',
   '/pages/register-admin.html',
   '/pages/forgot-password.html',
   '/pages/reset-password.html',
   '/pages/404.html',                    // legacy 404 (only reachable by direct link)
   '/pages/admin/index.html',
-  // v0.742.0+: admin pages flattened — no more /pages/admin/pages/ subfolder
+  // Admin pages flattened — no more /pages/admin/pages/ subfolder.
   '/pages/admin/buat-ujian.html',
   '/pages/admin/daftar-nama.html',
   '/pages/admin/data-hasil.html',
@@ -45,14 +43,14 @@ function fetchUrl(url) {
 }
 
 async function main() {
-  console.log('\n=== Deep Smoke Test: All HTML refs resolve ===\n');
+  console.log('\nDeep smoke test: all HTML refs resolve\n');
 
   let totalPages = 0;
   let totalAssets = 0;
   let broken = 0;
 
   for (const pageUrl of PAGES_TO_TEST) {
-    console.log(`--- ${pageUrl} ---`);
+    console.log(`${pageUrl}`);
     totalPages++;
 
     const { status, body } = await fetchUrl(pageUrl);
@@ -95,11 +93,11 @@ async function main() {
     }
   }
 
-  console.log('\n' + '='.repeat(60));
+  console.log('\n' + '-'.repeat(60));
   console.log(`Pages checked:  ${totalPages}`);
   console.log(`Assets checked: ${totalAssets}`);
   console.log(`Broken refs:    ${broken}`);
-  console.log('='.repeat(60));
+  console.log('-'.repeat(60));
 
   if (broken > 0) {
     console.log('\n❌ SMOKE TEST FAILED');

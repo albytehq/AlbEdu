@@ -1,14 +1,5 @@
-// =============================================================================
-// metadata-card.js — Card 1: assessment metadata + identity system + catatan
-// =============================================================================
-// Wires all inputs in Card 1 of create-assessment.html to
-// window.CreateAssessment state (v1.0.0 flat schema).
-// Identity system supports 'manual' (custom fields builder) and 'daftar'
-// (pick from daftar_nama table).
-// Theme editor (Google Form-like) is owned by create-assessment.js
-// initThemeEditor() — NOT wired here anymore.
-// Loaded as classic <script defer>. Exposes window.MetadataCard.
-// =============================================================================
+// metadata-card.js — Card 1 of buat-ujian: title/subject/duration/access mode/
+// identity system/note/allow-retake. Bound to window.CreateAssessment state.
 
 (function () {
   'use strict';
@@ -37,7 +28,7 @@
       this._catatanTextField = document.getElementById('note-text-field');
       this._isCatatan = document.getElementById('note-text');
 
-      // Allow retake (NEW v1.0.0)
+      // Allow retake
       this._allowRetake = document.getElementById('allow-retake');
 
       if (!this._judul) {
@@ -68,7 +59,7 @@
         window.CreateAssessment.setState({ examData: state.examData });
       });
 
-      // Durasi (NEW: stored as number `duration_minutes`, not string `time`)
+      // Durasi
       this._time.addEventListener('input', (e) => {
         const state = window.CreateAssessment.getState();
         const num = parseInt(e.target.value, 10);
@@ -76,7 +67,7 @@
         window.CreateAssessment.setState({ examData: state.examData });
       });
 
-      // Access mode (NEW: values 'manual'/'scheduled', was 'Manual'/'Otomatis')
+      // Access mode ('manual' / 'scheduled')
       this._modePembuka.addEventListener('change', (e) => {
         const state = window.CreateAssessment.getState();
         state.examData.access_mode = e.target.value;
@@ -84,7 +75,7 @@
         this._scheduledField.hidden = e.target.value !== 'scheduled';
       });
 
-      // Scheduled start (NEW: top-level state.scheduled_start, was nested access_control.scheduled.start)
+      // Scheduled start (top-level state.scheduled_start)
       this._scheduledStart.addEventListener('change', (e) => {
         const value = e.target.value || null;
         window.CreateAssessment.setState({ scheduled_start: value });
@@ -104,7 +95,7 @@
       // Add identity field
       this._btnAddField.addEventListener('click', () => this._addField());
 
-      // Catatan (NEW: state.note_enabled boolean + state.note_text; UI still Off/On select)
+      // Catatan (note_enabled boolean + note_text; UI is an On/Off select)
       this._catatan.addEventListener('change', (e) => {
         const state = window.CreateAssessment.getState();
         const enabled = e.target.value === 'On';
@@ -120,7 +111,7 @@
         window.CreateAssessment.setState({ examData: state.examData });
       });
 
-      // Allow retake (NEW v1.0.0)
+      // Allow retake
       if (this._allowRetake) {
         this._allowRetake.addEventListener('change', (e) => {
           const state = window.CreateAssessment.getState();
@@ -136,12 +127,14 @@
 
       this._identityFields.innerHTML = fields.map((f, i) => `
         <div class="albedu-identity-field" data-index="${i}">
-          <input type="text" class="albedu-field-input" data-field="label" value="${this._esc(f.label)}" placeholder="Label (e.g. Nama)">
-          <select class="albedu-field-input" data-field="type">
-            <option value="text" ${f.type === 'text' ? 'selected' : ''}>Text</option>
-            <option value="select" ${f.type === 'select' ? 'selected' : ''}>Select</option>
-          </select>
-          <input type="text" class="albedu-field-input" data-field="options"
+          <input type="text" class="albedu-input albedu-field-input" data-field="label" value="${this._esc(f.label)}" placeholder="Label (cth: Nama)">
+          <div class="albedu-select-wrap">
+            <select class="albedu-select albedu-field-input" data-field="type">
+              <option value="text" ${f.type === 'text' ? 'selected' : ''}>Text</option>
+              <option value="select" ${f.type === 'select' ? 'selected' : ''}>Select</option>
+            </select>
+          </div>
+          <input type="text" class="albedu-input albedu-field-input" data-field="options"
                  value="${this._esc((f.options || []).join(', '))}"
                  placeholder="Opsi (pisah koma)" ${f.type !== 'select' ? 'hidden' : ''}>
           <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-field-delete" data-index="${i}" type="button" aria-label="Hapus field">
@@ -165,7 +158,7 @@
           }
           window.CreateAssessment.setState({ examData: state.examData });
         });
-        // For select (type) — re-render to show/hide options input
+        // For select (type), re-render to show/hide the options input
         if (input.dataset.field === 'type') {
           input.addEventListener('change', () => this._renderIdentityFields());
         }
@@ -253,7 +246,7 @@
       }
       this._scheduledField.hidden = u.access_mode !== 'scheduled';
 
-      // Sync scheduled start (top-level state field)
+      // Sync scheduled start
       const schedVal = state.scheduled_start || '';
       if (this._scheduledStart.value !== schedVal) this._scheduledStart.value = schedVal;
 
@@ -276,12 +269,8 @@
       this._identityDaftar.hidden = u.identity_mode !== 'daftar';
     },
 
-    _esc(str) {
-      return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+    _esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     },
   };
 

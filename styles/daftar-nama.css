@@ -45,7 +45,7 @@
 .dn-card {
   background: #fff;
   border: 1.5px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 16px 20px;
   display: flex;
   align-items: center;
@@ -69,7 +69,7 @@
 .dn-card__icon {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #dbeafe, #eff6ff);
   display: flex;
   align-items: center;
@@ -113,7 +113,7 @@
   gap: 4px;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
+  border-radius: 8px;
   padding: 2px 8px;
   font-size: 11px;
   color: #475569;
@@ -156,7 +156,7 @@
   padding: 48px 24px;
   background: #f8fafc;
   border: 2px dashed #e2e8f0;
-  border-radius: 14px;
+  border-radius: 8px;
   color: #64748b;
 }
 
@@ -167,7 +167,7 @@
 .dn-limit-notice {
   background: #fffbeb;
   border: 1px solid #fcd34d;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 12px 16px;
   font-size: 13px;
   color: #92400e;
@@ -182,7 +182,7 @@
   align-items: center;
   gap: 7px;
   padding: 10px 18px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -216,7 +216,7 @@
 .dn-panel {
   background: #fff;
   border: 1.5px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -267,7 +267,7 @@
   width: 100%;
   padding: 10px 14px;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
   color: #1e293b;
   background: #fff;
@@ -294,7 +294,7 @@
 
 .dn-type-btn {
   padding: 8px 16px;
-  border-radius: 20px;
+  border-radius: 8px;
   border: 1.5px solid #e2e8f0;
   background: #f8fafc;
   color: #475569;
@@ -334,7 +334,7 @@
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  border-radius: 20px;
+  border-radius: 8px;
   border: 1.5px solid #e2e8f0;
   background: #f8fafc;
   color: #475569;
@@ -357,7 +357,7 @@
 .dn-tab-pill .tab-count {
   font-size: 10px;
   background: rgba(255,255,255,.25);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 1px 6px;
 }
 
@@ -384,7 +384,7 @@
 /* ── Tab editor ──────────────────────────────────────────────── */
 .dn-tab-editor {
   border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -407,6 +407,8 @@
   color: #1e293b;
   background: #fff;
   outline: none;
+  min-height: 44px; /* iOS HIG touch target */
+  box-sizing: border-box;
 }
 
 .dn-tab-editor__head input:focus { border-color: #2563eb; }
@@ -455,6 +457,12 @@
   color: #1e293b;
 }
 
+/* Touch target for entry-nama inputs — was ~28px, needs ≥44px for iOS HIG */
+.dn-entry-nama {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
 /* ── Add nama modal ──────────────────────────────────────────── */
 .dn-add-nama-btn {
   display: inline-flex;
@@ -491,7 +499,7 @@
 
 .dn-slim-modal {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 20px;
   width: 100%;
   max-width: 420px;
@@ -518,7 +526,7 @@
   width: 100%;
   padding: 10px 14px;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
   color: #1e293b;
   outline: none;
@@ -548,7 +556,7 @@
 
 .dn-type-modal {
   background: #fff;
-  border-radius: 20px;
+  border-radius: 8px;
   padding: 28px;
   width: 100%;
   max-width: 440px;
@@ -601,7 +609,7 @@
 .dn-header {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 18px;
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
 }
@@ -618,7 +626,7 @@
 
 .dn-card {
   align-items: flex-start;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 16px;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
 }
@@ -634,7 +642,7 @@
 }
 
 .dn-panel {
-  border-radius: 14px;
+  border-radius: 8px;
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
 }
 
@@ -699,7 +707,7 @@
   gap: 12px;
   padding: 12px 14px;
   border: 1.5px dashed #93c5fd;
-  border-radius: 12px;
+  border-radius: 8px;
   background: #eff6ff;
   color: #1d4ed8;
   cursor: pointer;
@@ -716,7 +724,7 @@
 .dn-import-card i {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   background: #ffffff;
@@ -743,7 +751,7 @@
 }
 
 .dn-tab-editor {
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 .dn-tab-editor__body {
@@ -751,16 +759,16 @@
 }
 
 .dn-type-modal {
-  border-radius: 16px;
+  border-radius: 8px;
 }
 
 .dn-type-btn,
 .dn-tab-pill {
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .dn-slim-modal {
-  border-radius: 14px;
+  border-radius: 8px;
 }
 
 @media (max-width: 760px) {
@@ -845,4 +853,118 @@
     width: 32px;
     height: 32px;
   }
+}
+
+/* ====================================================================
+   DARK MODE — prefers-color-scheme: dark (or [data-theme="dark"])
+   daftar-nama.css uses pure literals (no token system). Below: catch
+   the high-impact surfaces + text colors so the page flips cleanly.
+   ==================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .dn-header h2,
+  :root:not([data-theme="light"]) .dn-card__title,
+  :root:not([data-theme="light"]) .dn-panel__title,
+  :root:not([data-theme="light"]) .dn-empty h3 {
+    color: var(--albedu-heading, #f1f5f9);
+  }
+  :root:not([data-theme="light"]) .dn-header p,
+  :root:not([data-theme="light"]) .dn-card__meta,
+  :root:not([data-theme="light"]) .dn-empty p,
+  :root:not([data-theme="light"]) .dn-field .char-count {
+    color: var(--albedu-body, #cbd5e1);
+  }
+  :root:not([data-theme="light"]) .dn-card,
+  :root:not([data-theme="light"]) .dn-panel,
+  :root:not([data-theme="light"]) .dn-empty,
+  :root:not([data-theme="light"]) .dn-field input,
+  :root:not([data-theme="light"]) .dn-tab-editor,
+  :root:not([data-theme="light"]) .dn-type-btn,
+  :root:not([data-theme="light"]) .dn-tab-pill,
+  :root:not([data-theme="light"]) .dn-add-tab-btn,
+  :root:not([data-theme="light"]) .dn-btn.ghost,
+  :root:not([data-theme="light"]) .dn-btn-icon {
+    background: var(--albedu-surface, #1e293b);
+    border-color: var(--albedu-border, #334155);
+    color: var(--albedu-body, #cbd5e1);
+  }
+  :root:not([data-theme="light"]) .dn-card.is-active,
+  :root:not([data-theme="light"]) .dn-type-btn.selected,
+  :root:not([data-theme="light"]) .dn-tab-pill.active {
+    background: var(--albedu-primary-muted, rgba(59, 130, 246, 0.12));
+    border-color: var(--albedu-primary, #3b82f6);
+    color: var(--albedu-primary, #60a5fa);
+  }
+  :root:not([data-theme="light"]) .dn-card__icon {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(59, 130, 246, 0.06));
+    color: var(--albedu-primary, #60a5fa);
+  }
+  :root:not([data-theme="light"]) .dn-btn-icon:hover {
+    background: var(--albedu-surface-alt, #0f172a);
+    color: var(--albedu-heading, #f1f5f9);
+  }
+  :root:not([data-theme="light"]) .dn-btn.ghost:hover,
+  :root:not([data-theme="light"]) .dn-type-btn:hover,
+  :root:not([data-theme="light"]) .dn-tab-pill:hover,
+  :root:not([data-theme="light"]) .dn-add-tab-btn:hover {
+    background: var(--albedu-surface-alt, #0f172a);
+    color: var(--albedu-primary, #60a5fa);
+  }
+  :root:not([data-theme="light"]) .dn-limit-notice {
+    background: rgba(245, 158, 11, 0.10);
+    border-color: rgba(245, 158, 11, 0.35);
+    color: #fbbf24;
+  }
+}
+[data-theme="dark"] .dn-header h2,
+[data-theme="dark"] .dn-card__title,
+[data-theme="dark"] .dn-panel__title,
+[data-theme="dark"] .dn-empty h3 {
+  color: var(--albedu-heading, #f1f5f9);
+}
+[data-theme="dark"] .dn-header p,
+[data-theme="dark"] .dn-card__meta,
+[data-theme="dark"] .dn-empty p,
+[data-theme="dark"] .dn-field .char-count {
+  color: var(--albedu-body, #cbd5e1);
+}
+[data-theme="dark"] .dn-card,
+[data-theme="dark"] .dn-panel,
+[data-theme="dark"] .dn-empty,
+[data-theme="dark"] .dn-field input,
+[data-theme="dark"] .dn-tab-editor,
+[data-theme="dark"] .dn-type-btn,
+[data-theme="dark"] .dn-tab-pill,
+[data-theme="dark"] .dn-add-tab-btn,
+[data-theme="dark"] .dn-btn.ghost,
+[data-theme="dark"] .dn-btn-icon {
+  background: var(--albedu-surface, #1e293b);
+  border-color: var(--albedu-border, #334155);
+  color: var(--albedu-body, #cbd5e1);
+}
+[data-theme="dark"] .dn-card.is-active,
+[data-theme="dark"] .dn-type-btn.selected,
+[data-theme="dark"] .dn-tab-pill.active {
+  background: var(--albedu-primary-muted, rgba(59, 130, 246, 0.12));
+  border-color: var(--albedu-primary, #3b82f6);
+  color: var(--albedu-primary, #60a5fa);
+}
+[data-theme="dark"] .dn-card__icon {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(59, 130, 246, 0.06));
+  color: var(--albedu-primary, #60a5fa);
+}
+[data-theme="dark"] .dn-btn-icon:hover {
+  background: var(--albedu-surface-alt, #0f172a);
+  color: var(--albedu-heading, #f1f5f9);
+}
+[data-theme="dark"] .dn-btn.ghost:hover,
+[data-theme="dark"] .dn-type-btn:hover,
+[data-theme="dark"] .dn-tab-pill:hover,
+[data-theme="dark"] .dn-add-tab-btn:hover {
+  background: var(--albedu-surface-alt, #0f172a);
+  color: var(--albedu-primary, #60a5fa);
+}
+[data-theme="dark"] .dn-limit-notice {
+  background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
 }

@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
-"""
-Extract the icon registry from icons.legacy-v6.js and split into
-critical.js + secondary.js for the v7.0 modular architecture.
-
-Output:
-  src/shared/icons/modules/registry/critical.js     (16 critical icons)
-  src/shared/icons/modules/registry/secondary.js    (remaining ~70 icons)
-"""
+# Extract the icon registry from icons.legacy-v6.js and split into
+# critical.js + secondary.js for the modular icons.js bundle.
 import json
 import re
 import sys
@@ -91,11 +85,8 @@ def main():
     critical = {k: v for k, v in all_icons.items() if k in CRITICAL_NAMES}
     secondary = {k: v for k, v in all_icons.items() if k not in CRITICAL_NAMES}
 
-    sep = "// " + "=" * 77
     critical_header = [
-        sep,
         "// critical.js — AlbEdu Icon System · Critical Icon Registry (Layer 1)",
-        sep,
         "// 16 critical icons bundled into the main icons.js. These are ALSO injected",
         "// as an inline SVG sprite by critical-css.js so they render INSTANTLY on",
         "// first paint (before any JS executes).",
@@ -109,15 +100,12 @@ def main():
         "// Do NOT add feature-specific icons here. Use secondary-registry.js instead.",
         "//",
         "// License: ISC (Lucide icons — https://lucide.dev)",
-        "// =============================================================================",
         "",
     ]
     write_registry(CRITICAL_OUT, '__iconRegistryCritical', critical, critical_header)
 
     secondary_header = [
-        sep,
         "// secondary.js — AlbEdu Icon System · Secondary Icon Registry (Layer 2)",
-        sep,
         "// Secondary icons are bundled into the main icons.js (so they're available",
         "// immediately after the deferred script loads) but NOT in the inline sprite.",
         "// They render via the cached-template renderer (cloneNode — ~0.005ms each).",
@@ -127,7 +115,6 @@ def main():
         "//   const editorIcons = await import('../../src/shared/icons/modules/registry/feature-editor.js')",
         "//",
         "// License: ISC (Lucide icons — https://lucide.dev)",
-        "// =============================================================================",
         "",
     ]
     write_registry(SECONDARY_OUT, '__iconRegistrySecondary', secondary, secondary_header)

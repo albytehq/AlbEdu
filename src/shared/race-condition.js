@@ -1,24 +1,14 @@
-// =============================================================================
-// race-condition.js — AlbEdu Production Hardening · The Surgeon
-// =============================================================================
-// Race condition prevention utilities:
-//   - Mutex: prevent concurrent execution of the same async operation
-//   - Debounce: collapse rapid calls into one (trailing edge)
-//   - AbortControllerManager: abort in-flight requests on navigation
-//   - IdempotencyGuard: prevent duplicate submit
-//
+// race-condition.js — mutex, debounce, AbortControllerManager, IdempotencyGuard.
 // Usage:
 //   const mutex = createMutex('submit-assessment');
 //   const result = await mutex.run(async () => { ... });
 //   if (!result) { /* another submit already in progress */ }
-// =============================================================================
 
 (function () {
   'use strict';
 
-  // ── Mutex — prevent concurrent execution ────────────────────────────
-  // Returns a function that wraps async operations. If the same mutex
-  // is already running, the second call returns null immediately.
+  // Mutex — prevent concurrent execution. Returns a wrapper; second call
+  // while locked returns null immediately.
   const _mutexes = new Map();
 
   function createMutex(name) {
@@ -48,7 +38,7 @@
         }
       },
 
-      // Queue version — waits for lock instead of skipping
+      // Queue version — waits for the lock instead of skipping.
       async queue(fn) {
         if (!_locked) return mutex.run(fn);
         return new Promise((resolve) => {
@@ -66,8 +56,7 @@
     return mutex;
   }
 
-  // ── Debounce (trailing edge) ────────────────────────────────────────
-  // Collapse rapid calls into one. The last call wins.
+  // Debounce (trailing edge). Last call wins.
   function createDebounce(delayMs) {
     let _timer = null;
     let _lastArgs = null;
@@ -94,9 +83,8 @@
     };
   }
 
-  // ── AbortControllerManager ──────────────────────────────────────────
-  // Track all in-flight AbortControllers. On page navigation (pagehide),
-  // abort all pending requests to prevent ghost callbacks.
+  // AbortControllerManager — track all in-flight AbortControllers and abort
+  // them on pagehide to prevent ghost callbacks after navigation.
   const _controllers = new Set();
 
   function createAbortable() {
@@ -124,51 +112,43 @@
     abortAll();
   }, { passive: true });
 
-  // ── IdempotencyGuard ────────────────────────────────────────────────
-  // Track operation keys that have been executed. Prevent duplicate
-  // execution of the same operation (e.g., double-click submit).
+  // IdempotencyGuard — track operation keys to prevent duplicate execution
+  // (for example, double-click submit).
   const _executed = new Set();
   const _inflight = new Set();
 
   function createIdempotencyGuard() {
     return {
-      // Check if operation is already done or in-flight
       canExecute(key) {
         return !_executed.has(key) && !_inflight.has(key);
       },
 
-      // Mark as in-flight (call before starting async operation)
       markInflight(key) {
         if (_inflight.has(key)) return false;
         _inflight.add(key);
         return true;
       },
 
-      // Mark as completed (call after async operation finishes)
       markDone(key) {
         _inflight.delete(key);
         _executed.add(key);
-        // Auto-cleanup after 5 minutes (allow retry after cooldown)
+        // Auto-cleanup after 5 minutes — allows retry after cooldown.
         setTimeout(() => _executed.delete(key), 5 * 60 * 1000);
       },
 
-      // Mark as failed (allow retry)
       markFailed(key) {
         _inflight.delete(key);
-        // Don't add to _executed — allow retry
+        // Don't add to _executed — allow retry.
       },
 
-      // Check if currently in-flight
       isInflight(key) {
         return _inflight.has(key);
       },
 
-      // Check if already completed
       isDone(key) {
         return _executed.has(key);
       },
 
-      // Reset (for testing or manual recovery)
       reset(key) {
         _inflight.delete(key);
         _executed.delete(key);
@@ -176,7 +156,6 @@
     };
   }
 
-  // ── Public API ──────────────────────────────────────────────────────
   if (!window.AlbEdu) window.AlbEdu = {};
   window.AlbEdu.raceCondition = {
     createMutex,

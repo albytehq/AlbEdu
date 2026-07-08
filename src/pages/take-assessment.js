@@ -1,39 +1,21 @@
-// =============================================================================
-// take-assessment.js — Orchestrator for the participant assessment runtime
-// =============================================================================
-// This is the SLIM orchestrator. The actual logic lives in 5 split modules
-// under src/pages/take-assessment/:
+// take-assessment.js — slim orchestrator for the peserta assessment runtime.
 //
+// The actual logic lives in 5 split modules under src/pages/take-assessment/:
 //   utils.js     — pure utilities (sanitizers, waiters, shuffle, parse)
 //   fetch.js     — data fetch + access check + theme
 //   identity.js  — identity form phase
 //   exam.js      — exam runtime (rendering, answers, timer, security, lifecycle)
 //   submit.js    — submit flow + result rendering
 //
-// This file defines:
-//   1. window.TakeAssessment._internal = { state, dom, constants, t }
-//   2. The public init() method (the boot sequence)
-//   3. _cacheDOM, _setPhase, _setLoadingStatus, _setLoadingTitle, _showClosed
-//   4. window.ExamLogic shim (for Heartbeat.js compatibility)
-//
-// Load order (in assessment/take.html):
-//   <script defer src="../../src/pages/take-assessment/utils.js"></script>
-//   <script defer src="../../src/pages/take-assessment/fetch.js"></script>
-//   <script defer src="../../src/pages/take-assessment/identity.js"></script>
-//   <script defer src="../../src/pages/take-assessment/exam.js"></script>
-//   <script defer src="../../src/pages/take-assessment/submit.js"></script>
-//   <script defer src="../../src/pages/take-assessment.js"></script>  ← THIS FILE (last)
-//
-// The split modules extend window.TakeAssessment with their functions.
-// This file MUST load last so all functions are available when init() runs.
-// =============================================================================
+// This file defines the shared `_internal` namespace (state/dom/constants/t),
+// the public `init()` boot sequence, the phase/loading helpers, and the
+// `window.ExamLogic` shim used by Heartbeat.js. It MUST load last.
 
 (function () {
   'use strict';
 
   const t = (key, vars, fallback) => fallback;
 
-  // ── Constants ───────────────────────────────────────────────────────────
   const constants = {
     SUBMIT_UNLOCK_SECONDS: 600,
     TIMER_WARNING_SECONDS: 300,
@@ -45,7 +27,6 @@
       'span', 'sub', 'sup', 'u', 's', 'ruby', 'rt', 'rp', 'bdi', 'bdo', 'mark', 'br'],
   };
 
-  // ── Shared state ────────────────────────────────────────────────────────
   const state = {
     phase: 'loading',
     assessment: null,
@@ -67,18 +48,15 @@
     _redirected: false,
   };
 
-  // ── DOM refs (populated in _cacheDOM) ───────────────────────────────────
+  // Populated by _cacheDOM.
   const dom = {};
 
-  // ── Initialize the namespace ────────────────────────────────────────────
-  // The split modules already created window.TakeAssessment and added their
-  // functions. We add _internal (state/dom/constants/t) and the orchestrator
-  // functions here.
+  // The split modules created window.TakeAssessment and added their functions.
+  // We attach _internal (state/dom/constants/t) + the orchestrator functions here.
   const TakeAssessment = window.TakeAssessment || {};
   window.TakeAssessment = TakeAssessment;
   TakeAssessment._internal = { state, dom, constants, t };
 
-  // ── DOM cache ───────────────────────────────────────────────────────────
   function _cacheDOM() {
     dom.loadingScreen = document.getElementById('loading-screen');
     dom.loadingText   = document.getElementById('loading-text');
@@ -115,7 +93,6 @@
     dom.closedRetry?.addEventListener('click', () => window.location.reload());
   }
 
-  // ── Phase management ────────────────────────────────────────────────────
   function _setPhase(phase) {
     state.phase = phase;
     dom.loadingScreen.hidden = phase !== 'loading';
@@ -149,14 +126,12 @@
     _setPhase('closed');
   }
 
-  // ── Expose orchestrator functions ───────────────────────────────────────
   Object.assign(TakeAssessment, {
     _setPhase,
     _setLoadingStatus,
     _setLoadingTitle,
     _showClosed,
 
-    // ── Public API: init (boot sequence) ──────────────────────────────────
     async init() {
       _cacheDOM();
 
@@ -258,7 +233,7 @@
       TakeAssessment._wireGlobalEvents();
     },
 
-    // Exposed for Heartbeat.js compatibility (it reads window.ExamLogic.getState)
+    // Exposed for Heartbeat.js (it reads window.ExamLogic.getState).
     _ExamLogicCompat: {
       getState: () => ({
         jawaban: { ...state.jawaban },
@@ -269,13 +244,13 @@
     },
   });
 
-  // ── Heartbeat.js shim ───────────────────────────────────────────────────
+  // Heartbeat.js shim
   window.ExamLogic = TakeAssessment._ExamLogicCompat;
   if (typeof ExamGuardian !== 'undefined' && !window.ExamGuardian) {
     window.ExamGuardian = ExamGuardian;
   }
 
-  // ── Boot ────────────────────────────────────────────────────────────────
+  // Boot
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => TakeAssessment.init());
   } else {

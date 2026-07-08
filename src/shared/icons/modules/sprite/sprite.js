@@ -1,48 +1,8 @@
-// =============================================================================
-// sprite.js — AlbEdu Icon System · Inline SVG Sprite Manager
-// =============================================================================
-// Responsibility:
-//   Build and inject the inline SVG sprite containing all CRITICAL icons.
-//   The sprite is injected into <head> BEFORE first paint, so critical
-//   icons render instantly via `<use href="#i-NAME">` — zero JS execution,
-//   zero network requests.
-//
-// Architecture:
-//   critical-css.js (sync, in <head>)
-//     └─ injects sprite DOM (25 <symbol> elements)
-//     └─ injects inline style for .albedu-sprite (hidden)
-//
-//   HTML pages use:
-//     <span data-albedu-icon="login"></span>
-//
-//   icons.js (deferred) upgrades them:
-//     1. For critical icons: <svg><use href="#i-login"/></svg> (instant)
-//     2. For non-critical icons: full <svg>...</svg> (cached template)
-//
-// Why <symbol> + <use>?
-//   - <symbol> is the SVG2 standard for reusable shapes.
-//   - <use> clones the symbol at render time — browser-native cloneNode.
-//   - Single source of truth: the sprite defines the icon once.
-//   - Instant render: no JS, no string parse, no DOM mutation beyond <use>.
-//
-// Critical Icons (25):
-//   The set is chosen to cover ALL icons that appear in the persistent
-//   application shell (navbar, sidebar, header, footer, auth gates).
-//   These icons must render before first paint to avoid any flash.
-//
-//   menu, close, login, logout, person, person_add, manage_accounts,
-//   notifications, arrow_back, arrow_forward, chevron_right, chevron_left,
-//   search, home, language, refresh,
-//   account_circle, edit_note, menu_book, inventory_2, monitor_heart,
-//   bar_chart, list, left_panel_open, left_panel_close (v0.746.0: admin sidebar)
-//
-// Public API (attached to window.AlbEdu.__iconSprite):
-//   .CRITICAL_ICONS      → array of critical icon names
-//   .isCritical(name)    → boolean
-//   .buildSpriteSvg()    → string (full <svg>...</svg> for injection)
-//   .buildUseHtml(name, opts) → string (e.g. '<svg class="albedu-icon" ...><use href="#i-login"/></svg>')
-//   .injectInto(doc)     → void (idempotent — used by critical-css.js)
-// =============================================================================
+// sprite.js — inline SVG sprite of CRITICAL icons (persistent app shell:
+// navbar, sidebar, header, footer, auth gates). critical-css.js injects the
+// sprite synchronously into <head> before first paint, so these icons render
+// instantly via <use href="#i-NAME"> — zero JS execution, zero network requests.
+// Lucide (ISC license).
 
 (function () {
   'use strict';
@@ -50,10 +10,8 @@
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.AlbEdu && window.AlbEdu.__iconSprite) return;
 
-  // ── Critical icon set (25 icons) ────────────────────────────────────
-  // These are the icons that appear in the persistent app shell and
-  // auth gates — they MUST render on first paint.
-  //
+  // Critical icon set. These are the icons that appear in the persistent
+  // app shell and auth gates — they MUST render on first paint.
   // SVG path data is the inner content of <svg> (paths, circles, lines).
   // Sourced from Lucide (ISC license). Keep in sync with registry/critical.js.
   var CRITICAL_ICONS = {
@@ -73,7 +31,8 @@
     'home': '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
     'language': '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
     'refresh': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
-    // [v0.746.0] Admin sidebar icons — moved from secondary to critical
+    // Admin sidebar icons — moved from secondary to critical so they render
+    // via inline sprite before first paint (instant, zero JS).
     'account_circle': '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>',
     'edit_note': '<path d="M14.364 13.634a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506l4.013-4.009a1 1 0 0 0-3.004-3.004z"/><path d="M14.487 7.858A1 1 0 0 1 14 7V2"/><path d="M20 19.645V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l2.516 2.516"/><path d="M8 18h1"/>',
     'menu_book': '<path d="M12 7v14"/><path d="M16 12h2"/><path d="M16 8h2"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/><path d="M6 12h2"/><path d="M6 8h2"/>',
@@ -85,7 +44,7 @@
     'left_panel_close': '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/>',
   };
 
-  // ── Check if a name is in the critical set ──────────────────────────
+  // Check if a name is in the critical set.
   function isCritical(name) {
     if (!name) return false;
     var normalized = name
@@ -96,8 +55,8 @@
     return Object.prototype.hasOwnProperty.call(CRITICAL_ICONS, normalized);
   }
 
-  // ── Build the full sprite SVG string ────────────────────────────────
-  // Used by critical-css.js to inject the sprite synchronously into <head>.
+  // Build the full sprite SVG string. Used by critical-css.js to inject the
+  // sprite synchronously into <head>.
   function buildSpriteSvg() {
     var symbols = '';
     var names = Object.keys(CRITICAL_ICONS);
@@ -111,8 +70,7 @@
          + '</svg>';
   }
 
-  // ── Build the <use> HTML for a critical icon ────────────────────────
-  // Returns the full <svg>...</svg> string with <use> inside.
+  // Build the <use> HTML for a critical icon. Returns the full <svg>...</svg> string with <use> inside.
   function buildUseHtml(name, opts) {
     opts = opts || {};
     var size = opts.size != null ? opts.size : null;
@@ -132,8 +90,7 @@
     return '<svg ' + attrs + '><use href="#i-' + name + '"/></svg>';
   }
 
-  // ── Inject the sprite into the document (idempotent) ────────────────
-  // Used by critical-css.js. Safe to call multiple times.
+  // Inject the sprite into the document. Used by critical-css.js. Idempotent.
   function injectInto(doc) {
     doc = doc || document;
     if (doc.getElementById('albedu-icon-sprite')) return; // already injected

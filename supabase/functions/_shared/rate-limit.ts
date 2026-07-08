@@ -1,13 +1,8 @@
-// =============================================================================
-// _shared/rate-limit.ts — In-memory rate limiter (per Edge Function isolate)
-// =============================================================================
-// NOTE: In-memory = per-isolate. Multiple isolates may have separate counters.
-// For accurate rate limiting across isolates, use DB-based counting (see
-// registration_attempts table pattern in register-admin).
-//
-// This is suitable for soft rate limits (heartbeat) where slight overage is OK.
-// For hard rate limits (auth, token entry), use DB-based counting.
-// =============================================================================
+// _shared/rate-limit.ts — In-memory rate limiter (per Edge Function isolate).
+// Per-isolate counters are fine for soft limits (heartbeat) where slight
+// overage is acceptable. For hard limits (auth, token entry) pair with the
+// DB-based counters — see checkHeartbeatRateDB / checkSubmitRateDB below
+// and the registration_attempts table used by register-admin.
 
 interface RateLimitEntry {
   count: number;
@@ -25,7 +20,7 @@ export function checkRateLimit(
 ): { allowed: boolean; remaining: number; resetAt: number } {
   const now = Date.now();
 
-  // Periodic GC — clean expired entries
+  // Periodic GC: clean expired entries.
   if (++_gcCounter >= GC_INTERVAL) {
     _gcCounter = 0;
     for (const [k, entry] of _store) {
@@ -47,9 +42,8 @@ export function checkRateLimit(
   return { allowed: true, remaining: maxRequests - entry.count, resetAt: entry.windowStart + windowMs };
 }
 
-// Heartbeat: 4 req/min per session (15s interval = 4/min)
-// [v2.0 Hardening] In-memory for soft limit + DB-based for hard limit.
-// In-memory catches most abuse. DB-based catches cross-isolate bypass.
+// Heartbeat: 4 req/min per session (matches the 15s client interval).
+// Soft limit (in-memory) + hard limit (DB) so cross-isolate bypass can't slip through.
 export function checkHeartbeatRate(sessionId: string) {
   return checkRateLimit(`hb:${sessionId}`, 4, 60_000);
 }
@@ -73,7 +67,7 @@ export async function checkHeartbeatRateDB(env: Env, sessionId: string) {
     return { allowed: false, remaining: 0, resetAt: Date.now() + windowMs };
   }
 
-  // Insert attempt record (non-fatal if fails)
+  // Insert attempt record (non-fatal if it fails).
   try {
     await fetch(`${env.SUPABASE_URL}/rest/v1/rate_limit_heartbeats`, {
       method: 'POST',
@@ -89,7 +83,7 @@ export async function checkHeartbeatRateDB(env: Env, sessionId: string) {
   return { allowed: true, remaining: maxRequests - rows.length - 1, resetAt: Date.now() + windowMs };
 }
 
-// Submit: 1 req/min per session (idempotency + anti-spam)
+// Submit: 1 req/min per session (idempotency + anti-spam).
 export function checkSubmitRate(sessionId: string) {
   return checkRateLimit(`submit:${sessionId}`, 2, 60_000);  // allow 1 retry
 }
@@ -128,22 +122,22 @@ export async function checkSubmitRateDB(env: Env, sessionId: string) {
   return { allowed: true, remaining: maxRequests - rows.length - 1, resetAt: Date.now() + windowMs };
 }
 
-// Block: 10 req/min per admin (bulk block UI)
+// Block: 10 req/min per admin (bulk block UI).
 export function checkBlockRate(adminId: string) {
   return checkRateLimit(`block:${adminId}`, 10, 60_000);
 }
 
-// Lifecycle: 10 req/min per admin per assessment
+// Lifecycle: 10 req/min per admin per assessment.
 export function checkLifecycleRate(adminId: string, assessmentId: string) {
   return checkRateLimit(`life:${adminId}:${assessmentId}`, 10, 60_000);
 }
 
-// Data export: 3 req/hour per user (heavy operation)
+// Data export: 3 req/hour per user (heavy operation).
 export function checkExportRate(userId: string) {
   return checkRateLimit(`export:${userId}`, 3, 3_600_000);
 }
 
-// DSR: 5 req/hour per user
+// DSR: 5 req/hour per user.
 export function checkDSRRate(userId: string) {
   return checkRateLimit(`dsr:${userId}`, 5, 3_600_000);
 }

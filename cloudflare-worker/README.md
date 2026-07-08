@@ -1,25 +1,24 @@
-# Cloudflare Worker — AlbEdu v6.0 (v1.0.0 enterprise)
+# Cloudflare Worker — AlbEdu Asset Storage
 
 Worker untuk image upload/delete + cron sweep expired assessments.
 
 ## URLs
 
-- **Production (v1.0.0):** `https://edu.albyte-inc.workers.dev`
-- **Legacy (v0.2.0):** `https://albedu.examjuniorhighschool.workers.dev` (deprecated)
+- **Production:** `https://edu.albyte-inc.workers.dev`
 
 ## Endpoints
 
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/supabase-config` | Return Supabase URL + anon key (cached 1 hour) |
-| GET | `/api/health` | NEW v6.0 — uptime monitoring endpoint |
+| GET | `/api/health` | Uptime monitoring endpoint |
 | POST | `/upload` | Image upload (multipart/form-data, max 10MB, JPEG/PNG/WebP) |
 | POST | `/release` | Image delete by SHA-256 hash (ref count decrement) |
 
 ## Cron Trigger
 
 ```
-*/15 * * * *  (every 15 minutes — was every hour in v5.1)
+*/15 * * * *  (every 15 minutes)
 ```
 
 Runs `sweepExpiredAssessments()` — deletes assessments that have been finished for >1 hour (grace period).
@@ -29,18 +28,11 @@ Runs `sweepExpiredAssessments()` — deletes assessments that have been finished
 | Variable | Required | Example |
 |---|---|---|
 | `GITHUB_TOKEN` | Yes | `ghp_xxxxxxxxxxxx` |
-| `GITHUB_USERNAME` | Yes | `DBBYTE` (was `albytehq`, was `albedu-id`) |
+| `GITHUB_USERNAME` | Yes | `DBBYTE` |
 | `SUPABASE_URL` | Yes | `https://kzsrerxhhrtsxnpnmqgl.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | `sb_secret_xxxxxxxx` |
 | `SUPABASE_ANON_KEY` | Yes | `sb_publishable_xxxxxxxx` |
 | `AUTH_TOKEN` | Optional | Custom bearer token for upload/release auth |
-
-## Changes from v5.1 → v6.0
-
-1. **REFACTOR:** `sweepExpiredExams()` → `sweepExpiredAssessments()` — queries `assessments` table (was `ujian`), uses normalized `ac_*` columns (was `access_control` JSONB blob)
-2. **UPDATE:** `ALLOWED_ORIGINS` — `albedu-id.github.io` → `albytehq.github.io` (owner rename). Legacy origin kept for backward compat.
-3. **ADD:** `/api/health` endpoint for uptime monitoring (returns status, version, config check)
-4. **KEEP:** All v5.1 fixes (rate limit GC, parallel sweep, GitHub PUT timeout, magic bytes validation)
 
 ## Deploy
 

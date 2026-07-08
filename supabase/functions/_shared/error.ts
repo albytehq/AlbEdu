@@ -1,6 +1,4 @@
-// =============================================================================
-// _shared/error.ts — Custom HTTPError + consistent error response formatter
-// =============================================================================
+// _shared/error.ts — HTTPError class + consistent error response formatter.
 
 import type { ErrorCode, ErrorResponse } from './types.ts';
 
@@ -38,7 +36,7 @@ export function successResponse<T>(data: T, status = 200): Response {
   });
 }
 
-// Map HTTPError to Response
+// Map an HTTPError (or any thrown value) to a JSON Response.
 export function handleError(err: unknown): Response {
   if (err instanceof HTTPError) {
     return errorResponse(err.status, err.code, err.message, err.details);

@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>404 Tidak Ditemukan | AlbEdu</title>
+<title>404 Tidak Ditemukan — AlbEdu</title>
 
 <!-- SEO Meta Tags -->
 <meta name="description" content="Halaman tidak ditemukan. Kembali ke halaman utama AlbEdu untuk mengakses platform pembelajaran online.">
 <meta name="keywords" content="404, halaman tidak ditemukan, error, AlbEdu">
 <meta name="author" content="AlbEdu">
 <meta name="robots" content="noindex, follow">
-<meta name="theme-color" content="#2563EB">
+<meta name="theme-color" content="#2563eb">
 
 <!-- Open Graph Meta Tags -->
 <meta property="og:title" content="404 Tidak Ditemukan | AlbEdu">
@@ -24,7 +24,7 @@
 <meta name="twitter:description" content="Halaman tidak ditemukan. Kembali ke halaman utama AlbEdu untuk mengakses platform pembelajaran online.">
 
 <!--
-  ── AlbEdu 404 Routing Contract (rule-url-albedu.md §6) ──────────────────────
+  AlbEdu 404 Routing Contract (rule-url-albedu.md §6)
   This file MUST live at the project root (AlbEdu/404.html), NOT in pages/.
   GitHub Pages, Cloudflare Pages, Netlify, and Vercel all auto-serve only the
   root-level 404.html as the fallback for any unmatched URL.
@@ -40,7 +40,7 @@
 
   An inline <script> at the bottom computes BASE_PATH the same way
   src/auth/main.js AUTH_CONFIG.BASE_PATH does, and rewrites the CTA href
-  to the absolute BASE_PATH on load — defensive against the page being
+  to the absolute BASE_PATH on load — guards against the page being
   served from a non-root URL like /AlbEdu/some-deep-path/that-doesnt-exist.
 -->
 
@@ -60,7 +60,7 @@
   (function() {
     var p = window.location.pathname;
     // Walk up past known app subfolders.
-    // v0.742.0: `/pages/admin/pages/` and `/admin/pages/` are kept as legacy
+    // `/pages/admin/pages/` and `/admin/pages/` are kept as legacy
     // patterns — old bookmarked URLs to the pre-flatten structure will hit
     // this 404 page, and the base path detection must still work so the
     // "Kembali ke Beranda" CTA resolves to the correct BASE_PATH.
@@ -149,7 +149,7 @@
 (function () {
   'use strict';
 
-  /* ── BASE_PATH-aware CTA rewrite ──────────────────────────────────
+  /* BASE_PATH-aware CTA rewrite
    * Mirrors AUTH_CONFIG.BASE_PATH logic in src/auth/main.js.
    * When GitHub Pages serves /AlbEdu/some/deep/missing-path, the
    * browser keeps that path as document base. A relative href="./"
@@ -162,13 +162,11 @@
    *   3. Walk up past known app subfolders (admin/pages legacy, ujian, admin)
    *   4. Whatever is left is BASE_PATH (e.g. '/AlbEdu/')
    *
-   * v0.742.0: `/admin/pages/` retained as legacy pattern for old bookmarks.
-   * v0.742.2: Added `/pages/`, `/pages/admin/`, `/pages/assessment/`,
-   *           `/pages/ujian/`, `/pages/admin/pages/` to mirror the
-   *           AUTH_CONFIG.BASE_PATH logic in src/auth/main.js exactly.
-   *           Previously this 404 CTA rewriter could return `/pages/`
-   *           instead of `/` when the 404 was served from a `/pages/`
-   *           URL — sending the user to `/pages/` (no index.html there).
+   * `/admin/pages/` is retained as a legacy pattern for old bookmarks.
+   * The list mirrors the AUTH_CONFIG.BASE_PATH logic in src/auth/main.js
+   * exactly so this 404 CTA rewriter returns `/` (not `/pages/`) when the
+   * 404 is served from a `/pages/` URL — otherwise the user lands on
+   * `/pages/` which has no index.html.
    */
   function computeBasePath() {
     var p    = window.location.pathname;
@@ -195,7 +193,7 @@
     if (alt) alt.setAttribute('href', bp);
   } catch (_) { /* keep default './' */ }
 
-  /* ── Eye-Follow-Mouse ──────────────────────────────────── */
+  /* Eye-Follow-Mouse */
   var pupilLeft  = document.getElementById('pupilLeft');
   var pupilRight = document.getElementById('pupilRight');
   var eyeLeft    = document.getElementById('eyeLeft');
@@ -232,7 +230,7 @@
     }
   }, { passive: true });
 
-  /* ── Periodic Blink ────────────────────────────────────── */
+  /* Periodic Blink */
   function blink() {
     eyeLeft.classList.add('blinking');
     eyeRight.classList.add('blinking');
@@ -253,7 +251,7 @@
   // Start after entrance animation
   setTimeout(scheduleBlink, 1500);
 
-  /* ── Click → Jump ──────────────────────────────────────── */
+  /* Click → Jump */
   faceWrap.addEventListener('click', function () {
     if (faceWrap.classList.contains('jumping')) return;
     faceWrap.classList.add('jumping');

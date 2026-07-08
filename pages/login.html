@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Admin — AlbEdu</title>
     <meta name="description" content="Masuk ke AlbEdu sebagai administrator.">
-    <meta name="theme-color" content="#1E40AF">
+    <meta name="theme-color" content="#2563eb">
 
     <!-- Favicon set (single source of truth) -->
     <link rel="icon" type="image/x-icon" href="../public/images/favicon/favicon.ico">
@@ -22,6 +22,7 @@
 
     <!-- ═══ Design tokens ═══ -->
     <link rel="stylesheet" href="../styles/tokens.css">
+    <link rel="stylesheet" href="../styles/albedu-components.css">
 
     <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
     <script defer src="../src/shared/head/fonts.js"></script>
@@ -31,6 +32,7 @@
     <script type="module" src="../src/shared/resilience.js"></script>
     <script defer src="../src/platform/repository.js"></script>
     <script defer src="../src/security/sanitize.js"></script>
+  <script defer src="../src/shared/boot.js"></script>
 
     <!-- ═══ Auth + UI (legacy modules — kept until migrated to platform layer) ═══ -->
     <script defer src="../src/auth/security.js"></script>
@@ -63,16 +65,44 @@
                         <span class="form-logo-name">AlbEdu</span>
                     </div>
                     <h1 class="form-title">Masuk ke AlbEdu</h1>
-                    <p class="form-subtitle">Kelola asesmen Anda dengan mudah</p>
+                    <p class="form-subtitle">Akses Awal — admin atau peserta</p>
 
                     <!-- Language switcher (SVG icons — no font flash) -->                </div>
 
-                <!-- Email + password form -->
+                <!-- Role-awareness banner: peserta = Google, admin = email/password -->
+                <div class="albedu-alert albedu-alert--info">
+                    <svg class="albedu-alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4"/>
+                        <path d="M12 8h.01"/>
+                    </svg>
+                    <div class="albedu-alert__body">
+                        <div class="albedu-alert__title">Peserta: masuk dengan Google</div>
+                        <p>Email dan password khusus untuk admin. Peserta tidak perlu registrasi.</p>
+                    </div>
+                </div>
+
+                <!-- Google login — PRIMARY CTA (peserta) -->
+                <button id="userLoginBtn" class="albedu-btn albedu-btn-secondary albedu-btn--block google-login-btn" type="button" aria-busy="false">
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                    <span class="btn-spinner"></span>
+                    <span class="btn-text" id="userLoginText">Masuk dengan Google</span>
+                </button>
+
+                <!-- Divider — Google above, admin email/password below -->
+                <div class="divider" style="margin: var(--sp-5) 0;" aria-hidden="true">atau masuk sebagai admin</div>
+
+                <!-- Email + password form (admin) -->
                 <form id="emailLoginForm" class="auth-form" novalidate>
                     <div class="field">
                         <label for="email">Email</label>
                         <input id="email" name="email" type="email" autocomplete="email"
-                            class="input" placeholder="nama@email.com" required>
+                            class="albedu-input" placeholder="nama@email.com" required>
                     </div>
                     <div class="field field-password">
                         <div class="field-label-row">
@@ -80,7 +110,7 @@
                             <a href="forgot-password.html" id="forgotPasswordLink">Lupa Kata Sandi?</a>
                         </div>
                         <input id="password" name="password" type="password" autocomplete="current-password"
-                            class="input" placeholder="Masukkan kata sandi" required>
+                            class="albedu-input" placeholder="Masukkan kata sandi" required>
                         <button type="button" class="toggle-visibility" data-target="password"
                             aria-label="Tampilkan kata sandi">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-eye">
@@ -95,7 +125,7 @@
                         </button>
                     </div>
 
-                    <button id="emailLoginBtn" class="primary-login-btn" type="submit" aria-busy="false">
+                    <button id="emailLoginBtn" class="albedu-btn albedu-btn-primary albedu-btn--block primary-login-btn" type="submit" aria-busy="false">
                         <span class="btn-text">Masuk</span>
                     </button>
                 </form>
@@ -108,23 +138,9 @@
                 <div id="userTurnstile" class="turnstile-hidden" aria-hidden="true"
                      style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;"></div>
 
-                <!-- Divider + Google login -->
-                <div class="divider" style="margin: var(--sp-5) 0;" aria-hidden="true">atau</div>
-
-                <button id="userLoginBtn" class="google-login-btn" type="button" aria-busy="false">
-                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                    </svg>
-                    <span class="btn-spinner"></span>
-                    <span class="btn-text" id="userLoginText">Masuk dengan Google</span>
-                </button>
-
                 <!-- Navigation links -->
                 <div class="footer-links">
-                    <span><span>Belum punya akun?</span> <strong><a href="register-admin.html">Daftar sekarang</a></strong></span>
+                    <span><span>Belum punya akun admin?</span> <strong><a href="register-admin.html">Daftar di sini</a></strong></span>
                     <a href="../">&larr; Kembali ke halaman utama</a>
                 </div>
 
@@ -140,8 +156,8 @@
                 <div class="branding-logo" aria-hidden="true">
                     <img src="../public/images/logo.svg" alt="" width="40" height="40">
                 </div>
-                <h2 class="branding-title">Platform Asesmen Online Terpercaya</h2>
-                <p class="branding-tagline">Kelola asesmen, pantau hasil, dan tingkatkan kualitas evaluasi dengan platform yang aman dan mudah digunakan — untuk sekolah, kampus, dan kebutuhan personal.</p>
+                <h2 class="branding-title">Platform Asesmen Online — Akses Awal</h2>
+                <p class="branding-tagline">Kelola asesmen, pantau hasil, dan koreksi jawaban otomatis. Peserta masuk langsung dengan Google — tidak perlu registrasi. Admin mendaftar untuk membuat dan mengelola asesmen.</p>
 
                 <div class="feature-list">
                     <div class="feature-item">
@@ -152,8 +168,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Asesmen Aman</span>
-                            <span class="feature-desc">Proktor berbasis AI & anti-cheating</span>
+                            <span class="feature-label">Asesmen Terpandu</span>
+                            <span class="feature-desc">Pengawasan berbasis perangkat & anti-cheating</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -166,7 +182,7 @@
                         </div>
                         <div class="feature-text-wrap">
                             <span class="feature-label">Analitik Real-time</span>
-                            <span class="feature-desc">Dashboard hasil & statistik instan</span>
+                            <span class="feature-desc">Dashboard hasil & statistik langsung</span>
                         </div>
                     </div>
                     <div class="feature-item">
@@ -178,8 +194,8 @@
                             </svg>
                         </div>
                         <div class="feature-text-wrap">
-                            <span class="feature-label">Manajemen Mudah</span>
-                            <span class="feature-desc">Buat, jadwalkan, & kelola asesmen dengan cepat</span>
+                            <span class="feature-label">Manajemen Asesmen</span>
+                            <span class="feature-desc">Buat, jadwalkan, & kelola asesmen dari satu tempat</span>
                         </div>
                     </div>
                 </div>

@@ -1,22 +1,17 @@
--- =============================================================================
 -- 20260701_013_pg_cron_retention.sql
--- AlbEdu v1.0.0 — Phase 1.13 — Data Retention (Q10 + Q17)
--- =============================================================================
 -- Schedules pg_cron jobs for automatic data cleanup per retention policy:
 --   - registration_attempts: purge after 30 days
---   - violation_events: purge after 90 days (Q10)
---   - audit_logs: archive after 1 year (Q10)
+--   - violation_events: purge after 90 days
+--   - audit_logs: archive after 1 year
 --   - assessment_sessions: mark stale (heartbeat >5 min) as 'disconnected'
 --   - consents: keep history (no purge — immutable audit trail)
 --
 -- Requires: pg_cron extension (Supabase built-in, enable via dashboard if needed)
--- =============================================================================
 
--- ── Enable pg_cron if not already enabled ──
+-- Enable pg_cron if not already enabled
 CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
 
--- ── Job 1: Purge registration_attempts older than 30 days ──
--- Runs daily at 03:00 UTC
+-- Purge registration_attempts older than 30 days. Runs daily at 03:00 UTC.
 SELECT cron.schedule(
   'purge-registration-attempts',
   '0 3 * * *',
@@ -26,8 +21,7 @@ SELECT cron.schedule(
   $$
 );
 
--- ── Job 2: Purge violation_events older than 90 days (Q10) ──
--- Runs daily at 03:15 UTC
+-- Purge violation_events older than 90 days. Runs daily at 03:15 UTC.
 SELECT cron.schedule(
   'purge-violation-events',
   '15 3 * * *',
@@ -37,10 +31,8 @@ SELECT cron.schedule(
   $$
 );
 
--- ── Job 3: Archive audit_logs older than 1 year (Q10) ──
--- Runs daily at 03:30 UTC
--- Note: For v1.0.0 we just DELETE (no archive table). Phase 9 can add
--- audit_logs_archive table for long-term storage if needed.
+-- Purge audit_logs older than 1 year. Runs daily at 03:30 UTC.
+-- No archive table — add one later if long-term storage is required.
 SELECT cron.schedule(
   'purge-audit-logs',
   '30 3 * * *',
@@ -50,7 +42,7 @@ SELECT cron.schedule(
   $$
 );
 
--- ── Job 4: Mark stale assessment_sessions as 'disconnected' ──
+-- Mark stale assessment_sessions as 'disconnected'.
 -- Sessions with last_heartbeat_at > 5 minutes ago are considered disconnected.
 -- Runs every 1 minute.
 SELECT cron.schedule(
@@ -64,7 +56,7 @@ SELECT cron.schedule(
   $$
 );
 
--- ── Job 5: Mark expired assessment_sessions (ac_end passed) ──
+-- Mark expired assessment_sessions (ac_end passed).
 -- Sessions where assessment's ac_end has passed and status is still 'active'.
 -- Runs every 1 minute.
 SELECT cron.schedule(
@@ -83,9 +75,8 @@ SELECT cron.schedule(
   $$
 );
 
--- ── Job 6: Anonymize IP addresses older than 90 days (Q17 UU PDP) ──
--- Per UU PDP best practice: don't store raw IP indefinitely.
--- Replace with SHA-256 hash (one-way, cannot reverse to original IP).
+-- Anonymize IP addresses older than 90 days (UU PDP).
+-- Don't store raw IP indefinitely. Replace with SHA-256 hash (one-way).
 -- Runs daily at 04:00 UTC.
 SELECT cron.schedule(
   'anonymize-old-ips',
@@ -106,7 +97,7 @@ SELECT cron.schedule(
   $$
 );
 
--- ── Job 7: Auto-archive assessments older than 1 year (Q10) ──
+-- Auto-archive assessments older than 1 year.
 -- Mark assessments with status='active' but created_at > 1 year ago as 'archived'.
 -- Runs daily at 04:15 UTC.
 SELECT cron.schedule(
@@ -120,4 +111,4 @@ SELECT cron.schedule(
   $$
 );
 
-COMMENT ON SCHEMA public IS 'AlbEdu v1.0.0 — pg_cron retention jobs scheduled. See docs/COMPLIANCE.md for retention policy details.';
+COMMENT ON SCHEMA public IS 'AlbEdu — pg_cron retention jobs scheduled. See docs/COMPLIANCE.md for retention policy details.';

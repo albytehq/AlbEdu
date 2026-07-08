@@ -1,47 +1,18 @@
-// =============================================================================
-// AdminNotificationCenter.js — AlbEdu v0.5.2
-// =============================================================================
-//
-// Real-time violation signal hub. Subscribes to Firestore violations collection
-// and pushes live alerts to any admin page that loads this script.
-//
-// v0.5.2: Removed "Live" badge from header + "Real-time aktif" text from footer
-//         per user request. Footer now shows "Terhubung" (Connected) instead.
-//
-// v0.5.0 ENTERPRISE REDESIGN:
-//   - Refined header with clean light theme + brand accent strip
-//   - 2-row header layout (title+close / Baca Semua+Hapus Semua)
-//   - Sliding pill tab indicator (refined typography + tabular-nums counters)
-//   - Notification items with rounded-square icons + severity-tinted borders
-//   - Critical (max violation) items pulse to draw attention
-//   - Hover-revealed action buttons (mark-read + dismiss)
-//   - Refined empty state with rotating dashed ring + contextual messaging
-//   - Footer with status dot + last-updated timestamp
-//   - All animations respect prefers-reduced-motion
-//
-// STRATEGI DISMISS (v0.4.1 fix, preserved):
-//   - Notifikasi TIDAK disimpan di localStorage
-//   - State 100% dari Firestore onSnapshot (source of truth)
-//   - Dismiss satu  → deleteDoc dari Firestore → onSnapshot 'removed' → hilang
-//   - Clear all     → batch.delete semua doc  → onSnapshot 'removed' → bersih
-//   - Pindah halaman → onSnapshot load ulang → hanya tampilkan doc yang masih ada
-//
-// KONSEKUENSI:
-//   - Data violations hilang permanen saat di-dismiss (by design, pilihan 1)
-//   - Tidak ada ghost notif setelah navigasi
-// =============================================================================
+// admin-notification-center.js — real-time violation signal hub. Subscribes
+// to the violations table and pushes live alerts to any admin page that
+// loads this script. Source of truth is the DB snapshot — dismissed rows
+// are deleted from the DB, not from localStorage, so there are no ghost
+// notifications after navigation.
 
 (function (global) {
   'use strict';
 
   const t = (key, vars, fallback) => fallback;
 
-  // ── Constants ──────────────────────────────────────────────────────────────
   const MAX_NOTIFS    = 150;
   const PANEL_ID      = 'anc-panel';
   const OVERLAY_ID    = 'anc-overlay';
 
-  // ── State ──────────────────────────────────────────────────────────────────
   let _db             = null;
   let _unsubscribe    = null;
   let _panelEl        = null;
@@ -51,28 +22,26 @@
   let _isPanelOpen    = false;
   let _isClearingAll  = false;
 
-  // Source of truth: diisi HANYA dari onSnapshot, tidak dari localStorage
+  // Source of truth: populated from the realtime subscription only (not localStorage).
   // { id, docId, type, userName, examTitle, message, warningNum, maxWarnings, ts, read }
   let _notifications  = [];
 
   // docId → { eventCount, status } — track perubahan per doc
   const _docState = new Map();
 
-  // ── Badge ──────────────────────────────────────────────────────────────────
   function _getUnreadCount() {
     return _notifications.filter(n => !n.read).length;
   }
 
-  // [FIX v0.743.0] Flag untuk suppress pulse saat initial load / page navigate.
-  // Saat halaman baru load, _handleSnapshot akan dipanggil dengan semua notif
-  // yang sudah ada (bukan baru). Kita gak mau bell shake setiap pindah halaman.
-  // Setelah initial snapshot selesai, flag di-set false → pulse hanya untuk
-  // NEW violations yang masuk real-time.
+  // Suppress pulse on initial load / page navigate. The first snapshot fires
+  // with all existing notifications (not new ones) — no bell shake on every
+  // page navigation. After the first snapshot, _isInitialSnapshot flips false
+  // so pulse only fires for real-time NEW violations.
   let _isInitialSnapshot = true;
 
   function _updateBadge(opts) {
-    // opts.pulse (default true) — false untuk suppress animation
-    //                     (e.g. saat init, dismiss, markAllRead, page load)
+    // opts.pulse (default true) — false to suppress animation
+    // (for example, on init, dismiss, markAllRead, page load)
     var pulse = !opts || opts.pulse !== false;
     var count = _getUnreadCount();
     document.querySelectorAll('.notification-btn .badge, #anc-bell-badge').forEach(badge => {
@@ -80,20 +49,17 @@
       badge.style.display = count > 0 ? 'flex' : 'none';
       if (count > 0 && pulse) {
         badge.classList.add('anc-badge-pulse');
-        // [FIX] Sync timeout dengan CSS duration baru (.28s = 280ms)
         setTimeout(() => badge.classList.remove('anc-badge-pulse'), 300);
       }
     });
     if (count > 0 && pulse) {
       document.querySelectorAll('.notification-btn').forEach(btn => {
         btn.classList.add('anc-bell-pulse');
-        // [FIX] Sync timeout dengan CSS duration baru (.35s = 350ms)
         setTimeout(() => btn.classList.remove('anc-bell-pulse'), 360);
       });
     }
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   function _makeId(docId, suffix) {
     return `${docId}__${suffix}`;
   }
@@ -116,12 +82,8 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // ── Firestore snapshot → state ─────────────────────────────────────────────
-  // v1.0.0 SCHEMA: each doc in `violation_events` is a SINGLE event
-  // (not an embedded array). One doc → one notification. The old
-  // `_docState` per-doc event-count tracking is no longer needed.
-  //
-  // Field map (new → notification):
+  // Each row in `violation_events` is a SINGLE event (not an embedded array).
+  // One row → one notification. Field map:
   //   event_type  → type (mapped: keyboard_violation → 'violation')
   //   severity    → bumps type to 'max_violation' when severity === 'critical'
   //   message     → message
@@ -157,8 +119,8 @@
       const userName   = data.user_name   || data.user_id   || t('notif.default_user', null, 'Peserta');
       const examTitle  = data.exam_title  || data.access_code || t('notif.default_exam', null, 'Asesmen');
       const severity   = data.severity    || 'warning';
-      // data.event_type (e.g. 'keyboard_violation', 'tab_switch') is available
-      // for future per-type rendering; currently all events render as 'violation'.
+      // data.event_type (for example 'keyboard_violation', 'tab_switch') is
+      // available for future per-type rendering; currently all events render as 'violation'.
       const ts         = (data.created_at instanceof Date)
         ? data.created_at.toISOString()
         : (typeof data.created_at === 'string' ? data.created_at : new Date().toISOString());
@@ -189,9 +151,9 @@
     }
 
     if (changed) {
-      // [FIX] Suppress pulse saat initial snapshot (page load). Setelah
-      // snapshot pertama selesai, _isInitialSnapshot = false, jadi pulse
-      // hanya fire untuk NEW violations yang masuk real-time.
+      // Suppress pulse on the initial snapshot (page load). After the first
+      // snapshot, _isInitialSnapshot flips false so pulse only fires for
+      // real-time NEW violations.
       _updateBadge({ pulse: !_isInitialSnapshot });
       _updateFooterTimestamp();
       if (_isPanelOpen) _renderPanelContent();
@@ -199,7 +161,6 @@
     _isInitialSnapshot = false;
   }
 
-  // ── Footer "last updated" timestamp ─────────────────────────────────────────
   function _updateFooterTimestamp() {
     const el = document.getElementById('anc-footer-note');
     if (!el) return;
@@ -210,23 +171,33 @@
     el.textContent = `Diperbarui ${hh}:${mm}:${ss}`;
   }
 
-  // ── Firestore subscription ─────────────────────────────────────────────────
-  // v1.0.0: subscribe to `violation_events` (was `violations`). Each doc is
-  // one event; we order by `created_at` desc (was `updatedAt`).
+  // Subscribe to `violation_events`. Each row is one event; ordered by
+  // created_at desc.
   function _subscribeToViolations() {
     if (!window.AlbEdu?.repository) return;
     if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
     try {
-      // Native platform layer: subscribe to all changes on violation_events.
-      // The repository.subscribe() helper does an initial fetch + sets up a
-      // Supabase Realtime channel. Replaces _db.collection().onSnapshot().
       const repo = window.AlbEdu.repository;
       const channelName = 'admin-notification-center:violation_events';
-      _unsubscribe = repo.subscribe(
-        channelName,
-        'violation_events',
-        async () => {
-          // Re-fetch the latest 300 rows on any change
+      // Filter by assessments this admin owns so we don't refetch 300 rows
+      // on every violation INSERT across ALL assessments (thundering herd).
+      // Falls back to unfiltered subscribe if the admin's assessment list
+      // can't be resolved (e.g. still loading).
+      let filter = undefined;
+      try {
+        const owned = JSON.parse(sessionStorage.getItem('albedu_admin_owned_assessments') || '[]');
+        if (Array.isArray(owned) && owned.length > 0) {
+          filter = `assessment_id=in.(${owned.slice(0, 50).join(',')})`;
+        }
+      } catch (_) { /* ignore */ }
+
+      let refetchTimer = null;
+      const debouncedRefetch = async () => {
+        // Debounce rapid-fire realtime events so 5 violations in 2s
+        // produce 1 refetch, not 5.
+        if (refetchTimer) clearTimeout(refetchTimer);
+        refetchTimer = setTimeout(async () => {
+          refetchTimer = null;
           try {
             const snap = await repo.getDocs('violation_events', {
               order: { column: 'created_at', ascending: false },
@@ -237,7 +208,14 @@
             const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
             if (isDev) console.warn('[ANC] violation_events refetch error:', err?.message || err);
           }
-        }
+        }, 200);
+      };
+
+      _unsubscribe = repo.subscribe(
+        channelName,
+        'violation_events',
+        debouncedRefetch,
+        filter
       );
     } catch (err) {
       const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -245,26 +223,24 @@
     }
   }
 
-  // ── Dismiss satu ───────────────────────────────────────────────────────────
-  // Langsung deleteDoc → onSnapshot 'removed' akan bersihin state otomatis
+  // Delete the row → the realtime 'removed' event cleans state.
   async function _dismissOne(notifId) {
     const notif = _notifications.find(n => n.id === notifId);
     if (!notif || !window.AlbEdu?.repository) return;
 
-    // Animasi keluar dulu
+    // Exit animation first
     const el = _panelEl && _panelEl.querySelector(`[data-notif-id="${CSS.escape(notifId)}"]`);
     if (el) {
       el.classList.add('anc-item-removing');
       await new Promise(r => setTimeout(r, 230));
     }
 
-    // Hapus dari state lokal sementara (biar UI responsif)
+    // Drop from local state (keeps UI responsive)
     _notifications = _notifications.filter(n => n.id !== notifId);
-    // [FIX] No pulse on dismiss — user initiated, no need to alert
+    // No pulse on dismiss — user initiated.
     _updateBadge({ pulse: false });
     if (_isPanelOpen) _renderPanelContent();
 
-    // Delete via native repository — replaces _db.collection().doc().delete()
     try {
       await window.AlbEdu?.repository?.deleteDoc('violation_events', notif.docId);
     } catch (err) {
@@ -272,8 +248,7 @@
     }
   }
 
-  // ── Clear all ──────────────────────────────────────────────────────────────
-  // Batch delete semua doc → onSnapshot 'removed' akan kosongkan state
+  // Batch-delete every row → realtime 'removed' events empty the state.
   async function _clearAll() {
     if (_isClearingAll || _notifications.length === 0) return;
     _isClearingAll = true;
@@ -281,27 +256,22 @@
     const btn = _panelEl && _panelEl.querySelector('#anc-clear-all-btn');
     if (btn) btn.disabled = true;
 
-    // Animasi stagger
+    // Staggered exit animation
     const items = _panelEl ? Array.from(_panelEl.querySelectorAll('.anc-notif-item')) : [];
     items.forEach((el, i) => setTimeout(() => el.classList.add('anc-item-removing'), i * 35));
 
-    // Kumpulkan docId unik sebelum clear
     const docIds = [...new Set(_notifications.map(n => n.docId).filter(Boolean))];
 
     await new Promise(r => setTimeout(r, items.length * 35 + 260));
 
-    // Bersihkan state lokal sementara
     _notifications = [];
     _docState.clear();
-    // [FIX] No pulse on clear all — count = 0 anyway, but explicit for clarity
     _updateBadge({ pulse: false });
     if (_isPanelOpen) _renderPanelContent();
 
-    // Batch delete Firestore (max 500 per batch)
-    // v1.0.0: delete from `violation_events` (was `violations`).
+    // Bulk delete in chunks of 500 (Supabase batch limit).
     if (docIds.length > 0) {
       try {
-        // Native bulk delete — replaces _db.batch().delete().commit()
         for (let i = 0; i < docIds.length; i += 500) {
           const chunk = docIds.slice(i, i + 500);
           await window.AlbEdu?.repository?.bulkDelete('violation_events', chunk);
@@ -314,7 +284,6 @@
     _isClearingAll = false;
   }
 
-  // ── Panel DOM ──────────────────────────────────────────────────────────────
   function _createPanel() {
     if (document.getElementById(PANEL_ID)) return;
 
@@ -398,18 +367,21 @@
     document.getElementById('anc-mark-all-btn').addEventListener('click', markAllRead);
     document.getElementById('anc-clear-all-btn').addEventListener('click', () => _clearAll());
 
-    // [Item 2] Named keydown handler for cleanup
+    // Named keydown handler so we can remove it on pagehide.
     const _onKeydown = function (e) { if (e.key === 'Escape' && _isPanelOpen) closePanel(); };
     document.addEventListener('keydown', _onKeydown);
 
-    // [Item 2] Cleanup on pagehide — remove document listener + unsubscribe realtime
+    // Cleanup on pagehide — remove document listener + unsubscribe realtime
+    // + tear down panel DOM so bfcache restore doesn't show stale UI.
     window.addEventListener('pagehide', function () {
       document.removeEventListener('keydown', _onKeydown);
       if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+      if (_panelEl) { try { _panelEl.remove(); } catch (_) {} _panelEl = null; }
+      if (_overlayEl) { try { _overlayEl.remove(); } catch (_) {} _overlayEl = null; }
+      _isPanelOpen = false;
     }, { once: true });
   }
 
-  // ── Render list ────────────────────────────────────────────────────────────
   function _getFiltered() {
     const sorted = [..._notifications].sort((a, b) => {
       if (a.read !== b.read) return a.read ? 1 : -1;
@@ -529,14 +501,13 @@
 
   function _markOneRead(id) {
     const n = _notifications.find(n => n.id === id);
-    // [FIX] No pulse on mark-read — user initiated
+    // No pulse on mark-read — user initiated.
     if (n) { n.read = true; _updateBadge({ pulse: false }); _renderPanelContent(); }
   }
 
-  // ── Public ─────────────────────────────────────────────────────────────────
   function markAllRead() {
     _notifications.forEach(n => n.read = true);
-    // [FIX] No pulse on mark-all-read — user initiated
+    // No pulse on mark-all-read — user initiated.
     _updateBadge({ pulse: false });
     if (_isPanelOpen) _renderPanelContent();
   }
@@ -559,11 +530,10 @@
     document.body.style.overflow = '';
   }
 
-  // ── Init ───────────────────────────────────────────────────────────────────
   async function init() {
     if (_isInitialized) return;
-    // [FIX] No pulse on init — page load should be silent. Pulse only fires
-    // for NEW violations yang masuk real-time setelah initial snapshot.
+    // No pulse on init — page load should be silent. Pulse only fires for
+    // NEW violations that arrive real-time after the first snapshot.
     _updateBadge({ pulse: false });
     _createPanel();
 
@@ -578,7 +548,6 @@
 
     try {
       await _waitForPlatform(10_000);
-      // Native platform layer check — replaces _db = window.firebaseDb
       if (!window.AlbEdu?.repository) return;
       _db = true; // marker: platform ready (actual access via AlbEdu.repository)
 
@@ -590,7 +559,7 @@
           _unsubscribe = null;
           _notifications = [];
           _docState.clear();
-          // [FIX] No pulse on logout — silent cleanup
+          // No pulse on logout — silent cleanup.
           _updateBadge({ pulse: false });
           if (_isPanelOpen) _renderPanelContent();
         }

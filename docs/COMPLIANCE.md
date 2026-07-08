@@ -1,6 +1,6 @@
 # COMPLIANCE — UU PDP (Indonesia) Implementation
 
-> AlbEdu v0.746.0 basic compliance with UU No. 27/2022 (Perlindungan Data Pribadi)
+> AlbEdu v0.815.7 basic compliance with UU No. 27/2022 (Perlindungan Data Pribadi)
 > Status: Basic implementation in Phase 1-3. Advanced features defer to Phase 9.
 
 ---

@@ -1,12 +1,7 @@
-// =============================================================================
-// take-assessment/identity.js — Identity form phase
-// =============================================================================
-// Part of the take-assessment split (see README.md in this directory).
-//
-// Functions: _renderIdentity, _onIdentitySubmit
-//
-// Load order: MUST load after utils.js and fetch.js, before take-assessment.js.
-// =============================================================================
+// take-assessment/identity.js — identity form phase. Renders the peserta
+// identity form (via IdentityProvider), persists the snapshot to the session
+// row on submit, then hands off to the exam runtime.
+// MUST load after utils.js and fetch.js, before take-assessment.js.
 
 (function () {
   'use strict';
@@ -16,7 +11,7 @@
   const I = _internal._internal;
   const t = I.t || ((key, vars, fallback) => fallback || key);
 
-  // ── Render identity phase ───────────────────────────────────────────────
+  // Render identity phase
   async function _renderIdentity(assessment) {
     _internal._setPhase('identity');
 
@@ -77,7 +72,7 @@
     }
   }
 
-  // ── Identity form submit ────────────────────────────────────────────────
+  // Identity form submit
   async function _onIdentitySubmit(identity) {
     // Validate
     if (window.IdentityProvider?.validate) {
@@ -89,7 +84,7 @@
       }
     }
 
-    // Sanitize display name (EDGE: peserta could enter arbitrary name)
+    // Sanitize display name (peserta could enter arbitrary name)
     if (identity._display_name) {
       identity._display_name = String(identity._display_name).slice(0, 80).trim();
     }
@@ -99,7 +94,8 @@
 
     I.state.identity = identity;
 
-    // Persist identity snapshot to server (so refresh restores to exam phase)
+    // Persist identity snapshot to server so a refresh restores to the exam
+    // phase instead of re-showing the identity form.
     try {
       const repo = window.AlbEdu?.repository;
       if (repo) {
@@ -115,7 +111,6 @@
     _internal._startExam(identity, { isResume: false });
   }
 
-  // ── Expose ──────────────────────────────────────────────────────────────
   Object.assign(_internal, {
     _renderIdentity,
     _onIdentitySubmit,

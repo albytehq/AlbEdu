@@ -1,20 +1,4 @@
-// =============================================================================
-// security/heartbeat.js — Peserta heartbeat (15s sync + cross-device resume)
-// =============================================================================
-// Sends progress + draft answers to server every 15s.
-// Detects block signal from server (instant redirect).
-// Graceful degradation: if offline, queue + retry.
-//
-// Edge cases:
-//   - Offline → queue, retry when online
-//   - Server 429 (rate limit) → backoff to 30s
-//   - Server returns blocked=true → trigger block listener
-//   - Server returns submitted=true → already submitted, redirect
-//   - Server returns expired=true → time up, force submit
-//   - Peserta navigates away → stop heartbeat
-//   - Peserta refreshes → heartbeat restarts (server has latest draft)
-//   - Double heartbeat (race) → idempotent (server updates last_heartbeat_at)
-// =============================================================================
+// heartbeat.js — Peserta exam heartbeat with block/submitted/expired signals
 
 (function () {
   'use strict';
@@ -25,14 +9,21 @@
 
   const Heartbeat = {
     _timer: null,
+    _backoffRecoveryTimer: null,
+    _initialBeatTimer: null,
     _sessionId: null,
     _intervalMs: DEFAULT_INTERVAL_MS,
     _running: false,
+    _isBeating: false,
     _retryCount: 0,
     _lastSyncAt: null,
     _onBlocked: null,
     _onSubmitted: null,
     _onExpired: null,
+    _listenersBound: false,
+    _onOnline: null,
+    _onOffline: null,
+    _onBeforeUnload: null,
 
     start(sessionId, options = {}) {
       this._sessionId = sessionId;
@@ -42,53 +33,85 @@
       this._onExpired = options.onExpired;
 
       if (this._running) {
-        console.warn('[heartbeat] Already running, stopping old first');
         this.stop();
       }
 
       this._running = true;
       this._retryCount = 0;
+      this._isBeating = false;
 
-      // Initial heartbeat after 2s (let page settle)
-      setTimeout(() => this._beat(), 2000);
-
-      // Periodic heartbeat
+      this._initialBeatTimer = setTimeout(() => this._beat(), 2000);
       this._timer = setInterval(() => this._beat(), this._intervalMs);
 
-      // Online/offline handlers
-      window.addEventListener('online', () => {
-        console.info('[heartbeat] Back online, resuming');
-        this._retryCount = 0;
-        this._beat();
-      });
-
-      window.addEventListener('offline', () => {
-        console.info('[heartbeat] Offline, queuing');
-      });
-
-      // Stop on page unload
-      window.addEventListener('beforeunload', () => this.stop());
+      this._bindLifecycleListeners();
 
       console.info(`[heartbeat] Started (session=${sessionId}, interval=${this._intervalMs}ms)`);
     },
 
     stop() {
-      if (this._timer) {
-        clearInterval(this._timer);
-        this._timer = null;
-      }
+      if (this._timer) { clearInterval(this._timer); this._timer = null; }
+      if (this._backoffRecoveryTimer) { clearTimeout(this._backoffRecoveryTimer); this._backoffRecoveryTimer = null; }
+      if (this._initialBeatTimer) { clearTimeout(this._initialBeatTimer); this._initialBeatTimer = null; }
+      this._unbindLifecycleListeners();
       this._running = false;
+      this._isBeating = false;
+      this._onBlocked = null;
+      this._onSubmitted = null;
+      this._onExpired = null;
       console.info('[heartbeat] Stopped');
+    },
+
+    _bindLifecycleListeners() {
+      if (this._listenersBound) return;
+      this._onOnline = () => {
+        if (!this._running) return;
+        console.info('[heartbeat] Back online, resuming');
+        this._retryCount = 0;
+        this._beat();
+      };
+      this._onOffline = () => {
+        console.info('[heartbeat] Offline, queuing');
+      };
+      this._onBeforeUnload = () => this.stop();
+      window.addEventListener('online', this._onOnline);
+      window.addEventListener('offline', this._onOffline);
+      window.addEventListener('beforeunload', this._onBeforeUnload);
+      this._listenersBound = true;
+    },
+
+    _unbindLifecycleListeners() {
+      if (!this._listenersBound) return;
+      if (this._onOnline) window.removeEventListener('online', this._onOnline);
+      if (this._onOffline) window.removeEventListener('offline', this._onOffline);
+      if (this._onBeforeUnload) window.removeEventListener('beforeunload', this._onBeforeUnload);
+      this._onOnline = null;
+      this._onOffline = null;
+      this._onBeforeUnload = null;
+      this._listenersBound = false;
     },
 
     async _beat() {
       if (!this._running || !this._sessionId) return;
+      if (this._isBeating) {
+        // Skip overlapping beat; the in-flight one will reschedule.
+        return;
+      }
       if (!navigator.onLine) {
         console.debug('[heartbeat] Offline, skipping');
         return;
       }
 
-      // Gather current state from ExamLogic (if available)
+      this._isBeating = true;
+      try {
+        await this._doBeat();
+      } catch (err) {
+        console.error('[heartbeat] Unexpected error:', err);
+      } finally {
+        this._isBeating = false;
+      }
+    },
+
+    async _doBeat() {
       const state = window.ExamLogic?.getState?.() || {};
       const draftAnswers = state.jawaban || {};
       const currentSection = state.activePageIdx || 0;
@@ -115,8 +138,6 @@
           return;
         }
 
-        // [Production Hardening] Use Actly resilience wrapper for heartbeat.
-        // Circuit breaker: 5 fails → 15s cooldown. Retry: 2x exp backoff. Timeout: 5s.
         let data;
         const resilience = window.AlbEdu?.resilience;
 
@@ -134,7 +155,6 @@
           }
           data = result.value;
         } else {
-          // Fallback: raw call without resilience
           const { data: rawData, error } = await window.AlbEdu.supabase.rpc.invoke('heartbeat', body);
           if (error) throw error;
           data = rawData;
@@ -142,11 +162,9 @@
 
         const d = data?.data || data;
 
-        // Reset retry count on success
         this._retryCount = 0;
         this._lastSyncAt = Date.now();
 
-        // Check server signals
         if (d) {
           if (d.blocked) {
             console.warn('[heartbeat] Server says BLOCKED:', d.blocked_reason);
@@ -167,11 +185,10 @@
             return;
           }
         }
-
       } catch (err) {
         const status = err?.status || err?.context?.status;
         if (status === 429) {
-          console.warn('[heartbeat] Rate limited, backing off to 30s');
+          console.warn('[heartbeat] Rate limited, backing off');
           this._backoff();
           return;
         }
@@ -193,10 +210,10 @@
     _backoff() {
       if (this._timer) clearInterval(this._timer);
       this._timer = setInterval(() => this._beat(), BACKOFF_MS);
+      if (this._backoffRecoveryTimer) clearTimeout(this._backoffRecoveryTimer);
       console.info(`[heartbeat] Backed off to ${BACKOFF_MS}ms`);
 
-      // Reset to normal after 3 successful beats
-      setTimeout(() => {
+      this._backoffRecoveryTimer = setTimeout(() => {
         if (this._running && this._retryCount === 0) {
           if (this._timer) clearInterval(this._timer);
           this._timer = setInterval(() => this._beat(), this._intervalMs);
@@ -205,7 +222,6 @@
       }, BACKOFF_MS * 3);
     },
 
-    // Force sync now (e.g. before submit)
     async syncNow() {
       await this._beat();
     },

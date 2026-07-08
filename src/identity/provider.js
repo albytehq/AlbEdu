@@ -1,9 +1,6 @@
-// =============================================================================
-// IdentityProvider.js — AlbEdu Identity Provider v1.0.0
-// =============================================================================
-//
-// Unified facade untuk render identity form di exam-taker (peserta side).
-// Switch antara mode "manual" (IdentityFormRenderer) atau "daftar" (dropdown).
+// IdentityProvider.js — unified facade that renders the identity form on
+// the exam-taker (peserta) side. Switches between "manual" mode
+// (IdentityFormRenderer) and "daftar" mode (dropdown).
 //
 // Public API:
 //   - getIdentityConfig(examData)              → return { mode, fields|daftar, ... }
@@ -15,13 +12,12 @@
 //   Manual mode: { _mode:'manual', _display_name:'...', field_id:value, ... }
 //   Daftar mode: { _mode:'daftar', _display_name:'...', nama:'...', tab_id:'...',
 //                  tab_nama:'...', daftar_id:'...' }
-// =============================================================================
 
 window.IdentityProvider = (() => {
 
   const t = (key, vars, fallback) => fallback;
 
-  // ── Helpers ────────────────────────────────────────────────────────────
+  // Helpers
 
   function _escapeHtml(s) {
     if (s == null) return '';
@@ -33,16 +29,13 @@ window.IdentityProvider = (() => {
       .replace(/'/g, '&#39;');
   }
 
-  /**
-   * Extract identity config dari examData.
-   * Support 2 shape:
-   *   - v2: examData.identity_mode + examData.identity_config
-   *   - legacy fallback: examData.PQ.pages1.identitas (manual/daftar)
-   */
+  // Extract identity config from examData. Supports two shapes:
+  //   - current: examData.identity_mode + examData.identity_config
+  //   - legacy fallback: examData.PQ.pages1.identitas (manual/daftar)
   function getIdentityConfig(examData) {
     if (!examData) return { mode: 'manual', fields: _defaultFields() };
 
-    // v2 shape (post-migration)
+    // Current shape (post-migration)
     if (examData.identity_mode) {
       const cfg = examData.identity_config || {};
       if (examData.identity_mode === 'manual') {
@@ -101,7 +94,7 @@ window.IdentityProvider = (() => {
     ];
   }
 
-  // ── Validation ──────────────────────────────────────────────────────────
+  // Validation
 
   function validate(identityConfig, identityObj) {
     const errors = [];
@@ -141,7 +134,7 @@ window.IdentityProvider = (() => {
     return identityObj._display_name || identityObj.nama || '';
   }
 
-  // ── Render (manual mode) ─────────────────────────────────────────────────
+  // Render (manual mode)
 
   function _renderManual(mount, fields, onSubmit, onCancel) {
     if (!window.IdentityFormRenderer) {
@@ -199,7 +192,7 @@ window.IdentityProvider = (() => {
     mount.appendChild(actions);
   }
 
-  // ── Render (daftar mode) ──────────────────────────────────────────────────
+  // Render (daftar mode)
 
   async function _renderDaftar(mount, config, onSubmit, onCancel) {
     // Header
@@ -218,9 +211,9 @@ window.IdentityProvider = (() => {
     const form = document.createElement('div');
     form.className = 'ip-daftar-form';
 
-    // v2.0.0: Normalize tabs structure.
-    // - v2 shape: [{nama_tab, anggota:[string]}] (embedded, no DB query needed)
-    // - Legacy shape: ['7A', '7B', ...] (array of strings — perlu fetch dari DB)
+    // Normalize tabs structure.
+    // - Embedded: [{nama_tab, anggota:[string]}] (no DB query needed)
+    // - Legacy: ['7A', '7B', ...] (array of strings — needs DB fetch)
     const tabsNormalized = (config.tabs || []).map(t => {
       if (typeof t === 'string') {
         return { nama_tab: t, anggota: null }; // anggota null → perlu fetch
@@ -245,7 +238,7 @@ window.IdentityProvider = (() => {
     // State
     const state = { tab_nama: '', nama: '', daftar_id: config.daftar_id };
 
-    // ── Tab selector (custom dropdown) ────────────────────────────────────
+    // Tab selector (custom dropdown)
     const tabWrap = document.createElement('div');
     tabWrap.className = 'ip-field';
 
@@ -273,11 +266,12 @@ window.IdentityProvider = (() => {
         // Cari tab di tabsNormalized
         const tab = tabsNormalized.find(t => t.nama_tab === tabName);
 
-        // v2.0.0: kalau anggota sudah embedded, pakai langsung (no DB query)
+        // If anggota is embedded, use it directly (no DB query)
         if (tab && Array.isArray(tab.anggota)) {
           _populateNamaDropdown(tab.anggota);
         } else {
-          // Fallback: fetch dari DB (untuk legacy exam yang tabs cuma array of strings)
+          // Legacy fallback: fetch from DB (for exams whose tabs were just
+          // an array of strings)
           try {
             const list = await _fetchPesertaDariDaftar(config.daftar_id, tabName);
             _populateNamaDropdown(list);
@@ -291,7 +285,7 @@ window.IdentityProvider = (() => {
     tabWrap.appendChild(tabDropdown.element);
     form.appendChild(tabWrap);
 
-    // ── Nama selector (custom dropdown) ───────────────────────────────────
+    // Nama selector (custom dropdown)
     const namaWrap = document.createElement('div');
     namaWrap.className = 'ip-field ip-field--hidden';
 
@@ -372,7 +366,7 @@ window.IdentityProvider = (() => {
 
     mount.appendChild(actions);
 
-    // ── Event handlers ──────────────────────────────────────────────────
+    // Event handlers
 
     manualCb.onchange = e => {
       if (e.target.checked) {
@@ -418,10 +412,8 @@ window.IdentityProvider = (() => {
     };
   }
 
-  /**
-   * v2.0.0 — Custom dropdown component (replaces native <select>).
-   * Returns: { element, setOptions, setPlaceholder, clear, show, hide }
-   */
+  // Custom dropdown component (replaces native <select>).
+  // Returns: { element, setOptions, setPlaceholder, clear, show, hide }
   function _createCustomDropdown({ placeholder = '-- Pilih --', options = [], onChange = () => {} } = {}) {
     const wrap = document.createElement('div');
     wrap.className = 'ip-dropdown';
@@ -529,10 +521,8 @@ window.IdentityProvider = (() => {
     };
   }
 
-  /**
-   * Fetch peserta dari daftar_nama by daftarId + tabName.
-   * Uses DaftarNama module (added getAnggota method in Phase 6).
-   */
+  // Fetch peserta from daftar_nama by daftarId + tabName.
+  // Uses DaftarNama module (getAnggota method).
   async function _fetchPesertaDariDaftar(daftarId, tabName) {
     if (window.DaftarNama?.getAnggota) {
       try {
@@ -548,7 +538,7 @@ window.IdentityProvider = (() => {
     return [];
   }
 
-  // ── Main render entry ────────────────────────────────────────────────────
+  // Main render entry
 
   async function render(mount, examData, onSubmit, onCancel) {
     if (!mount) throw new Error('Mount container required');
@@ -565,7 +555,7 @@ window.IdentityProvider = (() => {
     }
   }
 
-  // ── Public API ──────────────────────────────────────────────────────────
+  // Public API
 
   return {
     getIdentityConfig,

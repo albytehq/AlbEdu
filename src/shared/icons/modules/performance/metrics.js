@@ -1,40 +1,8 @@
-// =============================================================================
-// metrics.js — AlbEdu Icon System · Performance Observability
-// =============================================================================
-// Responsibility:
-//   Collect, aggregate, and expose performance metrics for every icon render.
-//   Used by the benchmark suite (scripts/benchmark_icons.mjs) and the
-//   runtime debug overlay (AlbEdu.getMetrics()).
-//
-// Tracked metrics:
-//   - iconsRendered:        total icon() calls that succeeded
-//   - iconsBound:           total DOM bindings via bindIcons()
-//   - cacheHits / cacheMisses: Layer 1 memory cache stats
-//   - renderTimeUs:         total time spent in renderer (microseconds)
-//   - bindTimeMs:           last bindIcons() duration
-//   - initTimeMs:           total module init duration
-//   - missingIcons:         map of icon-name → request count
-//   - errors:               capped array of caught errors (max 50)
-//
-// Performance marks (via Performance API when available):
-//   'albedu:icons:init'        — module init start
-//   'albedu:icons:bind'        — bindIcons() start
-//   'albedu:icons:render'      — individual icon render (sampled)
-//
-// Public API (attached to window.AlbEdu.__iconMetrics):
-//   .incRender()             → void
-//   .incBind()               → void
-//   .incCacheHit() / .incCacheMiss()
-//   .recordRenderTime(us)    → void
-//   .recordMissing(name)     → void
-//   .recordError(ctx, err)   → void
-//   .startBind() / .endBind()
-//   .startInit() / .endInit()
-//   .snapshot()              → IconMetrics (immutable)
-//   .reset()                 → void
-//   .addEventListener(event, cb) → unsubscribe
-//   .emit(event, detail)
-// =============================================================================
+// metrics.js — collects render/binding/cache metrics for the debug overlay
+// (AlbEdu.getMetrics()) and benchmark suite (scripts/benchmark_icons.mjs).
+// Tracks: iconsRendered, iconsBound, cacheHits/Misses, renderTimeUs,
+// bindTimeMs, initTimeMs, missingIcons, errors (capped at 50).
+// Performance marks: 'albedu:icons:init' / 'bind' / 'render' (sampled).
 
 (function () {
   'use strict';

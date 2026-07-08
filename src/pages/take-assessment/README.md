@@ -1,43 +1,6 @@
-# take-assessment/ — Split modules
+# take-assessment/ — split modules
 
-This directory contains the split modules for the take-assessment page.
-
-## Files
-
-1. **utils.js** — Pure utilities (no state/dom access)
-   - _sanitizeHTML, _escAttr, _getUrlParam, _t
-   - _waitForAuth, _waitForQNotify, _waitForThemeSystem
-   - mulberry32, _shuffleFisherYates, _computeSeed, _shufflePages, _parseSections
-   - _formatDuration, _findQuestion, _countEmpty
-
-2. **fetch.js** — Data fetch + access check + theme
-   - _fetchAssessment, _fetchSession, _restoreDraft
-   - _checkAccess, _applyTheme
-
-3. **identity.js** — Identity form phase
-   - _renderIdentity, _onIdentitySubmit
-
-4. **exam.js** — Exam runtime (rendering + answers + timer + security + lifecycle)
-   - _startExam, _renderPageTabs, _renderQuestion, _buildQuestionCard, _buildMediaHTML
-   - _updateQuestionAnsweredState, _saveAnswer, _debounceEsai, _scheduleDraftSync
-   - _buildAnswersPayload
-   - _startTimer, _stopTimer, _updateTimerDisplay, _updateSubmitLockState, _getCurrentSisa
-   - _startSecurity, _stopSecurity, _pauseSecurity, _resumeSecurity
-   - _handleMaxViolations, _handleBlocked, _handleSubmitted, _handleExpired
-   - _wireGlobalEvents, _beforeUnloadGuard, _popstateTrap, _renderMath
-
-5. **submit.js** — Submit + result rendering
-   - _submitExam, _confirmSubmit, _showSubmitRetryError
-   - _renderResult, _renderResultItem
-
-## Shared state
-
-All modules access shared state via `window.TakeAssessment._internal`:
-- `.state` — the runtime state object
-- `.dom` — cached DOM references
-- `.constants` — SUBMIT_UNLOCK_SECONDS, TIMER_WARNING_SECONDS, etc.
-
-## Load order (in assessment/take.html)
+The take-assessment page is split into 5 modules, loaded in this order:
 
 ```html
 <script defer src="../../src/pages/take-assessment/utils.js"></script>
@@ -48,5 +11,19 @@ All modules access shared state via `window.TakeAssessment._internal`:
 <script defer src="../../src/pages/take-assessment.js"></script>
 ```
 
-The main `take-assessment.js` file defines `_internal` (state, dom, constants, t),
-the public `init()` method, and `window.ExamLogic` shim. It must load LAST.
+| Module       | Responsibility                                                       |
+| ------------ | ------------------------------------------------------------------- |
+| `utils.js`   | Pure helpers (sanitizers, waiters, shuffle, parse, math render)    |
+| `fetch.js`   | Fetch assessment + session, restore draft, access check, theme      |
+| `identity.js`| Identity form phase (renders + persists identity snapshot)         |
+| `exam.js`    | Exam runtime (rendering, answers, timer, security, lifecycle)       |
+| `submit.js`  | Submit flow + result rendering                                      |
+
+All modules share state via `window.TakeAssessment._internal`:
+- `.state` — runtime state object
+- `.dom` — cached DOM references
+- `.constants` — SUBMIT_UNLOCK_SECONDS, TIMER_WARNING_SECONDS, etc.
+
+The parent `take-assessment.js` (one level up) defines `_internal`, the public
+`init()` boot sequence, and the `window.ExamLogic` shim used by Heartbeat.js.
+It must load LAST.

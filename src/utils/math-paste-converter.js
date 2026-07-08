@@ -1,6 +1,6 @@
-// MathPasteConverter.js — v0.3.0
-// Feature 6: Smart Paste — intercept clipboard paste events in admin textarea/input
-// elements and auto-convert Unicode math symbols to LaTeX ($...$) syntax.
+// MathPasteConverter.js — intercept clipboard paste events in admin
+// textarea/input elements and auto-convert Unicode math symbols to LaTeX
+// ($...$) syntax.
 //
 // Supports paste from: Word, Google Docs, WhatsApp, plaintext editors.
 // Does NOT process PDF clipboard content (encoding too inconsistent).
@@ -14,7 +14,6 @@
 
 window.MathPasteConverter = (() => {
 
-  // ── Unicode → LaTeX character map ──────────────────────────────────────────
   // Keys: single Unicode characters.
   // Values: LaTeX replacement (math symbols wrapped in $...$).
   // Characters NOT in this map are passed through unchanged.
@@ -32,7 +31,7 @@ window.MathPasteConverter = (() => {
     '∞': '$\\infty$',
     '°': '$^{\\circ}$',
     // Roots
-    '√': '$\\sqrt{}$',   // NOTE: content after √ becomes {} argument — acceptable minimum
+    '√': '$\\sqrt{}$',   // content after √ becomes {} argument — acceptable minimum
     '∛': '$\\sqrt[3]{}$',
     '∜': '$\\sqrt[4]{}$',
     // Superscripts
@@ -159,7 +158,6 @@ window.MathPasteConverter = (() => {
     // WHY no Arab/CJK: those are handled by MathRenderer.js RTL support — don't touch
   };
 
-  // ── Pattern-based replacements (multi-char) ──────────────────────────────
   // Applied AFTER character-by-character substitution.
   // Patterns are ordered from most specific to most general.
   const PATTERN_REPLACEMENTS = [
@@ -172,7 +170,6 @@ window.MathPasteConverter = (() => {
     },
   ];
 
-  // ── Smart Merge: split on existing $...$ delimiters ─────────────────────
   // Segments inside existing LaTeX blocks are preserved exactly.
   // Only segments OUTSIDE $...$ get converted.
   //
@@ -203,13 +200,13 @@ window.MathPasteConverter = (() => {
   function _convertSegment(rawText) {
     if (!rawText) return rawText;
 
-    // Step 1: character-by-character substitution from the lookup table
+    // Character-by-character substitution from the lookup table
     let result = '';
     for (const char of rawText) {
       result += UNICODE_TO_LATEX_MAP[char] ?? char;
     }
 
-    // Step 2: multi-char pattern replacements
+    // Multi-char pattern replacements
     for (const { re, fn } of PATTERN_REPLACEMENTS) {
       re.lastIndex = 0;
       result = result.replace(re, fn);
@@ -218,7 +215,6 @@ window.MathPasteConverter = (() => {
     return result;
   }
 
-  // ── Public API ─────────────────────────────────────────────────────────────
 
   /**
    * Convert a raw text string, replacing Unicode math symbols with LaTeX.
@@ -311,9 +307,9 @@ window.MathPasteConverter = (() => {
       const converted = convert(raw);
       _insertAtCursor(el, converted);
 
-      // F4 integration: trigger KaTeX preview if there's a preview container nearby.
+      // Trigger KaTeX preview if there's a preview container nearby.
       // Preview containers should have data-preview-for attribute pointing to the input id.
-      // This is a best-effort — no crash if preview element isn't found.
+      // Best-effort — no crash if preview element isn't found.
       _triggerPreview(el);
     });
   }

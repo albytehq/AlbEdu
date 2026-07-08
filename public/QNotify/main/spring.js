@@ -1,41 +1,21 @@
-// spring.js — QNotify 1.0.5 For AlbEdu
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  QNotify — spring.js 1.0.5 For AlbEdu ║
- * ║  "Analytic Spring Solver — Damped Harmonic Oscillator"      ║
- * ╚══════════════════════════════════════════════════════════════╝
- *
- * Solves the damped harmonic oscillator equation ANALYTICALLY:
- *
- *   m·x'' + c·x' + k·x = k·target
- *
- * Rewritten with displacement  u = x - target:
- *   m·u'' + c·u' + k·u = 0
- *
- * Three damping regimes (ζ = c / (2√(km))):
- *   ζ < 1  → underdamped   (oscillates with decay envelope)
- *   ζ = 1  → critically damped  (fastest settle without overshoot)
- *   ζ > 1  → overdamped    (exponential decay, no oscillation)
- *
- * KEY ADVANTAGES OVER RK4:
- *  ✓ Frame-rate independent by design — time-based, not step-based
- *  ✓ Zero numerical drift — exact solution at any t
- *  ✓ Identical animation feel at 30fps, 60fps, 120fps, 240fps
- *  ✓ Cheaper per-frame: 6-10 ops vs ~30 ops for RK4
- *  ✓ Supports getValue(t) for scrubbing, prediction, interruption
- */
-
-// ═══════════════════════════════════════════════════════════════
-//  ANALYTIC SPRING SOLVER
-// ═══════════════════════════════════════════════════════════════
+// spring.js — QNotify spring solvers for UI animation and gesture physics.
+//
+// AnalyticSpring solves the damped harmonic oscillator equation analytically:
+//   m·x'' + c·x' + k·x = k·target
+// Rewritten with displacement u = x - target: m·u'' + c·u' + k·u = 0.
+// Three damping regimes (ζ = c / (2√(km))):
+//   ζ < 1  → underdamped   (oscillates with decay envelope)
+//   ζ = 1  → critically damped  (fastest settle without overshoot)
+//   ζ > 1  → overdamped    (exponential decay, no oscillation)
+//
+// Why analytic over RK4: frame-rate independent by design (time-based, not
+// step-based), zero numerical drift (exact solution at any t), identical
+// animation feel at 30/60/120/240 fps, cheaper per-frame (6-10 ops vs ~30
+// for RK4), and supports getValue(t) for scrubbing/prediction/interruption.
+// RK4 is kept for hybrid mode where the step-based feel is preferred for
+// gesture physics (bump/drag).
 
 export class AnalyticSpring {
-    /**
-     * @param {Object} opts
-     * @param {number} [opts.k=180]  stiffness
-     * @param {number} [opts.c=22]   damping coefficient
-     * @param {number} [opts.m=1]    mass
-     */
     constructor({ k = 180, c = 22, m = 1 } = {}) {
         this._k = k;
         this._c = c;
@@ -66,8 +46,6 @@ export class AnalyticSpring {
         this._precompute();
     }
 
-    // ─── Configuration ──────────────────────────────────────────
-
     _configure({ k = 180, c = 22, m = 1 } = {}) {
         this._k = k;
         this._c = c;
@@ -87,10 +65,8 @@ export class AnalyticSpring {
         this._onRest   = null;
     }
 
-    /**
-     * Precompute regime and natural frequency — called once on config change.
-     * All downstream evaluations use these cached values.
-     */
+    // Precompute regime + natural frequency — called once on config change.
+    // All downstream evaluations reuse these cached values.
     _precompute() {
         const k = this._k, c = this._c, m = this._m;
 
@@ -116,15 +92,8 @@ export class AnalyticSpring {
         this._precomputed = true;
     }
 
-    // ─── Core analytic evaluator ─────────────────────────────────
-
-    /**
-     * Evaluate exact position and velocity at elapsed time t (seconds).
-     * Uses initial conditions stored at the moment `to()` / `jump()` was called.
-     *
-     * @param {number} t  seconds since animation start
-     * @returns {{ pos: number, vel: number }}
-     */
+    // Core analytic evaluator — returns exact position + velocity at elapsed
+    // time t (seconds). Uses initial conditions stored when to()/jump() was called.
     _evaluate(t) {
         const u0 = this._x0;   // initial displacement from target
         const v0 = this._v0;   // initial velocity
@@ -172,19 +141,10 @@ export class AnalyticSpring {
         }
     }
 
-    // ─── Public animation API (mirrors RK4Spring exactly) ────────
+    // Public animation API — mirrors RK4Spring exactly.
 
-    /**
-     * Set target and begin animating toward it.
-     * Captures current position + velocity as initial conditions.
-     *
-     * @param {number} target
-     * @param {Object} [opts]
-     * @param {number}   [opts.v]         override initial velocity
-     * @param {Function} [opts.onUpdate]
-     * @param {Function} [opts.onRest]
-     * @returns {this}
-     */
+    // Set target and begin animating toward it. Captures current position +
+    // velocity as initial conditions.
     to(target, { v, onUpdate, onRest } = {}) {
         this.target = target;
 
@@ -206,9 +166,7 @@ export class AnalyticSpring {
         return this;
     }
 
-    /**
-     * Jump to value instantly — no animation, preserves zero velocity.
-     */
+    // Jump to value instantly — no animation, preserves zero velocity.
     jump(value) {
         this.stop();
         this.x      = value;
@@ -224,12 +182,9 @@ export class AnalyticSpring {
         if (this._raf) { cancelAnimationFrame(this._raf); this._raf = null; }
     }
 
-    // ─── Global tick — called by the shared RAF loop ──────────────
-
-    /**
-     * dt is provided for API compatibility but not used —
-     * analytic solver uses absolute elapsed time for correctness.
-     */
+    // Global tick — called by the shared RAF loop.
+    // dt is provided for API compatibility but not used — analytic solver
+    // uses absolute elapsed time for correctness.
     _tickGlobal(_dt) {
         if (!this._running) return;
 
@@ -256,7 +211,7 @@ export class AnalyticSpring {
         }
     }
 
-    // Legacy individual tick — backward compat
+    // Legacy individual tick — backward compat.
     _tick() {
         if (!this._running) return;
         this._tickGlobal(1 / 60);
@@ -269,9 +224,7 @@ export class AnalyticSpring {
 }
 
 
-// ═══════════════════════════════════════════════════════════════
-//  RK4 SPRING — preserved for hybrid mode / interactive physics
-// ═══════════════════════════════════════════════════════════════
+// RK4 SPRING — preserved for hybrid mode / interactive physics.
 
 export class RK4Spring {
     constructor({ k = 180, c = 22, m = 1 } = {}) {
@@ -377,9 +330,7 @@ export class RK4Spring {
 }
 
 
-// ═══════════════════════════════════════════════════════════════
-//  GLOBAL RAF LOOP — shared by both solver types
-// ═══════════════════════════════════════════════════════════════
+// GLOBAL RAF LOOP — shared by both solver types.
 
 export const _activeSprings = new Set();
 let _rafHandle   = null;
@@ -394,9 +345,9 @@ function _globalTick(now) {
         return;
     }
 
-    // [v7.5.0] dt clamped to 64ms (2 frames at 30fps) — tighter than old 100ms.
-    // 64ms prevents springs jumping visibly after tab switch,
-    // while still allowing graceful catch-up on slow devices.
+    // dt clamped to 64ms (2 frames at 30fps) — tighter than old 100ms. 64ms
+    // prevents springs jumping visibly after tab switch, while still allowing
+    // graceful catch-up on slow devices.
     const raw = now - _lastTime;
     const dt  = Math.min(raw > 0 ? raw / 1000 : 1 / 60, 0.064);
     _lastTime  = now;
@@ -419,9 +370,9 @@ export function _scheduleLoop() {
     _rafHandle   = requestAnimationFrame(_globalTick);
 }
 
-// [v7.5.0] Handle both visibilitychange (desktop) and pagehide/pageshow (mobile).
-// Mobile browsers freeze rAF on pagehide — springs must resync on resume
-// or they'll teleport to final position instead of animating from current pos.
+// Handle both visibilitychange (desktop) and pagehide/pageshow (mobile).
+// Mobile browsers freeze rAF on pagehide — springs must resync on resume or
+// they'll teleport to final position instead of animating from current pos.
 function _onPageVisible() {
     if (_activeSprings.size === 0) return;
 
@@ -447,30 +398,23 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') _onPageVisible();
 });
 
-// Mobile: pageshow fires when page is restored from bfcache
+// Mobile: pageshow fires when page is restored from bfcache.
 window.addEventListener('pageshow', (e) => {
     if (e.persisted) _onPageVisible();
 }, { passive: true });
 
 
-// ═══════════════════════════════════════════════════════════════
-//  SPRING OBJECT POOL
-// ═══════════════════════════════════════════════════════════════
+// SPRING OBJECT POOL
 
 const _analyticPool = [];
 const _rk4Pool      = [];
 
-// [v7.5.0] Pool size cap: prevents unbounded memory growth.
+// Pool size cap — prevents unbounded memory growth.
 // 40 analytic (UI springs) + 20 RK4 (bump/gesture) is generous for any UI.
 const POOL_MAX_ANALYTIC = 40;
 const POOL_MAX_RK4      = 20;
 
-/**
- * Acquire a spring from the pool — or create a new one.
- *
- * @param {Object}  config
- * @param {'analytic'|'rk4'} solver
- */
+// Acquire a spring from the pool — or create a new one.
 export function acquireSpring(config, solver = 'analytic') {
     const pool = solver === 'rk4' ? _rk4Pool : _analyticPool;
     const Cls  = solver === 'rk4' ? RK4Spring : AnalyticSpring;
@@ -483,7 +427,7 @@ export function releaseSpring(spring) {
     spring._reset();
     if (spring instanceof AnalyticSpring) {
         if (_analyticPool.length < POOL_MAX_ANALYTIC) _analyticPool.push(spring);
-        // else: let GC collect it — pool is at capacity
+        // else: let GC collect it — pool is at capacity.
     } else {
         if (_rk4Pool.length < POOL_MAX_RK4) _rk4Pool.push(spring);
     }

@@ -1,7 +1,4 @@
--- =============================================================================
 -- 20260703_017_db_based_rate_limiting.sql
--- AlbEdu Production Hardening — The Surgeon
--- =============================================================================
 -- Migrate heartbeat + submit rate limiting from in-memory (per-isolate)
 -- to DB-based (cross-isolate accurate).
 --
@@ -9,11 +6,10 @@
 --   rate_limit_heartbeats  — 4 req/min per session (15s interval = 4/min)
 --   rate_limit_submits     — 2 req/min per session (allow 1 retry)
 --
--- Both tables use INSERT + time-window COUNT pattern (same as
+-- Both tables use INSERT + time-window COUNT (same pattern as
 -- registration_attempts in access-code-attempt Edge Function).
--- =============================================================================
 
--- ── Heartbeat rate limit table ─────────────────────────────────────────
+-- Heartbeat rate limit table
 CREATE TABLE IF NOT EXISTS public.rate_limit_heartbeats (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id  uuid NOT NULL,
@@ -35,7 +31,7 @@ CREATE POLICY "rl_hb_auth_read_own" ON public.rate_limit_heartbeats
         SELECT id FROM public.assessment_sessions WHERE user_id = auth.uid()
     ));
 
--- ── Submit rate limit table ────────────────────────────────────────────
+-- Submit rate limit table
 CREATE TABLE IF NOT EXISTS public.rate_limit_submits (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id  uuid NOT NULL,
@@ -56,8 +52,8 @@ CREATE POLICY "rl_submit_auth_read_own" ON public.rate_limit_submits
         SELECT id FROM public.assessment_sessions WHERE user_id = auth.uid()
     ));
 
--- ── Auto-cleanup: pg_cron deletes entries older than 1 hour ───────────
--- Reduces table size — old entries are useless for rate limiting.
+-- Auto-cleanup: pg_cron deletes entries older than 1 hour.
+-- Old entries are useless for rate limiting.
 SELECT cron.schedule(
     'cleanup-rate-limit-tables',
     '0 * * * *',  -- every hour

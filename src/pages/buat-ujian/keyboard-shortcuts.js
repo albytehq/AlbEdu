@@ -1,9 +1,7 @@
-// =============================================================================
-// keyboard-shortcuts.js — Global shortcuts for Buat Ujian (v0.2.0)
-//   Cmd/Ctrl + Enter  → publish exam to Supabase (only fires in wizard view)
-//   Cmd/Ctrl + N      → open "add question" modal on first typed section
-// Loaded as classic <script defer>. No external state — reads from window.*.
-// =============================================================================
+// keyboard-shortcuts.js — global shortcuts for the buat-ujian page:
+//   Cmd/Ctrl + Enter → publish (step 3) or advance to next step (steps 1-2)
+//   Cmd/Ctrl + N     → add a question to the first typed section (step 2 only)
+// Reads all state from window.*; no local state of its own.
 
 (function () {
   'use strict';
@@ -13,19 +11,17 @@
   const KeyboardShortcuts = {
     init() {
       document.addEventListener('keydown', (e) => {
-        // Only fire when modifier (Cmd on macOS, Ctrl elsewhere) is held
+        // Only fire when Cmd (macOS) or Ctrl (everywhere else) is held.
         const mod = e.metaKey || e.ctrlKey;
         if (!mod) return;
 
         const key = e.key.toLowerCase();
 
         if (key === 'enter') {
-          // Only fire if wizard view is visible
           const wizard = document.getElementById('wizard-view');
           if (!wizard || wizard.hidden) return;
           e.preventDefault();
           e.stopPropagation();
-          // If on step 3 → publish; else → next step
           const currentStep = window.WizardController?._currentStep;
           if (currentStep === 3) {
             window.PublishCard?._publish?.();
@@ -36,7 +32,6 @@
         }
 
         if (key === 'n') {
-          // Only fire if wizard view is on step 2 (soal)
           const wizard = document.getElementById('wizard-view');
           if (!wizard || wizard.hidden) return;
           const currentStep = window.WizardController?._currentStep;

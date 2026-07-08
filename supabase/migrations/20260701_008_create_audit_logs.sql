@@ -1,14 +1,8 @@
--- =============================================================================
 -- 20260701_008_create_audit_logs.sql
--- AlbEdu v1.0.0 — Phase 1.8
--- =============================================================================
--- Creates `audit_logs` — Q9 audit trail tier B (Standard).
--- Logs ~15 event types: login, logout, create/publish/start/pause/resume/finish/delete
+-- Creates `audit_logs` — audit trail of ~25 event types.
+-- Logs: login, logout, create/publish/start/pause/resume/finish/delete
 -- assessment, block/unblock participant, submit assessment, violation, DSR, etc.
---
--- Q10: retention 1 year (auto-archive via pg_cron — see 013).
--- Q17: UU PDP compliance — IP + user_agent stored for forensic.
--- =============================================================================
+-- 1-year retention via pg_cron (see migration 013). IP + user_agent stored for forensic.
 
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -33,7 +27,7 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
                     'FORCE_SUBMIT', 'START_SESSION', 'END_SESSION',
                     -- Submission
                     'SUBMIT_ASSESSMENT',
-                    -- Compliance (Q17)
+                    -- Compliance (UU PDP consents + DSRs)
                     'CONSENT_GRANTED', 'CONSENT_REVOKED',
                     'DSR_REQUEST', 'DSR_RESOLVED',
                     'DATA_EXPORT', 'ACCOUNT_DELETE',
@@ -50,23 +44,23 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   -- Metadata (action-specific details)
   metadata        jsonb DEFAULT '{}'::jsonb,
 
-  -- Forensics (Q17)
+  -- Forensics (UU PDP compliance)
   ip_address      text,
   user_agent      text,
 
-  -- Auto-expiry (Q10: 1 year for audit logs)
+  -- Auto-expiry (1-year retention)
   created_at      timestamptz DEFAULT now(),
   expires_at      timestamptz DEFAULT (now() + INTERVAL '365 days')
 );
 
--- ── Indexes ──
+-- Indexes
 CREATE INDEX idx_audit_actor     ON public.audit_logs(actor_id) WHERE actor_id IS NOT NULL;
 CREATE INDEX idx_audit_action    ON public.audit_logs(action);
 CREATE INDEX idx_audit_target    ON public.audit_logs(target_type, target_id) WHERE target_id IS NOT NULL;
 CREATE INDEX idx_audit_created   ON public.audit_logs(created_at DESC);
 CREATE INDEX idx_audit_expires   ON public.audit_logs(expires_at) WHERE expires_at IS NOT NULL;
 
--- ── RLS Policies ──
+-- RLS Policies
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- Admins: read all audit logs (forensic visibility)
@@ -87,6 +81,6 @@ CREATE POLICY "audit_peserta_read_own"
 -- No DELETE — only via pg_cron cleanup (service role)
 
 COMMENT ON TABLE public.audit_logs IS
-  'Q9 audit trail tier B (Standard). ~25 event types. Immutable append-only. 1-year retention. Forensic-grade.';
+  'Audit trail. ~25 event types. Immutable append-only. 1-year retention.';
 COMMENT ON COLUMN public.audit_logs.action IS 'Enum: see CHECK constraint for full list. ~25 event types covering auth, assessment lifecycle, sessions, submissions, compliance, violations.';
-COMMENT ON COLUMN public.audit_logs.metadata IS 'JSONB. Action-specific details, e.g. { access_code, score, reason }.';
+COMMENT ON COLUMN public.audit_logs.metadata IS 'JSONB. Action-specific details, for example { access_code, score, reason }.';

@@ -1,6 +1,6 @@
-# Supabase — AlbEdu v0.746.0
+# Supabase — AlbEdu v0.815.7
 
-Database schema, Edge Functions, and migrations for AlbEdu v0.746.0.
+Database schema, Edge Functions, and migrations for AlbEdu v0.815.7.
 
 **Note:** Live DB may have additional manual tables (admin_storages, assets_manifest, daftar_nama, rate_limit_heartbeats, rate_limit_submits, user_devices) created via Studio SQL editor, not in migrations.
 
@@ -17,7 +17,7 @@ Database schema, Edge Functions, and migrations for AlbEdu v0.746.0.
 
 ---
 
-## 2. Schema Overview (v0.746.0)
+## 2. Schema Overview (v0.815.7)
 
 ### 2.1 Tables (16 active, 1 dropped)
 

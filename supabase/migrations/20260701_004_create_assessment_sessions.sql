@@ -1,16 +1,12 @@
--- =============================================================================
 -- 20260701_004_create_assessment_sessions.sql
--- AlbEdu v1.0.0 — Phase 1.4
--- =============================================================================
 -- Creates `assessment_sessions` — tracks each peserta's active session per
 -- assessment. Used for:
 --   - Proctoring dashboard (real-time monitoring)
---   - Cross-device resume (Q4: jawaban sync ke server)
+--   - Cross-device resume
 --   - Instant block (admin block → status='blocked' → peserta redirect)
 --   - Heartbeat tracking (last_heartbeat_at for "is peserta still online?")
 --
 -- Replaces: ad-hoc violations table + localStorage submit lock
--- =============================================================================
 
 CREATE TABLE IF NOT EXISTS public.assessment_sessions (
   id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -21,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.assessment_sessions (
   user_email            text,
   identity_snapshot     jsonb,  -- { nama, kelas, is_manual, ... }
 
-  -- Device + network forensics (Q17 compliance — IP stored 90 days, then hash)
+  -- Device + network forensics — IP stored 90 days then hashed per UU PDP.
   device_id             text,
   ip_address            text,
   user_agent            text,
@@ -30,7 +26,7 @@ CREATE TABLE IF NOT EXISTS public.assessment_sessions (
   status                text NOT NULL DEFAULT 'active'
                         CHECK (status IN ('active', 'paused', 'submitted', 'blocked', 'expired', 'disconnected')),
 
-  -- Heartbeat (Q12: 15s interval, in-memory cache 60s)
+  -- Heartbeat (15s interval, in-memory cache 60s)
   started_at            timestamptz DEFAULT now(),
   last_heartbeat_at     timestamptz DEFAULT now(),
   submitted_at          timestamptz,
@@ -46,8 +42,7 @@ CREATE TABLE IF NOT EXISTS public.assessment_sessions (
   progress_pct          numeric(5,2) DEFAULT 0.00 CHECK (progress_pct BETWEEN 0 AND 100),
   violation_count       int DEFAULT 0,
 
-  -- Draft answers (for cross-device resume — Q4)
-  -- Synced via heartbeat Edge Function every 15s
+  -- Draft answers (for cross-device resume). Synced via heartbeat every 15s.
   draft_answers         jsonb DEFAULT '{}'::jsonb,
 
   -- Attempt number (for allow_retake feature)
@@ -63,7 +58,7 @@ CREATE TABLE IF NOT EXISTS public.assessment_sessions (
     DEFERRABLE INITIALLY DEFERRED
 );
 
--- ── Indexes ──
+-- Indexes
 CREATE INDEX idx_sessions_assessment   ON public.assessment_sessions(assessment_id);
 CREATE INDEX idx_sessions_user         ON public.assessment_sessions(user_id);
 CREATE INDEX idx_sessions_status       ON public.assessment_sessions(status);
@@ -71,16 +66,16 @@ CREATE INDEX idx_sessions_heartbeat    ON public.assessment_sessions(last_heartb
   WHERE status = 'active';
 CREATE INDEX idx_sessions_attempt      ON public.assessment_sessions(assessment_id, user_id, attempt_number DESC);
 
--- ── RLS Policies ──
+-- RLS Policies
 ALTER TABLE public.assessment_sessions ENABLE ROW LEVEL SECURITY;
 
--- Admins: read all sessions for assessments they own (collaborative: can read all in single-tenant)
+-- Admins: read all sessions (collaborative model in single-tenant mode)
 CREATE POLICY "sessions_admin_read"
   ON public.assessment_sessions FOR SELECT TO authenticated
   USING (peran_user() = 'admin');
 
--- Admins: update sessions for assessments they own (for block, force-submit, etc.)
--- Server-side validation in Edge Function ensures admin owns assessment.
+-- Admins: update sessions for assessments they own (block, force-submit, etc.).
+-- Server-side validation in Edge Function ensures admin owns the assessment.
 CREATE POLICY "sessions_admin_update"
   ON public.assessment_sessions FOR UPDATE TO authenticated
   USING (peran_user() = 'admin');
@@ -101,15 +96,15 @@ CREATE POLICY "sessions_peserta_update_own"
   USING (peran_user() = 'peserta' AND user_id = auth.uid())
   WITH CHECK (peran_user() = 'peserta' AND user_id = auth.uid());
 
--- ── Trigger: auto-update updated_at ──
+-- Trigger: auto-update updated_at
 DROP TRIGGER IF EXISTS sessions_updated_at ON public.assessment_sessions;
 CREATE TRIGGER sessions_updated_at
   BEFORE UPDATE ON public.assessment_sessions
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
--- ── Trigger: enforce one active session per assessment+user ──
--- The UNIQUE constraint above handles this, but we add a trigger to give
--- a friendly error message instead of constraint violation.
+-- Trigger: enforce one active session per assessment+user.
+-- The UNIQUE constraint above handles this; the trigger gives a friendlier
+-- error message instead of a raw constraint violation.
 CREATE OR REPLACE FUNCTION enforce_single_active_session()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -135,5 +130,5 @@ CREATE TRIGGER enforce_single_active_session
 
 COMMENT ON TABLE public.assessment_sessions IS
   'Tracks each peserta session per assessment. Powers proctoring dashboard, cross-device resume, instant block, heartbeat tracking.';
-COMMENT ON COLUMN public.assessment_sessions.draft_answers IS 'JSONB. Synced every 15s via heartbeat Edge Function. Enables cross-device resume (Q4).';
+COMMENT ON COLUMN public.assessment_sessions.draft_answers IS 'JSONB. Synced every 15s via heartbeat Edge Function. Enables cross-device resume.';
 COMMENT ON COLUMN public.assessment_sessions.status IS 'State machine: active → (paused|blocked|submitted|expired|disconnected).';

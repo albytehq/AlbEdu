@@ -3,7 +3,7 @@
 > Platform asesmen production-grade untuk semua kebutuhan evaluasi — SD, SMP, SMA, kuliah, hingga personal use.
 > Vanilla JS + Supabase + Cloudflare — zero framework, zero build runtime.
 
-[![Version](https://img.shields.io/badge/version-0.746.0-blue)]()
+[![Version](https://img.shields.io/badge/version-0.816.0-blue)]()
 [![Structure](https://img.shields.io/badge/structure-by--feature-green)]()
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)]()
 
@@ -52,7 +52,7 @@ npm run verify
 
 ---
 
-## 📁 Project Structure (v0.746.0 — By-Feature)
+## 📁 Project Structure (v0.816.0 — By-Feature)
 
 ```
 AlbEdu/
@@ -135,7 +135,7 @@ AlbEdu/
 │   │   ├── results-analytics.html
 │   │   ├── daftar-nama.html
 │   │   └── buat-ujian.html, data-hasil.html, ujian-peserta.html
-│   │       # Legacy redirect stubs (v0.742.0: flattened to canonical pages)
+│   │       # Legacy redirect stubs (flattened to canonical pages)
 │   ├── assessment/             # Peserta assessment pages (4 files)
 │   │   ├── index.html          # Token entry
 │   │   ├── take.html           # Assessment runtime

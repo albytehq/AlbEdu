@@ -1,27 +1,16 @@
-/**
- * AlbEdu Asset Storage Worker  (v6.0 — v1.0.0 enterprise migration)
- *
- * CHANGES dari v5.1:
- *   - REFACTOR: sweepExpiredAssessments (was sweepExpiredExams) — query `assessments`
- *     table instead of legacy `ujian`. Uses normalized ac_* columns instead of
- *     access_control JSONB blob.
- *   - UPDATE: ALLOWED_ORIGINS — albedu-id.github.io → albytehq.github.io
- *     (owner renamed GitHub username)
- *   - UPDATE: Worker URL — https://edu.albyte-inc.workers.dev (new)
- *   - ADD: /api/health endpoint for uptime monitoring
- *   - KEEP: all v5.1 fixes (rate limit GC, parallel sweep, GitHub PUT timeout, magic bytes)
- *
- * Decision ref: docs/MIGRATION-DECISIONS.md §24-25 (GitHub rename + Worker URL)
- *
- * DEPLOY: Copy this file to Cloudflare Workers dashboard (or wrangler deploy).
- *         Set env vars: GITHUB_TOKEN, GITHUB_USERNAME=albytehq, SUPABASE_URL,
- *         SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY, AUTH_TOKEN (optional)
- *         Cron trigger: every 15 minutes (was every hour)
- */
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
+// AlbEdu Asset Storage Worker.
+// Endpoints:
+//   GET  /api/supabase-config — returns Supabase URL + anon key (cached 1 hour)
+//   GET  /api/health          — uptime monitoring endpoint
+//   POST /upload              — image upload (multipart/form-data, max 10MB, JPEG/PNG/WebP)
+//   POST /release             — image delete by SHA-256 hash (ref count decrement)
+//
+// Cron trigger: every 15 minutes → sweepExpiredAssessments() deletes assessments
+// that have been finished for >1 hour (grace period).
+//
+// Env vars (Cloudflare Dashboard → Settings → Variables):
+//   GITHUB_TOKEN, GITHUB_USERNAME, SUPABASE_URL,
+//   SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY, AUTH_TOKEN (optional)
 
 const REPO_PREFIX    = 'assets-';
 const REPO_COUNT     = 20;
@@ -30,7 +19,7 @@ const BRANCH         = 'main';
 const MAX_FILE_SIZE  = 10 * 1024 * 1024;
 const ALLOWED_MIMES  = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
-const EXPIRY_GRACE_MS = 60 * 60 * 1000; // 1 jam
+const EXPIRY_GRACE_MS = 60 * 60 * 1000; // 1 hour
 
 const CONFIG_CACHE_MAX_AGE = 3600;
 
@@ -39,10 +28,11 @@ const RATE_LIMIT_WINDOW = 60_000;
 
 const GITHUB_PUT_TIMEOUT_MS = 25_000;
 
-// v1.0.0: Updated origins — albedu-id → albytehq (owner rename)
+// Allowed origins — albytehq is the current owner; albedu-id is kept for
+// backward compat with old bookmarked URLs.
 const ALLOWED_ORIGINS = new Set([
-  'https://albytehq.github.io',       // NEW: albytehq (was albedu-id)
-  'https://albedu-id.github.io',      // KEEP for backward compat (legacy URLs)
+  'https://albytehq.github.io',
+  'https://albedu-id.github.io',
   'http://127.0.0.1:5500',
   'http://localhost:5500',
   'http://localhost:3000',
@@ -54,9 +44,7 @@ const _rateLimitStore = new Map();
 let _rateLimitGcCounter = 0;
 const _RATE_LIMIT_GC_INTERVAL = 100;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers (unchanged from v5.1)
-// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
 
 function getExtension(filename, mime) {
   if (filename && filename.includes('.')) {
@@ -133,9 +121,12 @@ function checkRateLimit(ip) {
 }
 
 function corsHeaders(origin, forConfig = false) {
-  const allowOrigin = (forConfig && origin && ALLOWED_ORIGINS.has(origin))
+  // Production posture: every endpoint locks to ALLOWED_ORIGINS. The
+  // previous `*` fallback allowed any origin to POST to /upload and
+  // /release, which is unsafe even with AUTH_TOKEN.
+  const allowOrigin = (origin && ALLOWED_ORIGINS.has(origin))
     ? origin
-    : (forConfig ? 'null' : '*');
+    : 'null';
   return {
     'Access-Control-Allow-Origin':  allowOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -145,7 +136,12 @@ function corsHeaders(origin, forConfig = false) {
 }
 
 function checkAuth(request, env) {
-  if (!env.AUTH_TOKEN) return;
+  // AUTH_TOKEN is required — fail closed if missing so a misconfigured
+  // deploy doesn't silently open /upload to the world.
+  if (!env.AUTH_TOKEN) {
+    console.error('[auth] AUTH_TOKEN not set — refusing request');
+    throw new Error('AUTH_TOKEN not configured');
+  }
   const auth = request.headers.get('Authorization');
   if (!auth || auth !== `Bearer ${env.AUTH_TOKEN}`) throw new Error('Unauthorized');
 }
@@ -168,9 +164,7 @@ function getShardRepo(hash) {
   return `${REPO_PREFIX}${idx}`;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Supabase REST helper
-// ─────────────────────────────────────────────────────────────────────────────
 
 async function supabaseRequest(path, env, options = {}) {
   const { method = 'GET', body, headers: extraHeaders } = options;
@@ -193,9 +187,7 @@ async function supabaseRequest(path, env, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Main export
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default {
 
@@ -233,9 +225,7 @@ export default {
   },
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/supabase-config
-// ─────────────────────────────────────────────────────────────────────────────
 
 function handleSupabaseConfig(request, env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
@@ -267,9 +257,7 @@ function handleSupabaseConfig(request, env) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/health — NEW v6.0 — uptime monitoring endpoint
-// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/health — uptime monitoring endpoint
 
 function handleHealth(env) {
   return json({
@@ -281,9 +269,7 @@ function handleHealth(env) {
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /upload (unchanged from v5.1)
-// ─────────────────────────────────────────────────────────────────────────────
+// POST /upload
 
 async function handleUpload(request, env) {
   try {
@@ -422,9 +408,7 @@ async function _handleUploadInner(request, env) {
     { 'Cache-Control': 'public, max-age=31536000, immutable' });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /release (unchanged from v5.1)
-// ─────────────────────────────────────────────────────────────────────────────
+// POST /release
 
 async function handleRelease(request, env) {
   try {
@@ -466,21 +450,26 @@ async function _releaseByHash(hash, env) {
   return json({ success: true, ref_count: newRef, pending_delete: pending });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Cron: sweep expired assessments (v6.0 — REFACTORED for assessments table)
-// ─────────────────────────────────────────────────────────────────────────────
+// Cron: sweep expired assessments.
+// Soft-archive instead of hard-delete — pg_cron (migration 013) handles
+// the 365-day hard delete. Hard-deleting here would conflict with the
+// archive policy and permanently lose assessment data + audit trail.
 
 async function sweepExpiredAssessments(env) {
-  const result = { swept: 0, deleted: 0, failed: 0, imagesReleased: 0 };
+  const result = { swept: 0, archived: 0, failed: 0, imagesReleased: 0 };
 
-  // v6.0: Query assessments table with normalized columns
+  // Server-side filter on ac_end / ac_scheduled_end so we don't pull every
+  // active row across the wire on every cron tick.
+  const nowIso = new Date().toISOString();
+  const filter = `status=eq.active&or=(ac_manual_status.eq.finished,ac_end.lt.${encodeURIComponent(nowIso)},ac_scheduled_end.lt.${encodeURIComponent(nowIso)})`;
+
   const rows = await supabaseRequest(
-    'assessments?select=id,access_code,ac_manual_status,ac_end,ac_remaining_time,ac_scheduled_start,ac_scheduled_end,access_mode,sections&status=eq.active',
+    `assessments?select=id,access_code,ac_manual_status,ac_end,ac_remaining_time,ac_scheduled_start,ac_scheduled_end,access_mode,sections&${filter}`,
     env
   );
 
   if (!rows?.length) {
-    console.log('[sweep] No active assessments found');
+    console.log('[sweep] No expired assessments found');
     return result;
   }
 
@@ -493,16 +482,16 @@ async function sweepExpiredAssessments(env) {
   if (!expired.length) return result;
 
   const outcomes = await Promise.allSettled(
-    expired.map(row => _deleteExpiredAssessment(row, env))
+    expired.map(row => _archiveExpiredAssessment(row, env))
   );
 
   for (let i = 0; i < outcomes.length; i++) {
     const o = outcomes[i];
     if (o.status === 'fulfilled') {
-      result.deleted++;
+      result.archived++;
       result.imagesReleased += o.value ?? 0;
     } else {
-      console.error(`[sweep] Failed to delete assessment ${expired[i].access_code}:`, o.reason?.message);
+      console.error(`[sweep] Failed to archive assessment ${expired[i].access_code}:`, o.reason?.message);
       result.failed++;
     }
   }
@@ -510,12 +499,15 @@ async function sweepExpiredAssessments(env) {
   return result;
 }
 
-async function _deleteExpiredAssessment(row, env) {
+async function _archiveExpiredAssessment(row, env) {
   const released = await _releaseAssessmentImages(row, env);
+  // Soft-archive: pg_cron migration 013 will hard-delete after 365 days.
   await supabaseRequest(`assessments?id=eq.${encodeURIComponent(row.id)}`, env, {
-    method: 'DELETE',
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'archived' }),
   });
-  console.log(`[sweep] Deleted assessment ${row.access_code} (${released} images released)`);
+  console.log(`[sweep] Archived assessment ${row.access_code} (${released} images released)`);
   return released;
 }
 

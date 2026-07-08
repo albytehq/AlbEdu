@@ -1,7 +1,4 @@
--- =============================================================================
 -- 20260701_014_migrate_legacy_ujian.sql
--- AlbEdu v1.0.0 — Phase 1.14
--- =============================================================================
 -- Migrates data from legacy `ujian` table → new `assessments` table.
 -- Idempotent: safe to run multiple times (uses ON CONFLICT DO NOTHING).
 --
@@ -23,9 +20,8 @@
 --   - hasil_peserta JSONB → submissions (extracted via PL/pgSQL)
 --   - violations JSONB → violation_events (extracted via PL/pgSQL)
 --
--- IMPORTANT: Run this AFTER all other migrations (001-013) are applied.
+-- Run this AFTER all other migrations (001-013) are applied.
 -- Legacy `ujian` table is DROPPED in migration 015 (drop_legacy_tables.sql).
--- =============================================================================
 
 -- Only proceed if legacy `ujian` table exists
 DO $$
@@ -36,7 +32,7 @@ BEGIN
   ) THEN
     RAISE NOTICE 'Legacy ujian table found. Starting migration...';
 
-    -- ── Step 1: Migrate ujian → assessments ──
+    -- Migrate ujian → assessments.
     -- Pad 5-digit kode_id to 6-digit access_code (prefix with '0')
     INSERT INTO public.assessments (
       access_code, created_by, created_by_email, published_at,
@@ -126,13 +122,13 @@ BEGIN
       AND u.created_by ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
     ON CONFLICT (access_code) DO NOTHING;
 
-    RAISE NOTICE 'Step 1 complete: ujian → assessments migrated.';
+    RAISE NOTICE 'Migrate: ujian → assessments done.';
 
-    -- ── Step 2: Migrate hasil_peserta JSONB → submissions ──
+    -- Migrate hasil_peserta JSONB → submissions.
     -- Legacy stores results as: { "Nama Peserta": { skor, selesai_at } }
     -- We cannot fully reconstruct submissions (no answer data), so we create
-    -- stub submissions with just the score + identity snapshot.
-    -- This is best-effort — full migration not possible without source answers.
+    -- stub submissions with just the score + identity snapshot. Full migration
+    -- is not possible without source answers.
     INSERT INTO public.submissions (
       assessment_id, session_id, user_id, identity_snapshot, user_email,
       answers, score, max_score, correct_count, total_count,
@@ -144,7 +140,7 @@ BEGIN
       -- session_id: create a stub session for legacy submissions
       gen_random_uuid(),
       -- user_id: we don't know the UUID, use a deterministic NULL UUID placeholder
-      -- (these are legacy stubs, real data starts fresh in v1.0.0)
+      -- for legacy stubs (real data starts fresh in the new schema).
       '00000000-0000-0000-0000-000000000000'::uuid,
       jsonb_build_object('nama', hp.key, 'source', 'legacy_migration'),
       NULL,
@@ -165,9 +161,9 @@ BEGIN
       AND u.hasil_peserta::text != '{}'
     ON CONFLICT DO NOTHING;
 
-    RAISE NOTICE 'Step 2 complete: hasil_peserta → submissions migrated (stub records).';
+    RAISE NOTICE 'Migrate: hasil_peserta → submissions done (stub records).';
 
-    -- ── Step 3: Migrate violations JSONB → violation_events ──
+    -- Migrate violations JSONB → violation_events.
     -- Legacy stores: { "Nama": { severity, count, blocked, blockedAt, blockedBy } }
     -- We create summary violation_events (one per blocked user).
     INSERT INTO public.violation_events (
@@ -195,7 +191,7 @@ BEGIN
       AND u.violations::text != '{}'
     ON CONFLICT DO NOTHING;
 
-    RAISE NOTICE 'Step 3 complete: violations → violation_events migrated.';
+    RAISE NOTICE 'Migrate: violations → violation_events done.';
 
     RAISE NOTICE 'Migration complete. Legacy ujian table will be dropped in migration 015.';
   ELSE

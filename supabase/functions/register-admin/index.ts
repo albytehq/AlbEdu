@@ -6,36 +6,35 @@ type RiskResult = {
   reason?: string;
 };
 
-// Locked to the known deployment origins.
-// "*" is never sent — unknown origins get no CORS header and the browser blocks them.
+// Locked to the known deployment origins. "*" is never sent — unknown
+// origins get no CORS header and the browser blocks them.
 const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
-// ── Patch D: ALLOWED_ORIGINS startup validation ────────────────────────────
-// Deno Edge Functions have no dedicated startup hook, so we validate once on
-// the first cold-start invocation. An empty list means every browser request
-// will be CORS-blocked with no visible error — this log makes that detectable.
+// Edge Functions have no dedicated startup hook, so we validate once on the
+// first cold-start invocation. An empty ALLOWED_ORIGINS means every browser
+// request will be CORS-blocked with no visible error — this log makes that
+// detectable.
 if (ALLOWED_ORIGINS.length === 0) {
   console.error(
-    "[register-admin] Patch D: ALLOWED_ORIGINS env var is not set or is empty. " +
+    "[register-admin] ALLOWED_ORIGINS env var is not set or is empty. " +
     "All browser CORS requests will be rejected. " +
     "Set ALLOWED_ORIGINS in Supabase secrets (comma-separated origin URLs)."
   );
 }
-// ── End Patch D startup ────────────────────────────────────────────────────
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
   // Supabase local dev and CLI don't send an Origin — allow those internal calls.
   const allowed = origin === "" || ALLOWED_ORIGINS.includes(origin);
   if (!allowed) {
-    // Patch D: log every blocked origin so misconfigured deployments are visible
-    // in Function logs rather than silently failing on the client.
+    // Log every blocked origin so misconfigured deployments are visible in
+    // Function logs rather than silently failing on the client.
     if (origin !== "") {
       console.warn(
-        "[register-admin] Patch D: CORS blocked for origin:", origin,
+        "[register-admin] CORS blocked for origin:", origin,
         "— not in ALLOWED_ORIGINS:", ALLOWED_ORIGINS
       );
     }
@@ -50,9 +49,9 @@ function getCorsHeaders(req: Request): Record<string, string> {
   };
 }
 
-// Uniform error response — every failure returns the same shape and the same
-// generic message to the client. Specific reasons are logged server-side only
-// so attackers can't enumerate valid emails or learn internal state.
+// Every failure returns the same shape and the same generic message to the
+// client. Specific reasons are logged server-side only so attackers can't
+// enumerate valid emails or learn internal state.
 function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
     status,
@@ -97,11 +96,12 @@ async function verifyTurnstile(token: string, remoteIp: string | null): Promise<
   }
 }
 
-// Real risk evaluation — checks recent attempts from the same IP and email
+// Risk evaluation — checks recent attempts from the same IP and email
 // within the last hour before allowing a new registration to proceed.
 // Limits: 5 attempts per IP, 3 per email — generous enough for legitimate
 // use, tight enough to slow down automated abuse.
-// Phase 1: deviceId and browserHash are accepted but NOT used for blocking yet.
+// deviceId and browserHash are accepted but NOT used for blocking yet
+// (shadow collection for future tuning).
 async function evaluateRegistrationRisk(
   supabase: ReturnType<typeof createClient>,
   input: {
@@ -146,25 +146,22 @@ async function evaluateRegistrationRisk(
       return { allowed: false, reason: "Terlalu banyak percobaan. Silakan coba lagi nanti." };
     }
 
-    // Phase 1: Log device_id and browser_hash for shadow analysis (no blocking)
+    // Shadow-collect device_id and browser_hash for later tuning (no blocking).
     if (input.deviceId) {
-      if (_DEBUG) console.log("[register-admin] Phase 1: device_id collected (shadow):", input.deviceId);
+      if (_DEBUG) console.log("[register-admin] device_id collected (shadow):", input.deviceId);
     }
     if (input.browserHash) {
-      if (_DEBUG) console.log("[register-admin] Phase 1: browser_hash collected (shadow):", input.browserHash);
+      if (_DEBUG) console.log("[register-admin] browser_hash collected (shadow):", input.browserHash);
     }
 
     return { allowed: true };
   } catch (err) {
-    // ── Patch B: Fail-Closed Risk Engine ──────────────────────────────────
-    // Original code returned { allowed: true } here — a DB error or malformed
-    // fingerprint causing a cast exception would silently bypass all rate gates.
-    // Fail closed instead: if we can't evaluate risk, we can't allow the request.
-    // A transient DB outage blocks registrations, but createUser would also fail
-    // moments later anyway, so no legitimate registration is lost.
-    console.error("[register-admin] Patch B: risk evaluation exception — failing closed:", err);
+    // Fail closed: a DB error or malformed fingerprint causing a cast
+    // exception would otherwise silently bypass all rate gates. A transient
+    // DB outage blocks registrations, but createUser would also fail moments
+    // later anyway, so no legitimate registration is lost.
+    console.error("[register-admin] risk evaluation exception — failing closed:", err);
     return { allowed: false, reason: "risk_check_unavailable" };
-    // ── End Patch B ────────────────────────────────────────────────────────
   }
 }
 
@@ -179,21 +176,19 @@ serve(async (req) => {
     return json({ success: false, error: "Method not allowed." }, 405, corsHeaders);
   }
 
-  // ── Patch C: Worker Secret Gate ─────────────────────────────────────────
-  // Prevents direct calls to the Edge Function URL that bypass the
-  // hosting-layer proxy (Vercel middleware / Cloudflare Worker).
-  // Gate is opt-in: inactive until REGISTER_WORKER_SECRET is set in Supabase
-  // secrets, so existing deployments are unaffected during the rollout window.
-  // The proxy must inject x-worker-secret server-side — never from the browser.
+  // Worker-secret gate — prevents direct calls to the Edge Function URL that
+  // bypass the hosting-layer proxy (Vercel middleware / Cloudflare Worker).
+  // Opt-in: inactive until REGISTER_WORKER_SECRET is set, so existing
+  // deployments are unaffected during rollout. The proxy must inject
+  // x-worker-secret server-side — never from the browser.
   const workerSecret = Deno.env.get("REGISTER_WORKER_SECRET");
   if (workerSecret) {
     const provided = req.headers.get("x-worker-secret") ?? "";
     if (provided !== workerSecret) {
-      console.warn("[register-admin] Patch C: missing or invalid worker secret — request blocked");
+      console.warn("[register-admin] missing or invalid worker secret — request blocked");
       return genericError(corsHeaders, 401);
     }
   }
-  // ── End Patch C ──────────────────────────────────────────────────────────
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -207,11 +202,11 @@ serve(async (req) => {
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
     const turnstileToken = String(body.turnstileToken || "");
-    // Phase 1 Anti-Abuse: Accept device fingerprint fields (shadow collection)
+    // Device fingerprint fields — shadow collection, not enforced yet.
     const deviceId = body.deviceId ? String(body.deviceId) : null;
     const browserHash = body.browserHash ? String(body.browserHash) : null;
     const deviceInfo = body.deviceInfo && typeof body.deviceInfo === 'object' ? body.deviceInfo : null;
-    // Legacy fingerprint field retained for backward compatibility
+    // Legacy fingerprint field retained for backward compatibility.
     const legacyFingerprint = body.fingerprint ? String(body.fingerprint) : null;
     const ipAddress =
       req.headers.get("cf-connecting-ip") ||
@@ -243,9 +238,8 @@ serve(async (req) => {
       },
     });
 
-    // Record attempt BEFORE risk check so the attempt itself is counted
-    // even if we ultimately block it.
-    // Phase 1 Anti-Abuse: Store device_id and browser_hash (shadow collection)
+    // Record the attempt BEFORE the risk check so the attempt itself is
+    // counted even if we ultimately block it.
     await supabase.from("registration_attempts").insert({
       ip_address: ipAddress,
       fingerprint: legacyFingerprint,
@@ -274,18 +268,16 @@ serve(async (req) => {
       return genericError(corsHeaders, 429);
     }
 
-    // ── MAX ACCOUNT = 2 ENFORCEMENT (VERIFIED ONLY) ────────────────────────
-    // Count VERIFIED admin accounts for this device_id.
-    // VERIFIED means auth.users.email_confirmed_at IS NOT NULL.
-    // If count >= 2, reject registration with HTTP 429.
-    // BUGFIX E: All DEBUG console.log lines below are gated behind the
-    // DEBUG env var to prevent log spam and internal-state leakage in
-    // production. Set DEBUG=1 in Supabase secrets to re-enable.
+    // Max 2 verified admin accounts per device_id. VERIFIED means
+    // auth.users.email_confirmed_at IS NOT NULL. If count >= 2, reject.
+    // DEBUG console.log lines below are gated behind the DEBUG env var to
+    // prevent log spam and internal-state leakage in production. Set
+    // DEBUG=1 in Supabase secrets to re-enable.
     const _DEBUG = !!Deno.env.get("DEBUG");
     if (deviceId) {
       if (_DEBUG) console.log("[register-admin] DEBUG: Checking device limit for device_id:", deviceId);
-      
-      // Step 1: Fetch all user_ids associated with this device_id from user_devices
+
+      // Fetch all user_ids linked to this device_id from user_devices.
       const { data: deviceRecords, error: fetchError } = await supabase
         .from("user_devices")
         .select("user_id")
@@ -298,12 +290,11 @@ serve(async (req) => {
 
       if (fetchError) {
         console.error("[register-admin] device limit check failed:", fetchError.message);
-        // BUGFIX F: Fail CLOSED (previously failed open). A DB error here
-        // could mean a transient glitch OR a deliberate attempt to bypass
-        // the device limit by causing the lookup to error. Failing open
-        // lets a 3rd account slip through. Failing closed blocks
-        // registration until the DB is healthy -- legitimate users can
-        // retry in a few seconds.
+        // Fail CLOSED (previously failed open). A DB error here could be a
+        // transient glitch OR a deliberate attempt to bypass the device limit
+        // by causing the lookup to error. Failing open lets a 3rd account slip
+        // through. Failing closed blocks registration until the DB is healthy
+        // — legitimate users can retry in a few seconds.
         return json(
           { success: false, error: "risk_check_unavailable" },
           500,
@@ -311,12 +302,12 @@ serve(async (req) => {
         );
       } else if (deviceRecords && deviceRecords.length > 0) {
         if (_DEBUG) console.log("[register-admin] DEBUG: Found", deviceRecords.length, "existing user(s) for this device");
-        
-        // Step 2: Extract unique user IDs to avoid double counting
+
+        // Dedupe user IDs to avoid double-counting.
         const userIds = [...new Set(deviceRecords.map((r) => r.user_id))];
         if (_DEBUG) console.log("[register-admin] DEBUG: Unique user IDs:", userIds);
 
-        // Step 3: Count how many of these users are VERIFIED in auth.users
+        // Count how many of these users are VERIFIED in auth.users.
         const { data: verifiedCount, error: countError } = await supabase.rpc(
           "count_verified_admins_by_device",
           { target_device_id: deviceId }
@@ -348,14 +339,13 @@ serve(async (req) => {
           }
         }
       } else {
-        if (_DEBUG) console.log("[register-admin] DEBUG: No existing users found for this device_id - first registration");
+        if (_DEBUG) console.log("[register-admin] DEBUG: No existing users found for this device_id — first registration");
       }
     }
-    // ── END MAX ACCOUNT = 2 ENFORCEMENT ────────────────────────────────────
 
     // email_confirm: false means Supabase creates the account but marks
     // email_confirmed_at as null. The user cannot log in until they click
-    // the confirmation link — Supabase enforces this at the signIn level when
+    // the confirmation link — Supabase enforces this at signIn level when
     // "Confirm email" is enabled in project Auth settings (required).
     const { data: createdUser, error: createError } = await supabase.auth.admin.createUser({
       email,
@@ -364,11 +354,9 @@ serve(async (req) => {
     });
 
     if (createError) {
-      // Log internal detail for debugging
       console.error("[register-admin] createUser error:", createError.message);
       console.error("[register-admin] DEBUG: createUser failed with status:", createError.status);
-      
-      // Categorize the error for better debugging
+
       const errorMsg = createError.message || '';
       if (errorMsg.includes("User already registered") || errorMsg.includes("duplicate")) {
         console.error("[register-admin] DEBUG: Duplicate email registration attempt detected");
@@ -377,8 +365,8 @@ serve(async (req) => {
       } else if (errorMsg.includes("Invalid email")) {
         console.error("[register-admin] DEBUG: Invalid email format at Supabase level");
       }
-      
-      // Return generic message to prevent email enumeration
+
+      // Generic message to prevent email enumeration.
       return genericError(corsHeaders);
     }
 
@@ -388,28 +376,26 @@ serve(async (req) => {
       return genericError(corsHeaders, 500);
     }
 
-    // ── Patch A: Email Verification Gate (server side) ───────────────────
-    // If email_confirmed_at is already set, Supabase's "Confirm email" project
-    // setting is OFF — the account is live and loginable immediately without
-    // clicking any link. This is a misconfiguration that breaks the security
-    // model. Abort, delete the dangling account, and alert ops via logs.
+    // If email_confirmed_at is already set, Supabase's "Confirm email"
+    // project setting is OFF — the account is live and loginable immediately
+    // without clicking any link. This is a misconfiguration that breaks the
+    // security model. Abort, delete the dangling account, and alert ops.
     const confirmedAt = createdUser.user?.email_confirmed_at;
     if (confirmedAt) {
       console.error(
-        "[register-admin] Patch A: CRITICAL — email_confirmed_at is set immediately after createUser. " +
+        "[register-admin] email_confirmed_at is set immediately after createUser. " +
         "Supabase 'Confirm email' project setting appears to be OFF. " +
         "Aborting registration and deleting account to prevent unverified admin login."
       );
       await supabase.auth.admin.deleteUser(userId);
       return genericError(corsHeaders, 500);
     }
-    // ── End Patch A ───────────────────────────────────────────────────────
 
-    // NOTE: `foto_profil`/`profil_lengkap` were renamed to `avatar_url`/
-    // `profile_complete` by migration 20260701_002_alter_users_snake_case.sql.
-    // Inserting the old column name here causes every admin registration to
-    // fail with a Postgres "column does not exist" error (caught below as a
-    // generic 500). Fixed to use the current schema.
+    // foto_profil / profil_lengkap were renamed to avatar_url / profile_complete
+    // by migration 20260701_002_alter_users_snake_case.sql. Inserting the old
+    // column name causes every admin registration to fail with a Postgres
+    // "column does not exist" error (caught below as a generic 500). Use the
+    // current schema.
     const { error: profileError } = await supabase.from("users").insert({
       id: userId,
       email,
@@ -423,8 +409,7 @@ serve(async (req) => {
       return genericError(corsHeaders, 500);
     }
 
-    // Phase 1 Anti-Abuse: Log device to user_devices table (shadow collection)
-    // NO enforcement yet — just recording the device association
+    // Shadow-collect the device → user_devices row (no enforcement yet).
     if (deviceId) {
       const { error: deviceError } = await supabase.from("user_devices").insert({
         user_id: userId,
@@ -434,19 +419,17 @@ serve(async (req) => {
       });
 
       if (deviceError) {
-        // Non-fatal: log but don't block registration
         console.error("[register-admin] user_devices insert error (non-fatal):", deviceError.message);
       } else {
-        if (_DEBUG) console.log("[register-admin] Phase 1: device logged to user_devices (shadow)");
+        if (_DEBUG) console.log("[register-admin] device logged to user_devices (shadow)");
       }
     }
 
-    // BUGFIX P (clarification): createUser with email_confirm:false does NOT
-    // auto-send the confirmation email in Supabase -- it only creates the
-    // auth.users row. We must explicitly call resend({ type: "signup" })
-    // to trigger the verification email. If Supabase changes this default
-    // behavior in the future (e.g. auto-send on createUser), users would
-    // receive duplicate emails -- remove this call at that point.
+    // createUser with email_confirm:false does NOT auto-send the confirmation
+    // email in Supabase — it only creates the auth.users row. We must
+    // explicitly call resend({ type: "signup" }) to trigger the verification
+    // email. If Supabase changes this default (auto-send on createUser),
+    // users would receive duplicate emails — remove this call at that point.
     const { error: emailError } = await supabase.auth.resend({
       type: "signup",
       email,
@@ -462,11 +445,10 @@ serve(async (req) => {
     return json({ success: true }, 200, corsHeaders);
   } catch (err) {
     console.error("[register-admin] unhandled exception:", err);
-    // Return more specific error messages for debugging while keeping them user-friendly
     const errorMessage = err instanceof Error ? err.message : String(err);
     const errorStack = err instanceof Error ? err.stack : undefined;
-    
-    // Debug logging with categorized error types
+
+    // Categorized log lines for greppable diagnostics.
     if (errorMessage.includes("email_confirmed_at")) {
       console.error("[register-admin] DEBUG: Email confirmation gate triggered");
     } else if (errorMessage.includes("User already registered")) {
@@ -492,16 +474,14 @@ serve(async (req) => {
     } else {
       console.error("[register-admin] DEBUG: Unknown error type -", errorMessage);
     }
-    
-    // Log full stack trace for critical errors (only in production logs, not exposed to client)
+
     if (errorStack) {
       console.error("[register-admin] DEBUG: Full stack trace:", errorStack);
     }
-    
-    // Log request context for better debugging
+
     console.error("[register-admin] DEBUG: Request context - timestamp:", new Date().toISOString());
     console.error("[register-admin] DEBUG: Request context - environment:", Deno.env.get("DENO_DEPLOYMENT_ID") ? "production" : "local/dev");
-    
+
     return genericError(corsHeaders, 500);
   }
 });

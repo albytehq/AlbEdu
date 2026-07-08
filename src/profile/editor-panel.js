@@ -1,43 +1,34 @@
-// =============================================================
-//  ProfileEditorPanel.js — AlbEdu Floating Profile Editor v1.0
+// ProfileEditorPanel.js — floating profile editor modal (avatar + name).
+// Self-contained: zero external deps beyond the platform layer + Worker upload.
+// All styles are scoped to the `pep-` prefix so it can mount on any page
+// without leaking CSS.
 //
-//  Self-contained. Zero external dependencies.
-//  Integrates dengan: window.AlbEdu?.supabase?.client, window.firebaseAuth, Worker upload.
-//
-//  Usage:
-//    ProfileEditorPanel.init({
-//      trigger:    document.getElementById('btn-edit-profile'),
-//      workerBase: 'https://edu.albyte-inc.workers.dev',
-//      onSaved:    (updatedUser) => { /* update UI avatar, name, dll */ }
-//    })
-//
-//  Panel mount otomatis ke document.body.
-//  Bisa dipanggil dari admin page maupun halaman ujian.
-//  Tidak ada konflik dengan CSS global — semua style scoped ke prefix 'pep-'.
-// =============================================================
+// Usage:
+//   ProfileEditorPanel.init({
+//     trigger:    HTMLElement | HTMLElement[] | NodeList,
+//     workerBase: 'https://edu.albyte-inc.workers.dev',
+//     onSaved:    (updatedUser) => { /* sync avatar/name in the host UI */ }
+//   })
 
 ;(function (global) {
   'use strict';
 
   const t = (key, vars, fallback) => fallback;
 
-  // ── Constants ──────────────────────────────────────────────
-  const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB — Worker max adalah 10MB, kita batasi 4MB di client
+  const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB client cap (Worker allows 10MB)
   const ALLOWED_TYPES   = ['image/jpeg', 'image/png', 'image/webp'];
   const NAME_MAX_LEN    = 60;
 
-  // ── State ──────────────────────────────────────────────────
-  let _cfg        = null;   // { trigger, workerBase, onSaved }
-  let _panel      = null;   // DOM panel element
-  let _backdrop   = null;   // DOM backdrop element
-  let _user       = null;   // current user doc dari Supabase
-  let _previewUrl = null;   // blob URL dari foto baru (belum di-upload)
-  let _newFile    = null;   // File object yang akan di-upload saat save
+  let _cfg        = null;
+  let _panel      = null;
+  let _backdrop   = null;
+  let _user       = null;   // current user doc from Supabase
+  let _previewUrl = null;   // blob URL of a not-yet-uploaded photo
+  let _newFile    = null;   // File to upload on save
   let _saving     = false;
 
-  // ── CSS ────────────────────────────────────────────────────
-  // Scoped ke prefix pep- agar tidak bocor ke halaman manapun.
-  // Warna ikut design system AlbEdu: biru #2563eb, surface #f8fafc.
+  // Styles scoped to `pep-` prefix. Colors follow the AlbEdu design system
+  // (primary #2563eb, surface #f8fafc).
   function _injectStyles() {
     if (document.getElementById('pep-styles')) return;
     const s = document.createElement('style');
@@ -248,7 +239,7 @@
     document.head.appendChild(s);
   }
 
-  // ── DOM Builder ────────────────────────────────────────────
+  // DOM Builder
   function _buildPanel() {
     // Backdrop
     _backdrop = document.createElement('div');
@@ -342,7 +333,7 @@
     });
   }
 
-  // ── File Pick ──────────────────────────────────────────────
+  // File pick
   function _handleFileChange(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -370,7 +361,7 @@
     imgEl.onload = function() { this.classList.add('pep-loaded'); };
   }
 
-  // ── Save ───────────────────────────────────────────────────
+  // Save
   async function _handleSave() {
     if (_saving) return;
 
@@ -456,7 +447,7 @@
     }
   }
 
-  // ── Upload via Worker ──────────────────────────────────────
+  // Upload via Worker
   async function _uploadImage(file) {
     const workerBase = _cfg?.workerBase;
     if (!workerBase) throw new Error('workerBase tidak di-set di ProfileEditorPanel.init()');
@@ -487,9 +478,8 @@
     return data.cdn_url;
   }
 
-  // ── Supabase update ────────────────────────────────────────
+  // Supabase update
   async function _updateUserProfile(fields) {
-    // Native platform layer — replaces window.firebaseDb / window.firebaseAuth shim.
     const repo = window.AlbEdu?.repository;
     const auth = window.AlbEdu?.supabase?.auth;
 
@@ -498,7 +488,7 @@
     const userId = auth.currentUser?.id;
     if (!userId) throw new Error('User tidak login.');
 
-    // NOTE: migration 20260701_002_alter_users_snake_case.sql renamed
+    // Migration 20260701_002_alter_users_snake_case.sql renamed
     // foto_profil → avatar_url and profil_lengkap → profile_complete.
     // `fields` may still come in as { foto_profil } from older callers, so
     // translate it to the real column name here rather than sending a
@@ -512,7 +502,7 @@
       profile_complete: true,
     };
 
-    // [Production Hardening] Use Actly resilience for profile update
+    // Use Actly resilience for profile update
     const resilience = window.AlbEdu?.resilience;
     if (resilience) {
       const result = await resilience.write(
@@ -526,7 +516,7 @@
     }
   }
 
-  // ── Progress bar ───────────────────────────────────────────
+  // Progress bar
   function _setProgress(pct, visible = true) {
     if (!_panel) return;
     const wrap = _panel.querySelector('#pep-progress-wrap');
@@ -535,7 +525,7 @@
     bar.style.width = pct + '%';
   }
 
-  // ── Avatar progress ring ───────────────────────────────────
+  // Avatar progress ring
   function _showAvatarProgress(pct) {
     if (!_panel) return;
     const ring = _panel.querySelector('#pep-avatar-progress');
@@ -553,7 +543,7 @@
     if (ring) ring.classList.remove('pep-active');
   }
 
-  // ── Avatar success checkmark ───────────────────────────────
+  // Avatar success checkmark
   function _showAvatarSuccess() {
     if (!_panel) return;
     const success = _panel.querySelector('#pep-avatar-success');
@@ -562,8 +552,7 @@
     setTimeout(() => success.classList.remove('pep-show'), 1200);
   }
 
-  // ── Toast ──────────────────────────────────────────────────
-  // Pakai QNotify kalau tersedia, fallback ke minimal toast sendiri.
+  // Toast: prefer QNotify, fall back to a minimal inline toast.
   function _showToast(msg, type = 'info') {
     if (window.notify) {
       const title = t('pep.title', null, 'Profil');
@@ -586,7 +575,7 @@
     setTimeout(() => toastEl.remove(), 3000);
   }
 
-  // ── Populate panel dengan data user ───────────────────────
+  // Populate panel with user data
   function _populatePanel(user) {
     _user = user;
     const imgEl   = _panel.querySelector('#pep-avatar-img');
@@ -632,7 +621,7 @@
     _setProgress(0, false);
   }
 
-  // Gravatar-style inisial fallback
+  // Gravatar-style initials fallback
   function _fallbackAvatar(seed) {
     const initials = (seed || '?')
       .trim()
@@ -652,7 +641,7 @@
     return 'data:image/svg+xml,' + encodeURIComponent(svg);
   }
 
-  // ── Fetch user doc dari Supabase ───────────────────────────
+  // Fetch user doc from Supabase
   async function _fetchCurrentUser() {
     const repo = window.AlbEdu?.repository;
     const auth = window.AlbEdu?.supabase?.auth;
@@ -666,7 +655,7 @@
     return snap.data();
   }
 
-  // ── Open / Close ───────────────────────────────────────────
+  // Open / Close
   async function open() {
     if (!_panel) _buildPanel();
 
@@ -714,7 +703,7 @@
     _saving  = false;
   }
 
-  // ── Public API ─────────────────────────────────────────────
+  // Public API
   function init(cfg) {
     if (!cfg?.trigger) {
       console.warn('[ProfileEditorPanel] init() butuh { trigger: HTMLElement }');

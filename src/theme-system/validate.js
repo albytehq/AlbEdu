@@ -1,6 +1,4 @@
-// =============================================================================
-// theme-system/validate.js — WCAG AA contrast validation
-// =============================================================================
+// theme-system/validate.js — WCAG AA contrast validation.
 
 function relativeLuminance(hex) {
   const { r, g, b } = hexToRgb(hex);

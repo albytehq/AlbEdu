@@ -1,14 +1,5 @@
-// =============================================================================
-// src/utils/index.js — Barrel export for shared utilities
-// =============================================================================
+// src/utils/index.js — barrel export for shared utilities.
 // All external consumers should import from this file, not from submodules.
-//
-// v2.0.0 (Stage 2 refactor): Removed legacy firebaseAuth/firebaseDb aliases.
-// Consumers should use window.AlbEdu.supabase.{auth,client,realtime,rpc}
-// or window.AlbEdu.repository.* directly. The SupabaseApi object below
-// preserves the .sb property for backward compatibility but no longer
-// exposes Firebase-named aliases.
-// =============================================================================
 
 export const UI                       = window.UI;
 export const Navigasi                 = window.Navigasi;

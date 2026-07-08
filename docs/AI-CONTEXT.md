@@ -3,7 +3,58 @@
 > File ini buat AI assistant (Claude, GPT, Copilot, dst.) cepat onboard ke project AlbEdu.
 > **READ THIS FIRST** sebelum edit code apapun.
 
-**Last verified:** 2026-07-05 (v0.746.0)
+**Last verified:** 2026-07-08 (v0.816.0)
+
+---
+
+## v0.816.0 Changes
+
+Before editing any file, read [`docs/STRICT-COMMENTING-FOR-AI.md`](./STRICT-COMMENTING-FOR-AI.md) — it codifies the human-style commenting rules. AI assistants have repeatedly introduced ASCII-art headers, version archaeology, and marketing-speak into this codebase; that doc kills those patterns going forward. If you generate a diff that violates any of the 5 rules in that doc, the diff will be rejected in review.
+
+Key new patterns to know about when working in v0.816.0+ code:
+
+### Migration `20260708_021_v0815_7_stability_hardening.sql`
+
+Apply this migration before deploying the v0.816.0 Edge Functions. It contains:
+
+- RLS tightening on `rate_limit_heartbeats`, `rate_limit_submits`, and `violation_events` (now check session ownership via `assessment_sessions.user_id = auth.uid()` join).
+- `peran_user()` SECURITY DEFINER function now filters `WHERE deleted_at IS NULL` — soft-deleted users can no longer authenticate via stale JWTs.
+- Atomic `submit_assessment()` RPC — wraps the `INSERT INTO submissions` + `UPDATE assessment_sessions` pair in a single transaction.
+
+### Atomic `submit_assessment()` RPC
+
+Replace any separate `INSERT INTO submissions` + `UPDATE assessment_sessions` pairs with a single RPC call:
+
+```javascript
+const result = await AlbEdu.supabase.rpc.invoke('submit_assessment', {
+  p_session_id: sessionId,
+  p_answers: answers,
+  p_duration_seconds: durationSeconds
+});
+```
+
+The RPC is SECURITY DEFINER and wraps both writes in a transaction, so a crash mid-submit cannot leave dangling rows. The RPC also enforces the `submissions_session_unique` constraint idempotently — a second submit for the same session returns the first submit's result instead of throwing.
+
+### `heartbeatDbCache` pattern in heartbeat Edge Function
+
+The heartbeat Edge Function (`supabase/functions/heartbeat/index.ts`) caches the session row in Worker memory for 60s (`heartbeatDbCache` Map keyed by `session_id`). With 15s heartbeats, this cuts DB reads from 4/min/peserta to 1/min/peserta — a 4x reduction in DB load on Free Plan.
+
+Do NOT add per-heartbeat DB queries to the heartbeat function — the cache hit rate is what keeps the Free Plan alive. If you genuinely need fresh data (e.g. for an admin override), pass `bypass_cache=1` as a query param (admin-only — checked via `requireAdmin()`).
+
+### `AlbEdu.supabase.realtime.subscribe(name, table, callback, filter)` 4-arg signature
+
+The realtime subscription helper now accepts a 4th argument — a filter object:
+
+```javascript
+AlbEdu.supabase.realtime.subscribe(
+  'violations-' + assessmentId,        // channel name
+  'violation_events',                  // table
+  (payload) => handleViolation(payload), // callback
+  { assessment_id: 'eq.' + assessmentId } // filter — only events for THIS assessment
+);
+```
+
+The old 3-arg form (`subscribe(name, table, callback)`) is still supported but deprecated — it subscribes to ALL events on the table, which causes a thundering herd when multiple assessments run concurrently. Always use the 4-arg form for new code. The `admin-notification-center.js` was the worst offender and is now migrated.
 
 ---
 
@@ -26,7 +77,7 @@
 | Add new assessment question type | `src/pages/buat-ujian/templates.js`, `src/pages/buat-ujian/soal-editor-modal.js`, `src/identity/form-builder.js` |
 | Change Buat Asesmen page behavior | `src/pages/buat-ujian/` modules, `styles/buat-ujian-v2.css`, `styles/buat-ujian-modal.css` |
 | Update navigation menu | `src/utils/navigasi.js`, `pages/admin/index.html` |
-| Add new admin page | Bikin `pages/admin/{name}.html`, `src/pages/{name}.js`, `styles/{name}.css` (v0.742.0+: flat structure, no more `pages/admin/pages/` subfolder) |
+| Add new admin page | Bikin `pages/admin/{name}.html`, `src/pages/{name}.js`, `styles/{name}.css` (flat structure, no more `pages/admin/pages/` subfolder) |
 | Fix notification styling | `public/QNotify/ui/*.css` |
 | Update Supabase schema | `supabase/migrations/{date}_{name}.sql` |
 | Change auth redirect logic | `src/auth/main.js` (cari `_redirectToLogin`, `_redirectForRole`, `authLogout`) — **read [`rule-url-albedu.md`](../rule-url-albedu.md) FIRST** |

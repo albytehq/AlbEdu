@@ -1,12 +1,6 @@
--- =============================================================================
 -- 20260701_009_create_consents.sql
--- AlbEdu v1.0.0 — Phase 1.9 — UU PDP Compliance
--- =============================================================================
 -- Creates `consents` — records explicit user consent for data processing.
 -- Required by UU PDP (Indonesia) Article 20-22.
---
--- Q17: basic compliance implementation in Phase 1-3, advanced defer Phase 9.
--- =============================================================================
 
 CREATE TABLE IF NOT EXISTS public.consents (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -22,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.consents (
                   )),
 
   -- Version (which version of the policy did they agree to?)
-  version         text NOT NULL,  -- e.g. "1.0.0", "1.1.0"
+  version         text NOT NULL,  -- for example "1.0.0", "1.1.0"
 
   -- Consent state
   granted         boolean NOT NULL,
@@ -37,14 +31,14 @@ CREATE TABLE IF NOT EXISTS public.consents (
   created_at      timestamptz DEFAULT now()
 );
 
--- ── Indexes ──
+-- Indexes
 CREATE INDEX idx_consents_user        ON public.consents(user_id);
 CREATE INDEX idx_consents_type        ON public.consents(consent_type);
 CREATE INDEX idx_consents_granted     ON public.consents(granted) WHERE granted = true;
 CREATE INDEX idx_consents_active      ON public.consents(user_id, consent_type)
   WHERE revoked_at IS NULL;
 
--- ── RLS Policies ──
+-- RLS Policies
 ALTER TABLE public.consents ENABLE ROW LEVEL SECURITY;
 
 -- Admins: read all consents (compliance audit)

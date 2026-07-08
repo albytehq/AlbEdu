@@ -1,12 +1,8 @@
--- =============================================================================
 -- 20260701_012_helper_functions.sql
--- AlbEdu v1.0.0 — Phase 1.12
--- =============================================================================
 -- Helper functions used by RLS policies + Edge Functions.
--- Reuses legacy `peran_user()` if it exists; creates new helpers for v1.0.0.
--- =============================================================================
+-- Reuses legacy `peran_user()` if it exists; creates new helpers.
 
--- ── peran_user() — SECURITY DEFINER, returns role of current user ──
+-- peran_user() — SECURITY DEFINER, returns role of current user.
 -- Already exists from legacy migration. Recreate idempotently.
 CREATE OR REPLACE FUNCTION public.peran_user()
 RETURNS text
@@ -21,7 +17,7 @@ $$;
 COMMENT ON FUNCTION public.peran_user() IS
   'Returns peran (''admin'' | ''peserta'' | NULL) of current authenticated user. SECURITY DEFINER to avoid RLS recursion. Used by all RLS policies.';
 
--- ── org_id() — returns organization_id of current user (SCloud-ready) ──
+-- org_id() — returns organization_id of current user (multi-tenant).
 -- Returns NULL in single-tenant mode (all users have organization_id IS NULL).
 CREATE OR REPLACE FUNCTION public.org_id()
 RETURNS uuid
@@ -34,9 +30,9 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION public.org_id() IS
-  'Returns organization_id of current user. NULL in single-tenant mode. SCloud-ready (Phase 9).';
+  'Returns organization_id of current user. NULL in single-tenant mode.';
 
--- ── is_admin() — convenience boolean check ──
+-- is_admin() — convenience boolean check
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE sql
@@ -47,7 +43,7 @@ AS $$
   SELECT peran_user() = 'admin';
 $$;
 
--- ── is_peserta() — convenience boolean check ──
+-- is_peserta() — convenience boolean check
 CREATE OR REPLACE FUNCTION public.is_peserta()
 RETURNS boolean
 LANGUAGE sql
@@ -58,7 +54,7 @@ AS $$
   SELECT peran_user() = 'peserta';
 $$;
 
--- ── generate_access_code() — 6-digit random string ──
+-- generate_access_code() — 6-digit random string.
 -- Used by Edge Function submit-assessment to generate unique codes.
 -- Caller must check uniqueness (UNIQUE constraint will catch dupes).
 CREATE OR REPLACE FUNCTION public.generate_access_code()
@@ -72,7 +68,7 @@ $$;
 COMMENT ON FUNCTION public.generate_access_code() IS
   'Generates random 6-digit string for assessment access_code. Caller must handle uniqueness via UNIQUE constraint.';
 
--- ── count_active_sessions_for_user(assessment_uuid) ──
+-- count_active_sessions_for_user(assessment_uuid)
 -- Used by start-session Edge Function to check if peserta already has
 -- active session (enforce one-shot unless allow_retake=TRUE).
 CREATE OR REPLACE FUNCTION public.count_active_sessions_for_user(
@@ -91,7 +87,7 @@ AS $$
     AND status IN ('active', 'paused');
 $$;
 
--- ── count_submissions_for_user(assessment_uuid) ──
+-- count_submissions_for_user(assessment_uuid)
 -- Used to enforce allow_retake limit (default: 1 attempt unless allow_retake=TRUE)
 CREATE OR REPLACE FUNCTION public.count_submissions_for_user(
   p_assessment_id uuid,
@@ -108,7 +104,7 @@ AS $$
     AND user_id = p_user_id;
 $$;
 
--- ── log_audit() — convenience function for Edge Functions ──
+-- log_audit() — convenience function for Edge Functions.
 -- Edge Functions call this to insert audit log entries (uses service role,
 -- bypasses RLS — only callable server-side).
 CREATE OR REPLACE FUNCTION public.log_audit(

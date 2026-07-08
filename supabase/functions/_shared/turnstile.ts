@@ -1,21 +1,10 @@
-// =============================================================================
-// _shared/turnstile.ts — Cloudflare Turnstile verification (hardened)
-// =============================================================================
-// If TURNSTILE_SECRET_KEY env is not set, verification is SKIPPED (dev mode).
-// In production, set the secret key via Supabase Dashboard → Edge Functions → Secrets.
-//
-// HARDENING (Phase 4):
-//   - Network errors during siteverify now FAIL CLOSED in production
-//     (env.TURNSTILE_SECRET_KEY is set). The previous "fail open on network
-//     error" behavior allowed an attacker to bypass Turnstile by simply
-//     dropping the network connection.
-//   - Token validation enforces sane length bounds (10–2048 chars) to
-//     reject obvious garbage before hitting Cloudflare.
-//   - Verification timeout (5s) prevents hanging on a stalled Cloudflare
-//     response — better to fail closed than to hang.
-//   - Error messages do NOT leak Cloudflare error codes to the client.
-//     They are logged server-side only.
-// =============================================================================
+// _shared/turnstile.ts — Cloudflare Turnstile verification.
+// If TURNSTILE_SECRET_KEY is unset, verification is SKIPPED in dev mode.
+// In production (SUPABASE_URL points at supabase.co) the same code FAILS CLOSED —
+// never silently bypass. Network errors during siteverify also fail closed so
+// an attacker can't bypass by dropping the connection. Token length is bounded
+// (10–2048 chars) before hitting Cloudflare, the fetch has a 5s timeout, and
+// Cloudflare error codes are logged server-side only (never leaked to client).
 
 import { HTTPError } from './error.ts';
 import type { Env } from './types.ts';
@@ -31,11 +20,8 @@ export async function verifyTurnstile(
   remoteIP?: string
 ): Promise<void> {
   // Dev mode: skip if no secret key. In production, the secret MUST be set.
-  // If a production function reaches this branch without a secret, that is
-  // a deployment error — we fail closed to avoid silent bypass.
+  // If a production function reaches this branch without a secret, fail closed.
   if (!env.TURNSTILE_SECRET_KEY) {
-    // Heuristic: if SUPABASE_URL is set (production), fail closed.
-    // If only dev env vars are present, allow skip.
     if (env.SUPABASE_URL && env.SUPABASE_URL.includes('supabase.co')) {
       console.error('[turnstile] PRODUCTION env detected but TURNSTILE_SECRET_KEY missing — failing closed');
       throw new HTTPError(500, 'TURNSTILE_NOT_CONFIGURED', 'Anti-abuse protection not configured');
@@ -71,7 +57,7 @@ export async function verifyTurnstile(
       ),
     ]);
   } catch (err) {
-    // Fail CLOSED — do not allow bypass by network failure
+    // Fail CLOSED — do not allow bypass by network failure.
     console.error('[turnstile] network/timeout error — failing closed:', err);
     throw new HTTPError(503, 'TURNSTILE_UNAVAILABLE', 'Anti-abuse verification unavailable. Please retry.');
   }
@@ -83,7 +69,7 @@ export async function verifyTurnstile(
 
   const data = await res.json();
   if (!data.success) {
-    // Log error codes server-side for debugging. Do NOT send to client.
+    // Log error codes server-side only — do NOT send to client.
     console.warn('[turnstile] verification failed:', data['error-codes']);
     throw new HTTPError(400, 'TURNSTILE_FAILED', 'Anti-abuse verification failed. Please retry.');
   }

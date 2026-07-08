@@ -1,30 +1,15 @@
-// =============================================================================
-// peserta-profile-fab.js — Floating Profile Button for participant pages
-// =============================================================================
-// v0.742.7: New file. Bootstraps a fixed-position iOS-feel profile button
-// on participant-side pages (assessment/index, take, submitted, blocked).
-// Clicking it triggers OptionProfile (the same dropdown used on admin pages).
+// peserta-profile-fab.js — Floating Profile Button for participant pages.
 //
-// WHY: Peserta had no way to logout — the assessment pages had no profile
-// button at all. The "Kembali ke Login" buttons on submitted/blocked pages
-// were just href links, not real logout. Now peserta can tap the floating
-// avatar (top-right, iOS-style) → OptionProfile dropdown → "Keluar" →
-// authLogout() → landing page.
+// Peserta pages (assessment/index, take, submitted, blocked) had no logout
+// path: the "Kembali ke Login" buttons were plain hrefs, not real logout.
+// This injects a fixed-position iOS-style avatar button (top-right) that
+// opens OptionProfile (the same dropdown admin pages use), so peserta can
+// reach "Keluar" → authLogout() → landing page.
 //
-// HOW IT WORKS:
-//   1. Inject a <button class="albedu-profile-fab"> into <body> on DOMContentLoaded.
-//   2. Wait for window.Auth to be ready (auth-ready event or polling).
-//   3. Populate the avatar with user initials / foto_profil.
-//   4. Load OptionProfile script (if not already loaded) and init it with
-//      the FAB as a trigger.
-//   5. Clicking the FAB → OptionProfile.toggle() at cursor position.
-//
-// OPTIONPROFILE LOAD PATH:
-//   - On admin pages, navigasi.js bootstraps OptionProfile + ProfileEditorPanel.
-//   - On peserta pages, navigasi.js is NOT loaded (no sidebar). So we
-//     bootstrap OptionProfile ourselves here.
-//   - ProfileEditorPanel is also bootstrapped (for "Edit Profil" menu item).
-// =============================================================================
+// On admin pages, navigasi.js bootstraps OptionProfile + ProfileEditorPanel.
+// Peserta pages don't load navigasi.js (no sidebar), so we bootstrap both
+// modules ourselves here. ProfileEditorPanel is needed for the "Edit Profil"
+// menu item.
 
 (function () {
   'use strict';
@@ -33,10 +18,9 @@
   const PEP_SCRIPT_ID = 'pep-panel-script-peserta';
   const OP_SCRIPT_ID = 'op-script-peserta';
 
-  // ── Avatar helpers ──────────────────────────────────────────────────────
   function _esc(s) {
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function _initials(name) {
@@ -53,7 +37,6 @@
     return '';
   }
 
-  // ── Build the FAB DOM ───────────────────────────────────────────────────
   function _buildFab() {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -71,7 +54,7 @@
     return btn;
   }
 
-  // ── Populate avatar from Auth.userData ──────────────────────────────────
+  // Populate avatar from Auth.userData
   function _populateAvatar(btn, user) {
     if (!user) return;
     const avatarEl = btn.querySelector('.albedu-profile-fab__avatar');
@@ -106,7 +89,7 @@
     }
   }
 
-  // ── Resolve script base path (mirror navigasi.js logic) ─────────────────
+  // Resolve script base path (mirror navigasi.js logic)
   function _resolveScriptBase() {
     // Try to find this script's src
     const myScript = document.querySelector('script[src*="peserta-profile-fab.js"]');
@@ -121,7 +104,7 @@
     return '../../src/profile/';
   }
 
-  // ── Load OptionProfile + ProfileEditorPanel (idempotent) ────────────────
+  // Load OptionProfile + ProfileEditorPanel (idempotent)
   function _loadScript(src, id) {
     return new Promise((resolve, reject) => {
       if (document.getElementById(id)) {
@@ -183,7 +166,7 @@
     }
   }
 
-  // ── Wait for Auth ───────────────────────────────────────────────────────
+  // Wait for Auth
   function _waitForAuth() {
     return new Promise((resolve) => {
       if (window.Auth?.userData) return resolve(window.Auth.userData);
@@ -211,7 +194,7 @@
     });
   }
 
-  // ── Init ─────────────────────────────────────────────────────────────────
+  // Init
   function init() {
     // Don't double-init
     if (document.querySelector('.albedu-profile-fab')) return;

@@ -1,26 +1,15 @@
-// =============================================================================
-// auth/preflight.js — User preflight validation for device & security checks
-// =============================================================================
+// auth/preflight.js — user preflight validation (Turnstile + device check)
 
 import { AUTH_CONFIG, TIMING_CONFIG, RATE_LIMITS } from './constants.js';
 import { getTurnstileToken, getFreshTurnstileToken } from './turnstile.js';
 import { getErrorMessage } from './errorMapper.js';
 
-// ── PreflightError class ─────────────────────────────────────────────────────
-// Custom error yang memisahkan backendCode dari userMessage.
-// Ini mencegah double-mapping: komponen UI cukup cek instanceof PreflightError,
-// lalu langsung tampilkan err.message (sudah user-friendly).
-// err.backendCode digunakan hanya untuk logging.
-
+// Custom error that separates backendCode from userMessage. Prevents
+// double-mapping — UI just checks instanceof PreflightError and displays
+// err.message (already user-friendly). backendCode is for logging only.
 export class PreflightError extends Error {
-    /**
-     * @param {string} backendCode - Kode error dari backend (e.g. 'device_limit_reached')
-     * @param {string} [userMessage] - Pesan user-friendly. Jika tidak diberikan,
-     *   akan di-map otomatis dari backendCode via getErrorMessage().
-     */
     constructor(backendCode, userMessage) {
-        // Selalu map ke user-friendly message — TIDAK pernah expose raw backendCode ke user.
-        // getErrorMessage() dijamin mengembalikan string Indonesia yang aman.
+        // Always map to user-friendly message — never expose raw backendCode.
         const message = userMessage || getErrorMessage(backendCode);
         super(message);
         this.name = 'PreflightError';
@@ -28,17 +17,9 @@ export class PreflightError extends Error {
     }
 }
 
-// ── CompletionError class ────────────────────────────────────────────────────
-// Custom error untuk user-auth-complete (POST Google OAuth).
-// Struktur identik dengan PreflightError — memisahkan backendCode dari
-// userMessage supaya UI cukup cek instanceof lalu tampilkan err.message.
-
+// Mirror of PreflightError for the user-auth-complete (post-Google-OAuth)
+// step. Same shape so UI treats both the same way.
 export class CompletionError extends Error {
-    /**
-     * @param {string} backendCode - Kode error dari backend (e.g. 'device_limit_reached', 'invalid_token')
-     * @param {string} [userMessage] - Pesan user-friendly. Jika tidak diberikan,
-     *   akan di-map otomatis dari backendCode via getErrorMessage().
-     */
     constructor(backendCode, userMessage) {
         const message = userMessage || getErrorMessage(backendCode);
         super(message);
@@ -47,7 +28,7 @@ export class CompletionError extends Error {
     }
 }
 
-// ── Storage helpers ──────────────────────────────────────────────────────────
+// Storage helpers
 
 export function getStoredPreflight() {
     try {
@@ -78,14 +59,12 @@ export function clearPreflight() {
     } catch (_) {}
 }
 
-// ── Device fingerprint ───────────────────────────────────────────────────────
+// Returns { deviceId, browserHash, deviceInfo } for storage + sending to
+// user-auth-complete.
 //
-// Mengembalikan object lengkap: { deviceId, browserHash, deviceInfo }
-// agar bisa disimpan ke session storage dan dikirim ke user-auth-complete.
-//
-// DeviceFingerprint.getFingerprint() adalah API yang benar — BUKAN .get().
-// .get() tidak ada di DeviceFingerprint.js dan akan return undefined secara silent.
-
+// DeviceFingerprint.getFingerprint() is the correct API — NOT .get().
+// .get() doesn't exist on DeviceFingerprint.js and would silently return
+// undefined.
 export async function getDeviceFingerprint() {
     if (typeof window.DeviceFingerprint?.getFingerprint === 'function') {
         const fp = window.DeviceFingerprint.getFingerprint();
@@ -96,8 +75,8 @@ export async function getDeviceFingerprint() {
         };
     }
 
-    // Fallback: canvas-based ID jika DeviceFingerprint.js belum load
-    // Tidak menghasilkan browser_hash atau device_info — hanya deviceId darurat.
+    // Canvas-based fallback if DeviceFingerprint.js hasn't loaded yet.
+    // Only produces a deviceId — no browser_hash or device_info.
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     ctx.textBaseline = 'top';
@@ -117,13 +96,11 @@ export async function getDeviceFingerprint() {
     };
 }
 
-// ── Extract backend error code from FunctionsHttpError ───────────────────────
-// Supabase SDK wraps non-2xx responses in FunctionsHttpError.
-// The actual error code from our Edge Function is in error.context (a Response).
-// We need to parse the JSON body to get the `error` field.
+// Supabase SDK wraps non-2xx responses in FunctionsHttpError. The actual
+// error code from our Edge Function is in error.context (a Response object).
+// Parse the JSON body to pull out the `error` field.
 
 export async function extractBackendErrorCode(error) {
-    // 1. Try to parse error.context (Supabase FunctionsHttpError)
     if (error?.context && typeof error.context.json === 'function') {
         try {
             const body = await error.context.json();
@@ -131,7 +108,6 @@ export async function extractBackendErrorCode(error) {
         } catch (_) {}
     }
 
-    // 2. Try error.context.text() fallback
     if (error?.context && typeof error.context.text === 'function') {
         try {
             const text = await error.context.text();
@@ -140,15 +116,15 @@ export async function extractBackendErrorCode(error) {
         } catch (_) {}
     }
 
-    // 3. Fallback: detect from HTTP status
     if (error?.status === 403) return 'device_limit_reached';
     if (error?.status === 429) return 'rate_limit_exceeded';
     if (error?.status === 401) return 'unauthorized';
 
-    // 4. Network / CORS error detection (BEFORE falling back to error.message).
-    // When the Supabase SDK fails to even send the request (CORS preflight blocked,
-    // DNS failure, offline, etc.), error.context is undefined and error.message is
-    // a generic English string like "Failed to send a request to the Edge Function".
+    // Network / CORS detection — must run BEFORE the error.message fallback.
+    // When the SDK can't even send the request (CORS preflight blocked, DNS
+    // failure, offline), error.context is undefined and error.message is a
+    // generic English string like "Failed to send a request to the Edge
+    // Function".
     const msg = (error?.message || '').toLowerCase();
     if (
         msg.includes('failed to send a request') ||
@@ -161,22 +137,18 @@ export async function extractBackendErrorCode(error) {
         return 'network_error';
     }
 
-    // 5. Last resort: use error.message
     return error?.message || 'unknown_error';
 }
 
-// ── Client-side throttle ─────────────────────────────────────────────────────
-
+// Client-side throttle (5s) — prevents the same client from spamming
+// preflight back-to-back if the user double-clicks.
 let lastPreflightAt = 0;
-const PREFLIGHT_THROTTLE_MS = 5000; // 5 detik
-
-// ── Run preflight validation ─────────────────────────────────────────────────
+const PREFLIGHT_THROTTLE_MS = 5000;
 
 export async function runPreflightValidation(turnstileToken) {
-    // Terima string langsung atau object {token, widgetId} dari getFreshTurnstileToken
+    // Accept either a raw string or {token, widgetId} from getFreshTurnstileToken.
     const token = typeof turnstileToken === 'string' ? turnstileToken : turnstileToken?.token;
 
-    // Ambil fingerprint lengkap: deviceId + browserHash + deviceInfo
     const fp = await getDeviceFingerprint();
     const { deviceId, browserHash, deviceInfo } = fp;
 
@@ -188,31 +160,27 @@ export async function runPreflightValidation(turnstileToken) {
         throw new PreflightError('risk_check_unavailable');
     }
 
-    // Client-side throttle
     const now = Date.now();
     if (now - lastPreflightAt < PREFLIGHT_THROTTLE_MS) {
         throw new PreflightError('rate_limit_exceeded');
     }
     lastPreflightAt = now;
 
-    // Use the native platform layer's RPC service — handles auth token auto-attachment.
     const rpc = window.AlbEdu?.supabase?.rpc;
     if (!rpc) throw new PreflightError('platform_not_ready');
 
-    // PENTING: rpc.invoke(name, body, opts) — argumen ke-2 adalah payload JSON
-    // MENTAH yang langsung diteruskan ke client.functions.invoke(name, { body }).
-    // JANGAN bungkus payload di sini dengan `{ body: {...} }` — itu akan
-    // menghasilkan double-wrapping (`{ body: { body: {...} } }`) pada HTTP
-    // body yang benar-benar terkirim, sehingga edge function membaca
-    // `body.turnstileToken` sebagai undefined dan selalu menolak dengan
-    // 400 "missing_verification" walau token valid di client.
-    // Lihat pemakaian yang benar di heartbeat.js / submit.js / create-assessment.js.
+    // rpc.invoke(name, body, opts) — the second arg is the raw JSON payload
+    // forwarded directly to client.functions.invoke(name, { body }). DO NOT
+    // wrap it as `{ body: {...} }` here — that double-wraps the actual HTTP
+    // body, the edge function reads body.turnstileToken as undefined, and
+    // every request gets a 400 "missing_verification" even though the token
+    // is valid on the client.
     const { data, error } = await rpc.invoke('user-auth-preflight', {
         turnstileToken: token,
         deviceId,
         browserHash: browserHash || null,
-        // deviceInfo tidak dipakai oleh preflight backend, tapi dikirim
-        // agar tersedia jika backend diperluas ke depannya
+        // deviceInfo isn't used by the preflight backend today — sent for
+        // forward-compat if the backend grows richer validation.
     });
 
     if (error) {
@@ -224,7 +192,6 @@ export async function runPreflightValidation(turnstileToken) {
         throw new PreflightError('user_preflight_failed');
     }
 
-    // Kembalikan semua data yang dibutuhkan oleh user-auth-complete
     return {
         preflightId: data.preflightId,
         deviceId,
@@ -233,46 +200,37 @@ export async function runPreflightValidation(turnstileToken) {
     };
 }
 
-// ── Execute full preflight flow ──────────────────────────────────────────────
-//
-// Alur:
-//   1. Cek cache session dulu — jika valid, skip semua langkah mahal.
-//   2. Minta token Turnstile fresh dengan container eksplisit.
-//   3. Kirim ke backend untuk validasi device + rate-limit.
-//   4. Jika backend kembalikan turnstile_failed (403), coba SEKALI lagi
-//      dengan token baru — Cloudflare kadang butuh re-challenge setelah
-//      idle lama atau jika iframe sempat di-render di luar viewport.
-//   5. Simpan hasil ke sessionStorage agar login kedua dalam sesi sama
-//      tidak perlu ulang challenge.
-
+// Full preflight flow:
+//   1. Use cached result if still valid (skip the expensive steps).
+//   2. Get a fresh Turnstile token with an explicit container.
+//   3. Send to backend for device + rate-limit check.
+//   4. If backend says turnstile_failed (403), retry ONCE with a new token —
+//      Cloudflare sometimes needs a re-challenge after long idle or if the
+//      iframe rendered off-viewport.
+//   5. Cache result so a second login in the same session skips the challenge.
 export async function executePreflightFlow() {
-    // 1. Gunakan cache jika masih valid
     const stored = getStoredPreflight();
     if (stored) return stored;
 
-    // Ambil container Turnstile — wajib ada di DOM
     const container = document.getElementById('userTurnstile');
     if (!container) {
         throw new PreflightError('risk_check_unavailable',
             'Komponen verifikasi keamanan tidak ditemukan. Silakan muat ulang halaman.');
     }
 
-    // 2. Dapatkan token fresh (render atau reset widget)
     let tokenResult;
     try {
         tokenResult = await getFreshTurnstileToken(container);
     } catch (err) {
         // Distinguish network/DNS failures (Turnstile can't reach Cloudflare)
-        // from other failures (widget not ready, container missing, etc).
-        // Network failures need a different message — user can fix by changing
-        // DNS / disabling VPN / trying a different network.
+        // from other failures. Network failures need a different message so
+        // the user knows to change DNS / disable VPN / try another network.
         const msg = (err?.message || '').toLowerCase();
         const isNetworkError =
             msg.includes('timeout') ||
-            msg.includes('gagal') ||            // "Verifikasi Turnstile gagal" (error-callback fired)
+            msg.includes('gagal') ||
             msg.includes('failed') ||
-            msg.includes('kadaluarsa') === false && msg.includes('verifikasi'); // generic verification error
-        // Note: "kadaluarsa" (expired) is a separate concern, mapped to turnstile_expired
+            msg.includes('kadaluarsa') === false && msg.includes('verifikasi');
         if (msg.includes('kadaluarsa')) {
             throw new PreflightError('turnstile_expired');
         }
@@ -284,7 +242,6 @@ export async function executePreflightFlow() {
         throw new PreflightError('missing_verification');
     }
 
-    // 3. Coba preflight pertama
     try {
         const result = await runPreflightValidation(token);
         storePreflight({
@@ -295,7 +252,7 @@ export async function executePreflightFlow() {
         });
         return getStoredPreflight();
     } catch (err) {
-        // 4. Jika turnstile_failed → minta token baru dan coba sekali lagi
+        // turnstile_failed → re-challenge and retry once.
         if (err instanceof PreflightError && err.backendCode === 'turnstile_failed') {
             let retryTokenResult;
             try {

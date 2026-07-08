@@ -1,29 +1,8 @@
-// =============================================================================
-// errors.js — CompletionError class & error message mapping
-// =============================================================================
+// auth/errors.js — CompletionError class for user-auth-complete flow
 //
-// Extracted from auth.js (v2.0.0 restructure) for separation of concerns.
-//
-// Purpose:
-//   Custom error class for user-auth-complete (POST Google OAuth) flow.
-//   Mirrors PreflightError pattern — separates backendCode from userMessage
-//   so the UI can display specific Indonesian messages instead of generic ones.
-//
-// Dependencies: NONE (pure self-contained module)
-//
-// Public API:
-//   - window.CompletionError  — Error class
-//   - window.AuthErrors       — { CompletionError, COMPLETION_MESSAGES }
-//
-// Load order: MUST be loaded BEFORE main.js (defer attribute preserves order).
-//
-// v2.1.3 FIX: Wrapped in IIFE. Previously, top-level `class CompletionError`
-// and `const COMPLETION_MESSAGES` leaked into the global lexical environment,
-// causing `SyntaxError: Identifier 'CompletionError' has already been declared`
-// when main.js tried `const CompletionError = window.CompletionError;`.
-// The IIFE scopes them locally; only `window.CompletionError` and
-// `window.AuthErrors` leak to the global scope (which is the intended API).
-// =============================================================================
+// IIFE-scoped because main.js also re-aliases CompletionError at module scope;
+// without the IIFE the bare `class` declaration collides with that alias on
+// browsers that don't tolerate redeclaration of the same lexical name.
 
 (function () {
 
@@ -55,9 +34,6 @@ class CompletionError extends Error {
     }
 }
 
-// ── Expose to window for backward compat & cross-script access ────────────────
-// main.js (and other classic scripts) reads CompletionError via window global.
-// ESM modules can also import from window if needed.
 window.CompletionError = CompletionError;
 window.AuthErrors = { CompletionError, COMPLETION_MESSAGES };
 

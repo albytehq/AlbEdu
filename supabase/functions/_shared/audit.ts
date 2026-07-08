@@ -1,10 +1,6 @@
-// =============================================================================
-// _shared/audit.ts — Audit logging helper (non-blocking, fire-and-forget)
-// =============================================================================
-// All state-changing Edge Function operations MUST log to audit_logs.
-// Uses log_audit() RPC function (SECURITY DEFINER, bypasses RLS).
-// Non-blocking: failures don't affect main request flow.
-// =============================================================================
+// _shared/audit.ts — Fire-and-forget audit logging helper.
+// log_audit() is SECURITY DEFINER and bypasses RLS; failures are swallowed
+// so they cannot affect the main request flow.
 
 import type { Env } from './types.ts';
 
@@ -21,7 +17,6 @@ interface AuditParams {
 }
 
 export function logAudit(env: Env, params: AuditParams): void {
-  // Fire-and-forget — don't await, don't throw
   const body = {
     p_action: params.action,
     p_target_type: params.targetType ?? null,
@@ -43,7 +38,6 @@ export function logAudit(env: Env, params: AuditParams): void {
     },
     body: JSON.stringify(body),
   }).catch((err) => {
-    // Non-blocking: log error but don't fail request
     console.error('[audit] logAudit failed:', err?.message || err);
   });
 }

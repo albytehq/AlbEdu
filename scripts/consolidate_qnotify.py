@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
-"""
-consolidate_qnotify.py — Stage 1 + Stage 2: Replace per-page QNotify bootstrap
-with the shared native notify.js module.
-
-For every HTML page that has:
-  - <link rel="stylesheet" href="...QNotify/ui/notify.css"> (and dialog/label/Readnote)
-  - <script type="module">import QNotify from '...QNotify/api/index.js'; ...</script>
-
-This script:
-  1. Removes the 4 QNotify <link> tags (notify/dialog/label/Readnote CSS).
-  2. Removes the inline QNotify bootstrap <script type="module">...</script>.
-  3. Adds <script defer src="...src/shared/notify.js"></script> right after
-     the existing src/shared/boot.js line (so it loads in deterministic order).
-
-The notify.js module auto-installs window.notify, window.QNotify (legacy shim),
-window.show, and dispatches 'qnotify-ready' — so consumers keep working without
-any changes.
-
-After this script runs, public/QNotify/ can be deleted (Stage 2 cleanup).
-"""
+# consolidate_qnotify.py — Replace per-page QNotify bootstrap with the shared
+# native notify.js module.
+#
+# For every HTML page that has:
+#   - <link rel="stylesheet" href="...QNotify/ui/notify.css"> (and dialog/label/Readnote)
+#   - <script type="module">import QNotify from '...QNotify/api/index.js'; ...</script>
+#
+# This script:
+#   1. Removes the 4 QNotify <link> tags (notify/dialog/label/Readnote CSS).
+#   2. Removes the inline QNotify bootstrap <script type="module">...</script>.
+#   3. Adds <script defer src="...src/shared/notify.js"></script> right after
+#      the existing src/shared/boot.js line (so it loads in deterministic order).
+#
+# The notify.js module auto-installs window.notify, window.QNotify (legacy shim),
+# window.show, and dispatches 'qnotify-ready' — so consumers keep working without
+# any changes.
 
 import re
 from pathlib import Path

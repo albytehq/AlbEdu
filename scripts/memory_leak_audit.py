@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""
-memory_leak_audit.py — Phase 4: Audit semua addEventListener, setInterval,
-setTimeout, dan Realtime subscriptions untuk pastikan ada cleanup.
-
-Scan untuk patterns:
-  1. addEventListener tanpa removeEventListener
-  2. setInterval tanpa clearInterval
-  3. setTimeout dalam loop tanpa clearTimeout
-  4. .subscribe( tanpa unsubscribe
-  5. .on( tanpa .off(
-"""
+# memory_leak_audit.py — audit addEventListener, setInterval, setTimeout, dan
+# Realtime subscriptions untuk pastikan ada cleanup.
+#
+# Scan untuk patterns:
+#   1. addEventListener tanpa removeEventListener
+#   2. setInterval tanpa clearInterval
+#   3. setTimeout dalam loop tanpa clearTimeout
+#   4. .subscribe( tanpa unsubscribe
+#   5. .on( tanpa .off(
 import re
 from pathlib import Path
 from collections import defaultdict

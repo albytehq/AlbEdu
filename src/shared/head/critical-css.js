@@ -1,43 +1,17 @@
-// =============================================================================
-// critical-css.js — AlbEdu Shared Head · Paint-First Shell
-// =============================================================================
-// Single responsibility: inject critical CSS inline into <head> BEFORE the
-// browser fetches any external stylesheet. This guarantees the shell renders
-// on the very first paint, even on slow networks.
+// critical-css.js — injects critical CSS + inline SVG sprite into <head>
+// BEFORE the browser fetches any external stylesheet. Runs synchronously
+// (no defer/async) as the FIRST <script> in <head>, so the shell paints on
+// first paint even on slow networks.
 //
-// This script is the FIRST <script> in every page's <head>. It runs
-// synchronously (no defer/async) and is tiny (~3KB minified) so it does not
-// delay first paint materially.
-//
-// Why inline-injected instead of <style> in HTML:
-//   - Single source of truth — update once here, every page gets the fix.
-//   - No risk of HTML author forgetting to copy-paste the latest <style>.
-//   - File is small enough that the inline cost is negligible.
-//
-// What this script does NOT do:
-//   - Load fonts (handled by shared font strategy — see fonts.js)
-//   - Load full design system (loaded async via tokens.css + page CSS)
-// =============================================================================
+// @font-face declarations are inlined here too — no CSS roundtrip needed.
 
 (function () {
   'use strict';
 
-  // Critical CSS is co-located with this script. We embed it inline so the
-  // browser doesn't need to round-trip for it.
-  // (Source: src/shared/head/critical.css — keep in sync.)
-
-  // ── Compute BASE_PATH (deployment-prefix aware) ─────────────────────────
-  // AlbEdu can be deployed at:
-  //   - root domain (https://albedu.id/)
-  //   - subdirectory (https://albytehq.github.io/AlbEdu/)
-  //   - localhost (http://127.0.0.1:5500/)
-  //
-  // Font paths in @font-face MUST be prefixed with BASE_PATH so they resolve
-  // correctly regardless of deployment location. Without this, fonts 404
-  // when deployed to a subdirectory because `/public/fonts/...` resolves to
-  // the domain root, not the app root.
-  //
-  // Algorithm mirrors AUTH_CONFIG.BASE_PATH in src/auth/main.js — keep in sync.
+  // Compute BASE_PATH (deployment-prefix aware). AlbEdu can be deployed at
+  // the root domain OR at a subdirectory (for example, GitHub Pages /AlbEdu/).
+  // Font paths in @font-face MUST be prefixed so they resolve in both.
+  // Mirrors AUTH_CONFIG.BASE_PATH in src/auth/main.js — keep in sync.
   var _computeBasePath = function () {
     var p = window.location.pathname;
     var base = p.substring(0, p.lastIndexOf('/') + 1);
@@ -71,7 +45,7 @@
 .albedu-icon--16{width:16px;height:16px}.albedu-icon--20{width:20px;height:20px}.albedu-icon--24{width:24px;height:24px}
 /* Inline SVG sprite for critical icons — renders INSTANTLY without waiting for icons.js.
    Use: <svg class="albedu-icon"><use href="#i-login"/></svg>
-   icons.js will upgrade these to full registry on load (no-op if already rendered). */
+   icons.js upgrades these to full registry on load (no-op if already rendered). */
 .albedu-sprite{position:absolute;width:0;height:0;overflow:hidden;visibility:hidden}
 .albedu-cloak{visibility:hidden!important}.albedu-cloak--ready{visibility:visible!important}
 .albedu-skip-link{position:absolute;top:-40px;left:8px;background:var(--albedu-blue-600);color:#fff;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;z-index:1000;transition:top 0.15s ease}.albedu-skip-link:focus{top:8px;outline:2px solid var(--albedu-blue-700);outline-offset:2px}
@@ -84,28 +58,10 @@ html[data-theme="dark"]{--albedu-slate-50:#0f172a;--albedu-slate-100:#1e293b;--a
   style.textContent = CRITICAL_CSS;
   document.head.appendChild(style);
 
-  // ── Inject inline SVG sprite for CRITICAL icons ──
-  // These 16 icons render INSTANTLY on first paint, before icons.js loads.
-  // icons.js will skip re-binding elements that already contain an <svg> child.
-  // Use in HTML: <span data-albedu-icon="login"></span>
-  // → critical-css.js injects the sprite, then icons.js (deferred) materializes
-  //   these 16 icons immediately via <use href="#i-...">. icons.js handles
-  //   the remaining ~85 secondary icons via cached-template renderer.
-  //
-  // Critical icon set (33 icons = 16 shell + 17 admin):
-  //   Shell: menu, close, login, logout, person, person_add, manage_accounts,
-  //          notifications, arrow_back, arrow_forward, chevron_right, chevron_left,
-  //          search, home, language, refresh
-  //   Admin: account_circle, edit_note, menu_book, inventory_2, monitor_heart,
-  //          bar_chart, list, fingerprint, info, schedule, shield, photo_camera,
-  //          left_panel_open, left_panel_close, assignment_turned_in, auto_fix_high
-  //
-  // Admin icons added Phase 5+ supaya AlbEdu Creates render INSTANT tanpa tunggu
-  // icons.js (73KB). Sebelumnya hanya 16 shell icons di sprite — admin pages
-  // delay ~200-500ms menunggu icons.js load + bind. Sekarang semua icon admin
-  // pages ada di sprite → render di first paint.
-  //
-  // Sourced from Lucide (ISC license). Keep in sync with
+  // Inline SVG sprite: 33 critical icons (16 shell + 17 admin). These render
+  // on first paint via <use href="#i-...">, before icons.js loads. icons.js
+  // will skip elements that already have an <svg> child.
+  // Lucide (ISC license). Keep in sync with
   // src/shared/icons/modules/sprite/sprite.js CRITICAL_ICONS.
   var SPRITE_SVG = '<svg class="albedu-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" id="albedu-icon-sprite">'
     + '<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></symbol>'
@@ -124,7 +80,6 @@ html[data-theme="dark"]{--albedu-slate-50:#0f172a;--albedu-slate-100:#1e293b;--a
     + '<symbol id="i-home" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>'
     + '<symbol id="i-language" viewBox="0 0 24 24"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></symbol>'
     + '<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>'
-    // ── Admin icons (Phase 5+ — supaya AlbEdu Creates instant) ──
     + '<symbol id="i-account_circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></symbol>'
     + '<symbol id="i-edit_note" viewBox="0 0 24 24"><path d="M14.364 13.634a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506l4.013-4.009a1 1 0 0 0-3.004-3.004z"/><path d="M14.487 7.858A1 1 0 0 1 14 7V2"/><path d="M20 19.645V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l2.516 2.516"/><path d="M8 18h1"/></symbol>'
     + '<symbol id="i-menu_book" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M16 12h2"/><path d="M16 8h2"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/><path d="M6 12h2"/><path d="M6 8h2"/></symbol>'
@@ -149,26 +104,10 @@ html[data-theme="dark"]{--albedu-slate-50:#0f172a;--albedu-slate-100:#1e293b;--a
   spriteEl.setAttribute('aria-hidden', 'true');
   document.head.appendChild(spriteEl);
 
-  // ── Phase 1: Resource Hints (zero-risk performance optimization) ────
-  // Inject <link> hints ke <head> SEBELUM browser parse <script src="https://...">
-  // atau <script type="module" src="...">. Browser mulai resolve DNS + TLS
-  // handshake + fetch module secara paralel, hemat 200-500ms perceived load.
-  //
-  // Affects: semua 27 halaman (critical-css.js di-load synchronously di <head>)
-  // Risk:    ZERO — <link rel="preconnect">, dns-prefetch, modulepreload
-  //          adalah pure hints. Browser ignore kalau tidak dibutuhkan.
-  //          Tidak pernah block rendering.
-  //
-  // Strategy:
-  //   1. preconnect  → start TLS handshake early (cdn.jsdelivr.net, cloudflare)
-  //   2. dns-prefetch → fallback DNS-only (untuk browser lama tanpa preconnect)
-  //   3. modulepreload → fetch + parse ESM module sebelum <script type="module">
-  //
-  // Idempotent: skip kalau hint sudah ada di <head> (defensive — HTML mungkin
-  // sudah deklarasi manual di beberapa halaman).
-
+  // Resource hints. <link rel="preconnect"> + dns-prefetch + modulepreload
+  // let the browser start DNS/TLS/module-fetch in parallel with HTML parse.
+  // Pure hints — zero risk, browser ignores when not needed.
   function _injectHint(rel, href, attrs) {
-    // Cek existing — selector pakai attribute value match
     var existing = document.querySelector(
       'link[rel="' + rel + '"][href="' + href + '"]'
     );
@@ -179,7 +118,7 @@ html[data-theme="dark"]{--albedu-slate-50:#0f172a;--albedu-slate-100:#1e293b;--a
     if (attrs) {
       for (var key in attrs) {
         if (attrs[key]) {
-          // crossorigin: true → set attribute empty string (spec requirement)
+          // crossorigin: true → set attribute to empty string (spec requirement)
           link.setAttribute(key, attrs[key] === true ? '' : attrs[key]);
         }
       }
@@ -187,95 +126,41 @@ html[data-theme="dark"]{--albedu-slate-50:#0f172a;--albedu-slate-100:#1e293b;--a
     document.head.appendChild(link);
   }
 
-  // 1. External CDN preconnect — start DNS + TCP + TLS handshake early.
-  //    cdn.jsdelivr.net: dipakai di 15+ halaman (Supabase SDK, KaTeX)
-  //    challenges.cloudflare.com: dipakai di 4 halaman auth (Turnstile)
   _injectHint('preconnect', 'https://cdn.jsdelivr.net', { crossorigin: true });
   _injectHint('preconnect', 'https://challenges.cloudflare.com', { crossorigin: true });
-
-  // 2. DNS-prefetch — fallback untuk browser yang tidak support preconnect
-  //    (Safari < 11, IE). Zero cost di browser modern.
   _injectHint('dns-prefetch', 'https://cdn.jsdelivr.net');
   _injectHint('dns-prefetch', 'https://challenges.cloudflare.com');
 
-  // 3. Modulepreload — fetch + parse ESM module sebelum <script type="module">
-  //    tercapai oleh HTML parser. Critical path: resilience.js load Actly
-  //    transitively (15 file ESM). Tanpa modulepreload, browser baru mulai
-  //    fetch resilience.js setelah parse selesai — hemat 100-300ms.
-  //
-  //    resilience.js dipakai di 19/27 halaman (admin + auth + assessment).
-  //    qnotify-loader.js hanya di admin/assessment pages — skip global preload
-  //    untuk avoid waste di landing/auth pages yang tidak pakai QNotify.
-  //
-  //    Trade-off: 8 halaman kecil (404, docs/PAGE-TEMPLATE, legacy stubs
-  //    buat-ujian/data-hasil/ujian-peserta, pages/ujian/*) tidak load
-  //    resilience.js tapi tetap dapat modulepreload → waste ~8KB prefetch.
-  //    Acceptable karena: (a) halaman tersebut jarang dikunjungi,
-  //    (b) file di-cache SW setelah prefetch pertama, (c) cost kompleksitas
-  //    deteksi runtime (cek document.scripts saat critical-css.js execute
-  //    tidak work — script tags setelahnya belum di-DOM) lebih tinggi dari
-  //    benefit ~64KB total waste (8KB × 8 halaman, tapi cuma sekali per SW
-  //    cache lifetime).
+  // Modulepreload resilience.js — it's loaded on 19/27 pages and pulls in
+  // Actly transitively (15 ESM files). Without this the browser only starts
+  // fetching after the parser reaches the <script type="module"> tag.
   _injectHint('modulepreload', BASE_PATH + 'src/shared/resilience.js');
 
-  // ── Phase 2: Inject view-transitions.js (deferred, non-blocking) ─────
-  // File ini intercept clicks pada internal <a href> dan wrap navigasi
-  // dengan document.startViewTransition() untuk cross-fade halus antar
-  // halaman. Progressive enhancement — browser tanpa support tetap jalan.
-  //
-  // Pakai <script defer> supaya:
-  //   - Tidak block HTML parsing (defer = download parallel, execute setelah parse)
-  //   - Jalan sebelum DOMContentLoaded (catch clicks awal)
-  //   - Idempotent — file punya guard sendiri
+  // Inject view-transitions.js (deferred). Cross-fades internal-link clicks
+  // via document.startViewTransition(). No-op in browsers without the API.
   var vtScript = document.createElement('script');
   vtScript.src = BASE_PATH + 'src/shared/view-transitions.js';
   vtScript.defer = true;
   document.head.appendChild(vtScript);
 
-  // ── Phase 3: Inject link-prefetch.js (deferred, non-blocking) ────────
-  // File ini prefetch halaman tujuan SEBELUM user klik, supaya saat klik
-  // terjadi halaman sudah ada di browser cache → instant load.
-  //
-  // 3 mode prefetch:
-  //   1. Viewport prefetch — saat link masuk viewport (200px margin), prefetch
-  //   2. Hover/focus prefetch — saat user hover/focus link (intent-based)
-  //   3. Touchstart prefetch — mobile, manfaatkan 300ms delay sebelum click
-  //
-  // Co-exist dengan Phase 2 (VT):
-  //   Prefetch fetch HTML ke cache. VT handle animasi cross-fade.
-  //   Kombinasi: instant + animated = native feel.
-  //
-  // Safety: skip external/anchor/javascript links, dedup via Set,
-  //         respect prefers-reduced-data (navigator.connection.saveData).
+  // Inject link-prefetch.js (deferred). Prefetches destination pages on
+  // viewport-enter / hover / focus / touchstart.
   var prefetchScript = document.createElement('script');
   prefetchScript.src = BASE_PATH + 'src/shared/link-prefetch.js';
   prefetchScript.defer = true;
   document.head.appendChild(prefetchScript);
 
-  // ── Phase 4: Inject page-transition-overlay.js (deferred, non-blocking)
-  // Loading overlay fallback untuk browser tanpa VT support (Firefox/Safari
-  // lama) + loading indicator untuk slow navigation (>500ms).
-  //
-  // Strategy:
-  //   - Browser DENGAN VT: overlay TIDAK muncul (VT handle animasi)
-  //   - Browser TANPA VT: overlay muncul kalau navigation > 500ms
-  //   - Auto-hide di pageshow event (handle bfcache restore juga)
-  //   - Safety timeout 8 detik (avoid stuck overlay)
-  //
-  // Co-exist dengan Phase 2 (VT):
-  //   Listen 'viewtransitionstart' event → cancel overlay timer.
-  //   VT jalan → overlay skip. VT tidak support → overlay fallback.
-  //
-  // Co-exist dengan Phase 3 (Prefetch):
-  //   Prefetch bikin navigation biasanya < 500ms → overlay jarang muncul.
-  //   Tapi kalau network lambat, overlay jadi loading indicator.
+  // Inject page-transition-overlay.js (deferred). Loading overlay for
+  // browsers without VT support + slow-network fallback. Auto-hides on
+  // pageshow. Listens for 'viewtransitionstart' to cancel its timer when VT
+  // takes over.
   var overlayScript = document.createElement('script');
   overlayScript.src = BASE_PATH + 'src/shared/page-transition-overlay.js';
   overlayScript.defer = true;
   document.head.appendChild(overlayScript);
 
-  // ── Apply saved theme IMMEDIATELY (prevents dark-mode flash) ──
-  // This must run BEFORE the body renders. Reading localStorage is sync.
+  // Apply saved theme BEFORE body renders — prevents dark-mode flash.
+  // Reading localStorage is sync.
   try {
     var saved = localStorage.getItem('albedu-theme') || 'default';
     if (saved && saved !== 'default') {
@@ -283,12 +168,9 @@ html[data-theme="dark"]{--albedu-slate-50:#0f172a;--albedu-slate-100:#1e293b;--a
     }
   } catch (_) { /* private mode */ }
 
-  // ── Set <html lang> to Indonesian (single language) ─────────────────────
   document.documentElement.setAttribute('lang', 'id');
   document.documentElement.setAttribute('dir', 'ltr');
 
-  // ── Mark platform as booting ──
-  // Consumers can listen for 'albedu:platform-ready' to know when supabase is ready.
   if (!window.AlbEdu) window.AlbEdu = {};
   window.AlbEdu.bootStart = performance.now();
 })();

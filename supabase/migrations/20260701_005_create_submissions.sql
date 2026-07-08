@@ -1,14 +1,8 @@
--- =============================================================================
 -- 20260701_005_create_submissions.sql
--- AlbEdu v1.0.0 — Phase 1.5
--- =============================================================================
 -- Creates `submissions` — final submitted answers + server-side score.
 -- Replaces: hasil_peserta JSONB blob (embedded in ujian row — anti-pattern).
---
--- Q5: 100% server-side scoring. Score computed in submit-assessment Edge
--- Function, NOT client. Peserta cannot fake score.
--- Q6: Esai grading skipped. graded_by NULL until manual grading UI (Phase 9).
--- =============================================================================
+-- Score is computed server-side in the submit-assessment Edge Function, never on the client.
+-- Esai grading is skipped here — graded_by stays NULL until a manual grading UI exists.
 
 CREATE TABLE IF NOT EXISTS public.submissions (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -24,13 +18,13 @@ CREATE TABLE IF NOT EXISTS public.submissions (
   -- Format: { "section_0": { "1": "A", "2": "B" }, "section_1": { "1": "esai answer text" } }
   answers           jsonb NOT NULL,
 
-  -- Server-side score (Q5: computed in Edge Function, NOT client)
+  -- Server-side score (computed in Edge Function, never on the client)
   score             numeric(5,2) CHECK (score IS NULL OR score BETWEEN 0 AND 100),
   max_score         int DEFAULT 100,
   correct_count     int,
   total_count       int,
 
-  -- Per-question grading detail (Q6: esai grading deferred — auto-set to 0 or NULL)
+  -- Per-question grading detail. Esai entries auto-set to 0 or NULL until manual grading.
   -- [{ section_idx, idq, peserta_answer, jawaban_benar, is_correct, points, type }]
   grading_detail    jsonb,
 
@@ -39,12 +33,12 @@ CREATE TABLE IF NOT EXISTS public.submissions (
   submitted_at      timestamptz DEFAULT now(),
   duration_seconds  int,
 
-  -- Grading metadata (Q6: skipped, all NULL until Phase 9)
+  -- Grading metadata — NULL until manual grading UI exists.
   graded_by         uuid REFERENCES public.users(id),
   graded_at         timestamptz,
   grading_notes     text,
 
-  -- Attempt tracking (Q: allow_retake feature)
+  -- Attempt tracking (allow_retake feature).
   attempt_number    int DEFAULT 1 CHECK (attempt_number >= 1),
 
   -- Audit
@@ -54,14 +48,14 @@ CREATE TABLE IF NOT EXISTS public.submissions (
   CONSTRAINT submissions_session_unique UNIQUE (session_id)
 );
 
--- ── Indexes ──
+-- Indexes
 CREATE INDEX idx_submissions_assessment  ON public.submissions(assessment_id);
 CREATE INDEX idx_submissions_user         ON public.submissions(user_id);
 CREATE INDEX idx_submissions_submitted    ON public.submissions(submitted_at DESC);
 CREATE INDEX idx_submissions_score        ON public.submissions(assessment_id, score DESC);
 CREATE INDEX idx_submissions_attempt      ON public.submissions(assessment_id, user_id, attempt_number DESC);
 
--- ── RLS Policies ──
+-- RLS Policies
 ALTER TABLE public.submissions ENABLE ROW LEVEL SECURITY;
 
 -- Admins: read all submissions (collaborative — single-tenant all share)
@@ -69,8 +63,8 @@ CREATE POLICY "submissions_admin_read"
   ON public.submissions FOR SELECT TO authenticated
   USING (peran_user() = 'admin');
 
--- Admins: update only for grading (Phase 9 — manual esai grading)
--- For now, no UPDATE policy (submissions are immutable post-submit)
+-- Admins: update only for grading. No UPDATE policy active yet —
+-- submissions are immutable post-submit until a manual grading flow lands.
 CREATE POLICY "submissions_admin_grade"
   ON public.submissions FOR UPDATE TO authenticated
   USING (peran_user() = 'admin');
@@ -89,7 +83,7 @@ CREATE POLICY "submissions_peserta_insert_own"
 -- No DELETE for anyone (soft-delete via separate archive flow if needed)
 
 COMMENT ON TABLE public.submissions IS
-  'Final submitted answers + server-side score. Replaces hasil_peserta JSONB blob. Q5: 100% server-side scoring via submit-assessment Edge Function.';
+  'Final submitted answers + server-side score. Replaces hasil_peserta JSONB blob. Score computed server-side in submit-assessment Edge Function.';
 COMMENT ON COLUMN public.submissions.score IS 'Server-computed score (0-100). NULL only if grading in progress.';
 COMMENT ON COLUMN public.submissions.grading_detail IS 'Per-question grading. Auto-graded PG + (future) manual esai.';
 COMMENT ON COLUMN public.submissions.identity_snapshot IS 'Immutable snapshot of peserta identity at submit time. For audit.';

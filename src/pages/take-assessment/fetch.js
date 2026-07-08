@@ -1,13 +1,5 @@
-// =============================================================================
-// take-assessment/fetch.js — Data fetch + access check + theme application
-// =============================================================================
-// Part of the take-assessment split (see README.md in this directory).
-//
-// Functions: _fetchAssessment, _fetchSession, _restoreDraft,
-//            _checkAccess, _applyTheme
-//
-// Load order: MUST load after utils.js, before take-assessment.js.
-// =============================================================================
+// take-assessment/fetch.js — data fetch, draft restore, access check, theme.
+// MUST load after utils.js, before take-assessment.js.
 
 (function () {
   'use strict';
@@ -17,7 +9,7 @@
   const I = _internal._internal;
   const t = I.t || ((key, vars, fallback) => fallback || key);
 
-  // ── Fetch assessment (peserta view — strips admin fields) ───────────────
+  // Fetch assessment (peserta view — strips admin fields like total_score).
   async function _fetchAssessment(token) {
     const repo = window.AlbEdu?.repository;
     if (!repo) return null;
@@ -31,7 +23,7 @@
     }
   }
 
-  // ── Fetch session ───────────────────────────────────────────────────────
+  // Fetch session
   async function _fetchSession(sessionId) {
     const repo = window.AlbEdu?.repository;
     if (!repo) return null;
@@ -45,7 +37,8 @@
     }
   }
 
-  // ── EDGE #1/#2/#3: restore draft + identity from server ─────────────────
+  // Restore identity snapshot + draft answers + violation count from the
+  // server-side session row (so a refresh resumes mid-exam).
   function _restoreDraft(session) {
     if (!session) return;
 
@@ -78,7 +71,7 @@
     }
   }
 
-  // ── Access check (open / closed / paused / scheduled) ───────────────────
+  // Access check (open / closed / paused / scheduled)
   function _checkAccess(assessment) {
     const now = Date.now();
 
@@ -135,7 +128,7 @@
     return { allowed: true };
   }
 
-  // ── Theme application ───────────────────────────────────────────────────
+  // Theme application
   function _applyTheme(themeConfig) {
     if (!themeConfig || typeof themeConfig !== 'object') return;
     _internal._waitForThemeSystem().then(() => {
@@ -155,7 +148,6 @@
     });
   }
 
-  // ── Expose ──────────────────────────────────────────────────────────────
   Object.assign(_internal, {
     _fetchAssessment,
     _fetchSession,

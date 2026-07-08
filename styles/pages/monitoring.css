@@ -13,7 +13,7 @@
         padding: 16px;
         background: var(--albedu-surface, #fff);
         border: 1px solid var(--albedu-border, #e2e8f0);
-        border-radius: var(--albedu-radius-lg, 14px);
+        border-radius: var(--albedu-radius-lg, 8px);
       }
       .mon-controls > div label {
         display: block;
@@ -28,7 +28,7 @@
         width: 100%;
         padding: 10px 12px;
         border: 1px solid var(--albedu-border, #e2e8f0);
-        border-radius: var(--albedu-radius-md, 10px);
+        border-radius: var(--albedu-radius, 8px);
         background: var(--albedu-surface, #fff);
         color: var(--albedu-heading, #0f172a);
         font-size: 14px;
@@ -48,7 +48,7 @@
       .mon-stat-card {
         background: var(--albedu-surface, #fff);
         border: 1px solid var(--albedu-border, #e2e8f0);
-        border-radius: var(--albedu-radius-lg, 14px);
+        border-radius: var(--albedu-radius-lg, 8px);
         padding: 16px;
         display: flex;
         align-items: center;
@@ -56,7 +56,7 @@
       }
       .mon-stat-icon {
         width: 40px; height: 40px;
-        border-radius: 10px;
+        border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
         background: rgba(37, 99, 235, .12);
         color: var(--albedu-primary, #2563eb);
@@ -94,7 +94,7 @@
       .mon-card {
         background: var(--albedu-surface, #fff);
         border: 1px solid var(--albedu-border, #e2e8f0);
-        border-radius: var(--albedu-radius-lg, 14px);
+        border-radius: var(--albedu-radius-lg, 8px);
         padding: 16px;
         display: flex;
         flex-direction: column;
@@ -234,3 +234,23 @@
         .mon-stat-value { font-size: 18px; }
       }
     
+
+      /* ====================================================================
+         DARK MODE — prefers-color-scheme: dark (or [data-theme="dark"])
+         Surface/text colors flow through --albedu-* tokens (already flipped
+         in tokens.css). Below: bump status badge text contrast for dark bg.
+         ==================================================================== */
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .mon-status-active       { color: #34d399; }
+        :root:not([data-theme="light"]) .mon-status-paused       { color: #fbbf24; }
+        :root:not([data-theme="light"]) .mon-status-blocked      { color: #f87171; }
+        :root:not([data-theme="light"]) .mon-status-disconnected { color: #94a3b8; }
+        :root:not([data-theme="light"]) .mon-meta-item.warn,
+        :root:not([data-theme="light"]) .mon-meta-item.warn strong { color: #fbbf24; }
+      }
+      [data-theme="dark"] .mon-status-active       { color: #34d399; }
+      [data-theme="dark"] .mon-status-paused       { color: #fbbf24; }
+      [data-theme="dark"] .mon-status-blocked      { color: #f87171; }
+      [data-theme="dark"] .mon-status-disconnected { color: #94a3b8; }
+      [data-theme="dark"] .mon-meta-item.warn,
+      [data-theme="dark"] .mon-meta-item.warn strong { color: #fbbf24; }

@@ -1,31 +1,23 @@
--- =============================================================================
 -- 20260701_011_create_view_assessment_peserta.sql
--- AlbEdu v1.0.0 — Phase 1.11
--- =============================================================================
--- Creates view `assessment_view_peserta` — STRIPS sensitive fields from
--- assessments table so peserta cannot read:
+-- Creates view `assessment_view_peserta` — strips sensitive fields from
+-- assessments so peserta cannot read:
 --   - total_score (would reveal scoring algorithm)
 --   - ac_override (admin-only)
 --   - ac_remaining_time (admin-only runtime state)
 --   - created_by_email (admin PII)
 --   - any internal/debug fields
 --
--- Replaces: legacy view `ujian_peserta` (which stripped p_q/kunci_jawaban).
--- In v1.0.0, jawaban_benar lives inside sections JSONB. View cannot strip
--- nested JSONB fields efficiently, so we expose sections AS-IS but rely on
--- RLS + Edge Function server-side scoring to prevent cheating.
+-- Replaces legacy view `ujian_peserta` (which stripped p_q/kunci_jawaban).
+-- jawaban_benar lives inside the sections JSONB. The view cannot efficiently
+-- strip nested JSONB fields, so we expose sections AS-IS and rely on RLS +
+-- server-side scoring to prevent cheating.
 --
--- SECURITY NOTE: peserta CAN read jawaban_benar from sections JSONB via this
--- view. This is mitigated by:
---   1. Server-side scoring (Q5) — peserta cannot fake score even if they
---      know jawaban_benar, because scoring happens in Edge Function.
---   2. Peserta cannot submit modified answers via client — submit-assessment
---      Edge Function re-validates against stored sections.
---   3. Real anti-cheat is server-side scoring, not hiding jawaban_benar.
---
--- Future improvement (Phase 9): split sections into separate table so view
--- can truly strip jawaban_benar per question.
--- =============================================================================
+-- Security: peserta CAN read jawaban_benar from sections JSONB via this view.
+-- Mitigation: server-side scoring — peserta cannot fake score even if they
+-- know jawaban_benar, because scoring happens in the Edge Function. Peserta
+-- cannot submit modified answers either — submit-assessment re-validates
+-- against stored sections. The real anti-cheat is server-side scoring, not
+-- hiding jawaban_benar.
 
 CREATE OR REPLACE VIEW public.assessment_view_peserta AS
 SELECT
@@ -49,7 +41,7 @@ SELECT
   identity_mode,
   identity_config,
 
-  -- Sections (includes jawaban_benar — see SECURITY NOTE above)
+  -- Sections (includes jawaban_benar — see Security note above)
   sections,
 
   -- Feature toggles
@@ -73,8 +65,8 @@ SELECT
 FROM public.assessments
 WHERE status = 'active';
 
--- ── Grants ──
+-- Grants
 GRANT SELECT ON public.assessment_view_peserta TO authenticated;
 
 COMMENT ON VIEW public.assessment_view_peserta IS
-  'Peserta-facing view of assessments. Strips admin-only fields. jawaban_benar is exposed in sections JSONB (mitigated by server-side scoring — Q5). Future Phase 9: split sections to separate table for true field-level hiding.';
+  'Peserta-facing view of assessments. Strips admin-only fields. jawaban_benar is exposed in sections JSONB (mitigated by server-side scoring).';

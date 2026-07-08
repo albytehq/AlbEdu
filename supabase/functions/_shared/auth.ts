@@ -1,14 +1,9 @@
-// =============================================================================
-// _shared/auth.ts — JWT verification + role + ownership checks
-// =============================================================================
-// Uses Supabase Auth getUser endpoint to verify JWT.
-// Extracts user_id + email. Role fetched from users table (via service role).
-// =============================================================================
+// _shared/auth.ts — JWT verification + role + ownership checks.
 
 import { HTTPError } from './error.ts';
 import type { AuthUser, Env } from './types.ts';
 
-// Cache user role lookups for 60s (reduces DB hits on rapid heartbeats)
+// Heartbeats hit this path on every beat, so cache role lookups for 60s.
 const _roleCache = new Map<string, { role: string; expires: number }>();
 const ROLE_CACHE_TTL_MS = 60_000;
 
@@ -49,7 +44,6 @@ export async function verifyAuth(req: Request, env: Env): Promise<AuthUser> {
 }
 
 export async function getUserRole(env: Env, userId: string): Promise<'admin' | 'peserta' | null> {
-  // Check cache
   const cached = _roleCache.get(userId);
   if (cached && cached.expires > Date.now()) {
     return cached.role as 'admin' | 'peserta' | null;
@@ -78,7 +72,6 @@ export async function getUserRole(env: Env, userId: string): Promise<'admin' | '
 
   const role = user.peran as 'admin' | 'peserta' | null;
 
-  // Cache
   _roleCache.set(userId, { role: role || 'null', expires: Date.now() + ROLE_CACHE_TTL_MS });
 
   return role;
@@ -114,7 +107,7 @@ export async function requireAnyRole(req: Request, env: Env): Promise<AuthUser> 
   return user;
 }
 
-// Verify admin owns the assessment (Q2: collaborative — admin can READ all, but EDIT/DELETE only own)
+// Collaborative model: any admin can READ, but only the creator can EDIT/DELETE.
 export async function verifyAssessmentOwnership(
   env: Env,
   assessmentId: string,

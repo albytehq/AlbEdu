@@ -1,17 +1,9 @@
-// =============================================================================
-// access-code-attempt/index.ts — Rate limit + Anti-bot for access code entry
-// =============================================================================
+// access-code-attempt/index.ts — Rate limit + anti-bot gate for access code entry.
 // POST /functions/v1/access-code-attempt
-// Body: { device_id?: string, fingerprint_hash?: string, form_open_ms?: number }
-//
-// v0.746.0: Turnstile REMOVED — replaced with:
-//   - Tightened rate limit: 5/IP/hour, 5/device/hour (was 10)
-//   - Exponential backoff: 1st=0s, 2nd=5s, 3rd=30s, 4th=300s, 5th=3600s
-//   - Client-side honeypot + timing check (in assessment-entry.js)
-//   - Device fingerprint hash for additional bot detection
-//
-// Replaces: exam-token-attempt (v0.2.0)
-// =============================================================================
+// Body: { device_id?, fingerprint_hash?, form_open_ms? }
+// Turnstile is intentionally not used here; the gate is a tight rate limit
+// (5/IP/hour, 5/device/hour) + exponential backoff + client-side honeypot/
+// timing checks (see assessment-entry.js) + a device fingerprint hash.
 
 import { handler } from '../_shared/cors.ts';
 import { successResponse } from '../_shared/error.ts';
@@ -23,8 +15,8 @@ import type { Env } from '../_shared/types.ts';
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
-// Exponential backoff: after N attempts, wait this many seconds before next allowed
-// 1st=0s, 2nd=5s, 3rd=30s, 4th=300s, 5th=3600s
+// Exponential backoff: after N attempts, the next attempt must wait this many
+// seconds. Curve: 0 / 5 / 30 / 300 / 3600.
 const BACKOFF_SECONDS = [0, 5, 30, 300, 3600];
 
 interface AttemptBody {
@@ -43,7 +35,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
   const fingerprintHash = body.fingerprint_hash || 'unknown';
   const formOpenMs = body.form_open_ms || 0;
 
-  // 1. Server-side timing check — reject if form was open < 1000ms (bot speed)
+  // Server-side timing check: reject if the form was open < 1000ms (bot speed).
   if (formOpenMs > 0 && formOpenMs < 1000) {
     throw new HTTPError(429, 'TOO_FAST', 'Request too fast. Try again.', {
       retry_after: 5,
@@ -52,7 +44,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
 
   const db = new SupabaseDB(env);
 
-  // 2. Count IP attempts in last hour
+  // Count IP attempts in the last hour.
   const ipCountRes = await fetch(
     `${env.SUPABASE_URL}/rest/v1/registration_attempts?ip_address=eq.exam_ip:${ip}&fingerprint=eq.exam_token_attempt&created_at=gte.${new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString()}&select=id,created_at&limit=${RATE_LIMIT_MAX + 1}&order=created_at.desc`,
     {
@@ -64,9 +56,9 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
   );
   const ipAttempts = ipCountRes.ok ? await ipCountRes.json() : [];
 
-  // 3. Check rate limit + exponential backoff
+  // Apply rate limit + exponential backoff.
   if (ipAttempts.length >= RATE_LIMIT_MAX) {
-    // Max attempts reached — hard block for 1 hour
+    // Hard-block this IP for the rest of the hour.
     throw new HTTPError(429, 'RATE_LIMITED', 'Too many attempts from this IP. Try again later.', {
       scope: 'ip',
       attempts: ipAttempts.length,
@@ -75,7 +67,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     });
   }
 
-  // Exponential backoff: check time since last attempt
+  // Exponential backoff: check time since last attempt.
   if (ipAttempts.length > 0 && ipAttempts.length <= BACKOFF_SECONDS.length) {
     const lastAttempt = new Date(ipAttempts[0].created_at);
     const secondsSinceLast = (Date.now() - lastAttempt.getTime()) / 1000;
@@ -91,7 +83,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     }
   }
 
-  // 4. Count device attempts in last hour
+  // Count device attempts in the last hour.
   if (deviceId !== 'unknown') {
     const deviceCountRes = await fetch(
       `${env.SUPABASE_URL}/rest/v1/registration_attempts?device_id=eq.${encodeURIComponent(deviceId)}&fingerprint=eq.exam_token_attempt&created_at=gte.${new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString()}&select=id&limit=${RATE_LIMIT_MAX + 1}`,
@@ -114,7 +106,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     }
   }
 
-  // 5. Insert attempt record (non-fatal if fails)
+  // Insert the attempt record (non-fatal if the insert fails).
   try {
     await db.insert('registration_attempts', {
       ip_address: `exam_ip:${ip}`,

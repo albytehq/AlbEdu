@@ -1,35 +1,15 @@
-// =============================================================================
 // security/devtools-detector.js — DevTools detection (3 methods combined)
-// =============================================================================
-// v1.0.0 — Phase 5 Anti-Cheat Hardening
 //
 // 3 detection methods:
 //   1. Window size diff (outer - inner > threshold) — detects docked DevTools
 //   2. Debugger statement timing — detects undocked DevTools
 //   3. console.log getter override — detects open console panel
 //
-// Philosophy: False positive > false negative
+// Philosophy: false positive > false negative.
 //   - If detector fails, DON'T block (graceful degradation)
-//   - DevTools detection is a SIGNAL, not proof — log as violation, don't instant-block
+//   - DevTools detection is a SIGNAL, not proof — log as violation, don't
+//     instant-block
 //   - 3 detections → max violation → reset (same as keyboard shortcut)
-//
-// Edge cases (15):
-//   1. F12 → keyboard (Guardian handles, not here)
-//   2. Ctrl+Shift+I → keyboard (Guardian handles)
-//   3. Browser menu → window size diff detects
-//   4. Docked bottom → outerHeight - innerHeight > 160
-//   5. Docked right → outerWidth - innerWidth > 160
-//   6. Undocked → debugger timing detects
-//   7. Closed quickly → debounce 800ms
-//   8. Browser extension → false positive → log, don't block
-//   9. Responsive design mode → whitelist (Firefox)
-//   10. Iframe → size diff unreliable → skip
-//   11. Mobile remote → can't detect → rely on heartbeat
-//   12. Identity phase → don't care
-//   13. Exam phase → violation
-//   14. Result phase → don't care
-//   15. 3 detections → max violation → reset
-// =============================================================================
 
 (function () {
   'use strict';
@@ -74,14 +54,16 @@
       this._setupConsoleTrap();
 
       // Listen for window resize (catches dock/undock transitions)
-      window.addEventListener('resize', () => {
-        // Debounce — don't check immediately, wait for resize to settle
+      this._onResize = () => {
         clearTimeout(this._debounceTimer);
         this._debounceTimer = setTimeout(() => this._checkSizeDiff(), DEBOUNCE_MS);
-      });
+      };
+      window.addEventListener('resize', this._onResize);
 
-      // Cleanup on page unload (prevent memory leaks)
-      window.addEventListener('beforeunload', () => this.stop());
+      // Named handler so we can actually remove it on stop() — anonymous
+      // arrows would leak and stack on every start().
+      this._onBeforeUnload = () => this.stop();
+      window.addEventListener('beforeunload', this._onBeforeUnload);
 
       console.info('[devtools-detector] Started (3 methods active)');
     },
@@ -100,12 +82,21 @@
       }
       clearTimeout(this._debounceTimer);
 
+      if (this._onResize) {
+        window.removeEventListener('resize', this._onResize);
+        this._onResize = null;
+      }
+      if (this._onBeforeUnload) {
+        window.removeEventListener('beforeunload', this._onBeforeUnload);
+        this._onBeforeUnload = null;
+      }
+
       this._restoreConsoleTrap();
 
       console.info('[devtools-detector] Stopped');
     },
 
-    // ── Method 1: Window size diff ──
+    // Method 1: Window size diff
     // Detects DevTools docked at bottom (height diff) or right (width diff)
     _checkSizeDiff() {
       if (!this._isActive) return;
@@ -137,9 +128,9 @@
       }
     },
 
-    // ── Method 2: Debugger statement timing ──
-    // If DevTools is open, `debugger;` statement pauses execution.
-    // Measure time — if >100ms, DevTools is likely open.
+    // Method 2: Debugger statement timing
+    // If DevTools is open, `debugger;` pauses execution. Measure time — if
+    // >100ms, DevTools is likely open.
     _checkDebuggerTiming() {
       if (!this._isActive) return;
 
@@ -154,7 +145,7 @@
       }
     },
 
-    // ── Method 3: Console getter trap ──
+    // Method 3: Console getter trap
     // Override console.log with a getter. If DevTools console panel is open,
     // it renders the log object, triggering the getter.
     _setupConsoleTrap() {
@@ -197,10 +188,14 @@
     },
 
     _restoreConsoleTrap() {
-      // Clear the console trap interval to prevent memory leaks
       if (this._consoleTrapTimer) {
         clearInterval(this._consoleTrapTimer);
         this._consoleTrapTimer = null;
+      }
+      // Restore the original console.log so we don't leave a permanent monkey-patch.
+      if (this._origConsoleLog) {
+        console.log = this._origConsoleLog;
+        this._origConsoleLog = null;
       }
       this._consoleTrapSet = false;
     },

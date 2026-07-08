@@ -1,14 +1,11 @@
--- =============================================================================
--- Migration 020: Add admin consent INSERT/UPDATE policies
--- =============================================================================
--- Bug fix: admin account gagal saat accept privacy policy di halaman assessment.
--- Root cause: migration 009 hanya define INSERT/UPDATE policy untuk peserta,
--- admin ditolak RLS. Peserta langsung sukses karena policy cocok.
+-- Migration 020: Add admin consent INSERT/UPDATE policies.
+-- Bug fix: admin accounts failed to accept the privacy policy on the
+-- assessment page. Root cause: migration 009 only defined INSERT/UPDATE
+-- policies for peserta, so admin got rejected by RLS. Peserta succeeded
+-- because the policy matched.
 --
--- Consent adalah user-level concern (UU PDP), bukan role-level. Admin juga
--- user, perlu INSERT consent record sendiri. Policy mengikuti pattern yang
--- sama dengan consents_peserta_insert_own / consents_peserta_update_own.
--- =============================================================================
+-- Consent is a user-level concern (UU PDP), not role-level. Admins are also
+-- users and need their own consent record. Same pattern as the peserta policies.
 
 -- Admin: INSERT own consent record (when admin clicks "Setuju" on consent popup)
 CREATE POLICY IF NOT EXISTS "consents_admin_insert_own"
@@ -21,9 +18,7 @@ CREATE POLICY IF NOT EXISTS "consents_admin_update_own"
   USING (peran_user() = 'admin' AND user_id = auth.uid())
   WITH CHECK (peran_user() = 'admin' AND user_id = auth.uid());
 
--- =============================================================================
 -- Verification queries:
--- =============================================================================
 -- SELECT policyname, cmd, qual, with_check
 -- FROM pg_policies
 -- WHERE schemaname='public' AND tablename='consents'

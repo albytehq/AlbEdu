@@ -63,7 +63,7 @@ def main():
 
     # Build the modules section
     modules_section = '\n'.join(
-        f'  // ─── Module: {rel} ─────────────────────────────────\n'
+        f'  // Module: {rel}\n'
         f'{read_module(rel)}\n'
         for rel in MODULE_ORDER
     )

@@ -1,22 +1,11 @@
 /*
- * ═══════════════════════════════════════════════════════════════
- *  AlbEdu Critical CSS — Paint-First Shell Strategy
- *  Inline in <head> BEFORE any external resource.
- *  Goal: render a stable shell in the very first paint, even if
- *        all other CSS / fonts / JS are still downloading.
- * ═══════════════════════════════════════════════════════════════
+ * critical.css — paint-first shell. Inlined into <head> by critical-css.js
+ * before any external resource is fetched, so the shell renders on the
+ * first paint even when all other CSS / fonts / JS are still downloading.
  *
- * This file is loaded inline by every page via <style>...</style>
- * injected from src/shared/head/critical-css.js. Keeping it inline
- * avoids an extra round-trip before first paint.
- *
- * Rules:
- *   - Only what's needed to paint the shell: background, font fallback,
- *     top bar skeleton, loading screen. No page-specific styles.
- *   - Uses system font stack as fallback so text is readable immediately.
- *   - Material Symbols font is NOT used for critical UI — replaced by
- *     SVG icons. This file reserves icon space using fixed sizes so
- *     layout never shifts when icons swap in.
+ * Only what's needed to paint the shell: background, font fallback, top bar
+ * skeleton, loading screen. No page-specific styles. Uses the system font
+ * stack as fallback so text is readable immediately.
  */
 
 :root {
@@ -47,7 +36,7 @@
   --albedu-skeleton-shine: #f1f5f9;
 }
 
-/* ── Reset (minimal — only what the shell needs) ── */
+/* Reset (minimal — only what the shell needs) */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -65,7 +54,7 @@ img, svg { display: block; max-width: 100%; }
 button { font: inherit; cursor: pointer; }
 a { color: inherit; text-decoration: none; }
 
-/* ── App shell skeleton ── */
+/* App shell skeleton */
 .albedu-shell {
   min-height: 100vh;
   min-height: 100dvh;
@@ -111,7 +100,7 @@ a { color: inherit; text-decoration: none; }
   text-align: center;
 }
 
-/* ── Skeleton block — used in loading states ── */
+/* Skeleton block — used in loading states */
 .albedu-skeleton {
   background: var(--albedu-skeleton-base);
   border-radius: 6px;
@@ -137,7 +126,7 @@ a { color: inherit; text-decoration: none; }
   .albedu-skeleton::after { animation: none; }
 }
 
-/* ── Loading screen — premium, no flash ── */
+/* Loading screen */
 .albedu-loading {
   min-height: 100vh;
   min-height: 100dvh;
@@ -186,12 +175,9 @@ a { color: inherit; text-decoration: none; }
   margin: 0;
 }
 
-/* ── Icon system — Lucide SVG (v5.0 — inline SVG, zero font loading) ──
-   The .albedu-icon class styles SVG icons rendered by icons.js.
-   No font is loaded — SVG paths are inlined in the JS bundle for instant
-   first-paint rendering with zero FOUT/FOUC.
-   Lucide icons: https://lucide.dev (ISC license, used by Vercel, shadcn/ui,
-   Cal.com, Linear). */
+/* Icon system — Lucide SVG. The .albedu-icon class styles SVG icons
+   rendered by icons.js. No font is loaded — SVG paths are inlined in
+   the JS bundle. Lucide icons: https://lucide.dev (ISC license). */
 .albedu-icon {
   display: inline-block;
   width: 1em;
@@ -208,7 +194,7 @@ a { color: inherit; text-decoration: none; }
 .albedu-icon--20 { width: 20px; height: 20px; }
 .albedu-icon--24 { width: 24px; height: 24px; }
 
-/* ── Hidden until ready — prevents FOUC for theme ── */
+/* Hidden until ready — prevents FOUC for theme */
 .albedu-cloak {
   visibility: hidden !important;
 }
@@ -216,7 +202,7 @@ a { color: inherit; text-decoration: none; }
   visibility: visible !important;
 }
 
-/* ── Skip link ── */
+/* Skip link */
 .albedu-skip-link {
   position: absolute;
   top: -40px;
@@ -236,7 +222,7 @@ a { color: inherit; text-decoration: none; }
   outline-offset: 2px;
 }
 
-/* ── Reduced motion global ── */
+/* Reduced motion global */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -246,7 +232,7 @@ a { color: inherit; text-decoration: none; }
   }
 }
 
-/* ── Theme (dark mode) — applied via [data-theme="dark"] on <html> ── */
+/* Dark mode — applied via [data-theme="dark"] on <html> */
 html[data-theme="dark"] {
   --albedu-slate-50: #0f172a;
   --albedu-slate-100: #1e293b;

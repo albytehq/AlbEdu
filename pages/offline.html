@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Anda Sedang Offline — AlbEdu</title>
+  <meta name="description" content="Koneksi internet terputus. AlbEdu akan kembali otomatis saat koneksi pulih.">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/x-icon" href="../public/images/favicon/favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="../public/images/favicon/favicon.svg">
+  <link rel="icon" type="image/png" sizes="96x96" href="../public/images/favicon/favicon-96x96.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../public/images/favicon/apple-touch-icon.png">
+
+  <!-- ═══ Design tokens + design system (pre-cached by service worker) ═══ -->
+  <link rel="stylesheet" href="../styles/tokens.css">
+  <link rel="stylesheet" href="../styles/albedu-v1.css">
+
+  <style>
+    /* Page-specific layout. Colors/fonts inherit from tokens.css + albedu-v1.css. */
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      padding-top: max(24px, env(safe-area-inset-top, 24px));
+      padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+      background:
+        radial-gradient(ellipse at top, rgba(37, 99, 235, 0.08) 0%, transparent 60%),
+        var(--albedu-surface-alt);
+    }
+
+    .offline-card {
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      background: var(--albedu-surface);
+      border: 1px solid var(--albedu-border);
+      border-radius: var(--albedu-radius-lg);
+      padding: 48px 32px 32px;
+      box-shadow: var(--albedu-shadow-md);
+    }
+
+    .offline-icon {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 24px;
+      background: linear-gradient(135deg, #60a5fa 0%, var(--albedu-primary) 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      box-shadow: 0 8px 24px var(--albedu-primary-ring);
+      animation: offline-pulse 2.4s ease-in-out infinite;
+    }
+    .offline-icon .albedu-icon { width: 44px; height: 44px; stroke-width: 2; }
+
+    @keyframes offline-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%      { transform: scale(0.94); opacity: 0.85; }
+    }
+
+    .offline-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--albedu-heading);
+      margin: 0 0 8px;
+      letter-spacing: -0.025em;
+    }
+    .offline-subtitle {
+      font-size: 15px;
+      color: var(--albedu-body);
+      margin: 0 0 32px;
+      line-height: 1.5;
+    }
+
+    .offline-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 16px;
+    }
+    .offline-status::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--albedu-danger);
+      animation: offline-blink 1.6s ease-in-out infinite;
+    }
+    @keyframes offline-blink {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.3; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background:
+          radial-gradient(ellipse at top, rgba(37, 99, 235, 0.16) 0%, transparent 60%),
+          #0f172a;
+      }
+      .offline-card { background: #1e293b; border-color: #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+      .offline-title { color: #f1f5f9; }
+      .offline-subtitle { color: #94a3b8; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .offline-icon,
+      .offline-status::before { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="albedu-skip-link" href="#main-content">Lewati ke konten</a>
+
+  <main id="main-content" class="offline-card" role="main">
+    <div class="offline-icon" aria-hidden="true">
+      <!-- Inline SVG (no JS dependency — works fully offline) -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"/>
+        <path d="M10 2c0 .46.04.91.12 1.34"/>
+        <path d="M14 2c0 .46-.04.91-.12 1.34"/>
+        <path d="M8.5 8c-1.5.5-3 1.5-3 3.5"/>
+      </svg>
+    </div>
+    <h1 class="offline-title">Anda Sedang Offline</h1>
+    <p class="offline-subtitle">
+      Koneksi internet terputus. AlbEdu akan kembali otomatis saat koneksi pulih.
+    </p>
+    <button type="button" class="albedu-btn albedu-btn-primary albedu-btn--block" id="retry-btn"
+            style="display:inline-flex;align-items:center;gap:8px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+        <path d="M21 3v5h-5"/>
+        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+        <path d="M8 16H3v5"/>
+      </svg>
+      <span>Coba Lagi</span>
+    </button>
+    <p class="offline-status" id="status">Memantau koneksi…</p>
+  </main>
+
+  <script>
+    // Minimal retry logic — no external deps so it works fully offline.
+    (function () {
+      var btn = document.getElementById('retry-btn');
+      var status = document.getElementById('status');
+      var lastOnline = navigator.onLine;
+
+      function updateStatus() {
+        if (navigator.onLine) {
+          status.textContent = 'Koneksi pulih — memuat ulang…';
+          btn.disabled = false;
+          // Auto-reload when connection comes back (small grace to avoid flapping)
+          setTimeout(function () { window.location.reload(); }, 600);
+        } else {
+          status.textContent = 'Memantau koneksi…';
+        }
+      }
+
+      btn.addEventListener('click', function () {
+        if (navigator.onLine) {
+          window.location.reload();
+        } else {
+          status.textContent = 'Masih offline. Periksa koneksi Anda.';
+          // Try a fetch to detect captive portals / DNS failures
+          fetch('.', { cache: 'no-store', mode: 'no-cors' })
+            .then(function () { window.location.reload(); })
+            .catch(function () {
+              status.textContent = 'Tidak dapat mencapai server. Coba lagi nanti.';
+            });
+        }
+      });
+
+      window.addEventListener('online', updateStatus);
+      window.addEventListener('offline', updateStatus);
+      updateStatus();
+    })();
+  </script>
+</body>
+</html>

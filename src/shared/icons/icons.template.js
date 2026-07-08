@@ -1,54 +1,9 @@
-// =============================================================================
-// icons.js — AlbEdu Shared Layer · Icon System (v7.0 ENTERPRISE)
-// =============================================================================
-// Enterprise-grade icon architecture with multi-layer caching, clone-based
-// rendering, and instant first paint via inline SVG sprite.
+// icons.js — AlbEdu icon system. Inline SVG sprite + cached-template renderer.
+// Modules are concatenated at build time by scripts/build_icons_bundle.py;
+// in dev they load as separate <script> tags via scripts/serve.mjs.
+// Lucide icons (ISC license — https://lucide.dev).
 //
-// ┌─────────────────────────────────────────────────────────────────────┐
-// │ ARCHITECTURE                                                        │
-// ├─────────────────────────────────────────────────────────────────────┤
-// │                                                                     │
-// │  [HTML parse begins]                                                │
-// │       ↓                                                             │
-// │  critical-css.js (sync, in <head>)                                  │
-// │       ↓ injects inline sprite (16 critical <symbol> elements)       │
-// │       ↓ injects critical CSS (shell paints)                         │
-// │                                                                     │
-// │  [First Paint — 0ms icon render via <use href="#i-...">]            │
-// │       ↓                                                             │
-// │  icons.js loads (this file, deferred)                               │
-// │       ↓ loads modules in dependency order:                          │
-// │       ↓   1. metrics.js    — performance observability              │
-// │       ↓   2. cache.js      — Layer 1: DocumentFragment cache        │
-// │       ↓   3. sprite.js     — inline SVG sprite manager              │
-// │       ↓   4. registry/critical.js   — 16 critical icon paths        │
-// │       ↓   5. registry/secondary.js  — 85 secondary icon paths       │
-// │       ↓   6. renderer.js   — cloneNode-based SVG renderer           │
-// │       ↓   7. loader.js     — requestIdleCallback preloader          │
-// │       ↓                                                             │
-// │  [Auto-init runs]                                                   │
-// │       ↓ bindIcons() — visible icons bound synchronously             │
-// │       ↓ MutationObserver — auto-binds dynamic content               │
-// │       ↓ IntersectionObserver — lazy-binds off-screen icons          │
-// │       ↓ requestIdleCallback — preloads secondary icons into cache   │
-// │                                                                     │
-// │  [User scrolls / dynamic content added]                             │
-// │       ↓ IntersectionObserver fires → bind on demand                 │
-// │       ↓ MutationObserver fires → bind new content                   │
-// │                                                                     │
-// │  [Page hide / bfcache]                                              │
-// │       ↓ pagehide → disconnect observers (prevent leaks)             │
-// │       ↓ pageshow(persisted) → re-init observers                     │
-// └─────────────────────────────────────────────────────────────────────┘
-//
-// Performance characteristics:
-//   First paint (critical icons):  ~0ms (inline sprite, <use> clone)
-//   First paint (visible icons):   ~5-15ms (sync bind)
-//   Repeat icon render:            ~0.005ms (cloneNode from cache)
-//   Cache hit rate (steady state): >95%
-//   Memory footprint:              ~50KB (256-entry LRU cache)
-//
-// Public API (preserved from v6.0 — backward compatible):
+// Public API (backward compatible):
 //   AlbEdu.icon(name, opts?)              → HTML string
 //   AlbEdu.setIcon(el, name, opts?)       → set icon on existing element
 //   AlbEdu.registerIcon(name, svgPath)    → register custom SVG icon
@@ -58,35 +13,25 @@
 //   AlbEdu.getMetrics()                   → performance metrics
 //   AlbEdu.resetMetrics()                 → reset metrics
 //   AlbEdu.addEventListener(event, cb)    → subscribe to events
-//
-// New v7.0 APIs:
 //   AlbEdu.preloadIcons(names?)           → preload icons into cache
 //   AlbEdu.preloadAll()                   → preload entire registry
-//   AlbEdu.ICONS_VERSION                  → '7.0.0-enterprise'
-//
-// License: ISC (Lucide icons — https://lucide.dev)
-// =============================================================================
+//   AlbEdu.ICONS_VERSION                  → version string
 
 (function () {
   'use strict';
 
-  // ── SSR safety ──────────────────────────────────────────────────────
   if (typeof document === 'undefined' || typeof window === 'undefined') {
     return;
   }
 
   if (!window.AlbEdu) window.AlbEdu = {};
-  // Guard: don't re-init if already loaded
   if (window.AlbEdu.__iconSystemV7) return;
   window.AlbEdu.__iconSystemV7 = true;
 
-  // NOTE: Module references (_metrics, _renderer, etc.) are captured
-  // AFTER the inlined modules below, because the modules populate
-  // window.AlbEdu.__iconXxx when they execute.
+  // Module refs (_metrics, _renderer, etc.) are captured AFTER the inlined
+  // modules below, because the modules populate window.AlbEdu.__iconXxx
+  // when they execute.
 
-  // ── Compute BASE_PATH for module loading ────────────────────────────
-  // Mirrors critical-css.js BASE_PATH logic. Required for subdirectory
-  // deployments (e.g. GitHub Pages /AlbEdu/).
   var _computeBasePath = function () {
     var p = window.location.pathname;
     var base = p.substring(0, p.lastIndexOf('/') + 1);
@@ -103,29 +48,11 @@
   var BASE_PATH = _computeBasePath();
   var MODULES_DIR = BASE_PATH + 'src/shared/icons/modules/';
 
-  // ── Module loading (in strict dependency order) ─────────────────────
-  // Each module attaches its API to window.AlbEdu.__iconXxx.
-  // We use synchronous script injection (document.write is forbidden in
-  // modern HTML, so we use createElement + .appendChild + .sync=false).
-  //
-  // For deferred scripts, the browser already executes them in order.
-  // We embed each module's source inline here so icons.js remains a
-  // SINGLE HTTP request (preserving the existing <script defer> pattern).
-  //
-  // The modules are concatenated at build time by scripts/build_icons_bundle.py.
-  // In development, the modules are loaded as separate <script> tags via
-  // the dev server (scripts/serve.mjs).
+  // === PLACEHOLDER:MODULES ===
 
-  // === BEGIN INLINE MODULES ===
-  // (These are inlined by the build script for production. In dev, they
-// === PLACEHOLDER:MODULES ===
-  // === END INLINE MODULES ===
-
-  // ── Capture module references (modules are now loaded) ──────────────
   var _metrics = window.AlbEdu.__iconMetrics;
   if (_metrics) _metrics.startInit();
 
-  // ── Wire up the renderer with the registries ────────────────────────
   var _renderer = window.AlbEdu.__iconRenderer;
   var _sprite = window.AlbEdu.__iconSprite;
   var _loader = window.AlbEdu.__iconLoader;
@@ -140,7 +67,6 @@
 
   // Build aliases for common alternative names (hyphenated, camelCase)
   var _aliases = Object.create(null);
-  // person-add → person_add, etc.
   Object.keys(_mergedRegistry).forEach(function (name) {
     var hyphen = name.replace(/_/g, '-');
     if (hyphen !== name) _aliases[hyphen] = name;
@@ -152,26 +78,23 @@
 
   if (_renderer) _renderer.setRegistry(_mergedRegistry, _aliases);
 
-  // ── Public API: icon(name, opts) → HTML string ──────────────────────
   function icon(name, opts) {
     return _renderer ? _renderer.render(name, opts || {}) : '';
   }
 
-  // ── Public API: setIcon(el, name, opts) ─────────────────────────────
   function setIcon(el, name, opts) {
     if (!_renderer || !el) return;
     _renderer.bindToElement(el, name, opts || {});
   }
 
-  // ── Public API: registerIcon(name, svgPath) ─────────────────────────
   function registerIcon(name, svgPath) {
     if (!name || typeof svgPath !== 'string') return false;
     try {
       var normalized = _renderer._normalizeName(name);
       _mergedRegistry[normalized] = svgPath;
-      // Re-wire the renderer with the updated registry
+      // Re-wire the renderer with the updated registry.
       _renderer.setRegistry(_mergedRegistry, _aliases);
-      // Invalidate both string cache (Layer 1a) and template cache (Layer 1b)
+      // Invalidate both string cache (Layer 1a) and template cache (Layer 1b).
       _renderer.clearCache();
       return true;
     } catch (err) {
@@ -180,7 +103,6 @@
     }
   }
 
-  // ── Public API: listIcons() → string[] ──────────────────────────────
   function listIcons() {
     var all = Object.keys(_mergedRegistry).concat(Object.keys(_aliases));
     var seen = Object.create(null);
@@ -194,12 +116,10 @@
     return result.sort();
   }
 
-  // ── Public API: hasIcon(name) → boolean ─────────────────────────────
   function hasIcon(name) {
     return _renderer ? _renderer.has(name) : false;
   }
 
-  // ── Public API: getMetrics() ────────────────────────────────────────
   function getMetrics() {
     if (!_metrics) return {};
     var snap = _metrics.snapshot();
@@ -221,12 +141,10 @@
     else if (_cache) _cache.clear();
   }
 
-  // ── Public API: addEventListener / on ───────────────────────────────
   function addEventListener(event, cb) {
     return _metrics ? _metrics.addEventListener(event, cb) : function () {};
   }
 
-  // ── Public API: preloadIcons(names?) — NEW v7.0 ─────────────────────
   function preloadIcons(names) {
     if (!_loader) return;
     if (!names) {
@@ -236,16 +154,12 @@
     }
   }
 
-  // ── Public API: preloadAll() — NEW v7.0 ─────────────────────────────
   function preloadAll() {
     if (_loader) _loader.preloadAll();
   }
 
-  // ════════════════════════════════════════════════════════════════════
-  // DOM BINDER — bind [data-albedu-icon] elements to actual SVGs
-  // ════════════════════════════════════════════════════════════════════
+  // DOM binder — bind [data-albedu-icon] elements to actual SVGs.
 
-  // ── Lazy binding via IntersectionObserver ───────────────────────────
   var _io = null;
 
   function _bindNode(node) {
@@ -312,18 +226,10 @@
       // display:none ancestor), bind immediately to be safe.
       var noLayout = rect.top === 0 && rect.bottom === 0 &&
                      rect.left === 0 && rect.right === 0;
-      // FIX: off-canvas chrome (mobile sidebar drawers, slide-in panels)
-      // uses `transform: translateX(...)` to sit outside the viewport
-      // while "closed". getBoundingClientRect() reflects that transform,
-      // so these nodes look exactly like real off-screen/below-the-fold
-      // content and get queued into the IntersectionObserver instead of
-      // binding now. The icon only renders once the drawer's open
-      // transition brings it into the observer's bounds — visibly late,
-      // mid-animation. These nodes are NOT "far away, maybe never seen"
-      // content; they're persistent UI the user is about to reveal via a
-      // toggle. Opt them out of lazy-binding via [data-icon-eager] on the
-      // drawer/nav container so they always render immediately, matching
-      // the drawer's actual open trigger instead of a viewport heuristic.
+      // Off-canvas chrome (drawer/panel that uses transform: translateX to hide)
+      // still reports a real rect via getBoundingClientRect(), so it looks like
+      // off-screen content and would be deferred. [data-icon-eager] opts out —
+      // these are persistent UI about to be revealed by a toggle, not lazy content.
       var isEager = !!node.closest('[data-icon-eager]');
       var inViewport = noLayout || isEager ||
                        (rect.top < window.innerHeight && rect.bottom > 0 &&
@@ -386,7 +292,7 @@
     return result;
   }
 
-  // ── Auto-bind dynamic content via MutationObserver ──────────────────
+  // Auto-bind dynamic content via MutationObserver.
   var _mo = null;
 
   function _setupMutationObserver() {
@@ -436,21 +342,19 @@
     _mo.observe(document.body, { childList: true, subtree: true });
   }
 
-  // ── Memory management: cleanup on pagehide ──────────────────────────
+  // Memory management: cleanup on pagehide.
   function _cleanup() {
     if (_io) { try { _io.disconnect(); } catch (_) {} _io = null; }
     if (_mo) { try { _mo.disconnect(); } catch (_) {} _mo = null; }
   }
 
-  // ── Auto-init ───────────────────────────────────────────────────────
   function _autoInit() {
     try {
       bindIcons(document);
       _setupMutationObserver();
 
       // Preload critical icons into renderer cache during idle time.
-      // This ensures setIcon() calls (e.g. mobile menu toggle) are
-      // instant cache hits instead of cache misses.
+      // setIcon() calls (for example, mobile menu toggle) then hit cache.
       if (_loader) {
         _loader.onIdle(function () {
           _loader.preloadCriticalSet();
@@ -463,22 +367,9 @@
     }
   }
 
-  // FIX: this file is loaded via <script defer>, and defer scripts are
-  // guaranteed by spec to run AFTER the HTML parser has finished — i.e.
-  // document.readyState is already 'interactive' by the time this line
-  // executes, essentially every time, on every browser. The
-  // `readyState === 'loading'` branch below is therefore dead code in
-  // practice, and every single page load fell through to
-  // requestIdleCallback(..., {timeout:1000}). That call does not run
-  // "soon" — it waits for a genuinely idle main thread, or forces
-  // execution once the timeout is hit. On a light page (few scripts)
-  // the thread goes idle almost immediately, so the delay was
-  // imperceptible. On heavier pages (auth checks, sidebar sync,
-  // profile/notification bootstrapping, Supabase calls all competing
-  // for the main thread) idle never came quickly, so icons visibly
-  // popped in late — worse the busier the page. Since the DOM is
-  // already parsed by the time a defer script runs, there is nothing
-  // to gain by waiting: bind immediately.
+  // Defer scripts run after the HTML parser finishes, so document.readyState
+  // is already 'interactive' here — bind immediately. The loading branch is
+  // a defensive fallback for non-deferred loads.
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _autoInit);
   } else {
@@ -490,9 +381,6 @@
     if (event.persisted) _autoInit();
   });
 
-  // ════════════════════════════════════════════════════════════════════
-  // PUBLIC SURFACE
-  // ════════════════════════════════════════════════════════════════════
   window.AlbEdu.icon = icon;
   window.AlbEdu.setIcon = setIcon;
   window.AlbEdu.registerIcon = registerIcon;
@@ -503,8 +391,7 @@
   window.AlbEdu.resetMetrics = resetMetrics;
   window.AlbEdu.addEventListener = addEventListener;
   window.AlbEdu.on = addEventListener;
-  // New v7.0 APIs
   window.AlbEdu.preloadIcons = preloadIcons;
   window.AlbEdu.preloadAll = preloadAll;
-  window.AlbEdu.ICONS_VERSION = '7.0.0-enterprise';
+  window.AlbEdu.ICONS_VERSION = '7.0.0';
 })();

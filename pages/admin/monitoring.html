@@ -5,7 +5,7 @@
 
   <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoring Real-time - AlbEdu</title>
+    <title>Monitoring Real-time — AlbEdu</title>
     <meta name="description" content="AlbEdu - Dashboard proctoring real-time untuk asesmen">
     <meta name="theme-color" content="#2563eb">
 
@@ -40,8 +40,9 @@
     <link rel="stylesheet" href="../../styles/skeleton-loading.css">
     <link rel="stylesheet" href="../../styles/navigasi.css">
     <link rel="stylesheet" href="../../styles/notification-panel.css">
-    <!-- v0.746.0 — Enterprise design system -->
+    
     <link rel="stylesheet" href="../../styles/albedu-v1.css"><!-- Fonts --><!-- Supabase SDK --><!-- Auth baseline -->
+    <link rel="stylesheet" href="../../styles/albedu-components.css">
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
     <script src="../../src/auth/errors.js" defer></script>
@@ -52,7 +53,7 @@
     <script src="../../src/utils/self-storage.js" defer></script><link rel="stylesheet" href="../../styles/pages/monitoring.css">
 </head>
 <body>
-    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
+    <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
 
     <div class="container">
         <!-- Sidebar (consistent with other admin pages) -->
@@ -153,9 +154,11 @@
                 <div class="mon-controls">
                     <div>
                         <label for="mon-assessment-select">Pilih Asesmen</label>
-                        <select id="mon-assessment-select" class="mon-select-assessment" aria-label="Pilih asesmen untuk monitoring">
-                            <option value="">— Pilih asesmen —</option>
-                        </select>
+                        <div class="albedu-select-wrap">
+                            <select id="mon-assessment-select" class="albedu-select mon-select-assessment" aria-label="Pilih asesmen untuk monitoring">
+                                <option value="">— Pilih asesmen —</option>
+                            </select>
+                        </div>
                     </div>
                     <div>
                         <label>&nbsp;</label>
@@ -239,13 +242,13 @@
 
             <footer class="footer">
                 <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
-                <p>v0.746.0</p>
+                <p>v0.816.0</p>
             </footer>
         </main>
     </div>
 
     <script type="module" src="../../src/theme-system/index.js"></script>
-<!-- Monitoring v0.746.0 page controller (NEW) -->
+<!-- Monitoring page controller -->
     <script src="../../src/pages/monitoring.js" defer></script>
 
     <!-- Notification Center -->

@@ -40,8 +40,9 @@
     <link rel="stylesheet" href="../../styles/skeleton-loading.css">
     <link rel="stylesheet" href="../../styles/navigasi.css">
     <link rel="stylesheet" href="../../styles/notification-panel.css">
-    <!-- v0.746.0 — Enterprise design system -->
+    
     <link rel="stylesheet" href="../../styles/albedu-v1.css">
+    <link rel="stylesheet" href="../../styles/albedu-components.css">
     <link rel="stylesheet" href="../../styles/profile.css"><!-- Fonts --><!-- Supabase SDK --><!-- Auth baseline -->
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
@@ -53,7 +54,7 @@
     <script src="../../src/utils/self-storage.js" defer></script>
 </head>
 <body>
-    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
+    <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
 
     <div class="container">
         <!-- Sidebar -->
@@ -214,7 +215,7 @@
             
             <footer class="footer">
                 <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
-                <p>v0.746.0</p>
+                <p>v0.816.0</p>
             </footer>
         </main>
     </div>
@@ -225,7 +226,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
 
-        // ── Fetch Admin UUID langsung dari Supabase ────────
+        // Fetch Admin UUID langsung dari Supabase
         async function _getAdminIdFromSupabase() {
             try {
                 var client = window.AlbEdu?.supabase?.client;
@@ -247,7 +248,7 @@
             }
         }
 
-        // ── Skeleton helpers ────────────────────────────────────────────────
+        // Skeleton helpers
         function _showSkeleton(id) {
             var el = document.getElementById(id);
             if (el) el.classList.remove('skeleton-hidden');
@@ -284,7 +285,7 @@
             }
         }
 
-        // ── Render profil dengan UUID real dari Supabase ────────────────────
+        // Render profil dengan UUID real dari Supabase
         async function _renderProfile(user, skipSupabaseFetch) {
             if (!user && skipSupabaseFetch !== false) return;
 
@@ -344,7 +345,7 @@
             _revealLastLogin(loginStr);
         }
 
-        // ── Listen ke auth-ready event ────────────────────────────────────────
+        // Listen ke auth-ready event
         document.addEventListener('auth-ready', function () {
             console.log('[Profile] auth-ready event fired');
             var userData = window.Auth?.userData;
@@ -365,14 +366,14 @@
             }
         }, 3000);
 
-        // ── Update tampilan setelah user simpan profil ────────────────────────
+        // Update tampilan setelah user simpan profil
         window.addEventListener('pep-saved', function (e) {
             console.log('[Profile] Profile saved, updating display');
             _renderProfile(e.detail, false);
         });
 
-        // ── Wire tombol edit ke ProfileEditorPanel ────────────────────────────
-        // NOTE: editor-panel.js is now lazy-loaded (see navigasi.js) instead
+        // Wire tombol edit ke ProfileEditorPanel
+        // editor-panel.js is now lazy-loaded (see navigasi.js) instead
         // of being fetched unconditionally on every admin page — it's only
         // pulled in on first real interaction. These buttons are one of
         // those interactions, so request it via the shared loader (which
@@ -407,7 +408,7 @@
         if (btnAvatar) btnAvatar.addEventListener('click', _openPanel);
     });
     </script>
-    <!-- v0.746.0 — Apply default theme on load (prevents FOUC) -->
+    <!-- Apply default theme on load (prevents FOUC) -->
     <script>
       (function () {
         try {

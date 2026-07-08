@@ -1,6 +1,6 @@
 # SECURITY — Anti-Cheat Architecture
 
-> AlbEdu v0.746.0 enterprise-grade anti-cheat: server-side scoring, heartbeat, DevTools detection, instant block.
+> AlbEdu v0.816.0 enterprise-grade anti-cheat: server-side scoring, heartbeat, DevTools detection, instant block.
 > Note: Guardian.js (`src/exam/guardian.js`) still exists — it's the client-side anti-cheat layer that complements server-side scoring.
 
 ---
@@ -18,7 +18,7 @@
 
 ### 1.2 Attack Vectors
 
-| # | Attack | v0.2.0 Vulnerability | v0.746.0 Mitigation |
+| # | Attack | v0.2.0 Vulnerability | v0.816.0 Mitigation |
 |---|---|---|---|
 | 1 | DevTools override `getHasil()` return 100 | Client-side scoring | Server-side scoring (Q5) — Edge Function re-scores independently |
 | 2 | Clear localStorage to re-take assessment | Submit lock in localStorage | Server-side check in `assessment_sessions` table + `submissions` table |
@@ -90,7 +90,7 @@
 - Visibility change tracking (800ms debounce → violation if hidden >800ms)
 - Max 4 violations → reset assessment + reshuffle
 
-**Added in v0.746.0:**
+**Added in v0.816.0:**
 - DevTools detector integration (see 3.2)
 - Block listener integration (see 3.4)
 - Heartbeat integration (see 3.3)
@@ -278,7 +278,7 @@ Service role key **never** exposed to client. Only in Edge Function environment.
 **Endpoints with Turnstile:**
 - `register-admin` — admin registration
 - `user-auth-preflight` — peserta login preflight
-- `access-code-attempt` — token entry (added v0.746.0)
+- `access-code-attempt` — token entry (added v0.816.0)
 
 **Verification:**
 ```typescript
@@ -354,11 +354,73 @@ if (!success) {
 - [x] IP anonymization after 90 days (Phase 1)
 - [x] Soft delete for users (Phase 1)
 - [x] Data export for DSR (Phase 2)
+- [x] verify_jwt=true for all authenticated Edge Functions (v0.816.0)
+- [x] RLS session-ownership check on rate_limit_heartbeats / rate_limit_submits / violation_events (v0.816.0)
+- [x] peran_user() filters deleted_at (v0.816.0)
+- [x] Cloudflare Worker /upload + /release locked to ALLOWED_ORIGINS + AUTH_TOKEN required (v0.816.0)
+- [x] Worker soft-archive replaces hard-delete (v0.816.0)
+- [x] Atomic submit_assessment() RPC (v0.816.0)
+- [x] Consent previousVersion XSS escaped (v0.816.0)
+- [x] PII leak fixed — auth/main.js no longer logs user.email (v0.816.0)
 - [ ] Camera proctoring (Phase 9)
 - [ ] Hardware attestation (Phase 9)
 - [ ] Screen recording detection (Phase 9)
 
 ---
 
+## v0.816.0 Security Hardening
+
+The v0.816.0 cycle closed a number of defense-in-depth gaps that were latent in v0.746.0. None were known to be exploited in production, but each represents a class of attack that the audit deemed unacceptable for an exam platform. This section documents the gaps and the specific fixes applied — read it before touching any RLS policy or Edge Function config.
+
+### RLS tightening — session ownership checks
+
+Three tables had policies that were too permissive for a multi-tenant exam platform. The original policies checked `user_id = auth.uid()` on the row being inserted, but did NOT verify that the `session_id` on the row actually belonged to `auth.uid()`. This meant a peserta could insert fake heartbeats, fake violation events, or fake rate-limit rows for ANOTHER peserta's session — enabling both DOS (plant rate-limit rows to block the victim's submit) and audit-log poisoning (plant violation events to make the victim look like a cheater).
+
+- `rate_limit_heartbeats` — was INSERT-any-authenticated. Now checks that the session being rate-limited belongs to `auth.uid()` via a join on `assessment_sessions`. The policy is `USING (EXISTS (SELECT 1 FROM assessment_sessions s WHERE s.id = session_id AND s.user_id = auth.uid()))`.
+- `rate_limit_submits` — same pattern, same fix. Prevents a peserta from inserting fake rate-limit rows for another peserta's session to DOS their submit.
+- `violation_events` — peserta INSERT was already restricted to `user_id = auth.uid()`, but the `session_id` field was not checked. Now requires `session_id` to belong to `auth.uid()`. Prevents planting fake violations on another peserta's session.
+
+### `peran_user()` deleted_at filter
+
+The `peran_user()` SECURITY DEFINER function was returning the role of soft-deleted users (`SELECT peran FROM users WHERE id = auth.uid()`). This meant a soft-deleted admin could still authenticate via a stale JWT (Supabase JWTs are valid for 1 hour by default) and read admin-only tables. The function now filters `WHERE deleted_at IS NULL`, so soft-deleted users get `NULL` (anonymous) privileges. The fix is in migration `20260708_021_v0815_7_stability_hardening.sql`.
+
+### `verify_jwt=true` for 8 Edge Functions
+
+Eight Edge Functions had `verify_jwt = false` in their `supabase/config.toml` entry. The functions still validated JWT in-code via `getUser()`, but the gateway-level check was missing defense-in-depth. A misconfigured CORS rule, a leaked service-role key, or a future refactor that removes the in-code `getUser()` call would have allowed anonymous invocation. Now `verify_jwt=true` for:
+
+- `heartbeat`
+- `submit-assessment`
+- `block-participant`
+- `assessment-lifecycle`
+- `cleanup-assessment`
+- `data-export`
+- `dsr-handler`
+- `user-auth-complete`
+
+Four functions remain `verify_jwt=false` because they are pre-auth or anonymous by design: `access-code-attempt` (token entry before session is established), `register-admin` (registration before user exists), `user-auth-preflight` (login preflight), and `health-check` (public uptime monitoring).
+
+### Cloudflare Worker CORS lock + AUTH_TOKEN required
+
+The Cloudflare Worker (`cloudflare-worker/worker-v6.js`) `/upload` and `/release` endpoints were accepting requests from any `Origin` header and treating `AUTH_TOKEN` as optional (the env var was read but its absence only logged a warning, did not block). For a worker that can write to R2 storage, this is unacceptable — an attacker could POST to `/upload` from any origin and fill the bucket with garbage, or call `/release` to delete assets. Now:
+
+- `Origin` header is checked against `ALLOWED_ORIGINS` (configured via env var, currently `albytehq.github.io`, `albedu-id.github.io`, `http://localhost:8765` for dev). Mismatched Origin → 403.
+- `AUTH_TOKEN` header is required. Missing or mismatched → 401. The token is a 32-char random string stored in Cloudflare Worker env vars (set via `wrangler secret put AUTH_TOKEN`).
+
+### Worker soft-archive replaces hard-delete
+
+The `/release` endpoint was hard-deleting R2 assets when an admin deleted an assessment (`DELETE FROM assets_manifest` + R2 `delete()`). For an exam platform, this is unacceptable — audit and forensic investigations often need to recover the original assessment images months after the fact (e.g. a peserta disputes a violation, or a school investigates a suspected cheating ring). Hard-delete destroys the evidence permanently.
+
+The endpoint now sets `deleted_at = NOW()` on the `assets_manifest` row (soft-archive) and leaves the R2 object in place. Permanent deletion is deferred to the existing 365-day retention pg_cron job, which runs daily and hard-deletes assets whose `deleted_at` is older than 365 days. This gives investigators a 1-year window to recover evidence.
+
+### PII leak fixed — `src/auth/main.js` no longer logs `user.email`
+
+`src/auth/main.js` had a leftover debug log statement: `console.log('[auth] signed in:', user.email)`. This ran on every sign-in. On shared devices (school computer lab), on screen-recorded sessions (remote proctoring), or on any browser with DevTools open, the email was visible in the console. The log statement has been removed. Debugging now goes through `AlbEdu.observability.log()` which redacts `email` to `email: <redacted>@<domain>`.
+
+### Consent `previousVersion` XSS escaped
+
+`src/security/consent.js` was rendering the `previousVersion` field of the user's prior consent record as raw `innerHTML` — the intent was to show "you previously agreed to v3.0.0 of the privacy policy". A tampered consent record (e.g. via direct DB write by a malicious admin, or via SQL injection elsewhere) with `previousVersion: '<img src=x onerror=alert(document.cookie)>'` would execute in the peserta's browser. Now uses `AlbEdu.sanitize.setText()` which sets `textContent` (no HTML parsing). The displayed text is identical for legitimate inputs.
+
+---
+
 **Document version:** 1.0.0
-**Last updated:** 2026-06-30
+**Last updated:** 2026-07-08

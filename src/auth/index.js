@@ -1,23 +1,9 @@
-// =============================================================================
-// src/auth/index.js — Public exports for auth feature (barrel)
-// =============================================================================
+// auth/index.js — barrel re-exports for the auth feature
 //
-// v2.0.0 restructure: Expanded to include all auth submodules.
-//
-// Re-exports:
-//   - constants.js     → AUTH_CONFIG, TIMING_CONFIG, RATE_LIMITS
-//   - errorMapper.js   → error message utilities
-//   - turnstile.js     → Cloudflare Turnstile utilities
-//   - preflight.js     → PreflightError + preflight flow
-//   - authFlow.js      → auth flow helpers
-//   - errors.js        → CompletionError (via window.CompletionError for classic scripts)
-//   - user-helpers.js  → buildAvatarUrl, escapeHTML, isProfileComplete, etc.
-//
-// main.js is loaded via classic <script> tag (not ESM) because it uses window globals
-// for backward compat with existing classic scripts.
-// =============================================================================
+// main.js stays as a classic <script> (uses window globals for back-compat
+// with older code that reads window.Auth directly). The other modules here
+// are ESM.
 
-// Existing ESM exports
 export { AUTH_CONFIG, TIMING_CONFIG, RATE_LIMITS } from './constants.js';
 export {
     ERROR_MESSAGES,
@@ -66,8 +52,7 @@ export {
     signInWithGoogle
 } from './authFlow.js';
 
-// v2.0.0: Re-export from extracted modules via window globals
-// (errors.js & user-helpers.js are classic scripts that expose to window)
+// errors.js and user-helpers.js are classic scripts that expose via window.
 export const CompletionErrorClass = window.CompletionError;
 export const AuthHelpers = window.AuthHelpers;
 export const Auth = window.Auth;

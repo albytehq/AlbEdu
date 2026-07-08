@@ -1,9 +1,6 @@
-// =============================================================================
-// theme-system/derive.js — Auto-derive color variants from primary color
-// =============================================================================
-// Input: hex color (e.g. "#2563eb")
+// theme-system/derive.js — auto-derive color variants from a primary color.
+// Input: hex color (for example "#2563eb")
 // Output: { primary, primary_hover, primary_muted, primary_ring, ...fixed colors }
-// =============================================================================
 
 function hexToRgb(hex) {
   const cleaned = hex.replace('#', '');

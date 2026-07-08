@@ -1,24 +1,7 @@
 #!/usr/bin/env python3
-"""
-validate_icon_treeshake.py — Tree-shaking validation for the v7.0 icon system.
-
-Verifies that:
-  1. Every icon in the registry is actually USED in the codebase (HTML + JS).
-  2. No unused icons are bundled into the production file.
-  3. The critical icon set covers all shell/navigation icons.
-  4. The bundle size is within acceptable limits.
-
-Reports:
-  - Total icons in registry
-  - Icons used in HTML (data-albedu-icon attributes)
-  - Icons used in JS (AlbEdu.icon() calls)
-  - Unused icons (in registry but not referenced anywhere)
-  - Missing icons (referenced but not in registry)
-  - Bundle size analysis
-
-Usage:
-  python3 scripts/validate_icon_treeshake.py
-"""
+# validate_icon_treeshake.py — Tree-shaking validation for the icon system.
+# Verifies registry icons are used, no unused icons bundled, critical set
+# covers shell/nav icons, and bundle size is within limits.
 import json
 import re
 import sys
@@ -122,9 +105,9 @@ def normalize_name(name):
     return s
 
 def main():
-    print('═' * 72)
-    print('AlbEdu Icon System v7.0 — Tree-Shaking Validation')
-    print('═' * 72)
+    print('-' * 72)
+    print('AlbEdu Icon System — Tree-Shaking Validation')
+    print('-' * 72)
 
     registry = load_registry()
     critical_set = load_critical_set()
@@ -141,51 +124,46 @@ def main():
     # Find missing icons (referenced but not in registry)
     missing = sorted(set(all_usage.keys()) - registry)
 
-    print(f'\n┌─ Registry')
-    print(f'│ Total icons in registry:    {len(registry)}')
-    print(f'│ Critical icons (sprite):    {len(critical_set)}')
-    print(f'│ Secondary icons (cached):   {len(registry) - len(critical_set)}')
-    print(f'└─')
+    print(f'\nRegistry')
+    print(f'  Total icons in registry:    {len(registry)}')
+    print(f'  Critical icons (sprite):    {len(critical_set)}')
+    print(f'  Secondary icons (cached):   {len(registry) - len(critical_set)}')
 
-    print(f'\n┌─ Usage')
-    print(f'│ Icons referenced in HTML:   {len(html_usage_norm)}')
-    print(f'│ Icons referenced in JS:     {len(js_usage_norm)}')
-    print(f'│ Total unique icons used:    {len(all_usage)}')
-    print(f'│ Total icon instances:       {sum(all_usage.values())}')
-    print(f'└─')
+    print(f'\nUsage')
+    print(f'  Icons referenced in HTML:   {len(html_usage_norm)}')
+    print(f'  Icons referenced in JS:     {len(js_usage_norm)}')
+    print(f'  Total unique icons used:    {len(all_usage)}')
+    print(f'  Total icon instances:       {sum(all_usage.values())}')
 
-    print(f'\n┌─ Tree-shaking analysis')
-    print(f'│ Unused icons (in registry, not referenced): {len(unused)}')
+    print(f'\nTree-shaking analysis')
+    print(f'  Unused icons (in registry, not referenced): {len(unused)}')
     if unused:
-        print(f'│   {", ".join(unused[:20])}{"..." if len(unused) > 20 else ""}')
-    print(f'│ Missing icons (referenced, not in registry): {len(missing)}')
+        print(f'    {", ".join(unused[:20])}{"..." if len(unused) > 20 else ""}')
+    print(f'  Missing icons (referenced, not in registry): {len(missing)}')
     if missing:
         for m in missing[:10]:
-            print(f'│   ✗ {m} (referenced {all_usage[m]}x)')
-    print(f'└─')
+            print(f'    ✗ {m} (referenced {all_usage[m]}x)')
 
     # Bundle size analysis
     bundle_size = ICONS_JS.stat().st_size
-    print(f'\n┌─ Bundle size')
-    print(f'│ icons.js (uncompressed):    {bundle_size / 1024:.1f} KB')
-    print(f'│ Estimated (Brotli):         ~{bundle_size / 1024 * 0.25:.1f} KB')
-    print(f'│ Icons per KB:               {len(registry) / (bundle_size / 1024):.1f}')
-    print(f'└─')
+    print(f'\nBundle size')
+    print(f'  icons.js (uncompressed):    {bundle_size / 1024:.1f} KB')
+    print(f'  Estimated (Brotli):         ~{bundle_size / 1024 * 0.25:.1f} KB')
+    print(f'  Icons per KB:               {len(registry) / (bundle_size / 1024):.1f}')
 
     # Critical icon coverage check
-    print(f'\n┌─ Critical icon coverage')
+    print(f'\nCritical icon coverage')
     shell_icons = {'menu', 'close', 'login', 'logout', 'person', 'person_add',
                    'manage_accounts', 'notifications', 'arrow_back', 'arrow_forward',
                    'chevron_right', 'chevron_left', 'search', 'home', 'language', 'refresh'}
     missing_critical = shell_icons - critical_set
     if missing_critical:
-        print(f'│ ✗ Missing critical icons: {", ".join(missing_critical)}')
+        print(f'  ✗ Missing critical icons: {", ".join(missing_critical)}')
     else:
-        print(f'│ ✓ All 16 shell/navigation icons are in critical set')
-    print(f'└─')
+        print(f'  ✓ All 16 shell/navigation icons are in critical set')
 
     # Validation result
-    print('\n' + '═' * 72)
+    print('\n' + '-' * 72)
     has_unused = len(unused) > 0
     has_missing = len(missing) > 0
     if has_missing:

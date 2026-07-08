@@ -1,31 +1,26 @@
 #!/usr/bin/env python3
-"""
-fix_page_heads.py — AlbEdu Phase 2 Boot Path Cleanup
-
-For every HTML page in the project, replace the duplicated per-page font loading
-+ per-page Supabase SDK loading + per-page Material Symbols loading with the
-shared head strategy:
-  - critical-css.js (synchronous, tiny)
-  - tokens.css (deferred)
-  - shared/head/fonts.js (single font strategy)
-  - shared/icons/icons.js (SVG icons, replaces Material Symbols font)
-  - platform/supabase-client.js (native Supabase, replaces shim)
-  - platform/repository.js (typed table access)
-  - security/sanitize.js (DOM sanitization)
-  - shared/boot.js (boot orchestrator)
-
-Strategy:
-  1. Compute the REL prefix from the page's location (root/pages/pages/admin).
-  2. Remove every <link rel=stylesheet href=...fonts.googleapis.com...> tag.
-  3. Remove every <link rel=preconnect href=...fonts.googleapis...> tag.
-  4. Remove the legacy <script src=...supabase-api.js...> tag (replaced by platform).
-  5. Replace the first <link rel=stylesheet href=tokens.css> tag with the shared
-     head block (critical-css + tokens + shared modules), preserving the REL prefix.
-  6. Change any remaining <script src=...supabase-js... defer> to async.
-  7. Leave page-specific CSS/JS alone.
-
-Also removes the legacy inline theme-FOUC script (now handled by critical-css.js).
-"""
+# fix_page_heads.py — replace per-page duplicated font loading, Supabase SDK
+# loading, and Material Symbols loading with the shared head strategy:
+#   - critical-css.js (synchronous, tiny)
+#   - tokens.css (deferred)
+#   - shared/head/fonts.js (single font strategy)
+#   - shared/icons/icons.js (SVG icons, replaces Material Symbols font)
+#   - platform/supabase-client.js (native Supabase, replaces shim)
+#   - platform/repository.js (typed table access)
+#   - security/sanitize.js (DOM sanitization)
+#   - shared/boot.js (boot orchestrator)
+#
+# Strategy:
+#   1. Compute the REL prefix from the page's location (root/pages/pages/admin).
+#   2. Remove every <link rel=stylesheet href=...fonts.googleapis.com...> tag.
+#   3. Remove every <link rel=preconnect href=...fonts.googleapis...> tag.
+#   4. Remove the legacy <script src=...supabase-api.js...> tag (replaced by platform).
+#   5. Replace the first <link rel=stylesheet href=tokens.css> tag with the shared
+#      head block (critical-css + tokens + shared modules), preserving the REL prefix.
+#   6. Change any remaining <script src=...supabase-js... defer> to async.
+#   7. Leave page-specific CSS/JS alone.
+#
+# Also removes the legacy inline theme-FOUC script (now handled by critical-css.js).
 
 import re
 import sys
@@ -54,13 +49,13 @@ def rel_prefix(page_path):
 
 # Build the shared head block (replaces the tokens.css line)
 def build_shared_head_block(rel):
-    return f'''    <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
+    return f'''    <!-- Critical CSS (synchronous, tiny — paints shell in first paint) -->
     <script src="{rel}src/shared/head/critical-css.js"></script>
 
-    <!-- ═══ Design tokens ═══ -->
+    <!-- Design tokens -->
     <link rel="stylesheet" href="{rel}styles/tokens.css">
 
-    <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
+    <!-- Deferred shared modules (run after parse, in order) -->
     <script defer src="{rel}src/shared/head/fonts.js"></script>
     <script defer src="{rel}src/shared/icons/icons.js"></script>
     <script defer src="{rel}src/platform/supabase-client.js"></script>

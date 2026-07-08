@@ -1,25 +1,23 @@
-// =============================================================================
-// UserAuthPortal.js — Unified Google + email/password login page behaviour
-// =============================================================================
+// user-auth-portal.js — unified Google + email/password login page behaviour
 //
-// Satu modul yang melayani KEDUA halaman auth:
-//   - index.html (landing page peserta)  → tombol #userLoginBtn / #userLoginBtn2
-//   - login.html (admin login page)      → tombol #userLoginBtn + form #emailLoginForm
+// Single module serving BOTH auth pages:
+//   - index.html (peserta landing) → #userLoginBtn / #userLoginBtn2
+//   - login.html (admin login)     → #userLoginBtn + #emailLoginForm
 //
-// FLOW (SAMA untuk admin & peserta — FIX BUG #1, #2, #3, #4):
-//   1. Klik "Masuk dengan Google"
+// Flow (same for admin & peserta):
+//   1. Click "Masuk dengan Google"
 //   2. waitForSupabaseReady()
-//   3. executePreflightFlow() — butuh container #userTurnstile + Turnstile token
-//      + DeviceFingerprint → simpan ke sessionStorage[albedu_user_auth_preflight]
+//   3. executePreflightFlow() — needs #userTurnstile container + Turnstile
+//      token + DeviceFingerprint → stored in sessionStorage under
+//      albedu_user_auth_preflight
 //   4. window.Auth.authLogin() → Google OAuth redirect
-//   5. onAuthStateChanged di auth.js → _syncUserDocument → _createUserDocViaServer
-//      (baca preflight → invoke Supabase Function user-auth-complete)
-//   6. Sukses → redirect ke dashboard sesuai role (admin/peserta)
-//      Gagal (CompletionError) → dispatch 'auth-completion-error' → reset UI
+//   5. onAuthStateChanged in auth/main.js → _syncUserDocument →
+//      _createUserDocViaServer (reads preflight → invokes user-auth-complete)
+//   6. Success → redirect to dashboard by role (admin/peserta)
+//      Failure (CompletionError) → dispatch 'auth-completion-error' → reset UI
 //
-// Email/password form (hanya di login.html) tetap didukung sebagai alternatif
-// admin login — TIDAK melalui preflight (langsung signInWithPassword).
-// =============================================================================
+// The email/password form (login.html only) bypasses preflight and goes
+// straight to signInWithPassword.
 
 import {
     getErrorMessage,
@@ -35,7 +33,6 @@ import {
 } from './index.js';
 import { prerenderTurnstile } from './turnstile.js';
 
-// ── Step labels untuk animasi Google button ──────────────────────────────────
 const AUTH_STEPS = {
     idle:       'Masuk dengan Google',
     loading:    'Memuat...',
@@ -46,34 +43,26 @@ const AUTH_STEPS = {
     failed:     'Gagal!',
 };
 
-// ── Element references (null-safe; halaman mungkin tidak punya semuanya) ─────
-// Tombol Google di index.html: #userLoginBtn (hero) + #userLoginBtn2 (CTA bottom)
-// Tombol Google di login.html: #userLoginBtn (single, biasanya dipakai ulang)
+// null-safe — pages may not have all of these elements
 const btn1     = document.getElementById('userLoginBtn');
 const btn1Text = document.getElementById('userLoginText');
 const btn2     = document.getElementById('userLoginBtn2');
 const btn2Text = document.getElementById('userLoginText2');
 
-// Form email/password (hanya di login.html)
 const form           = document.getElementById('emailLoginForm');
 const emailInput     = document.getElementById('email');
 const passwordInput  = document.getElementById('password');
 const emailButton    = document.getElementById('emailLoginBtn');
 const errorEl        = document.getElementById('errorMessage')
-    ?? document.getElementById('portalMessage');  // index.html pakai #portalMessage
+    ?? document.getElementById('portalMessage');  // index.html uses #portalMessage
 const card           = document.querySelector('.login-card');
 const yearEl         = document.getElementById('currentYear')
     ?? document.getElementById('footerYear');
 
 if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-// ── State ────────────────────────────────────────────────────────────────────
 let _authInProgress = false;
 let _dotTimer = null;
-
-// ===========================================================================
-// Helpers — Google button UI
-// ===========================================================================
 
 function getAllButtonTexts() {
     const texts = [];
@@ -168,10 +157,6 @@ function setAuthStep(step) {
     }
 }
 
-// ===========================================================================
-// Helpers — error display & email form
-// ===========================================================================
-
 function showError(message) {
     if (!errorEl) return;
     if (window.Security?.setText) {
@@ -216,12 +201,7 @@ function validateEmailLogin() {
     return '';
 }
 
-// ===========================================================================
-// Main Google auth handler — UNIFIED untuk admin & peserta
-// ===========================================================================
-
 async function handleGoogleLogin() {
-    // Double-click guard
     if (_authInProgress) return;
     _authInProgress = true;
 
@@ -229,18 +209,15 @@ async function handleGoogleLogin() {
 
     let preflightData;
     try {
-        // Step 1: Tunggu Supabase siap dulu — ini async, tidak boleh skip
         setAuthStep('loading');
         await waitForSupabaseReady();
 
-        // Step 2: Turnstile verification (visual feedback only)
         setAuthStep('turnstile');
         await new Promise(r => setTimeout(r, 300));
 
-        // Step 3: Preflight validation (Turnstile + device check) — WAJIB
-        // untuk SEMUA halaman (admin & peserta). FIX BUG #1: sebelumnya
-        // login.html skip preflight → _createUserDocViaServer throw error
-        // dan user di-signOut diam-diam tanpa pesan.
+        // Preflight is REQUIRED on every page (admin & peserta). Skipping
+        // it on login.html previously caused _createUserDocViaServer to
+        // throw and silently sign out the user with no message.
         setAuthStep('preflight');
         preflightData = await executePreflightFlow();
 
@@ -259,7 +236,6 @@ async function handleGoogleLogin() {
             backendCode: err instanceof PreflightError ? err.backendCode : err?.message,
         });
 
-        // Auto-reset setelah 3 detik agar user bisa baca pesan error
         setTimeout(() => {
             _authInProgress = false;
             setAuthStep('idle');
@@ -279,19 +255,15 @@ async function handleGoogleLogin() {
         return;
     }
 
-    // Step 4: Connecting to Google
     setAuthStep('connecting');
 
     try {
-        // auth.js pakai redirect mode — await ini resolve dengan null saat
-        // browser mulai redirect ke Google. Setelah kembali, onAuthStateChanged
-        // yang menangani sisanya. Kita TIDAK reset loading di sini; biarkan
-        // listener 'auth-ready' / 'auth-completion-error' yang reset.
+        // auth/main.js uses redirect mode — this resolves with null when
+        // the browser starts the Google redirect. After return,
+        // onAuthStateChanged handles the rest. We DON'T reset loading here;
+        // the 'auth-ready' / 'auth-completion-error' listener does it.
         await window.Auth.authLogin();
 
-        // Step 5: Sukses — set state success. auth.js akan handle redirect
-        // via onAuthStateChanged. Tombol tetap di state success sampai
-        // redirect selesai.
         setAuthStep('success');
     } catch (err) {
         setAuthStep('failed');
@@ -309,17 +281,12 @@ async function handleGoogleLogin() {
             showError(getErrorMessage(errorCode));
         }
 
-        // Auto-reset setelah 2.5 detik
         setTimeout(() => {
             _authInProgress = false;
             setAuthStep('idle');
         }, 2500);
     }
 }
-
-// ===========================================================================
-// Email/password form (hanya di login.html) — alternatif admin login
-// ===========================================================================
 
 form?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -347,7 +314,8 @@ form?.addEventListener('submit', async (event) => {
         });
 
         if (error) throw error;
-        // No manual redirect here. auth.js will receive the auth state change and route by role.
+        // No manual redirect here. auth/main.js will receive the auth state
+        // change and route by role.
     } catch (err) {
         window.UI?.hideAuthLoading?.();
         setEmailLoading(false);
@@ -364,16 +332,8 @@ form?.addEventListener('submit', async (event) => {
     }
 });
 
-// ===========================================================================
-// Event listeners — Google buttons (semua tombol Google pakai ID userLoginBtn*)
-// ===========================================================================
-
 btn1?.addEventListener('click', handleGoogleLogin);
 btn2?.addEventListener('click', handleGoogleLogin);
-
-// ===========================================================================
-// "Lupa Kata Sandi?" link — pre-fill email ke sessionStorage
-// ===========================================================================
 
 const forgotLink = document.getElementById('forgotPasswordLink');
 forgotLink?.addEventListener('click', () => {
@@ -385,24 +345,18 @@ forgotLink?.addEventListener('click', () => {
     }
 });
 
-// ===========================================================================
-// Completion error listener — FIX BUG #2
-// auth.js dispatches 'auth-completion-error' when user-auth-complete
-// returns an error (e.g. device_limit_reached, invalid_token).
+// auth/main.js dispatches 'auth-completion-error' when user-auth-complete
+// returns an error (device_limit_reached, invalid_token, etc).
 //
-// Sebelumnya hanya halaman peserta (index.html) yang dengarkan event ini.
-// Halaman admin (login.html) TIDAK punya listener → user di login.html nggak
-// lihat pesan error kalau CompletionError terjadi. Sekarang UserAuthPortal.js
-// (unified) dengarkan event ini di SEMUA halaman.
-// ===========================================================================
-
+// Previously only index.html (peserta) listened for this event. login.html
+// (admin) didn't, so admin users saw no error message on CompletionError.
+// This unified listener covers both.
 document.addEventListener('auth-completion-error', (e) => {
     const { backendCode, message } = e.detail || {};
 
     stopDotAnimation();
     setAuthStep('failed');
 
-    // message is already user-friendly (mapped by CompletionError in auth.js)
     showError(message || getErrorMessage(backendCode || 'unknown_error'));
 
     logAuthError({
@@ -411,31 +365,26 @@ document.addEventListener('auth-completion-error', (e) => {
         backendCode,
     });
 
-    // Auto-reset after 5s — give user time to read the specific error
     setTimeout(() => {
         _authInProgress = false;
         setAuthStep('idle');
     }, 5000);
 });
 
-// ===========================================================================
-// FIX BUG #3 — auth-ready listener dengan role null (sign-out akibat error)
-// Saat _handleAuthStateChange di auth.js signOut user karena CompletionError,
-// ia dispatch 'auth-ready' dengan role=null. Tanpa listener ini, tombol Google
-// tetap di state loading/connecting dan tidak pernah reset ke idle.
-// ===========================================================================
-
+// When _handleAuthStateChange in auth/main.js signOuts the user because of
+// a CompletionError, it dispatches 'auth-ready' with role=null. Without
+// this listener, the Google button stays in loading/connecting state and
+// never resets to idle.
 document.addEventListener('auth-ready', (e) => {
     const role = e.detail?.role;
     if (!role) {
-        // User di-signOut (baik karena error completion, email belum verifikasi,
-        // atau signOut manual). Reset UI Google button ke idle.
+        // User signed out (completion error, unverified email, or manual
+        // signOut). Reset the Google button to idle.
         stopDotAnimation();
         window.UI?.hideAuthLoading?.();
 
-        // Hanya reset kalau tidak sedang dalam redirect sukses (role=null bisa
-        // juga terjadi sesaat sebelum user=null di-handle — gunakan timer
-        // kecil agar tidak mengganggu success state.
+        // role=null can also fire momentarily before user=null is handled.
+        // Tiny delay so we don't interrupt a successful-redirect state.
         setTimeout(() => {
             if (_authInProgress) {
                 _authInProgress = false;
@@ -443,66 +392,56 @@ document.addEventListener('auth-ready', (e) => {
             }
         }, 100);
     } else {
-        // Role didapat → login sukses. Pastikan button di state success.
-        // Overlay tetap visible sampai redirect terjadi (1.8s delay) —
-        // biar user nggak lihat flash idle state sebelum pindah halaman.
+        // Role obtained → login succeeded. Keep the button in success state
+        // until the redirect happens (1.8s delay) so the user doesn't see
+        // a flash of idle before navigating away.
         stopDotAnimation();
         setAuthStep('success');
         _authInProgress = false;
     }
 });
 
-// ===========================================================================
-// OAuth CALLBACK DETECTION — Show loading overlay immediately on page load
-// when returning from Google OAuth.
+// OAuth CALLBACK DETECTION
 //
-// WHY: After Google OAuth redirect, the page reloads. The button is back in
-// idle state and there's NO UI feedback while _handleAuthStateChange runs.
+// After Google OAuth redirect, the page reloads. The button is back in idle
+// state and there's NO UI feedback while _handleAuthStateChange runs.
 // The user sees a static login page for ~50ms–8s (depending on network and
-// whether the user row already exists) before being redirected. To them,
-// this looks like "pilih akun Google, terus gak terjadi apa-apa".
+// whether the user row already exists) before being redirected — looks like
+// "pilih akun Google, terus gak terjadi apa-apa".
 //
-// FIX: Detect OAuth callback params in the URL (?code= for PKCE flow) and
-// show the auth loading overlay IMMEDIATELY on page load. The overlay stays
-// visible until either:
-//   - 'auth-ready' fires with a role → redirect happens (overlay auto-hides
-//     via UI.afterLogin / UI.hideAuthLoading)
+// Detect OAuth callback params in the URL (?code= for PKCE flow) and show
+// the auth loading overlay IMMEDIATELY on page load. Overlay stays visible
+// until:
+//   - 'auth-ready' fires with a role → redirect (overlay auto-hides via
+//     UI.afterLogin / UI.hideAuthLoading)
 //   - 'auth-completion-error' fires → showError + reset UI (listener above
 //     already calls window.UI?.hideAuthLoading?.())
 //   - 30s safety net fires → show timeout error so user isn't stuck forever
-// ===========================================================================
-
 (function _detectOAuthCallback() {
     try {
         // Supabase PKCE flow appends ?code=... to the redirect URL.
         // detectSessionInUrl: true (in supabase-client.js) will consume this
-        // and strip it from the URL after exchanging for a session, but there
-        // is a window of time where the param is still visible.
+        // and strip it after exchanging for a session, but there's a window
+        // where the param is still visible.
         //
-        // Also handle error_description= which Supabase appends when the
-        // OAuth exchange fails (e.g. redirect URL mismatch, denied consent).
+        // error_description= is what Supabase appends when the OAuth exchange
+        // itself fails (redirect URL mismatch, denied consent, etc.).
         const url = window.location.href;
         const hasOAuthCode = url.includes('code=') || url.includes('error_description=');
 
         if (!hasOAuthCode) return;
 
-        // Mark that we're in a post-OAuth state so the safety net can clean up.
         _authInProgress = true;
 
-        // Show the auth loading overlay immediately. The text tells the
-        // user exactly what's happening so they don't think the page is
-        // broken.
         window.UI?.showAuthLoading?.('Menyelesaikan login Google...');
 
-        // Also put the Google button into the "connecting" state so the
-        // button itself reflects what's happening (in case the overlay
-        // is slow to render or the user looks at the button).
+        // Also put the Google button into "connecting" state in case the
+        // overlay is slow to render or the user looks at the button.
         setAuthStep('connecting');
 
-        // Safety net: if for some reason auth-ready never fires within
-        // 30 seconds (e.g. Supabase config fetch failed, network died,
-        // Edge Function hung), hide the overlay and show an error so the
-        // user isn't stuck staring at a spinner forever.
+        // Safety net: if auth-ready never fires within 30s (Supabase config
+        // fetch failed, network died, Edge Function hung), hide the overlay
+        // and show an error so the user isn't stuck staring at a spinner.
         setTimeout(() => {
             if (_authInProgress) {
                 _authInProgress = false;
@@ -517,30 +456,21 @@ document.addEventListener('auth-ready', (e) => {
     }
 })();
 
-// ===========================================================================
-// Pre-warm Turnstile — render widget as soon as page is interactive so the
-// challenge runs in the BACKGROUND. By the time user clicks "Masuk dengan
-// Google", the token is already cached and ready — no on-demand delay.
+// Pre-warm Turnstile: render the widget as soon as the page is interactive
+// so the challenge runs in the BACKGROUND. By the time the user clicks
+// "Masuk dengan Google", the token is already cached — no on-demand delay.
 //
-// Critical for peserta (exam participants) on slow networks where Cloudflare
-// PAT DNS resolution can take 5-15 seconds. Pre-warming hides this latency
-// behind the user's reading time.
+// Critical for peserta on slow networks where Cloudflare PAT DNS resolution
+// can take 5-15s. Pre-warming hides this latency behind the user's reading
+// time.
 //
 // Silent fail: if Turnstile script hasn't loaded yet, prerenderTurnstile()
-// will retry internally. If pre-warm fails entirely, getFreshTurnstileToken()
-// will retry on click — pre-warm is best-effort, not required.
-// ===========================================================================
-
-// Use requestIdleCallback if available — don't compete with initial page render.
-// Fallback to setTimeout(0) on browsers without rIC.
+// retries internally. If pre-warm fails entirely, getFreshTurnstileToken()
+// retries on click — pre-warm is best-effort, not required.
 const _startPrewarm = () => {
     try {
-        prerenderTurnstile().catch(() => {
-            // Silent fail — pre-warm is best-effort.
-        });
-    } catch (_) {
-        // Silent fail.
-    }
+        prerenderTurnstile().catch(() => {});
+    } catch (_) {}
 };
 
 if ('requestIdleCallback' in window) {
@@ -548,4 +478,3 @@ if ('requestIdleCallback' in window) {
 } else {
     setTimeout(_startPrewarm, 500);
 }
-

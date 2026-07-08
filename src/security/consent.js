@@ -1,28 +1,9 @@
-// =============================================================================
-// security/consent.js — UU PDP Consent Gate (v1.1.0)
-// =============================================================================
-// Checks if peserta has given consent. If not, shows consent popup.
-// Records consent to `consents` table via the native Supabase platform layer
-// (window.AlbEdu.supabase.client).
-// Blocks access to assessment until consent given.
+// security/consent.js — UU PDP consent gate
 //
-// v2.0.0 (Phase 3 refactor): Migrated from window.AlbEdu?.supabase?.client / window.firebaseAuth
-//   to window.AlbEdu.supabase.{client,auth}. This file is now Supabase-native
-//   — no Firebase shim references. The auth-shim global is gone, replaced
-//   by AlbEdu.supabase.auth.currentUser.
-//
-// v1.1.0 (v0.742.5): Originally rewrote to use window.AlbEdu?.supabase?.client (Supabase native) directly.
-//   Previous v1.0.0 used Firebase Firestore API via the compat shim.
-//
-// Edge cases handled:
-//   - First login (no consent) → show popup
-//   - Consent already given → skip
-//   - Policy version change → re-consent required
-//   - Network error → show popup anyway (fail-safe)
-//   - User not logged in → skip (auth will handle redirect)
-//   - "Tidak Setuju" → logout
-//   - Refresh during consent → re-show
-// =============================================================================
+// Checks if peserta has given consent. If not, shows the consent popup.
+// Records consent to the `consents` table via the native Supabase platform
+// layer (window.AlbEdu.supabase.client). Blocks access to assessment until
+// consent is given.
 
 (function () {
   'use strict';
@@ -32,7 +13,6 @@
 
   const Consent = {
     async check() {
-      // Wait for auth
       if (!window.AlbEdu?.supabase?.auth?.currentUser) {
         // Not logged in — let auth flow handle redirect
         console.info('[consent] User not logged in, skipping consent');
@@ -48,10 +28,9 @@
       const user = window.AlbEdu.supabase.auth.currentUser;
 
       try {
-        // Check existing consent.
-        // v1.1.0: use .is('revoked_at', null) instead of .eq(..., null).
-        // PostgREST requires .is() for NULL comparisons — .eq(col, null)
-        // produces ?col=eq.null which is the string "null", not SQL NULL.
+        // .is('revoked_at', null) is required for NULL comparisons.
+        // .eq(col, null) produces ?col=eq.null which is the string "null",
+        // not SQL NULL — the query silently returns zero rows.
         const { data, error } = await sb
           .from('consents')
           .select('*')
@@ -65,19 +44,16 @@
         if (error) throw new Error(`[consent] query failed: ${error.message}`);
 
         if (!data || data.length === 0) {
-          // No consent — show popup
           console.info('[consent] No consent found, showing popup');
           return this._showPopup();
         }
 
         const latest = data[0];
-        // Check version — re-consent if policy updated
         if (latest.version !== POLICY_VERSION) {
           console.info(`[consent] Policy updated (${latest.version} → ${POLICY_VERSION}), re-consent required`);
           return this._showPopup(latest.version);
         }
 
-        // Consent valid — update user's consent_at if null
         console.info('[consent] Consent valid, allowing access');
         await this._syncConsentAt(user.id);
         return true;
@@ -92,7 +68,6 @@
         const sb = window.AlbEdu?.supabase?.client;
         if (!sb) return;
         // Update users.consent_at + consent_version.
-        // Using .eq('id', userId) + .select() to confirm the row was touched.
         const { error } = await sb
           .from('users')
           .update({
@@ -111,7 +86,6 @@
     _showPopup(previousVersion = null) {
       return new Promise((resolve) => {
         const t = (key, params) => key;
-        // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'consent-overlay';
         overlay.style.cssText = `
@@ -133,8 +107,14 @@
           transform: translateY(10px); transition: transform 200ms ease;
         `;
 
-        const versionNote = previousVersion
-          ? `<p style="font-size: 13px; color: var(--albedu-warning, #f59e0b); margin: 8px 0 16px; padding: 8px 12px; background: #fffbeb; border-radius: 6px;">⚠ Kebijakan Privasi telah diperbarui (v${previousVersion} → v${POLICY_VERSION}). Mohon setujui kembali.</p>`
+        // Escape previousVersion before interpolation — it comes from the DB
+        // and could contain markup if the policy_versions table is ever
+        // tampered.
+        const safePrev = String(previousVersion || '').replace(/[&<>"']/g, (c) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[c]));
+        const versionNote = safePrev
+          ? `<p style="font-size: 13px; color: var(--albedu-warning, #f59e0b); margin: 8px 0 16px; padding: 8px 12px; background: #fffbeb; border-radius: 6px;">⚠ Kebijakan Privasi telah diperbarui (v${safePrev} → v${POLICY_VERSION}). Mohon setujui kembali.</p>`
           : '';
 
         dialog.innerHTML = `
@@ -175,13 +155,11 @@
         overlay.appendChild(dialog);
         document.body.appendChild(overlay);
 
-        // Animate in
         requestAnimationFrame(() => {
           overlay.style.opacity = '1';
           dialog.style.transform = 'translateY(0)';
         });
 
-        // Wire buttons
         const acceptBtn = dialog.querySelector('#consent-accept');
         const rejectBtn = dialog.querySelector('#consent-reject');
 
@@ -204,11 +182,10 @@
           rejectBtn.disabled = true;
           rejectBtn.textContent = 'Logout...';
           this._close(overlay, dialog);
-          // Logout
           if (window.Auth?.authLogout) {
             window.Auth.authLogout({ skipConfirm: true });
           } else {
-            // Fallback: redirect to login (v0.742.3+ login page is at /pages/login.html)
+            // Fallback redirect to login (login page is at /pages/login.html)
             const basePath = window.Auth?.getBasePath?.() || '/';
             window.location.href = basePath + 'pages/login.html';
           }
@@ -225,9 +202,9 @@
       const ip = await this._getClientIP();
       const userAgent = navigator.userAgent;
 
-      // v1.1.0: Insert consent record via native Supabase .insert().
-      // Previous v1.0.0 used db.collection('consents').add() — the Firestore
-      // shim never implemented .add(), so this threw
+      // Native Supabase .insert(). The legacy Firebase-shaped code used
+      // db.collection('consents').add() — the Firestore shim never
+      // implemented .add(), so this threw
       // "db.collection(...).add is not a function".
       const { error: insertError } = await sb
         .from('consents')
@@ -245,7 +222,6 @@
         throw new Error(`[consent] insert failed: ${insertError.message}`);
       }
 
-      // Update user's consent_at + consent_version
       const { error: updateError } = await sb
         .from('users')
         .update({
@@ -262,12 +238,18 @@
     },
 
     async _getClientIP() {
+      // 5s timeout — ipify should respond in <500ms. If it doesn't, the
+      // consent dialog would otherwise hang on "Menyimpan..." forever.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
       try {
-        const res = await fetch('https://api.ipify.org?format=json');
+        const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
         const data = await res.json();
         return data.ip || 'unknown';
       } catch {
         return 'unknown';
+      } finally {
+        clearTimeout(timer);
       }
     },
 

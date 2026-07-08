@@ -17,24 +17,27 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.submit-assessment]
-verify_jwt = false
+verify_jwt = true
 
 [functions.heartbeat]
-verify_jwt = false
+verify_jwt = true
 
 [functions.block-participant]
-verify_jwt = false
+verify_jwt = true
 
 [functions.assessment-lifecycle]
-verify_jwt = false
+verify_jwt = true
 
 [functions.cleanup-assessment]
-verify_jwt = false
+verify_jwt = true
 
 [functions.data-export]
-verify_jwt = false
+verify_jwt = true
 
 [functions.dsr-handler]
+verify_jwt = true
+
+[functions.health-check]
 verify_jwt = false
 
 [api]

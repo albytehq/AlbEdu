@@ -1,10 +1,7 @@
-// =============================================================================
-// assessment-lifecycle/index.ts — Start/pause/resume/finish assessment
-// =============================================================================
+// assessment-lifecycle/index.ts — Start / pause / resume / finish assessment.
 // POST /functions/v1/assessment-lifecycle
 // Headers: Authorization: Bearer <admin_token>
 // Body: { assessment_id: string, action: 'start'|'pause'|'resume'|'finish' }
-// =============================================================================
 
 import { handler } from '../_shared/cors.ts';
 import { HTTPError, successResponse } from '../_shared/error.ts';
@@ -48,7 +45,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
 
   const db = new SupabaseDB(env);
 
-  // Fetch assessment (with lock-like behavior via conditional update)
+  // Fetch assessment (with lock-like behavior via conditional update).
   const assessment = await db.selectOne<Assessment>(
     'assessments',
     `id,access_code,duration_minutes,access_mode,ac_manual_status,ac_end,ac_remaining_time,ac_scheduled_start,ac_scheduled_end,status&id=eq.${body.assessment_id}`
@@ -69,7 +66,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
 
   switch (action) {
     case 'start': {
-      // Validate: must be closed (not running, not paused)
+      // Must be closed (not running, not paused).
       if (assessment.ac_manual_status === 'open') {
         throw new HTTPError(409, 'CONFLICT', 'Assessment is already running');
       }
@@ -93,7 +90,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     }
 
     case 'pause': {
-      // Validate: must be running (open + ac_end in future)
+      // Must be running (open + ac_end in future).
       if (assessment.ac_manual_status !== 'open') {
         throw new HTTPError(409, 'CONFLICT', 'Assessment is not running');
       }
@@ -125,7 +122,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     }
 
     case 'resume': {
-      // Validate: must be paused (closed + has remaining_time)
+      // Must be paused (closed + has remaining_time).
       if (assessment.ac_manual_status !== 'closed') {
         throw new HTTPError(409, 'CONFLICT', 'Assessment is not paused');
       }
@@ -145,9 +142,9 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     }
 
     case 'finish': {
-      // Validate: must be running or paused
+      // Must be running or paused.
       if (assessment.ac_manual_status === 'finished') {
-        // Idempotent
+        // Idempotent.
         return successResponse({
           assessment_id: body.assessment_id,
           status: 'finished',
@@ -165,7 +162,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     }
   }
 
-  // Atomic conditional update — prevents race condition between 2 admins
+  // Atomic conditional update — prevents race condition between 2 admins.
   const expectedStatus = assessment.ac_manual_status;
   const { updated } = await db.updateIf(
     'assessments',
@@ -174,11 +171,11 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
   );
 
   if (updated === 0) {
-    // Status changed mid-request (race condition)
+    // Status changed mid-request (race condition).
     throw new HTTPError(409, 'CONFLICT', 'Assessment state changed. Refresh and try again.');
   }
 
-  // Audit log
+  // Audit log.
   logAudit(env, {
     action: auditAction,
     targetType: 'assessment',

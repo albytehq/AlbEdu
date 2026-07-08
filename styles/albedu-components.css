@@ -1,0 +1,834 @@
+/* albedu-components.css — AlbEdu Enterprise UI Component System
+ *
+ * Subtle enterprise aesthetic. 6px radius for inputs/buttons, 8px for
+ * cards. No bouncy animations. No Chrome-default dropdowns. Every
+ * interactive element hits 44×44px minimum touch target on mobile.
+ *
+ * Token-driven — flips automatically in dark mode via tokens.css.
+ *
+ * Load AFTER tokens.css and albedu-v1.css.
+ */
+
+/* =====================================================================
+   1. Spinner — .albedu-spinner
+   Previously referenced but undefined. Three sizes, token-driven.
+   ===================================================================== */
+.albedu-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--albedu-border, #e2e8f0);
+  border-top-color: var(--albedu-primary, #2563eb);
+  border-radius: 50%;
+  animation: albedu-spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+.albedu-spinner--sm { width: 14px; height: 14px; border-width: 1.5px; }
+.albedu-spinner--lg { width: 32px; height: 32px; border-width: 3px; }
+.albedu-spinner--on-primary {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+}
+@keyframes albedu-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .albedu-spinner { animation-duration: 1.5s; }
+}
+
+/* =====================================================================
+   2. Skeleton — .albedu-skeleton, .albedu-skeleton-line, .albedu-skeleton-block
+   Shimmer placeholder for loading content.
+   ===================================================================== */
+.albedu-skeleton {
+  background: var(--albedu-surface-alt, #f8fafc);
+  border-radius: var(--albedu-radius-sm, 6px);
+  position: relative;
+  overflow: hidden;
+}
+.albedu-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(148, 163, 184, 0.15) 50%,
+    transparent 100%
+  );
+  animation: albedu-shimmer 1.6s ease-in-out infinite;
+}
+.albedu-skeleton-line {
+  display: block;
+  height: 12px;
+  margin-bottom: 8px;
+  border-radius: var(--albedu-radius-sm, 6px);
+}
+.albedu-skeleton-line:last-child { margin-bottom: 0; }
+.albedu-skeleton-line--w30 { width: 30%; }
+.albedu-skeleton-line--w50 { width: 50%; }
+.albedu-skeleton-line--w70 { width: 70%; }
+.albedu-skeleton-line--w90 { width: 90%; }
+.albedu-skeleton-block {
+  width: 100%;
+  height: 80px;
+  border-radius: var(--albedu-radius, 8px);
+}
+.albedu-skeleton--circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+@keyframes albedu-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .albedu-skeleton::after { animation: none; opacity: 0.5; }
+}
+
+/* =====================================================================
+   3. Modal — .albedu-modal, .albedu-modal-overlay, .albedu-modal-* variants
+   Previously referenced in create-assessment.html but undefined. All
+   styling was inline. Now token-driven.
+   ===================================================================== */
+.albedu-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--albedu-z-overlay, 8999);
+  padding: 16px;
+  opacity: 0;
+  transition: opacity var(--albedu-transition, 150ms);
+}
+.albedu-modal-overlay.albedu-modal-visible {
+  opacity: 1;
+}
+.albedu-modal {
+  background: var(--albedu-surface, #fff);
+  border: 1px solid var(--albedu-border, #e2e8f0);
+  border-radius: var(--albedu-radius-lg, 8px);
+  box-shadow: var(--albedu-shadow-modal, 0 24px 64px rgba(15, 23, 42, .16));
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(8px) scale(0.98);
+  transition: transform var(--albedu-transition, 150ms);
+}
+.albedu-modal-overlay.albedu-modal-visible .albedu-modal {
+  transform: translateY(0) scale(1);
+}
+.albedu-modal--sm { max-width: 400px; }
+.albedu-modal--lg { max-width: 720px; }
+.albedu-modal--xl { max-width: 960px; }
+
+.albedu-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--albedu-border, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.albedu-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--albedu-heading, #0f172a);
+  margin: 0;
+}
+.albedu-modal-subtitle {
+  font-size: 13px;
+  color: var(--albedu-body, #475569);
+  margin: 4px 0 0;
+}
+.albedu-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+.albedu-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--albedu-border, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .albedu-modal-overlay { padding: 0; align-items: flex-end; }
+  .albedu-modal {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: var(--albedu-radius-lg, 8px) var(--albedu-radius-lg, 8px) 0 0;
+    transform: translateY(100%);
+  }
+  .albedu-modal-overlay.albedu-modal-visible .albedu-modal {
+    transform: translateY(0);
+  }
+}
+
+/* =====================================================================
+   4. Form Controls — Input, Select, Textarea validation states
+   Base classes exist in albedu-v1.css; these add validation states
+   and ensure 44px touch target on mobile.
+   ===================================================================== */
+
+/* Ensure all form controls hit 44px touch target on mobile */
+@media (max-width: 768px) {
+  .albedu-input,
+  .albedu-select,
+  .albedu-textarea,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  select,
+  textarea {
+    min-height: 44px;
+  }
+  textarea { min-height: 88px; }
+}
+
+/* Validation states — apply to .albedu-input / .albedu-select / .albedu-textarea */
+.albedu-input--error,
+.albedu-select--error,
+.albedu-textarea--error {
+  border-color: var(--albedu-danger, #ef4444) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+}
+.albedu-input--success,
+.albedu-select--success,
+.albedu-textarea--success {
+  border-color: var(--albedu-success, #10b981) !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12) !important;
+}
+.albedu-input:disabled,
+.albedu-select:disabled,
+.albedu-textarea:disabled {
+  background: var(--albedu-surface-alt, #f8fafc);
+  color: var(--albedu-body, #475569);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* =====================================================================
+   5. Custom Select (.albedu-select wrapper)
+   Hides Chrome default arrow, adds custom chevron. Native <select>
+   stays underneath for accessibility + mobile native picker.
+   ===================================================================== */
+.albedu-select-wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+.albedu-select-wrap .albedu-select,
+.albedu-select-wrap select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+  padding-right: 36px;
+  background-color: var(--albedu-surface, #fff);
+  border: 1px solid var(--albedu-border, #e2e8f0);
+  border-radius: var(--albedu-radius-sm, 6px);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--albedu-heading, #0f172a);
+  line-height: 1.4;
+  min-height: 44px;
+  transition: border-color var(--albedu-transition, 150ms),
+              box-shadow var(--albedu-transition, 150ms);
+  cursor: pointer;
+}
+.albedu-select-wrap .albedu-select:focus,
+.albedu-select-wrap select:focus {
+  outline: none;
+  border-color: var(--albedu-primary, #2563eb);
+  box-shadow: 0 0 0 3px var(--albedu-primary-ring, rgba(37, 99, 235, 0.2));
+}
+.albedu-select-wrap .albedu-select:disabled,
+.albedu-select-wrap select:disabled {
+  background: var(--albedu-surface-alt, #f8fafc);
+  color: var(--albedu-body, #475569);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.albedu-select-wrap::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid var(--albedu-body, #475569);
+  border-bottom: 1.5px solid var(--albedu-body, #475569);
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+  transition: transform var(--albedu-transition, 150ms);
+}
+.albedu-select-wrap select:disabled + ::after,
+.albedu-select-wrap:has(select:disabled)::after {
+  opacity: 0.4;
+}
+
+/* =====================================================================
+   6. Checkbox & Radio — custom styled, 44px hit area
+   ===================================================================== */
+.albedu-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--albedu-border, #e2e8f0);
+  border-radius: 4px;
+  background: var(--albedu-surface, #fff);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background var(--albedu-transition, 150ms),
+              border-color var(--albedu-transition, 150ms);
+  vertical-align: middle;
+  margin: 0;
+}
+.albedu-checkbox:checked {
+  background: var(--albedu-primary, #2563eb);
+  border-color: var(--albedu-primary, #2563eb);
+}
+.albedu-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.albedu-checkbox:focus-visible {
+  outline: 2px solid var(--albedu-primary, #2563eb);
+  outline-offset: 2px;
+}
+/* Hit area: 44px on mobile */
+@media (max-width: 768px) {
+  .albedu-checkbox {
+    width: 22px;
+    height: 22px;
+  }
+  label:has(> .albedu-checkbox),
+  .albedu-checkbox + label {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+.albedu-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--albedu-border, #e2e8f0);
+  border-radius: 50%;
+  background: var(--albedu-surface, #fff);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: border-color var(--albedu-transition, 150ms);
+  vertical-align: middle;
+  margin: 0;
+}
+.albedu-radio:checked {
+  border-color: var(--albedu-primary, #2563eb);
+}
+.albedu-radio:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--albedu-primary, #2563eb);
+}
+.albedu-radio:focus-visible {
+  outline: 2px solid var(--albedu-primary, #2563eb);
+  outline-offset: 2px;
+}
+
+/* =====================================================================
+   7. Alert / Info-box — .albedu-alert
+   For "Peserta gunakan Google" type messaging on auth pages.
+   ===================================================================== */
+.albedu-alert {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--albedu-radius, 8px);
+  border: 1px solid var(--albedu-border, #e2e8f0);
+  background: var(--albedu-surface-alt, #f8fafc);
+  color: var(--albedu-body, #475569);
+  font-size: 13px;
+  line-height: 1.5;
+  align-items: flex-start;
+}
+.albedu-alert__icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--albedu-primary, #2563eb);
+}
+.albedu-alert__title {
+  font-weight: 600;
+  color: var(--albedu-heading, #0f172a);
+  margin-bottom: 2px;
+  font-size: 13px;
+}
+.albedu-alert__body { flex: 1; }
+.albedu-alert__body p { margin: 0; }
+.albedu-alert__body p + p { margin-top: 4px; }
+.albedu-alert--info {
+  background: var(--albedu-primary-muted, #eff6ff);
+  border-color: rgba(37, 99, 235, 0.2);
+}
+.albedu-alert--warning {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.albedu-alert--warning .albedu-alert__icon { color: var(--albedu-warning, #f59e0b); }
+.albedu-alert--success {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+.albedu-alert--success .albedu-alert__icon { color: var(--albedu-success, #10b981); }
+.albedu-alert--danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+.albedu-alert--danger .albedu-alert__icon { color: var(--albedu-danger, #ef4444); }
+
+/* =====================================================================
+   8. Badge — .albedu-badge
+   Small status pill.
+   ===================================================================== */
+.albedu-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: var(--albedu-surface-alt, #f8fafc);
+  color: var(--albedu-body, #475569);
+  border: 1px solid var(--albedu-border, #e2e8f0);
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+.albedu-badge--primary {
+  background: var(--albedu-primary-muted, #eff6ff);
+  color: var(--albedu-primary, #2563eb);
+  border-color: transparent;
+}
+.albedu-badge--success {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--albedu-success, #10b981);
+  border-color: transparent;
+}
+.albedu-badge--warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--albedu-warning, #f59e0b);
+  border-color: transparent;
+}
+.albedu-badge--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--albedu-danger, #ef4444);
+  border-color: transparent;
+}
+
+/* =====================================================================
+   9. Empty State — .albedu-empty-state (enhance existing)
+   Already in albedu-v1.css; add illustration + CTA slot.
+   ===================================================================== */
+.albedu-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--albedu-body, #475569);
+}
+.albedu-empty-state__icon {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  color: var(--albedu-border, #cbd5e1);
+}
+.albedu-empty-state__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--albedu-heading, #0f172a);
+  margin-bottom: 6px;
+}
+.albedu-empty-state__desc {
+  font-size: 13px;
+  color: var(--albedu-body, #475569);
+  max-width: 360px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.albedu-empty-state__action {
+  margin-top: 4px;
+}
+
+/* =====================================================================
+   10. Tabs — .albedu-tabs, .albedu-tab
+   For exam runtime section navigation + admin daftar-nama tabs.
+   ===================================================================== */
+.albedu-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--albedu-border, #e2e8f0);
+  overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.albedu-tabs::-webkit-scrollbar { height: 3px; }
+.albedu-tabs::-webkit-scrollbar-thumb {
+  background: var(--albedu-border, #cbd5e1);
+  border-radius: 2px;
+}
+.albedu-tab {
+  appearance: none;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--albedu-body, #475569);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--albedu-transition, 150ms),
+              border-color var(--albedu-transition, 150ms);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-family: inherit;
+}
+.albedu-tab:hover {
+  color: var(--albedu-heading, #0f172a);
+}
+.albedu-tab--active {
+  color: var(--albedu-primary, #2563eb);
+  border-bottom-color: var(--albedu-primary, #2563eb);
+}
+.albedu-tab:focus-visible {
+  outline: 2px solid var(--albedu-primary, #2563eb);
+  outline-offset: -2px;
+}
+.albedu-tab:disabled {
+  color: var(--albedu-border, #cbd5e1);
+  cursor: not-allowed;
+}
+
+/* =====================================================================
+   11. Table — .albedu-table
+   For results-analytics, daftar-nama data displays.
+   ===================================================================== */
+.albedu-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  color: var(--albedu-body, #475569);
+}
+.albedu-table thead th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--albedu-heading, #0f172a);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--albedu-border, #e2e8f0);
+  background: var(--albedu-surface-alt, #f8fafc);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.albedu-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--albedu-border, #e2e8f0);
+  vertical-align: middle;
+}
+.albedu-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.albedu-table tbody tr:hover {
+  background: var(--albedu-surface-alt, #f8fafc);
+}
+@media (max-width: 640px) {
+  .albedu-table { font-size: 12px; }
+  .albedu-table thead th,
+  .albedu-table tbody td { padding: 8px 10px; }
+}
+
+/* =====================================================================
+   12. OTP / Code Input — .albedu-otp
+   For assessment token entry (6-digit). Replaces bespoke .token-input.
+   ===================================================================== */
+.albedu-otp {
+  display: inline-flex;
+  gap: 8px;
+}
+.albedu-otp input {
+  width: 44px;
+  height: 56px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  font-family: var(--albedu-font, inherit), monospace;
+  background: var(--albedu-surface, #fff);
+  border: 1.5px solid var(--albedu-border, #e2e8f0);
+  border-radius: var(--albedu-radius, 8px);
+  color: var(--albedu-heading, #0f172a);
+  transition: border-color var(--albedu-transition, 150ms),
+              box-shadow var(--albedu-transition, 150ms);
+}
+.albedu-otp input:focus {
+  outline: none;
+  border-color: var(--albedu-primary, #2563eb);
+  box-shadow: 0 0 0 3px var(--albedu-primary-ring, rgba(37, 99, 235, 0.2));
+}
+.albedu-otp input--error {
+  border-color: var(--albedu-danger, #ef4444) !important;
+}
+@media (max-width: 380px) {
+  .albedu-otp { gap: 6px; }
+  .albedu-otp input { width: 38px; height: 50px; font-size: 18px; }
+}
+
+/* =====================================================================
+   13. Button polish — remove default hover lift on PG-style buttons,
+   keep subtle hover only on .albedu-btn. PG options use .option-item
+   which has its OWN clean styling (no hover).
+   ===================================================================== */
+
+/* =====================================================================
+   14. PG Option — clean, no hover (user explicit request)
+   Override any inherited hover. Selected state shows fill.
+   ===================================================================== */
+.option-item,
+.albedu-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--albedu-surface, #fff);
+  border: 1.5px solid var(--albedu-border, #e2e8f0);
+  border-radius: var(--albedu-radius, 8px);
+  cursor: pointer;
+  transition: border-color var(--albedu-transition, 150ms),
+              background var(--albedu-transition, 150ms);
+  min-height: 48px;
+  user-select: none;
+}
+/* NO hover effect — clean look on mobile + desktop */
+.option-item:hover,
+.albedu-option:hover {
+  border-color: var(--albedu-border, #e2e8f0);
+  background: var(--albedu-surface, #fff);
+}
+.option-item.selected,
+.albedu-option--selected {
+  border-color: var(--albedu-primary, #2563eb);
+  background: var(--albedu-primary-muted, #eff6ff);
+}
+.option-item:focus-visible,
+.albedu-option:focus-visible {
+  outline: 2px solid var(--albedu-primary, #2563eb);
+  outline-offset: 2px;
+}
+.option-radio {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--albedu-border, #cbd5e1);
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+  transition: border-color var(--albedu-transition, 150ms);
+}
+.option-item.selected .option-radio,
+.albedu-option--selected .option-radio {
+  border-color: var(--albedu-primary, #2563eb);
+}
+.option-item.selected .option-radio::after,
+.albedu-option--selected .option-radio::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  background: var(--albedu-primary, #2563eb);
+  border-radius: 50%;
+}
+.option-key {
+  font-weight: 600;
+  color: var(--albedu-body, #475569);
+  min-width: 20px;
+  font-size: 14px;
+}
+.option-item.selected .option-key,
+.albedu-option--selected .option-key {
+  color: var(--albedu-primary, #2563eb);
+}
+.option-label {
+  flex: 1;
+  color: var(--albedu-heading, #0f172a);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* =====================================================================
+   15. Dark mode hardening — ensure components flip cleanly
+   ===================================================================== */
+[data-theme="dark"] .albedu-modal,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .albedu-modal {
+    background: var(--albedu-surface);
+    border-color: var(--albedu-border);
+  }
+}
+[data-theme="dark"] .albedu-alert,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .albedu-alert {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+[data-theme="dark"] .albedu-modal-overlay,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .albedu-modal-overlay {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
+[data-theme="dark"] .albedu-tabs::-webkit-scrollbar-thumb,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .albedu-tabs::-webkit-scrollbar-thumb {
+    background: var(--albedu-border);
+  }
+}
+
+/* =====================================================================
+   16. Base form controls + buttons (mirror from albedu-v1.css)
+   Auth pages load albedu-components.css but NOT albedu-v1.css, so the
+   .albedu-input / .albedu-btn base must also live here. These rules
+   are identical to albedu-v1.css:31-151 — kept in sync.
+   ===================================================================== */
+.albedu-input,
+.albedu-select,
+.albedu-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--albedu-font);
+  font-size: 14px;
+  color: var(--albedu-heading);
+  background: var(--albedu-surface);
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius-sm);
+  outline: none;
+  transition: border-color var(--albedu-transition), box-shadow var(--albedu-transition);
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.albedu-input::placeholder,
+.albedu-textarea::placeholder { color: #94a3b8; }
+.albedu-input:focus,
+.albedu-select:focus,
+.albedu-textarea:focus {
+  border-color: var(--albedu-primary);
+  box-shadow: 0 0 0 3px var(--albedu-primary-ring);
+}
+.albedu-textarea { resize: vertical; min-height: 80px; }
+.albedu-input:disabled, .albedu-select:disabled, .albedu-textarea:disabled {
+  background: var(--albedu-surface-alt);
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* AlbEdu button base */
+.albedu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-family: var(--albedu-font);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: var(--albedu-radius-sm);
+  cursor: pointer;
+  transition: background var(--albedu-transition), border-color var(--albedu-transition), transform var(--albedu-transition);
+  text-decoration: none;
+  white-space: nowrap;
+  min-height: 40px;
+}
+.albedu-btn:focus-visible {
+  outline: 2px solid var(--albedu-primary);
+  outline-offset: 2px;
+}
+.albedu-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.albedu-btn-primary {
+  background: var(--albedu-primary);
+  color: #fff;
+}
+.albedu-btn-primary:hover:not(:disabled) {
+  background: var(--albedu-primary-hover);
+  transform: translateY(-1px);
+}
+.albedu-btn-secondary {
+  background: var(--albedu-surface);
+  color: var(--albedu-heading);
+  border-color: var(--albedu-border);
+}
+.albedu-btn-secondary:hover:not(:disabled) {
+  border-color: var(--albedu-primary);
+  color: var(--albedu-primary);
+  transform: translateY(-1px);
+}
+.albedu-btn-ghost {
+  background: transparent;
+  color: var(--albedu-body);
+}
+.albedu-btn-ghost:hover:not(:disabled) {
+  background: var(--albedu-surface-alt);
+  color: var(--albedu-heading);
+}
+.albedu-btn-danger {
+  background: var(--albedu-danger);
+  color: #fff;
+}
+.albedu-btn-danger:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.albedu-btn-sm { padding: 6px 12px; font-size: 13px; min-height: 32px; }
+.albedu-btn-lg { padding: 14px 24px; font-size: 16px; min-height: 48px; }
+.albedu-btn--block { display: flex; width: 100%; justify-content: center; }
+@media (prefers-reduced-motion: reduce) {
+  .albedu-btn:hover:not(:disabled) { transform: none; }
+}
+@media (max-width: 768px) {
+  .albedu-btn { min-height: 44px; }
+  .albedu-btn-sm { min-height: 40px; }
+}

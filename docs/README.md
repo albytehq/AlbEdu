@@ -1,6 +1,6 @@
 # AlbEdu — Documentation Index
 
-> Index halaman dokumentasi AlbEdu v0.746.0
+> Index halaman dokumentasi AlbEdu v0.816.0
 
 ---
 
@@ -10,6 +10,7 @@
 |---|---|---|
 | [../README.md](../README.md) | Project overview, quick start, structure | All |
 | [ARCHITECTURE-FINAL.md](./ARCHITECTURE-FINAL.md) | System design, three-stage refactor summary | Developers, Architects |
+| [STRICT-COMMENTING-FOR-AI.md](./STRICT-COMMENTING-FOR-AI.md) | Human-style commenting rules (MUST READ before editing any file) | AI assistants, Contributors |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | How to add features, code style, PR checklist | Contributors |
 | [AI-CONTEXT.md](./AI-CONTEXT.md) | Cheat sheet for AI assistants | AI assistants, New devs |
 | [SECURITY.md](./SECURITY.md) | Security architecture, RLS matrix, anti-cheat | Security reviewers |
@@ -45,14 +46,14 @@
 
 ---
 
-## Project Stats (v0.746.0)
+## Project Stats (v0.816.0)
 
 | Metric | Value |
 |---|---|
 | JS files | 94 (di `src/`) |
 | CSS files | 29 (di `styles/`) |
 | HTML pages | 25 (23 di `pages/` + 2 root) |
-| Documentation files | 11 (di `docs/`) |
+| Documentation files | 12 (di `docs/`) |
 | Edge Functions | 12 (di `supabase/functions/`) |
 | SQL migrations | 22 (di `supabase/migrations/`) |
 | Largest JS file | `src/shared/icons/icons.js` (~78KB) |
@@ -84,10 +85,10 @@ AlbEdu/
 ├── cloudflare-worker/      # Worker v6.0 (CDN + cron)
 ├── scripts/                # Build & dev tooling
 ├── tests/                  # Test suites (TODO)
-├── docs/                   # 11 documentation files
+├── docs/                   # 12 documentation files
 ├── index.html              # Landing page (root)
 ├── rule-url-albedu.md      # URL routing rules
-└── package.json            # v0.746.0
+└── package.json            # v0.816.0
 ```
 
 ---
@@ -102,7 +103,7 @@ AlbEdu/
 
 ## Deleted Docs (historical reference)
 
-Dokumen berikut telah dihapus di v0.746.0 karena isinya stale/sudah tidak akurat:
+Dokumen berikut telah dihapus karena isinya stale/sudah tidak akurat:
 
 - ~~`docs/ARCHITECTURE.md`~~ — mengacu pada legacy v0.2.0 schema (`exams`, `exam_tokens`) yang sudah tidak ada. Diganti dengan [ARCHITECTURE-FINAL.md](./ARCHITECTURE-FINAL.md).
 - ~~`docs/UPDATE-GUIDE.md`~~ — pre-restructure paths (`admin/pages/`, `assets/css/`). Tidak relevan lagi.

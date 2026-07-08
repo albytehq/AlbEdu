@@ -5,7 +5,7 @@
 
   <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Masuk Asesmen - AlbEdu</title>
+    <title>Masuk Asesmen — AlbEdu</title>
     <meta name="description" content="AlbEdu - Masukkan kode akses untuk mengerjakan asesmen">
     <meta name="theme-color" content="#2563eb">
 
@@ -36,6 +36,7 @@
     <script type="module" src="../../src/shared/qnotify-loader.js"></script>
     <link rel="stylesheet" href="../../styles/loading.css">
     <link rel="stylesheet" href="../../styles/albedu-v1.css">
+    <link rel="stylesheet" href="../../styles/albedu-components.css">
     <link rel="stylesheet" href="../../styles/peserta-floating-profile.css">
 
     <!-- Supabase SDK --><!-- Auth baseline -->
@@ -69,7 +70,7 @@
             <input type="text" inputmode="numeric" maxlength="1" class="token-input" data-index="5" autocomplete="off" aria-label="Digit 6">
         </div>
 
-        <!-- v0.746.0: Turnstile removed — honeypot + timing + DB rate limiting -->
+        <!-- Turnstile removed — honeypot + timing + DB rate limiting -->
 
         <button class="token-submit" id="token-submit" type="button" disabled>
             <span id="submit-text">Masuk Asesmen</span>
@@ -87,7 +88,7 @@
     <!-- Security modules -->
     <script src="../../src/security/consent.js" defer></script>
     <script type="module" src="../../src/theme-system/index.js"></script>
-<!-- v0.742.8: Floating profile button (triggers OptionProfile — gives peserta logout) -->
+<!-- Floating profile button (triggers OptionProfile — gives peserta logout) -->
     <script src="../../src/profile/peserta-profile-fab.js" defer></script>
     <!-- Page controller -->
     <script src="../../src/pages/assessment-entry.js" defer></script>

@@ -1,9 +1,8 @@
-// =============================================================================
-// critical.js — AlbEdu Icon System · Critical Icon Registry (Layer 1)
-// =============================================================================
-// 25 critical icons bundled into the main icons.js. These are ALSO injected
-// as an inline SVG sprite by critical-css.js so they render INSTANTLY on
-// first paint (before any JS executes).
+// critical.js — registry of critical icons (same set as the sprite in
+// sprite.js). Kept as a separate object so the renderer can look them up
+// by name when setIcon() is called on an element that's not in the DOM at
+// sprite-inject time. critical-css.js also injects these as an inline SVG
+// sprite so they render INSTANTLY on first paint (before any JS executes).
 //
 // Critical icons MUST satisfy ALL of these criteria:
 //   1. Appears in the persistent app shell (navbar/sidebar/header/footer)
@@ -11,10 +10,8 @@
 //   3. Used on EVERY page (or nearly every page)
 //   4. Visible above the fold on first paint
 //
-// Do NOT add feature-specific icons here. Use secondary-registry.js instead.
-//
-// License: ISC (Lucide icons — https://lucide.dev)
-// =============================================================================
+// Do NOT add feature-specific icons here. Use secondary.js instead.
+// Lucide (ISC license — https://lucide.dev).
 
 window.AlbEdu = window.AlbEdu || {};
 window.AlbEdu.__iconRegistryCritical = {
@@ -34,7 +31,7 @@ window.AlbEdu.__iconRegistryCritical = {
   'person_add': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" x2="19" y1="8" y2="14" /><line x1="22" x2="16" y1="11" y2="11" />',
   'refresh': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" />',
   'search': '<path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" />',
-  // [v0.746.0] Admin sidebar icons — moved from secondary to critical
+  // Admin sidebar icons — moved from secondary to critical.
   'account_circle': '<circle cx="12" cy="12" r="10" /><circle cx="12" cy="10" r="3" /><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />',
   'edit_note': '<path d="M14.364 13.634a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506l4.013-4.009a1 1 0 0 0-3.004-3.004z" /><path d="M14.487 7.858A1 1 0 0 1 14 7V2" /><path d="M20 19.645V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l2.516 2.516" /><path d="M8 18h1" />',
   'menu_book': '<path d="M12 7v14" /><path d="M16 12h2" /><path d="M16 8h2" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" /><path d="M6 12h2" /><path d="M6 8h2" />',

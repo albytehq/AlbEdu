@@ -1,13 +1,5 @@
-// =============================================================================
-// take-assessment/submit.js — Submit flow + result rendering
-// =============================================================================
-// Part of the take-assessment split (see README.md in this directory).
-//
-// Functions: _submitExam, _confirmSubmit, _showSubmitRetryError,
-//            _renderResult, _renderResultItem
-//
-// Load order: MUST load after utils.js, fetch.js, identity.js, exam.js.
-// =============================================================================
+// take-assessment/submit.js — submit flow + result rendering.
+// MUST load after utils.js, fetch.js, identity.js, exam.js.
 
 (function () {
   'use strict';
@@ -21,7 +13,7 @@
   const SUBMIT_RETRY_BASE_MS = C.SUBMIT_RETRY_BASE_MS || 1500;
   const SUBMIT_UNLOCK_SECONDS = C.SUBMIT_UNLOCK_SECONDS || 600;
 
-  // ── Submit exam ─────────────────────────────────────────────────────────
+  // Submit exam
   async function _submitExam(opts = {}) {
     const skipConfirm = opts.skipConfirm === true;
     const isAuto = opts.isAuto === true;
@@ -62,9 +54,8 @@
       ? Math.floor((state.endTime - state.startTime) / 1000)
       : 0;
 
-    // [Production Hardening] Use Actly resilience wrapper for submit.
-    // Circuit breaker: 3 fails → 60s cooldown. Retry: 3x exp backoff + jitter. Timeout: 30s.
-    // Submit is idempotent via session_id UNIQUE constraint, so retries are safe.
+    // Submit is idempotent via the session_id UNIQUE constraint, so retries are
+    // safe. Circuit breaker (3 fails → 60s cooldown) + exp backoff + 30s timeout.
     const resilience = window.AlbEdu?.resilience;
     const submitBody = {
       session_id: state.session.id,
@@ -95,7 +86,7 @@
         }
         rawData = result.value;
       } else {
-        // Fallback: raw call with manual retry (legacy behavior)
+        // Fallback: raw call with manual retry
         let attempts = 0;
         while (attempts < SUBMIT_MAX_RETRIES) {
           try {
@@ -115,7 +106,6 @@
         }
       }
 
-      // Handle error from Edge Function (non-throw path)
       if (rawData?.error) {
         let code = '';
         let msg = rawData.error.message || rawData.error || 'Submit failed';
@@ -145,7 +135,7 @@
       state.isSubmitting = false;
 
     } catch (err) {
-      // Check for SESSION_BLOCKED in error context
+      // SESSION_BLOCKED may come back as an error status
       const status = err?.status || err?.context?.status;
       if (status === 409) {
         state.isSubmitting = false;
@@ -198,7 +188,7 @@
     }
   }
 
-  // ── Result render ───────────────────────────────────────────────────────
+  // Result render
   function _renderResult(result) {
     _internal._stopSecurity();
     _internal._stopTimer();
@@ -319,7 +309,6 @@
     `;
   }
 
-  // ── Expose ──────────────────────────────────────────────────────────────
   Object.assign(_internal, {
     _submitExam,
     _confirmSubmit,

@@ -1,54 +1,9 @@
-// =============================================================================
-// icons.js — AlbEdu Shared Layer · Icon System (v7.0 ENTERPRISE)
-// =============================================================================
-// Enterprise-grade icon architecture with multi-layer caching, clone-based
-// rendering, and instant first paint via inline SVG sprite.
+// icons.js — AlbEdu icon system. Inline SVG sprite + cached-template renderer.
+// Modules are concatenated at build time by scripts/build_icons_bundle.py;
+// in dev they load as separate <script> tags via scripts/serve.mjs.
+// Lucide icons (ISC license — https://lucide.dev).
 //
-// ┌─────────────────────────────────────────────────────────────────────┐
-// │ ARCHITECTURE                                                        │
-// ├─────────────────────────────────────────────────────────────────────┤
-// │                                                                     │
-// │  [HTML parse begins]                                                │
-// │       ↓                                                             │
-// │  critical-css.js (sync, in <head>)                                  │
-// │       ↓ injects inline sprite (25 critical <symbol> elements)       │
-// │       ↓ injects critical CSS (shell paints)                         │
-// │                                                                     │
-// │  [First Paint — 0ms icon render via <use href="#i-...">]            │
-// │       ↓                                                             │
-// │  icons.js loads (this file, deferred)                               │
-// │       ↓ loads modules in dependency order:                          │
-// │       ↓   1. metrics.js    — performance observability              │
-// │       ↓   2. cache.js      — Layer 1: DocumentFragment cache        │
-// │       ↓   3. sprite.js     — inline SVG sprite manager              │
-// │       ↓   4. registry/critical.js   — 25 critical icon paths        │
-// │       ↓   5. registry/secondary.js  — 85 secondary icon paths       │
-// │       ↓   6. renderer.js   — cloneNode-based SVG renderer           │
-// │       ↓   7. loader.js     — requestIdleCallback preloader          │
-// │       ↓                                                             │
-// │  [Auto-init runs]                                                   │
-// │       ↓ bindIcons() — visible icons bound synchronously             │
-// │       ↓ MutationObserver — auto-binds dynamic content               │
-// │       ↓ IntersectionObserver — lazy-binds off-screen icons          │
-// │       ↓ requestIdleCallback — preloads secondary icons into cache   │
-// │                                                                     │
-// │  [User scrolls / dynamic content added]                             │
-// │       ↓ IntersectionObserver fires → bind on demand                 │
-// │       ↓ MutationObserver fires → bind new content                   │
-// │                                                                     │
-// │  [Page hide / bfcache]                                              │
-// │       ↓ pagehide → disconnect observers (prevent leaks)             │
-// │       ↓ pageshow(persisted) → re-init observers                     │
-// └─────────────────────────────────────────────────────────────────────┘
-//
-// Performance characteristics:
-//   First paint (critical icons):  ~0ms (inline sprite, <use> clone)
-//   First paint (visible icons):   ~5-15ms (sync bind)
-//   Repeat icon render:            ~0.005ms (cloneNode from cache)
-//   Cache hit rate (steady state): >95%
-//   Memory footprint:              ~50KB (256-entry LRU cache)
-//
-// Public API (preserved from v6.0 — backward compatible):
+// Public API (backward compatible):
 //   AlbEdu.icon(name, opts?)              → HTML string
 //   AlbEdu.setIcon(el, name, opts?)       → set icon on existing element
 //   AlbEdu.registerIcon(name, svgPath)    → register custom SVG icon
@@ -58,35 +13,25 @@
 //   AlbEdu.getMetrics()                   → performance metrics
 //   AlbEdu.resetMetrics()                 → reset metrics
 //   AlbEdu.addEventListener(event, cb)    → subscribe to events
-//
-// New v7.0 APIs:
 //   AlbEdu.preloadIcons(names?)           → preload icons into cache
 //   AlbEdu.preloadAll()                   → preload entire registry
-//   AlbEdu.ICONS_VERSION                  → '7.0.0-enterprise'
-//
-// License: ISC (Lucide icons — https://lucide.dev)
-// =============================================================================
+//   AlbEdu.ICONS_VERSION                  → version string
 
 (function () {
   'use strict';
 
-  // ── SSR safety ──────────────────────────────────────────────────────
   if (typeof document === 'undefined' || typeof window === 'undefined') {
     return;
   }
 
   if (!window.AlbEdu) window.AlbEdu = {};
-  // Guard: don't re-init if already loaded
   if (window.AlbEdu.__iconSystemV7) return;
   window.AlbEdu.__iconSystemV7 = true;
 
-  // NOTE: Module references (_metrics, _renderer, etc.) are captured
-  // AFTER the inlined modules below, because the modules populate
-  // window.AlbEdu.__iconXxx when they execute.
+  // Module refs (_metrics, _renderer, etc.) are captured AFTER the inlined
+  // modules below, because the modules populate window.AlbEdu.__iconXxx
+  // when they execute.
 
-  // ── Compute BASE_PATH for module loading ────────────────────────────
-  // Mirrors critical-css.js BASE_PATH logic. Required for subdirectory
-  // deployments (e.g. GitHub Pages /AlbEdu/).
   var _computeBasePath = function () {
     var p = window.location.pathname;
     var base = p.substring(0, p.lastIndexOf('/') + 1);
@@ -103,60 +48,8 @@
   var BASE_PATH = _computeBasePath();
   var MODULES_DIR = BASE_PATH + 'src/shared/icons/modules/';
 
-  // ── Module loading (in strict dependency order) ─────────────────────
-  // Each module attaches its API to window.AlbEdu.__iconXxx.
-  // We use synchronous script injection (document.write is forbidden in
-  // modern HTML, so we use createElement + .appendChild + .sync=false).
-  //
-  // For deferred scripts, the browser already executes them in order.
-  // We embed each module's source inline here so icons.js remains a
-  // SINGLE HTTP request (preserving the existing <script defer> pattern).
-  //
-  // The modules are concatenated at build time by scripts/build_icons_bundle.py.
-  // In development, the modules are loaded as separate <script> tags via
-  // the dev server (scripts/serve.mjs).
-
-  // === BEGIN INLINE MODULES ===
-  // (These are inlined by the build script for production. In dev, they
-  // ─── Module: performance/metrics.js ─────────────────────────────────
-// =============================================================================
-// metrics.js — AlbEdu Icon System · Performance Observability
-// =============================================================================
-// Responsibility:
-//   Collect, aggregate, and expose performance metrics for every icon render.
-//   Used by the benchmark suite (scripts/benchmark_icons.mjs) and the
-//   runtime debug overlay (AlbEdu.getMetrics()).
-//
-// Tracked metrics:
-//   - iconsRendered:        total icon() calls that succeeded
-//   - iconsBound:           total DOM bindings via bindIcons()
-//   - cacheHits / cacheMisses: Layer 1 memory cache stats
-//   - renderTimeUs:         total time spent in renderer (microseconds)
-//   - bindTimeMs:           last bindIcons() duration
-//   - initTimeMs:           total module init duration
-//   - missingIcons:         map of icon-name → request count
-//   - errors:               capped array of caught errors (max 50)
-//
-// Performance marks (via Performance API when available):
-//   'albedu:icons:init'        — module init start
-//   'albedu:icons:bind'        — bindIcons() start
-//   'albedu:icons:render'      — individual icon render (sampled)
-//
-// Public API (attached to window.AlbEdu.__iconMetrics):
-//   .incRender()             → void
-//   .incBind()               → void
-//   .incCacheHit() / .incCacheMiss()
-//   .recordRenderTime(us)    → void
-//   .recordMissing(name)     → void
-//   .recordError(ctx, err)   → void
-//   .startBind() / .endBind()
-//   .startInit() / .endInit()
-//   .snapshot()              → IconMetrics (immutable)
-//   .reset()                 → void
-//   .addEventListener(event, cb) → unsubscribe
-//   .emit(event, detail)
-// =============================================================================
-
+  // metrics.js — collects render/binding/cache metrics for the debug overlay
+  // and benchmark suite. Attached to window.AlbEdu.__iconMetrics.
 (function () {
   'use strict';
 
@@ -324,37 +217,9 @@
 })();
 
 
-  // ─── Module: cache/cache.js ─────────────────────────────────
-// =============================================================================
-// cache.js — AlbEdu Icon System · Layer 1: In-Memory Template Cache
-// =============================================================================
-// Responsibility:
-//   Cache parsed SVG <template> elements keyed by (name + size + strokeWidth).
-//   Subsequent renders clone the cached template via `cloneNode(true)` —
-//   zero string parsing, zero attribute serialization, zero layout thrash.
-//
-// Architecture:
-//   request icon → cache.get(key) → if hit: cloneNode → else: build → cache.set
-//
-// Cache layers (defense-in-depth):
-//   Layer 1: This module — in-memory DocumentFragment cache (sub-millisecond)
-//   Layer 2: Browser HTTP cache — immutable assets (handled by service worker)
-//   Layer 3: Service Worker cache — offline support (public/service-worker.js)
-//   Layer 4: HTTP cache — long-term immutable caching (Cache-Control headers)
-//
-// Eviction:
-//   LRU with default cap of 256 entries. Each entry is a <template> element
-//   (~200 bytes). 256 × 200B = ~50KB max memory — negligible.
-//
-// Public API (attached to window.AlbEdu.__iconCache):
-//   .get(key)                → HTMLTemplateElement | null
-//   .set(key, template)      → void
-//   .has(key)                → boolean
-//   .size                    → number (current entry count)
-//   .clear()                 → void
-//   .stats()                 → { hits, misses, hitRate, size }
-// =============================================================================
-
+  // cache.js — in-memory LRU cache of parsed SVG <template> elements.
+  // Subsequent renders clone the cached template via cloneNode(true) —
+  // zero string parsing, zero attribute serialization.
 (function () {
   'use strict';
 
@@ -367,8 +232,8 @@
   var _misses = 0;
 
   function _key(name, size, strokeWidth, classes, label) {
-    // Build a composite cache key. Includes all options that affect the
-    // rendered SVG output so the cache is never wrong.
+    // Composite key includes all options that affect rendered SVG output,
+    // so the cache is never wrong.
     return name + '|' + (size || '') + '|' + (strokeWidth || '') +
            '|' + (classes || '') + '|' + (label ? '1' : '0');
   }
@@ -388,7 +253,6 @@
 
   function set(key, template) {
     if (!template) return;
-    // Evict oldest entry if at capacity
     if (_map.size >= MAX_ENTRIES) {
       var oldest = _map.keys().next().value;
       _map.delete(oldest);
@@ -430,65 +294,19 @@
 })();
 
 
-  // ─── Module: sprite/sprite.js ─────────────────────────────────
-// =============================================================================
-// sprite.js — AlbEdu Icon System · Inline SVG Sprite Manager
-// =============================================================================
-// Responsibility:
-//   Build and inject the inline SVG sprite containing all CRITICAL icons.
-//   The sprite is injected into <head> BEFORE first paint, so critical
-//   icons render instantly via `<use href="#i-NAME">` — zero JS execution,
-//   zero network requests.
-//
-// Architecture:
-//   critical-css.js (sync, in <head>)
-//     └─ injects sprite DOM (25 <symbol> elements)
-//     └─ injects inline style for .albedu-sprite (hidden)
-//
-//   HTML pages use:
-//     <span data-albedu-icon="login"></span>
-//
-//   icons.js (deferred) upgrades them:
-//     1. For critical icons: <svg><use href="#i-login"/></svg> (instant)
-//     2. For non-critical icons: full <svg>...</svg> (cached template)
-//
-// Why <symbol> + <use>?
-//   - <symbol> is the SVG2 standard for reusable shapes.
-//   - <use> clones the symbol at render time — browser-native cloneNode.
-//   - Single source of truth: the sprite defines the icon once.
-//   - Instant render: no JS, no string parse, no DOM mutation beyond <use>.
-//
-// Critical Icons (25):
-//   The set is chosen to cover ALL icons that appear in the persistent
-//   application shell (navbar, sidebar, header, footer, auth gates).
-//   These icons must render before first paint to avoid any flash.
-//
-//   menu, close, login, logout, person, person_add, manage_accounts,
-//   notifications, arrow_back, arrow_forward, chevron_right, chevron_left,
-//   search, home, language, refresh,
-//   account_circle, edit_note, menu_book, inventory_2, monitor_heart,
-//   bar_chart, list, left_panel_open, left_panel_close (v0.746.0: admin sidebar)
-//
-// Public API (attached to window.AlbEdu.__iconSprite):
-//   .CRITICAL_ICONS      → array of critical icon names
-//   .isCritical(name)    → boolean
-//   .buildSpriteSvg()    → string (full <svg>...</svg> for injection)
-//   .buildUseHtml(name, opts) → string (e.g. '<svg class="albedu-icon" ...><use href="#i-login"/></svg>')
-//   .injectInto(doc)     → void (idempotent — used by critical-css.js)
-// =============================================================================
-
+  // sprite.js — inline SVG sprite of CRITICAL icons (the persistent app shell:
+  // navbar, sidebar, header, footer, auth gates). These render instantly via
+  // <use href="#i-NAME"> — zero JS execution, zero network requests.
+  // critical-css.js injects the sprite synchronously into <head> before
+  // first paint.
 (function () {
   'use strict';
 
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.AlbEdu && window.AlbEdu.__iconSprite) return;
 
-  // ── Critical icon set (25 icons) ────────────────────────────────────
-  // These are the icons that appear in the persistent app shell and
-  // auth gates — they MUST render on first paint.
-  //
-  // SVG path data is the inner content of <svg> (paths, circles, lines).
-  // Sourced from Lucide (ISC license). Keep in sync with registry/critical.js.
+  // Admin sidebar icons moved from secondary to critical so they render via
+  // inline sprite before first paint (instant, zero JS).
   var CRITICAL_ICONS = {
     'menu': '<path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/>',
     'close': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
@@ -506,9 +324,6 @@
     'home': '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
     'language': '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
     'refresh': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
-    // [v0.746.0] Admin sidebar icons — dipindah dari secondary ke critical
-    // supaya render via inline sprite SEBELUM first paint (instant, zero JS).
-    // Sebelumnya di secondary → render setelah icons.js load → visible delay.
     'account_circle': '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>',
     'edit_note': '<path d="M14.364 13.634a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506l4.013-4.009a1 1 0 0 0-3.004-3.004z"/><path d="M14.487 7.858A1 1 0 0 1 14 7V2"/><path d="M20 19.645V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l2.516 2.516"/><path d="M8 18h1"/>',
     'menu_book': '<path d="M12 7v14"/><path d="M16 12h2"/><path d="M16 8h2"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/><path d="M6 12h2"/><path d="M6 8h2"/>',
@@ -520,7 +335,6 @@
     'left_panel_close': '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/>',
   };
 
-  // ── Check if a name is in the critical set ──────────────────────────
   function isCritical(name) {
     if (!name) return false;
     var normalized = name
@@ -531,7 +345,6 @@
     return Object.prototype.hasOwnProperty.call(CRITICAL_ICONS, normalized);
   }
 
-  // ── Build the full sprite SVG string ────────────────────────────────
   // Used by critical-css.js to inject the sprite synchronously into <head>.
   function buildSpriteSvg() {
     var symbols = '';
@@ -546,8 +359,6 @@
          + '</svg>';
   }
 
-  // ── Build the <use> HTML for a critical icon ────────────────────────
-  // Returns the full <svg>...</svg> string with <use> inside.
   function buildUseHtml(name, opts) {
     opts = opts || {};
     var size = opts.size != null ? opts.size : null;
@@ -567,11 +378,10 @@
     return '<svg ' + attrs + '><use href="#i-' + name + '"/></svg>';
   }
 
-  // ── Inject the sprite into the document (idempotent) ────────────────
-  // Used by critical-css.js. Safe to call multiple times.
+  // Idempotent — used by critical-css.js. Safe to call multiple times.
   function injectInto(doc) {
     doc = doc || document;
-    if (doc.getElementById('albedu-icon-sprite')) return; // already injected
+    if (doc.getElementById('albedu-icon-sprite')) return;
 
     var holder = doc.createElement('div');
     holder.innerHTML = buildSpriteSvg();
@@ -593,25 +403,10 @@
 })();
 
 
-  // ─── Module: registry/critical.js ─────────────────────────────────
-// =============================================================================
-// critical.js — AlbEdu Icon System · Critical Icon Registry (Layer 1)
-// =============================================================================
-// 25 critical icons bundled into the main icons.js. These are ALSO injected
-// as an inline SVG sprite by critical-css.js so they render INSTANTLY on
-// first paint (before any JS executes).
-//
-// Critical icons MUST satisfy ALL of these criteria:
-//   1. Appears in the persistent app shell (navbar/sidebar/header/footer)
-//   2. Appears on auth gates (login, register, forgot-password)
-//   3. Used on EVERY page (or nearly every page)
-//   4. Visible above the fold on first paint
-//
-// Do NOT add feature-specific icons here. Use secondary-registry.js instead.
-//
-// License: ISC (Lucide icons — https://lucide.dev)
-// =============================================================================
-
+  // critical.js — registry of critical icons (same set as the sprite above).
+  // Kept as a separate object so the renderer can look them up by name when
+  // setIcon() is called on an element that's not in the DOM at sprite-inject
+  // time. Lucide (ISC).
 window.AlbEdu = window.AlbEdu || {};
 window.AlbEdu.__iconRegistryCritical = {
   'arrow_back': '<path d="m12 19-7-7 7-7" /><path d="M19 12H5" />',
@@ -630,7 +425,6 @@ window.AlbEdu.__iconRegistryCritical = {
   'person_add': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" x2="19" y1="8" y2="14" /><line x1="22" x2="16" y1="11" y2="11" />',
   'refresh': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" />',
   'search': '<path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" />',
-  // [v0.746.0] Admin sidebar icons — moved from secondary to critical
   'account_circle': '<circle cx="12" cy="12" r="10" /><circle cx="12" cy="10" r="3" /><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />',
   'edit_note': '<path d="M14.364 13.634a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506l4.013-4.009a1 1 0 0 0-3.004-3.004z" /><path d="M14.487 7.858A1 1 0 0 1 14 7V2" /><path d="M20 19.645V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l2.516 2.516" /><path d="M8 18h1" />',
   'menu_book': '<path d="M12 7v14" /><path d="M16 12h2" /><path d="M16 8h2" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" /><path d="M6 12h2" /><path d="M6 8h2" />',
@@ -643,21 +437,9 @@ window.AlbEdu.__iconRegistryCritical = {
 };
 
 
-  // ─── Module: registry/secondary.js ─────────────────────────────────
-// =============================================================================
-// secondary.js — AlbEdu Icon System · Secondary Icon Registry (Layer 2)
-// =============================================================================
-// Secondary icons are bundled into the main icons.js (so they're available
-// immediately after the deferred script loads) but NOT in the inline sprite.
-// They render via the cached-template renderer (cloneNode — ~0.005ms each).
-//
-// Secondary icons cover feature-specific UI (charts, editor, admin tools).
-// For truly lazy-loaded icons (rarely used), use dynamic import chunks:
-//   const editorIcons = await import('../../src/shared/icons/modules/registry/feature-editor.js')
-//
-// License: ISC (Lucide icons — https://lucide.dev)
-// =============================================================================
-
+  // secondary.js — feature-specific icons (charts, editor, admin tools).
+  // Rendered via the cached-template renderer (cloneNode).
+  // Lucide (ISC).
 window.AlbEdu = window.AlbEdu || {};
 window.AlbEdu.__iconRegistrySecondary = {
   'add': '<path d="M5 12h14" /><path d="M12 5v14" />',
@@ -739,38 +521,11 @@ window.AlbEdu.__iconRegistrySecondary = {
 };
 
 
-  // ─── Module: renderer/renderer.js ─────────────────────────────────
-// =============================================================================
-// renderer.js — AlbEdu Icon System · Clone-Based SVG Renderer
-// =============================================================================
-// Responsibility:
-//   Render SVG icons as fast as physically possible in a browser.
-//
-// Strategy (enterprise-grade — comparable to Linear / Vercel / Stripe):
-//   1. Cache parsed SVG as a <template> element (one-time string parse).
-//   2. On subsequent renders, use `template.content.cloneNode(true)` —
-//      this is O(1) DOM cloning, no string parsing, no attribute serialization.
-//   3. For batch binding (bindIcons), use DocumentFragment to batch DOM writes.
-//   4. Never touch innerHTML for repeat renders — only for cache misses.
-//
-// Performance characteristics:
-//   - First render of icon X:  ~0.05ms (string parse + template creation)
-//   - Repeat render of icon X: ~0.005ms (cloneNode only) — 10x faster
-//   - Batch bind of 100 icons: ~2ms total (DocumentFragment batching)
-//
-// Why <template>?
-//   - `<template>.content` is a DocumentFragment — inert, not in DOM tree.
-//   - `cloneNode(true)` on DocumentFragment is highly optimized in V8/JSC/SpiderMonkey.
-//   - Avoids createElement+setAttribute for every node in the SVG.
-//
-// Public API (attached to window.AlbEdu.__iconRenderer):
-//   .render(name, opts)           → HTMLString (for AlbEdu.icon API)
-//   .renderNode(name, opts)       → SVGElement (cloned, ready to insert)
-//   .renderBatch(items)           → DocumentFragment
-//   .bindToElement(el, name, opts) → void (mutates el)
-//   .has(name)                    → boolean
-// =============================================================================
-
+  // renderer.js — clone-based SVG renderer.
+  // Strategy: cache parsed SVG as a <template> (one-time string parse),
+  // then cloneNode(true) on subsequent renders — O(1) DOM cloning, no string
+  // parsing, no attribute serialization. <template>.content is an inert
+  // DocumentFragment, and cloneNode on it is highly optimized in V8/JSC/SpiderMonkey.
 (function () {
   'use strict';
 
@@ -789,7 +544,6 @@ window.AlbEdu.__iconRegistrySecondary = {
     + '<text x="12" y="16" font-size="10" font-family="monospace" '
     + 'text-anchor="middle" fill="currentColor" opacity="0.6">?</text>';
 
-  // ── Name normalization ──────────────────────────────────────────────
   // Accepts: account_circle, account-circle, accountCircle → account_circle
   function _normalizeName(name) {
     if (typeof name !== 'string') return name;
@@ -800,7 +554,6 @@ window.AlbEdu.__iconRegistrySecondary = {
       .replace(/-/g, '_');
   }
 
-  // ── Resolve icon name through alias chain (max depth 5) ─────────────
   function _resolve(name) {
     var normalized = _normalizeName(name);
     var seen = Object.create(null);
@@ -818,7 +571,6 @@ window.AlbEdu.__iconRegistrySecondary = {
     return { name: current, path: path };
   }
 
-  // ── Attribute escaping (XSS prevention) ─────────────────────────────
   function _escapeAttr(s) {
     return String(s)
       .replace(/&/g, '&amp;')
@@ -827,8 +579,7 @@ window.AlbEdu.__iconRegistrySecondary = {
       .replace(/>/g, '&gt;');
   }
 
-  // ── Build the full SVG string for a given inner path ────────────────
-  // This is the SLOW path — only called on cache miss.
+  // SLOW path — only called on cache miss.
   function _buildSvgString(innerPath, opts, classes) {
     var size = opts.size != null ? opts.size : null;
     var label = opts['aria-label'];
@@ -847,8 +598,8 @@ window.AlbEdu.__iconRegistrySecondary = {
     return '<svg ' + attrs + '>' + innerPath + '</svg>';
   }
 
-  // ── String cache (Layer 1a) — for the icon() string API ─────────────
-  // Avoids DOM round-trip on cache hits. Keyed identically to _cache.
+  // String cache (Layer 1a) — for the icon() string API. Avoids DOM
+  // round-trip on cache hits. Keyed identically to _cache.
   var _stringCache = new Map();
   var STRING_CACHE_MAX = 256;
 
@@ -870,9 +621,8 @@ window.AlbEdu.__iconRegistrySecondary = {
     _stringCache.set(cacheKey, s);
   }
 
-  // ── Create a cached <template> for an icon ──────────────────────────
-  // The template holds the parsed SVG element. Cloning this template
-  // is dramatically faster than re-parsing the string.
+  // Build a cached <template> for an icon. Cloning the template is much
+  // faster than re-parsing the string.
   function _createTemplate(name, innerPath, opts, classes) {
     var svgString = _buildSvgString(innerPath, opts, classes);
     var tpl = document.createElement('template');
@@ -880,10 +630,8 @@ window.AlbEdu.__iconRegistrySecondary = {
     return { tpl: tpl, str: svgString };
   }
 
-  // ── Render: returns HTML string (for AlbEdu.icon API) ───────────────
-  // Uses a dedicated string cache (Layer 1a) — O(1) on cache hit, no
-  // DOM round-trip. This matches v6.0's string-concatenation speed
-  // while still benefiting from caching.
+  // render() — returns HTML string. Uses the string cache (Layer 1a),
+  // pure O(1) on cache hit, no DOM round-trip.
   function render(name, opts) {
     opts = opts || {};
     var startTime = _metrics ? performance.now() : 0;
@@ -904,7 +652,7 @@ window.AlbEdu.__iconRegistrySecondary = {
       var classes = 'albedu-icon';
       var cacheKey = _cache ? _cache._key(resolved.name, opts.size, opts.strokeWidth, opts.class, opts['aria-label']) : null;
 
-      // Try string cache FIRST (Layer 1a) — pure O(1), no DOM
+      // Try string cache FIRST — pure O(1), no DOM
       var cachedString = cacheKey ? _getString(cacheKey) : null;
       if (cachedString) {
         if (_metrics) {
@@ -934,9 +682,9 @@ window.AlbEdu.__iconRegistrySecondary = {
     }
   }
 
-  // ── Render Node: returns a cloned SVGElement ────────────────────────
-  // This is the FAST path for DOM insertion. Uses the template cache
-  // (Layer 1b) — cloneNode(true) is faster than string parsing.
+  // renderNode() — returns a cloned SVGElement. FAST path for DOM insertion.
+  // Uses the template cache (Layer 1b) — cloneNode(true) is faster than
+  // string parsing.
   function renderNode(name, opts) {
     opts = opts || {};
 
@@ -966,7 +714,6 @@ window.AlbEdu.__iconRegistrySecondary = {
       }
 
       if (_metrics) _metrics.incRender();
-      // Clone the SVG node — zero string parsing.
       return tpl.content.firstChild.cloneNode(true);
     } catch (err) {
       if (_metrics) _metrics.recordError('renderer.renderNode:' + name, err);
@@ -974,16 +721,13 @@ window.AlbEdu.__iconRegistrySecondary = {
     }
   }
 
-  // ── Render Batch: build many icons into a DocumentFragment ──────────
   // Used by bindIcons() to batch DOM writes — minimizes reflow.
   function renderBatch(items) {
-    // items: Array<{ el: Element, name: string, opts: Object }>
     var fragment = document.createDocumentFragment();
     for (var i = 0; i < items.length; i++) {
       var item = items[i];
       var node = renderNode(item.name, item.opts);
       if (node) {
-        // Wrap in a placeholder we can swap in
         var holder = document.createElement('div');
         holder.appendChild(node);
         fragment.appendChild(holder);
@@ -992,7 +736,6 @@ window.AlbEdu.__iconRegistrySecondary = {
     return fragment;
   }
 
-  // ── Bind To Element: replace element's content with the icon ────────
   // Used by setIcon() and bindIcons(). Uses cloneNode — no innerHTML
   // serialization when the template is cached.
   function bindToElement(el, name, opts) {
@@ -1027,13 +770,11 @@ window.AlbEdu.__iconRegistrySecondary = {
     return !!resolved.path;
   }
 
-  // ── Allow orchestrator to wire in the registry + aliases ────────────
   function setRegistry(registry, aliases) {
     _registry = registry || _registry;
     _aliases = aliases || _aliases;
   }
 
-  // ── Allow access to the fallback constant (for testing) ─────────────
   function getFallback() { return FALLBACK_SVG_INNER; }
 
   // Clear both string cache (Layer 1a) and template cache (Layer 1b).
@@ -1059,43 +800,11 @@ window.AlbEdu.__iconRegistrySecondary = {
 })();
 
 
-  // ─── Module: loader/loader.js ─────────────────────────────────
-// =============================================================================
-// loader.js — AlbEdu Icon System · Lazy Loader + Idle Preloader
-// =============================================================================
-// Responsibility:
-//   Coordinate WHEN icon binding happens to minimize impact on first paint
-//   and interactive time.
-//
-// Loading strategy (enterprise-grade):
-//
-//   App Start (HTML parse begins)
-//     ↓
-//   critical-css.js (sync, in <head>)
-//     ↓ injects inline sprite (25 critical icons available IMMEDIATELY)
-//     ↓ injects critical CSS (shell paints)
-//     ↓
-//   First Paint (icons visible via <use href="#i-...">)
-//     ↓
-//   icons.js loads (deferred, ~10-30ms after parse)
-//     ↓ runs _autoInit() — binds visible icons immediately
-//     ↓
-//   requestIdleCallback (after first interaction)
-//     ↓ preload secondary icons into cache
-//     ↓ bind off-screen icons via IntersectionObserver
-//     ↓
-//   User scrolls / dynamic content added
-//     ↓ IntersectionObserver fires → bind on demand
-//     ↓ MutationObserver fires → bind new content
-//
-// Public API (attached to window.AlbEdu.__iconLoader):
-//   .onIdle(cb, opts)         → schedule callback when browser is idle
-//   .preloadIcons(names)      → pre-render icons into cache (Layer 1)
-//   .preloadCriticalSet()     → pre-render the 25 critical icons
-//   .preloadAll()             → pre-render entire registry (warm cache)
-//   .scheduleBind(fn)         → schedule a bind operation (rAF + idle)
-// =============================================================================
-
+  // loader.js — schedules icon binding to minimize impact on first paint
+  // and interactive time. critical-css.js injects the sprite sync, then
+  // icons.js (deferred) binds visible icons immediately, defers off-screen
+  // binding to IntersectionObserver, and preloads secondary icons into the
+  // cache during requestIdleCallback.
 (function () {
   'use strict';
 
@@ -1116,14 +825,12 @@ window.AlbEdu.__iconRegistrySecondary = {
 
   var _raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
 
-  // ── Schedule a callback when the browser is idle ────────────────────
   function onIdle(cb, opts) {
     opts = opts || {};
     return _ric(cb, { timeout: opts.timeout || 2000 });
   }
 
-  // ── Pre-render icons into the cache (Layer 1) ───────────────────────
-  // This warms the cache so subsequent renders are pure cloneNode.
+  // Pre-render icons into the cache so subsequent renders are pure cloneNode.
   function preloadIcons(names) {
     if (!names || !names.length) return;
     var renderer = window.AlbEdu && window.AlbEdu.__iconRenderer;
@@ -1132,25 +839,21 @@ window.AlbEdu.__iconRegistrySecondary = {
     onIdle(function () {
       for (var i = 0; i < names.length; i++) {
         try {
-          // Render to cache (result discarded — we just want the cache populated)
           renderer.render(names[i], {});
         } catch (_) { /* swallow — preload is best-effort */ }
       }
     }, { timeout: 3000 });
   }
 
-  // ── Pre-render the 25 critical icons ────────────────────────────────
-  // (These are usually already in the sprite, but this populates the
-  //  renderer cache for setIcon() calls.)
+  // Pre-render the critical icons. They're already in the sprite, but this
+  // warms the renderer cache for setIcon() calls.
   function preloadCriticalSet() {
     var sprite = window.AlbEdu && window.AlbEdu.__iconSprite;
     if (!sprite) return;
     preloadIcons(sprite.CRITICAL_NAMES);
   }
 
-  // ── Pre-render the entire registry (warm cache) ─────────────────────
-  // Useful for SPA navigation — after this completes, every icon render
-  // is a pure cache hit (~0.005ms per render).
+  // Pre-render the entire registry — useful for SPA navigation.
   function preloadAll() {
     var listFn = window.AlbEdu && window.AlbEdu.listIcons;
     if (!listFn) return;
@@ -1160,9 +863,8 @@ window.AlbEdu.__iconRegistrySecondary = {
     }, { timeout: 5000 });
   }
 
-  // ── Schedule a bind operation ───────────────────────────────────────
-  // Uses rAF for visual sync, then idle callback for the actual work.
-  // This prevents bind operations from blocking animation frames.
+  // rAF for visual sync, then idle callback for the actual work — keeps
+  // bind operations from blocking animation frames.
   function scheduleBind(fn) {
     if (typeof fn !== 'function') return;
     _raf(function () {
@@ -1180,60 +882,49 @@ window.AlbEdu.__iconRegistrySecondary = {
   };
 })();
 
-
-  // === END INLINE MODULES ===
-
-  // ── Capture module references (modules are now loaded) ──────────────
   var _metrics = window.AlbEdu.__iconMetrics;
   if (_metrics) _metrics.startInit();
 
-  // ── Wire up the renderer with the registries ────────────────────────
   var _renderer = window.AlbEdu.__iconRenderer;
   var _sprite = window.AlbEdu.__iconSprite;
   var _loader = window.AlbEdu.__iconLoader;
   var _cache = window.AlbEdu.__iconCache;
 
-  // Build the merged registry (critical + secondary) for the renderer
   var _mergedRegistry = Object.assign(
     {},
     window.AlbEdu.__iconRegistryCritical || {},
     window.AlbEdu.__iconRegistrySecondary || {}
   );
 
-  // Build aliases for common alternative names (hyphenated, camelCase)
-  var _aliases = Object.create(null);
+  // Build aliases for common alternative names (hyphenated, camelCase).
   // person-add → person_add, etc.
+  var _aliases = Object.create(null);
   Object.keys(_mergedRegistry).forEach(function (name) {
     var hyphen = name.replace(/_/g, '-');
     if (hyphen !== name) _aliases[hyphen] = name;
     var camel = name.replace(/_([a-z0-9])/g, function (_, c) { return c.toUpperCase(); });
     if (camel !== name) _aliases[camel] = name;
   });
-  // Special-case: x is a common alias for close
+  // x is a common alias for close
   _aliases['x'] = 'close';
 
   if (_renderer) _renderer.setRegistry(_mergedRegistry, _aliases);
 
-  // ── Public API: icon(name, opts) → HTML string ──────────────────────
   function icon(name, opts) {
     return _renderer ? _renderer.render(name, opts || {}) : '';
   }
 
-  // ── Public API: setIcon(el, name, opts) ─────────────────────────────
   function setIcon(el, name, opts) {
     if (!_renderer || !el) return;
     _renderer.bindToElement(el, name, opts || {});
   }
 
-  // ── Public API: registerIcon(name, svgPath) ─────────────────────────
   function registerIcon(name, svgPath) {
     if (!name || typeof svgPath !== 'string') return false;
     try {
       var normalized = _renderer._normalizeName(name);
       _mergedRegistry[normalized] = svgPath;
-      // Re-wire the renderer with the updated registry
       _renderer.setRegistry(_mergedRegistry, _aliases);
-      // Invalidate both string cache (Layer 1a) and template cache (Layer 1b)
       _renderer.clearCache();
       return true;
     } catch (err) {
@@ -1242,7 +933,6 @@ window.AlbEdu.__iconRegistrySecondary = {
     }
   }
 
-  // ── Public API: listIcons() → string[] ──────────────────────────────
   function listIcons() {
     var all = Object.keys(_mergedRegistry).concat(Object.keys(_aliases));
     var seen = Object.create(null);
@@ -1256,19 +946,14 @@ window.AlbEdu.__iconRegistrySecondary = {
     return result.sort();
   }
 
-  // ── Public API: hasIcon(name) → boolean ─────────────────────────────
   function hasIcon(name) {
     return _renderer ? _renderer.has(name) : false;
   }
 
-  // ── Public API: getMetrics() ────────────────────────────────────────
   function getMetrics() {
     if (!_metrics) return {};
     var snap = _metrics.snapshot();
     var cacheStats = _cache ? _cache.stats() : {};
-    // Merge: snap.cacheHits/cacheMisses come from the metrics module
-    // (incremented by both string cache and template cache paths).
-    // cacheStats provides the template-cache-specific size/maxEntries.
     return Object.assign(snap, {
       cacheSize: cacheStats.size || 0,
       cacheMaxEntries: cacheStats.maxEntries || 0,
@@ -1283,12 +968,10 @@ window.AlbEdu.__iconRegistrySecondary = {
     else if (_cache) _cache.clear();
   }
 
-  // ── Public API: addEventListener / on ───────────────────────────────
   function addEventListener(event, cb) {
     return _metrics ? _metrics.addEventListener(event, cb) : function () {};
   }
 
-  // ── Public API: preloadIcons(names?) — NEW v7.0 ─────────────────────
   function preloadIcons(names) {
     if (!_loader) return;
     if (!names) {
@@ -1298,21 +981,16 @@ window.AlbEdu.__iconRegistrySecondary = {
     }
   }
 
-  // ── Public API: preloadAll() — NEW v7.0 ─────────────────────────────
   function preloadAll() {
     if (_loader) _loader.preloadAll();
   }
 
-  // ════════════════════════════════════════════════════════════════════
-  // DOM BINDER — bind [data-albedu-icon] elements to actual SVGs
-  // ════════════════════════════════════════════════════════════════════
+  // DOM binder: bind [data-albedu-icon] elements to actual SVGs.
 
-  // ── Lazy binding via IntersectionObserver ───────────────────────────
   var _io = null;
 
   function _bindNode(node) {
     if (!_renderer) return;
-    // Skip if already bound (has an <svg> child)
     if (node.querySelector('svg.albedu-icon')) return;
 
     var rawName = node.getAttribute('data-albedu-icon');
@@ -1326,8 +1004,8 @@ window.AlbEdu.__iconRegistrySecondary = {
 
     var normalizedName = _renderer._normalizeName(rawName);
 
-    // CRITICAL ICON FAST PATH: use <use href="#i-..."> for sprite icons.
-    // This is the fastest possible render — pure DOM clone, no template cache.
+    // Critical icon fast path: <use href="#i-..."> — pure DOM clone, no
+    // template cache lookup.
     if (_sprite && _sprite.isCritical(normalizedName)) {
       var useHtml = _sprite.buildUseHtml(normalizedName, { class: existingClass });
       node.innerHTML = useHtml;
@@ -1338,7 +1016,6 @@ window.AlbEdu.__iconRegistrySecondary = {
       return;
     }
 
-    // SECONDARY ICON PATH: use the cached-template renderer.
     _renderer.bindToElement(node, rawName, { class: existingClass });
     if (_metrics) _metrics.incBind();
   }
@@ -1374,18 +1051,14 @@ window.AlbEdu.__iconRegistrySecondary = {
       // display:none ancestor), bind immediately to be safe.
       var noLayout = rect.top === 0 && rect.bottom === 0 &&
                      rect.left === 0 && rect.right === 0;
-      // FIX: off-canvas chrome (mobile sidebar drawers, slide-in panels)
-      // uses `transform: translateX(...)` to sit outside the viewport
-      // while "closed". getBoundingClientRect() reflects that transform,
-      // so these nodes look exactly like real off-screen/below-the-fold
-      // content and get queued into the IntersectionObserver instead of
-      // binding now. The icon only renders once the drawer's open
-      // transition brings it into the observer's bounds — visibly late,
-      // mid-animation. These nodes are NOT "far away, maybe never seen"
-      // content; they're persistent UI the user is about to reveal via a
-      // toggle. Opt them out of lazy-binding via [data-icon-eager] on the
-      // drawer/nav container so they always render immediately, matching
-      // the drawer's actual open trigger instead of a viewport heuristic.
+      // Off-canvas chrome (mobile sidebar drawers, slide-in panels) uses
+      // transform: translateX(...) to sit outside the viewport while
+      // "closed". getBoundingClientRect() reflects that transform, so these
+      // nodes look like real off-screen content and get queued into the
+      // IntersectionObserver instead of binding now — the icon only renders
+      // mid-animation when the drawer opens. They're persistent UI the user
+      // is about to reveal, so opt them out of lazy-binding via
+      // [data-icon-eager] on the drawer/nav container.
       var isEager = !!node.closest('[data-icon-eager]');
       var inViewport = noLayout || isEager ||
                        (rect.top < window.innerHeight && rect.bottom > 0 &&
@@ -1398,9 +1071,8 @@ window.AlbEdu.__iconRegistrySecondary = {
       }
     }
 
-    // Batch immediate bindings — single reflow via DocumentFragment not
-    // possible here because nodes are in different parts of the DOM.
-    // But each _bindNode is fast (~0.05ms) so this is fine.
+    // Each _bindNode is fast (~0.05ms), so a simple loop is fine — no need
+    // for DocumentFragment batching here (nodes live in different parts of DOM).
     for (var j = 0; j < immediate.length; j++) {
       _bindNode(immediate[j]);
     }
@@ -1448,7 +1120,7 @@ window.AlbEdu.__iconRegistrySecondary = {
     return result;
   }
 
-  // ── Auto-bind dynamic content via MutationObserver ──────────────────
+  // Auto-bind dynamic content via MutationObserver.
   var _mo = null;
 
   function _setupMutationObserver() {
@@ -1477,7 +1149,7 @@ window.AlbEdu.__iconRegistrySecondary = {
 
       if (pending.length === 0) return;
 
-      // Use requestAnimationFrame for batch DOM updates (no layout thrash)
+      // requestAnimationFrame batches DOM updates — no layout thrash.
       if ('requestAnimationFrame' in window) {
         requestAnimationFrame(function () {
           for (var m = 0; m < pending.length; m++) {
@@ -1498,21 +1170,18 @@ window.AlbEdu.__iconRegistrySecondary = {
     _mo.observe(document.body, { childList: true, subtree: true });
   }
 
-  // ── Memory management: cleanup on pagehide ──────────────────────────
   function _cleanup() {
     if (_io) { try { _io.disconnect(); } catch (_) {} _io = null; }
     if (_mo) { try { _mo.disconnect(); } catch (_) {} _mo = null; }
   }
 
-  // ── Auto-init ───────────────────────────────────────────────────────
   function _autoInit() {
     try {
       bindIcons(document);
       _setupMutationObserver();
 
-      // Preload critical icons into renderer cache during idle time.
-      // This ensures setIcon() calls (e.g. mobile menu toggle) are
-      // instant cache hits instead of cache misses.
+      // Preload critical icons into renderer cache during idle time so
+      // setIcon() calls (for example, mobile menu toggle) are instant cache hits.
       if (_loader) {
         _loader.onIdle(function () {
           _loader.preloadCriticalSet();
@@ -1525,22 +1194,10 @@ window.AlbEdu.__iconRegistrySecondary = {
     }
   }
 
-  // FIX: this file is loaded via <script defer>, and defer scripts are
-  // guaranteed by spec to run AFTER the HTML parser has finished — i.e.
-  // document.readyState is already 'interactive' by the time this line
-  // executes, essentially every time, on every browser. The
-  // `readyState === 'loading'` branch below is therefore dead code in
-  // practice, and every single page load fell through to
-  // requestIdleCallback(..., {timeout:1000}). That call does not run
-  // "soon" — it waits for a genuinely idle main thread, or forces
-  // execution once the timeout is hit. On a light page (few scripts)
-  // the thread goes idle almost immediately, so the delay was
-  // imperceptible. On heavier pages (auth checks, sidebar sync,
-  // profile/notification bootstrapping, Supabase calls all competing
-  // for the main thread) idle never came quickly, so icons visibly
-  // popped in late — worse the busier the page. Since the DOM is
-  // already parsed by the time a defer script runs, there is nothing
-  // to gain by waiting: bind immediately.
+  // This file loads via <script defer>, which guarantees document.readyState
+  // is already 'interactive' by the time we execute — so bind immediately.
+  // The readyState==='loading' branch is technically dead code, kept as a
+  // defensive fallback for non-deferred loads.
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _autoInit);
   } else {
@@ -1552,9 +1209,6 @@ window.AlbEdu.__iconRegistrySecondary = {
     if (event.persisted) _autoInit();
   });
 
-  // ════════════════════════════════════════════════════════════════════
-  // PUBLIC SURFACE
-  // ════════════════════════════════════════════════════════════════════
   window.AlbEdu.icon = icon;
   window.AlbEdu.setIcon = setIcon;
   window.AlbEdu.registerIcon = registerIcon;
@@ -1565,8 +1219,7 @@ window.AlbEdu.__iconRegistrySecondary = {
   window.AlbEdu.resetMetrics = resetMetrics;
   window.AlbEdu.addEventListener = addEventListener;
   window.AlbEdu.on = addEventListener;
-  // New v7.0 APIs
   window.AlbEdu.preloadIcons = preloadIcons;
   window.AlbEdu.preloadAll = preloadAll;
-  window.AlbEdu.ICONS_VERSION = '7.0.0-enterprise';
+  window.AlbEdu.ICONS_VERSION = '7.0.0';
 })();

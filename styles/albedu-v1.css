@@ -147,6 +147,9 @@ body {
 .albedu-btn-sm .material-symbols-outlined { font-size: 16px; }
 .albedu-btn-lg { padding: 12px 22px; font-size: 15px; }
 
+/* Full-width block button — for forms, single-CTA cards, auth pages */
+.albedu-btn--block { display: flex; width: 100%; justify-content: center; }
+
 /* ── Cards ─────────────────────────────────────────────────────────────── */
 .albedu-card {
   background: var(--albedu-surface);
@@ -358,7 +361,8 @@ body {
   font-size: 13px; color: var(--albedu-body);
   cursor: pointer;
 }
-.albedu-preview-option:hover { border-color: var(--albedu-primary); background: var(--albedu-primary-muted); }
+/* No :hover — preview options mirror the clean take-assessment PG options
+   (user explicit request: clean look, no hover effect). */
 .albedu-preview-radio {
   width: 16px; height: 16px;
   border: 2px solid var(--albedu-border);
@@ -366,7 +370,6 @@ body {
   flex-shrink: 0;
   transition: border-color var(--albedu-transition);
 }
-.albedu-preview-option:hover .albedu-preview-radio { border-color: var(--albedu-primary); }
 
 .albedu-wcag-status {
   display: flex; align-items: center; gap: 6px;
@@ -586,4 +589,25 @@ body {
   .albedu-summary-grid { grid-template-columns: 1fr 1fr; }
   .albedu-summary-value { font-size: 20px; }
   .albedu-token-value { font-size: 22px; }
+}
+
+/* ── Playful micro-interactions ──────────────────────────────────────────
+   Buttons lift slightly on hover and press back down on active — a tactile
+   cue borrowed from native mobile UIs. Card-hover lifts cards in lists. */
+.albedu-btn { transition: all var(--albedu-transition), transform var(--albedu-transition); }
+.albedu-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.albedu-btn:active:not(:disabled) { transform: translateY(0); }
+
+.albedu-card-hover {
+  transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease;
+}
+.albedu-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--albedu-shadow-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .albedu-btn:hover:not(:disabled),
+  .albedu-btn:active:not(:disabled),
+  .albedu-card-hover:hover { transform: none; }
 }

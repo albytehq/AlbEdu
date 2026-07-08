@@ -1,17 +1,7 @@
 #!/usr/bin/env node
-/**
- * verify-structure.mjs — Post-migration integrity check for AlbEdu v2.0.0
- *
- * Checks:
- *   1. All expected folders exist
- *   2. No orphan files in old paths (assets/, admin/, ujian/)
- *   3. All HTML files reference valid JS/CSS paths
- *   4. All ES module imports resolve
- *   5. No inline <style> blocks > 50 lines
- *   6. All feature folders have index.js (barrel export)
- *   7. Required documentation files exist
- *   8. Required config files exist
- */
+// verify-structure.mjs — post-migration integrity check for AlbEdu.
+// Verifies folder structure, no orphan paths, valid HTML refs, ES imports
+// resolve, no large inline styles, barrel exports exist, docs/config present.
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, resolve, relative } from 'node:path';
@@ -46,8 +36,7 @@ function check(condition, msg, isWarn = false) {
   }
 }
 
-// === CHECK 1: Expected folders exist ===
-console.log('\n=== Check 1: Folder structure ===');
+console.log('\nCheck 1: Folder structure');
 
 const EXPECTED_FOLDERS = [
   'src', 'src/auth', 'src/exam', 'src/identity',
@@ -62,26 +51,22 @@ EXPECTED_FOLDERS.forEach(folder => {
   check(existsSync(join(ROOT, folder)), `Folder exists: ${folder}/`);
 });
 
-// === CHECK 2: Old paths removed ===
-console.log('\n=== Check 2: Old paths removed ===');
+console.log('\nCheck 2: Old paths removed');
 
 const OLD_PATHS = ['assets', 'assets/js', 'assets/css', 'assets/images', 'assets/QNotify', 'admin', 'ujian'];
 OLD_PATHS.forEach(path => {
   check(!existsSync(join(ROOT, path)), `Old path removed: ${path}/`, true);
 });
 
-// === CHECK 3: Feature folders have index.js ===
-console.log('\n=== Check 3: Barrel exports (index.js) ===');
+console.log('\nCheck 3: Barrel exports (index.js)');
 
 const FEATURE_FOLDERS = ['auth', 'exam', 'identity', 'profile', 'pages', 'utils'];
 FEATURE_FOLDERS.forEach(folder => {
   check(existsSync(join(ROOT, 'src', folder, 'index.js')), `Barrel export: src/${folder}/index.js`);
 });
-// v2.2.0 — Buat Ujian v2 has its own sub-folder barrel (src/pages/buat-ujian/index.js)
 check(existsSync(join(ROOT, 'src', 'pages', 'buat-ujian', 'index.js')), 'Barrel export: src/pages/buat-ujian/index.js');
 
-// === CHECK 4: Required root files ===
-console.log('\n=== Check 4: Root files ===');
+console.log('\nCheck 4: Root files');
 
 const ROOT_FILES = [
   'index.html', '404.html', 'package.json', 'README.md', 'LICENSE',
@@ -101,16 +86,16 @@ ROOT_FILES.forEach(file => {
   }
 });
 
-// === CHECK 5: Documentation files ===
-console.log('\n=== Check 5: Documentation ===');
+console.log('\nCheck 5: Documentation');
 
-const DOCS = ['README.md', 'ARCHITECTURE.md', 'CONTRIBUTING.md', 'AI-CONTEXT.md', 'MIGRATION.md', 'UPDATE-GUIDE.md'];
+// Expected docs — ARCHITECTURE-FINAL.md replaces ARCHITECTURE.md (Stage 3
+// rename), MIGRATION.md and UPDATE-GUIDE.md were rolled into ARCHITECTURE-FINAL.md.
+const DOCS = ['README.md', 'ARCHITECTURE-FINAL.md', 'CONTRIBUTING.md', 'AI-CONTEXT.md', 'STRICT-COMMENTING-FOR-AI.md'];
 DOCS.forEach(doc => {
   check(existsSync(join(ROOT, 'docs', doc)), `Doc exists: docs/${doc}`);
 });
 
-// === CHECK 6: HTML files exist ===
-console.log('\n=== Check 6: HTML pages ===');
+console.log('\nCheck 6: HTML pages');
 
 const HTML_FILES = [
   // Root (canonical)
@@ -119,7 +104,7 @@ const HTML_FILES = [
   'pages/login.html', 'pages/register-admin.html',
   'pages/register-success.html', 'pages/forgot-password.html',
   'pages/reset-password.html', 'pages/404.html',
-  // Admin (v0.742.0+: flattened — pages/admin/pages/ removed)
+  // Admin (flattened — pages/admin/pages/ removed).
   'pages/admin/index.html',
   'pages/admin/buat-ujian.html', 'pages/admin/daftar-nama.html',
   'pages/admin/data-hasil.html', 'pages/admin/profile.html',
@@ -138,8 +123,7 @@ HTML_FILES.forEach(file => {
   check(existsSync(join(ROOT, file)), `HTML page: ${file}`);
 });
 
-// === CHECK 7: Critical JS files exist ===
-console.log('\n=== Check 7: Critical JS files ===');
+console.log('\nCheck 7: Critical JS files');
 
 const CRITICAL_JS = [
   // Auth orchestrator + helpers
@@ -156,10 +140,10 @@ const CRITICAL_JS = [
   'src/identity/index.js',
   'src/profile/index.js',
   'src/pages/index.js',
-  'src/utils/index.js', 'src/utils/supabase-api.js', 'src/utils/ui.js',
+  'src/utils/index.js', 'src/utils/ui.js',
   'src/utils/navigasi.js',
-  // v0.2.0 — Buat Ujian (replaces src/wizard/*)
-  // v1.0.0 — Removed `src/pages/buat-ujian.js` (replaced by create-assessment.js)
+  // Buat Ujian (replaces src/wizard/*).
+  // Removed `src/pages/buat-ujian.js` — replaced by create-assessment.js.
   'src/pages/buat-ujian/index.js',
   'src/pages/buat-ujian/templates.js',
   'src/pages/buat-ujian/keyboard-shortcuts.js',
@@ -173,7 +157,7 @@ const CRITICAL_JS = [
   'supabase/functions/user-auth-preflight/index.ts',
   'supabase/functions/user-auth-complete/index.ts',
   'supabase/functions/register-admin/index.ts',
-  // v1.0.0 — Removed `supabase/functions/exam-token-attempt/index.ts` (replaced by access-code-attempt)
+  // Removed `supabase/functions/exam-token-attempt/index.ts` — replaced by access-code-attempt.
   'supabase/functions/access-code-attempt/index.ts',
 ];
 
@@ -181,21 +165,18 @@ CRITICAL_JS.forEach(file => {
   check(existsSync(join(ROOT, file)), `JS file: ${file}`);
 });
 
-// === CHECK 8: CSS files exist ===
-console.log('\n=== Check 8: CSS files ===');
+console.log('\nCheck 8: CSS files');
 
 const CSS_FILES = [
   'styles/tokens.css', 'styles/loading.css', 'styles/navigasi.css',
-  'styles/profile.css', 'styles/buat-ujian-v2.css', 'styles/buat-ujian-modal.css',
-  'styles/login.css', 'styles/landing.css', 'styles/kerjakan-ujian.css',
+  'styles/profile.css', 'styles/login.css', 'styles/landing.css',
 ];
 
 CSS_FILES.forEach(file => {
   check(existsSync(join(ROOT, file)), `CSS file: ${file}`);
 });
 
-// === CHECK 9: HTML files don't have broken refs ===
-console.log('\n=== Check 9: HTML references resolve ===');
+console.log('\nCheck 9: HTML references resolve');
 
 function findHtmlFiles(dir) {
   const results = [];
@@ -233,6 +214,8 @@ htmlFiles.forEach(htmlFile => {
     if (refPath.includes("'") || refPath.includes('+') || refPath.includes('${')) {
       continue;
     }
+    // Skip placeholder/ellipsis refs in documentation (for example "...foo...")
+    if (refPath.includes('...')) continue;
 
     // Strip query strings
     const cleanPath = refPath.split('?')[0].split('#')[0];
@@ -245,7 +228,7 @@ htmlFiles.forEach(htmlFile => {
     if (!existsSync(resolvedPath)) {
       // Skip if path starts with / (absolute URL, server-resolved)
       if (cleanPath.startsWith('/')) continue;
-      // Skip inline references (e.g., #id)
+      // Skip inline references (for example #id)
       if (cleanPath.startsWith('#')) continue;
       console.error(`  ❌ Broken ref in ${rel}: ${refPath}`);
       brokenRefs++;
@@ -259,23 +242,14 @@ if (brokenRefs === 0) {
   error(`${brokenRefs} broken references found`);
 }
 
-// === CHECK 9b: Classic script dependency chain (catches v2.1.2 bug class) ===
-console.log('\n=== Check 9b: Classic script dependency chain ===');
-//
-// main.js (classic script) reads from `window.CompletionError` (defined by
-// errors.js) and `window.AuthHelpers` (defined by user-helpers.js) at
-// module-eval time. If those scripts aren't loaded BEFORE main.js via
-// <script defer> tags, main.js throws TypeError and `window.Auth` never
-// gets defined → ALL auth flows break silently.
-//
-// This check verifies that every HTML file which loads `auth/main.js`
-// ALSO loads `auth/errors.js` AND `auth/user-helpers.js` BEFORE main.js.
-//
-// Bug history: v2.0.0 by-feature restructure extracted errors.js and
-// user-helpers.js out of auth.js, but forgot to add the new <script>
-// tags to any HTML file. The bug went unnoticed for weeks because the
-// error was caught by security.js's global error handler and logged
-// to console.error but didn't prevent the page from rendering.
+// Check 9b: main.js (classic script) reads `window.CompletionError` (defined by
+// errors.js) and `window.AuthHelpers` (defined by user-helpers.js) at module-eval
+// time. If those scripts aren't loaded BEFORE main.js via <script defer> tags,
+// main.js throws TypeError and `window.Auth` never gets defined → ALL auth flows
+// break silently. This check verifies that every HTML file which loads
+// `auth/main.js` ALSO loads `auth/errors.js` AND `auth/user-helpers.js` BEFORE
+// main.js.
+console.log('\nCheck 9b: Classic script dependency chain');
 
 const SCRIPT_SRC_REGEX = /<script\s+[^>]*src="([^"]+)"/g;
 const mainJsPages = [];
@@ -318,27 +292,19 @@ if (missingDeps.length === 0) {
   ok(`All ${mainJsPages.length} pages loading auth/main.js also load errors.js + user-helpers.js first`);
 } else {
   missingDeps.forEach(d => console.error(`  ❌ ${d}`));
-  error(`${missingDeps.length} missing script dependency (catches v2.1.2-style bugs)`);
+  error(`${missingDeps.length} missing script dependency`);
 }
 
-// === CHECK 9c: Classic scripts don't share top-level const/class/function names ===
-console.log('\n=== Check 9c: Classic script global name conflicts ===');
-//
-// Classic scripts (no `type="module"`) share the global lexical environment.
-// If two scripts both declare `const Foo` at top level, the second one throws
-// `SyntaxError: Identifier 'Foo' has already been declared`.
-//
-// The v2.1.3 bug: errors.js declared `class CompletionError` at top level,
-// then main.js tried `const CompletionError = window.CompletionError;` —
-// duplicate declaration in the shared global scope.
-//
-// Fix: wrap classic scripts that expose globals via `window.X = X` in IIFEs
-// so their top-level declarations stay scoped. Only the `window.X` assignment
-// leaks out.
+// Check 9c: classic scripts (no `type="module"`) share the global lexical
+// environment. If two scripts both declare `const Foo` at top level, the second
+// throws `SyntaxError: Identifier 'Foo' has already been declared`. Fix: wrap
+// classic scripts that expose globals via `window.X = X` in IIFEs so their
+// top-level declarations stay scoped — only the `window.X` assignment leaks out.
 //
 // This check scans all classic scripts loaded in HTML pages, extracts their
 // top-level `const`/`let`/`class`/`function` names, and flags any name that
 // appears in MORE THAN ONE file.
+console.log('\nCheck 9c: Classic script global name conflicts');
 
 const CLASSIC_SCRIPT_FILES = [
   // Files loaded via <script defer> (not <script type="module">) in HTML pages.
@@ -349,7 +315,6 @@ const CLASSIC_SCRIPT_FILES = [
   'src/auth/security.js',
   'src/auth/byteward.js',
   'src/auth/device-fingerprint.js',
-  'src/utils/supabase-api.js',
   'src/utils/ui.js',
   'src/utils/navigasi.js',
 ];
@@ -400,8 +365,7 @@ if (conflicts.length === 0) {
   error(`${conflicts.length} top-level name conflicts found (wrap one of the files in an IIFE)`);
 }
 
-// === CHECK 10: No large inline <style> blocks ===
-console.log('\n=== Check 10: Inline <style> blocks ===');
+console.log('\nCheck 10: Inline <style> blocks');
 
 htmlFiles.forEach(htmlFile => {
   const content = readFileSync(htmlFile, 'utf-8');
@@ -419,8 +383,7 @@ htmlFiles.forEach(htmlFile => {
   }
 });
 
-// === CHECK 11: ES module imports resolve ===
-console.log('\n=== Check 11: ES module imports ===');
+console.log('\nCheck 11: ES module imports');
 
 function findJsFiles(dir) {
   const results = [];
@@ -476,37 +439,25 @@ if (brokenImports === 0) {
   error(`${brokenImports} broken imports found`);
 }
 
-// === CHECK 12: Function call sites have definitions (catches the v2.1.1 bug class) ===
-console.log('\n=== Check 12: Undefined function references ===');
+// Check 12: catches the bug class where a function is called in N places but
+// defined in ZERO — the classic symptom was a helper referenced at multiple
+// call sites but renamed/deleted/never-created → ReferenceError at runtime,
+// caught by an outer try/catch, user silently signed out with no error message.
 //
-// This check catches the bug class that v2.1.1 fixed: a function called
-// in N places but defined in ZERO places. The classic symptom was
-// `_createUserDocViaServer` being called at lines 402 and 464 but never
-// defined → ReferenceError at runtime, caught by outer try/catch, user
-// silently signed out with no error message.
-//
-// Algorithm: for each .js file, extract every function/method definition
-// AND every `NAME(` call site (excluding method calls like `obj.NAME(`).
-// A call site is "unresolved" if NAME is not defined in the same file AND
-// not in the known-safe global list (builtins + window.* + imported names).
+// For each .js file, extract every function/method definition AND every
+// `NAME(` call site (excluding method calls like `obj.NAME(`). A call site is
+// "unresolved" if NAME is not defined in the same file AND not in the
+// known-safe global list (builtins + window.* + imported names).
 //
 // We only flag calls that match `_`-prefixed identifiers (the project
 // convention for "private but cross-file" functions) to keep noise low.
-// This catches the high-risk case where someone references a helper that
-// was renamed, deleted, or never created.
 //
-// Definition patterns we recognize:
-//   - `function NAME(`            — top-level function declaration
-//   - `async function NAME(`      — async top-level function declaration
-//   - `NAME(...) {`               — class method (inside `class { ... }`)
-//   - `async NAME(...) {`         — async class method
-//   - `const NAME = (...) =>`     — arrow function assignment
-//   - `const NAME = async (...) =>` — async arrow function assignment
-//   - `const NAME = function`     — function expression assignment
-//   - `(const|let|var) NAME = ...` — variable assignment (callbacks stored as vars)
-//     We treat ANY variable named `_xxx` as "defined" because it might be
-//     a callback stored for later invocation. This is more permissive but
-//     avoids false positives like `_onAnswerCb = cb; _onAnswerCb();`.
+// Definition patterns recognized: `function NAME(`, `async function NAME(`,
+// `NAME(...) {` (class method), `async NAME(...) {`,
+// `const NAME = (...) =>`, `const NAME = async (...) =>`,
+// `const NAME = function`, and any `(const|let|var) NAME = ...` (callbacks
+// stored as vars — permissive but avoids false positives).
+console.log('\nCheck 12: Undefined function references');
 
 const FN_DEF_REGEX = /(?:async\s+)?function\s+([A-Za-z_]\w*)\s*\(/g;
 const METHOD_DEF_REGEX = /(?:async\s+)?([A-Za-z_]\w*)\s*\([^)]*\)\s*\{/g;
@@ -540,7 +491,7 @@ jsFiles.forEach(jsFile => {
   // Strip only comments (line + block), NOT strings.
   // The previous implementation stripped strings too, which broke when
   // function definitions contained string literals with special chars
-  // (e.g. `function _shadeColor(hex, pct) {` after a line containing a
+  // (for example `function _shadeColor(hex, pct) {` after a line containing a
   // template literal that the state machine lost track of).
   //
   // We use a careful state machine that:
@@ -626,15 +577,14 @@ jsFiles.forEach(jsFile => {
 });
 
 if (undefinedPrivateCalls === 0) {
-  ok(`No undefined private function references (catches v2.1.1-style bugs)`);
+  ok(`No undefined private function references`);
 } else {
   error(`${undefinedPrivateCalls} undefined private function references found`);
 }
 
-// === SUMMARY ===
-console.log('\n' + '='.repeat(60));
+console.log('\n' + '-'.repeat(60));
 console.log(`Verification complete: ${errors} errors, ${warnings} warnings`);
-console.log('='.repeat(60));
+console.log('-'.repeat(60));
 
 if (errors > 0) {
   console.log('\n❌ STRUCTURE VERIFICATION FAILED');

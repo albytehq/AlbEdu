@@ -1,6 +1,4 @@
-// =============================================================================
-// theme-system/injector.js — Inject CSS Custom Properties to :root
-// =============================================================================
+// theme-system/injector.js — inject CSS custom properties into :root.
 
 export function injectTheme(theme) {
   const colors = deriveColors(theme.primary);

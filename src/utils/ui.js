@@ -1,15 +1,10 @@
-// ByteWard UI Module v1.0.0
-// - Floating profile button REMOVED — avatar now lives in sidebar dropdown (navigasi.js)
-// - Avatar system: UI-Avatars + inline SVG initials fallback (no DiceBear CDN)
-// - Loading system, auth loading, animations retained
+// ui.js — ByteWard UI module: avatar system (UI-Avatars + inline SVG
+// fallback), loading system, auth loading, animations, profile panel.
 
 window.UI = window.UI || {};
 
-/* ════════════════════════════
-   AVATAR SYSTEM — no DiceBear
-   Uses UI-Avatars (stable, rate-limit friendly)
-   Falls back to inline SVG initials if offline / blocked
-   ════════════════════════════ */
+/* Avatar system — UI-Avatars (rate-limit friendly). Falls back to inline SVG
+   initials if offline / blocked. */
 const AvatarSystem = {
     // Primary: ui-avatars.com — simple, deterministic, no bot cleanup risk
     buildUrl(name, bg, color) {
@@ -86,9 +81,7 @@ function _initials(str) {
     return words[0].slice(0, 2).toUpperCase();
 }
 
-/* ════════════════════════════
-   LOADING STATUS ROTATION
-   ════════════════════════════ */
+/* Loading status rotation */
 const _STATUS_MSGS = [
     'Mengalihkan halaman',
     'Memuat sumber daya',
@@ -118,9 +111,7 @@ function _stopStatus() {
 window._startLoadingStatus = _startStatus;
 window._stopLoadingStatus  = _stopStatus;
 
-/* ════════════════════════════
-   AUTH LOADING OVERLAY
-   ════════════════════════════ */
+/* Auth loading overlay */
 UI.showAuthLoading = function (text) {
     text = text || 'Memverifikasi sesi login...';
     let el = document.getElementById('loadingIndicator');
@@ -187,9 +178,7 @@ UI.confirm = function (opts) {
     }
 };
 
-/* ════════════════════════════
-   AFTER LOGIN/LOGOUT HOOKS
-   ════════════════════════════ */
+/* After login/logout hooks */
 UI.afterLogin = function () {
     this.hideAuthLoading();
     // Notify navigasi.js to sync sidebar user
@@ -209,9 +198,7 @@ UI.afterLogout = function () {
     this.hideAuthLoading?.();
 };
 
-/* ════════════════════════════
-   ANIMATION HELPERS
-   ════════════════════════════ */
+/* Animation helpers */
 UI.Animate = {
     panelIn(panel) {
         if (!panel) return;
@@ -253,15 +240,11 @@ UI.Animate = {
     },
 };
 
-/* ════════════════════════════
-   PROFILE PANEL (modal dialog)
-   Triggered from sidebar dropdown → "Edit Profil"
-   Also used directly by profile.html
-   ════════════════════════════ */
+/* Profile panel — modal dialog. Triggered from sidebar dropdown → "Edit Profil".
+   Also used directly by profile.html. */
 UI.Profile = {
-    // NOTE: init() is now a no-op for creating a floating button.
-    // The profile panel is opened via UI.Profile.open() directly
-    // from navigasi.js dropdown or profile.html page logic.
+    // init() is a no-op for the floating button — the panel is opened via
+    // UI.Profile.open() from navigasi.js dropdown or profile.html.
     init() {
         // Only set up keyboard handler if panel might be opened on this page
         this._initKeyboard();
@@ -554,12 +537,11 @@ UI.Profile = {
             const trimName = (state.tempName || '').trim();
             if (trimName.length === 0) throw new Error('Nama tidak boleh kosong');
             if (trimName !== window.Auth.userData.nama) updates.nama = trimName;
-            // NOTE: migration 20260701_002_alter_users_snake_case.sql renamed
+            // Migration 20260701_002_alter_users_snake_case.sql renamed
             // foto_profil → avatar_url and profil_lengkap → profile_complete.
-            // Writing the old names here threw a Postgrest "column does not
-            // exist" error on every save from this panel — fixed to the
-            // current schema. window.Auth.userData still carries foto_profil
-            // too (normalizeUserDoc keeps both in sync for legacy readers).
+            // Writing the old names threw "column does not exist" on every
+            // save — fixed to current schema. window.Auth.userData still
+            // carries foto_profil (normalizeUserDoc keeps both for legacy readers).
             if (state.tempAvatar && state.tempAvatar !== window.Auth.userData.foto_profil) {
                 updates.avatar_url = state.tempAvatar;
             }
@@ -570,8 +552,7 @@ UI.Profile = {
 
             delete updates.email; delete updates.peran; delete updates.id; delete updates.created_at;
 
-            // Native platform layer — replaces window.firebaseDb.collection('users').doc(uid).update().
-            // Note: user.id (Supabase native) replaces user.uid (Firebase-shaped legacy).
+            // user.id (Supabase native) replaces the legacy user.uid shape.
             const userId = window.Auth.currentUser?.id || window.Auth.currentUser?.uid;
             await window.AlbEdu?.repository?.updateDoc('users', userId, updates);
             // Mirror the DB write into the local camelCase/legacy shape so the
@@ -595,7 +576,7 @@ UI.Profile = {
             // Update sidebar avatar
             window.dispatchEvent(new Event('auth-ready'));
 
-            if (updates.profilLengkap) setTimeout(() => this.close(), 1500);
+            if (updates.profile_complete) setTimeout(() => this.close(), 1500);
         } catch (err) {
             state.isLoading = false;
             this._render();
@@ -656,7 +637,7 @@ UI.Profile = {
     },
 
     _initKeyboard() {
-        // [Item 2] Named handler for cleanup on pagehide
+        // Named handler so we can remove it on pagehide.
         const self = this;
         this._onKeydown = function (e) {
             if (e.key !== 'Escape') return;
@@ -665,7 +646,7 @@ UI.Profile = {
         };
         document.addEventListener('keydown', this._onKeydown);
 
-        // [Item 2] Cleanup
+        // Cleanup on pagehide.
         window.addEventListener('pagehide', () => {
             document.removeEventListener('keydown', this._onKeydown);
             if (_statusInterval) { clearInterval(_statusInterval); _statusInterval = null; }
@@ -673,9 +654,7 @@ UI.Profile = {
     },
 };
 
-/* ════════════════════════════
-   LOGIN FLOW
-   ════════════════════════════ */
+/* Login flow */
 UI.handleLogin = async function () {
     this.showAuthLoading('Membuka Google Login...');
     try {
@@ -690,9 +669,7 @@ UI.handleLogin = async function () {
 
 UI.initializeForLogin = function () { _ensureLoadingCSS(); };
 
-/* ════════════════════════════
-   CSS HELPER — load loading.css once
-   ════════════════════════════ */
+/* CSS helper — load loading.css once */
 function _ensureLoadingCSS() {
     if (document.querySelector('link[href*="loading.css"]') || document.querySelector('#loading-css-link')) return;
     const paths = ['styles/loading.css', '../styles/loading.css', '../../styles/loading.css', '../../../styles/loading.css'];
@@ -714,16 +691,12 @@ function _injectMinimalCSS() {
     document.head.appendChild(s);
 }
 
-/* ════════════════════════════
-   ESCAPE HELPER
-   ════════════════════════════ */
+/* Escape helper */
 function _esc(str) {
     return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ════════════════════════════
-   INIT
-   ════════════════════════════ */
+/* Init */
 (function () {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => UI.Profile.init());

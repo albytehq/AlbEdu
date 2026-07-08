@@ -1,18 +1,14 @@
-// =============================================================================
-// templates.js — Question templates for Buat Ujian v2
-// Schema-accurate: pilihan is {A,B,C,D} object, jawaban_benar is letter.
-// Loaded as a classic <script defer> — exposes window.TemplatePicker.
-// =============================================================================
+// templates.js — question templates for Buat Ujian. Schema-accurate:
+// `pilihan` is a {A,B,C,D} object, `jawaban_benar` is a letter.
 
 (function () {
   'use strict';
 
   const t = (key, vars, fallback) => fallback;
 
-  // ── Question templates (schema-accurate) ──
   // Each template knows its sectionType so the picker can route it to the
   // correct section. create() returns a fresh question object matching the
-  // verified examData schema (state.js addQuestion).
+  // CreateAssessment.addQuestion schema.
   const TEMPLATES = [
     {
       id: 'pg-4',
@@ -46,10 +42,9 @@
     },
   ];
 
-  // ── TemplatePicker — modal picker ──
-  // Wired to the "Dari Template" button in Card 2. Opens an overlay,
-  // lets user pick a template, then routes to SoalEditorModal with the
-  // template's create() result pre-filled as the draft.
+  // TemplatePicker — modal picker. Wired to the "Dari Template" button in
+  // Card 2. Opens an overlay, lets user pick a template, then routes to
+  // SoalEditorModal with the template's create() result pre-filled as the draft.
   const TemplatePicker = {
     init() {
       this._overlay = document.getElementById('question-template-overlay');
@@ -111,7 +106,7 @@
       let targetSection = state.examData.sections.findIndex((s) => s.type_question === tpl.sectionType);
 
       if (targetSection === -1) {
-        // No matching section — create one if possible
+        // No matching section — create one if we still can.
         if (state.examData.sections.length < 2) {
           const sec = window.CreateAssessment.addSection();
           if (sec) {

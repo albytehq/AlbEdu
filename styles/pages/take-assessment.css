@@ -49,7 +49,7 @@
     .loading-logo {
       width: 64px; height: 64px;
       background: var(--albedu-primary, #2563eb);
-      border-radius: 18px;
+      border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 12px 32px var(--albedu-primary-ring, rgba(37,99,235,.2));
     }
@@ -104,7 +104,7 @@
       width: 100%; max-width: 560px;
       background: var(--albedu-surface, #fff);
       border: 1px solid var(--albedu-border, #e2e8f0);
-      border-radius: var(--albedu-radius-lg, 16px);
+      border-radius: var(--albedu-radius-lg, 8px);
       box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
       overflow: hidden;
     }
@@ -128,7 +128,7 @@
     .identity-banner__chip .material-symbols-outlined { font-size: 14px; }
     .identity-card__note {
       padding: 14px 20px; margin: 16px 28px 0;
-      background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
       font-size: 13px; color: #92400e; line-height: 1.55;
     }
     .identity-card__body { padding: 24px 28px 28px; }
@@ -214,7 +214,7 @@
     .exam-question-card {
       background: var(--albedu-surface, #fff);
       border: 1px solid var(--albedu-border, #e2e8f0);
-      border-radius: var(--albedu-radius-lg, 16px);
+      border-radius: var(--albedu-radius-lg, 8px);
       padding: 22px 22px 18px;
       margin-bottom: 14px;
       transition: border-color 200ms ease;
@@ -239,13 +239,13 @@
       margin: 12px 0 16px; display: grid; gap: 10px;
     }
     .question-media img {
-      max-width: 100%; height: auto; border-radius: 10px;
+      max-width: 100%; height: auto; border-radius: 8px;
       border: 1px solid var(--albedu-border, #e2e8f0);
       cursor: zoom-in;
     }
     .question-media .media-video {
       position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
-      border-radius: 10px; border: 1px solid var(--albedu-border, #e2e8f0);
+      border-radius: 8px; border: 1px solid var(--albedu-border, #e2e8f0);
     }
     .question-media .media-video iframe {
       position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
@@ -258,13 +258,14 @@
       padding: 12px 14px;
       background: var(--albedu-surface-alt, #f8fafc);
       border: 1.5px solid var(--albedu-border, #e2e8f0);
-      border-radius: 10px;
+      border-radius: 8px;
       cursor: pointer;
       transition: all 150ms ease;
       min-height: 48px; /* touch target ≥44 + padding */
       -webkit-tap-highlight-color: transparent;
     }
-    .option-item:hover { border-color: var(--albedu-primary, #2563eb); background: var(--albedu-primary-muted, #eff6ff); }
+    /* No :hover — clean look. Selected state shown via .selected below.
+       (albedu-components.css also defines a no-op hover for safety.) */
     .option-item.selected {
       border-color: var(--albedu-primary, #2563eb);
       background: var(--albedu-primary-muted, #eff6ff);
@@ -300,7 +301,7 @@
       color: var(--albedu-heading, #0f172a);
       background: var(--albedu-surface, #fff);
       border: 1.5px solid var(--albedu-border, #e2e8f0);
-      border-radius: 10px; resize: vertical; outline: none;
+      border-radius: 8px; resize: vertical; outline: none;
       transition: border-color 150ms ease, box-shadow 150ms ease;
     }
     .esai-textarea:focus { border-color: var(--albedu-primary, #2563eb); box-shadow: 0 0 0 3px var(--albedu-primary-ring, rgba(37,99,235,.12)); }
@@ -327,7 +328,7 @@
       border: 1.5px solid var(--albedu-border, #e2e8f0);
       background: var(--albedu-surface, #fff);
       color: var(--albedu-heading, #0f172a);
-      border-radius: 10px; cursor: pointer;
+      border-radius: 8px; cursor: pointer;
       transition: all 150ms ease;
       -webkit-tap-highlight-color: transparent;
     }
@@ -348,11 +349,11 @@
     .page-tabs {
       display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;
       padding: 6px; background: var(--albedu-surface-alt, #f1f5f9);
-      border-radius: 10px;
+      border-radius: 8px;
     }
     .page-tab {
       flex: 1; min-width: 100px;
-      padding: 8px 12px; min-height: 40px;
+      padding: 8px 12px; min-height: 44px;
       font-family: inherit; font-size: 13px; font-weight: 600;
       background: transparent; color: var(--albedu-body, #64748b);
       border: none; border-radius: 8px; cursor: pointer;
@@ -388,7 +389,7 @@
     .result-hero {
       background: var(--albedu-surface, #fff);
       border: 1px solid var(--albedu-border, #e2e8f0);
-      border-radius: var(--albedu-radius-lg, 16px);
+      border-radius: var(--albedu-radius-lg, 8px);
       padding: 36px 28px; text-align: center;
       box-shadow: 0 12px 32px rgba(15,23,42,.06);
       margin-bottom: 24px;
@@ -414,7 +415,7 @@
     .result-stat {
       padding: 14px 16px;
       background: var(--albedu-surface-alt, #f8fafc);
-      border-radius: 10px;
+      border-radius: 8px;
       text-align: center;
     }
     .result-stat__num { font-size: 22px; font-weight: 700; color: var(--albedu-heading, #0f172a); font-family: 'JetBrains Mono', monospace; }
@@ -426,7 +427,7 @@
     .result-section {
       background: var(--albedu-surface, #fff);
       border: 1px solid var(--albedu-border, #e2e8f0);
-      border-radius: var(--albedu-radius-lg, 16px);
+      border-radius: var(--albedu-radius-lg, 8px);
       padding: 22px 24px; margin-bottom: 16px;
     }
     .result-section__title {
@@ -498,5 +499,74 @@
     @media (prefers-reduced-motion: reduce) {
       .exam-timer.critical { animation: none; }
       .loading-spinner, .exam-progress-fill { transition: none; }
+    }
+
+    /* ───────────────────────────────────────────────────────────────────────
+       8. DARK MODE (prefers-color-scheme: dark)
+       AlbEdu tokens ship with [data-theme="dark"] JS-gated overrides only.
+       This block ensures the peserta exam runtime flips cleanly when the
+       user's OS is in dark mode AND no manual theme attribute is set.
+       Mirrors the pattern used in albedu-components.css.
+       ─────────────────────────────────────────────────────────────────────── */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --albedu-surface: #1e293b;
+        --albedu-surface-alt: #0f172a;
+        --albedu-heading: #f1f5f9;
+        --albedu-body: #cbd5e1;
+        --albedu-border: #334155;
+        --albedu-primary-muted: rgba(37, 99, 235, 0.18);
+        --albedu-primary-ring: rgba(37, 99, 235, 0.35);
+      }
+
+      /* Status icons — keep tinted bg but soften for dark surface */
+      :root:not([data-theme="light"]) .status-icon {
+        background: rgba(245, 158, 11, 0.18);
+        color: #fbbf24;
+      }
+      :root:not([data-theme="light"]) .status-icon.danger {
+        background: rgba(239, 68, 68, 0.18);
+        color: #f87171;
+      }
+      :root:not([data-theme="light"]) .status-icon.success {
+        background: rgba(16, 185, 129, 0.18);
+        color: #34d399;
+      }
+
+      /* Identity note — dark amber */
+      :root:not([data-theme="light"]) .identity-card__note {
+        background: rgba(245, 158, 11, 0.08);
+        border-color: rgba(245, 158, 11, 0.3);
+        color: #fbbf24;
+      }
+
+      /* Exam timer states */
+      :root:not([data-theme="light"]) .exam-timer.warning {
+        background: rgba(245, 158, 11, 0.18);
+        color: #fbbf24;
+      }
+      :root:not([data-theme="light"]) .exam-timer.critical {
+        background: rgba(239, 68, 68, 0.18);
+        color: #f87171;
+      }
+
+      /* Result stat colors */
+      :root:not([data-theme="light"]) .result-stat--benar .result-stat__num { color: #34d399; }
+      :root:not([data-theme="light"]) .result-stat--salah .result-stat__num { color: #f87171; }
+      :root:not([data-theme="light"]) .result-stat--kosong .result-stat__num { color: #fbbf24; }
+
+      /* Result item status pills */
+      :root:not([data-theme="light"]) .result-item__status.benar {
+        background: rgba(16, 185, 129, 0.18);
+        color: #34d399;
+      }
+      :root:not([data-theme="light"]) .result-item__status.salah {
+        background: rgba(239, 68, 68, 0.18);
+        color: #f87171;
+      }
+      :root:not([data-theme="light"]) .result-item__status.kosong {
+        background: rgba(245, 158, 11, 0.18);
+        color: #fbbf24;
+      }
     }
   

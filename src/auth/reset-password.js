@@ -1,32 +1,8 @@
-// =============================================================================
-// ResetPassword.js — Production-grade password reset completion flow v2.0
-// =============================================================================
+// reset-password.js — password reset completion flow (POST link click)
 //
-// STATE MACHINE:
-//   ┌─────────────────────────────────────────────────────────────────┐
-//   │                                                                 │
-//   │   [INIT] ──detectRecoverySession──►  ┌── [FORM] (valid session)│
-//   │                                       │                          │
-//   │                                       ├── [ERROR] (no session)  │
-//   │                                       │                          │
-//   │                                       └── [ERROR] (hash error)  │
-//   │                                                                  │
-//   │   [FORM] ──submit──► [LOADING] ──┐                               │
-//   │                                  ├── [SUCCESS] (200 OK)          │
-//   │                                  └── [FORM] + error msg          │
-//   │                                                                  │
-//   └─────────────────────────────────────────────────────────────────┘
-//
-// FIXES vs v1:
-//   - Pakai getResetPasswordErrorMessage() untuk semua error dari updateUser().
-//   - Cek recovery marker dari hash DAN query string (PKCE + implicit flow).
-//   - Capture marker SEKALI di awal (sebelum Supabase clean URL).
-//   - Defense-in-depth storage cleanup setelah success.
-//   - SignOut timeout-bounded (4s) supaya UI tidak hang.
-//   - Cek `error_description` di hash untuk error Supabase PKCE.
-//
-// CRITICAL: this function must NEVER auto-redirect to admin/index.html.
-// =============================================================================
+// NEVER auto-redirect to admin/index.html from this page — the user is here
+// because they clicked a reset link, and they should land on login.html
+// after we update the password.
 
 import {
     getResetPasswordErrorMessage,
@@ -38,7 +14,6 @@ import {
 
 const t = (key, vars, fallback) => fallback;
 
-// ── DOM references ──────────────────────────────────────────────────────────
 const form             = document.getElementById('resetPasswordForm');
 const newPasswordInput = document.getElementById('newPassword');
 const confirmInput     = document.getElementById('confirmPassword');
@@ -56,7 +31,6 @@ const countdownBar     = document.getElementById('countdownBar');
 const strengthWrap     = document.getElementById('passwordStrength');
 const strengthText     = document.getElementById('strengthText');
 
-// ── Constants ───────────────────────────────────────────────────────────────
 const REDIRECT_SECONDS         = 3;
 const LOGIN_URL                = 'login.html';
 const BTN_TEXT_DEFAULT         = 'Simpan Kata Sandi Baru';
@@ -65,16 +39,10 @@ const RECOVERY_DETECT_RETRIES  = 3;
 const RECOVERY_DETECT_RETRY_MS = 800;
 const SIGNOUT_TIMEOUT_MS       = 4_000;
 
-// ── State ───────────────────────────────────────────────────────────────────
 let isSubmitting   = false;
 let _redirectTimerId = null;
 
-// ── DOM: button text reference ──────────────────────────────────────────────
 const btnTextEl = resetBtn?.querySelector('.btn-text');
-
-// =============================================================================
-// UI helpers
-// =============================================================================
 
 function showMessage(text, type = 'error') {
     if (!messageEl) return;
@@ -128,19 +96,14 @@ function showSuccessState() {
     startRedirectCountdown();
 }
 
-// =============================================================================
-// Defense-in-depth storage cleanup
-// =============================================================================
-
 // Supabase JS SDK persists auth state in localStorage under keys shaped like:
 //   sb-<project-ref>-auth-token
-// plus optional per-provider OAuth state keys. After signOut() these SHOULD be
-// gone, but in some edge cases (signOut timeout, network failure, certain
-// browser privacy modes) stale entries persist — and that's the root cause of
-// the auto-login bug. This function manually scrubs those keys as a fallback.
+// plus optional per-provider OAuth state keys. After signOut() these SHOULD
+// be gone, but in some edge cases (signOut timeout, network failure, certain
+// browser privacy modes) stale entries persist — and that's the root cause
+// of the auto-login bug. Manually scrub those keys as a fallback.
 function _clearSupabaseStorage() {
     try {
-        // Remove Supabase auth-token entries (sb-<ref>-auth-token)
         const toRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -152,7 +115,6 @@ function _clearSupabaseStorage() {
             try { localStorage.removeItem(k); } catch (_) {}
         });
 
-        // Also clear any AlbEdu-specific auth markers in sessionStorage
         const sessionKeys = [
             'albedu_user_auth_preflight',
             'albedu_forgot_email',
@@ -167,10 +129,6 @@ function _clearSupabaseStorage() {
         // Storage may be disabled (private mode) — best-effort only.
     }
 }
-
-// =============================================================================
-// Password strength
-// =============================================================================
 
 function evaluateStrength(password) {
     if (!password) return { level: '', label: '' };
@@ -206,10 +164,6 @@ function updateStrengthIndicator() {
     strengthText.textContent = label;
 }
 
-// =============================================================================
-// Toggle visibility
-// =============================================================================
-
 function setupToggleVisibility() {
     document.querySelectorAll('.toggle-visibility').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -229,10 +183,6 @@ function setupToggleVisibility() {
         });
     });
 }
-
-// =============================================================================
-// Form validation
-// =============================================================================
 
 function validateForm() {
     const newPassword = newPasswordInput?.value || '';
@@ -254,27 +204,23 @@ function validateForm() {
     return '';
 }
 
-// =============================================================================
-// Parse URL errors dari Supabase
-// =============================================================================
-
-// Supabase me-return error di URL dengan beberapa format:
+// Supabase returns errors in the URL in several formats:
 //
-//   Implicit flow (lama):
+//   Implicit flow (legacy):
 //     #error=access_denied&error_code=otp_expired&error_description=...
 //
-//   PKCE flow (default sejak Supabase JS v2.39):
+//   PKCE flow (default since Supabase JS v2.39):
 //     ?error=access_denied&error_code=otp_expired&error_description=...
-//     atau:
+//     or:
 //     #error=access_denied&error_code=otp_expired&error_description=...
 //
-// Kita parse KEDUA lokasi (hash + query) untuk kompatibilitas penuh.
+// Parse BOTH locations (hash + query) for full compatibility.
 function _parseSupabaseErrorFromUrl() {
     const locations = [window.location.hash, window.location.search];
 
     for (const loc of locations) {
         if (!loc || !(loc.startsWith('#') || loc.startsWith('?'))) continue;
-        const params = new URLSearchParams(loc.slice(1)); // buang '#' atau '?'
+        const params = new URLSearchParams(loc.slice(1)); // strip '#' or '?'
         const error = params.get('error');
         const errorCode = params.get('error_code');
         const errorDescription = params.get('error_description');
@@ -294,12 +240,11 @@ function handleUrlError(urlErr) {
         backendCode: errorCode,
     });
 
-    // Bersihkan hash & query dari URL supaya user gak bookmark URL berisi error
+    // Clean hash & query so the user doesn't bookmark a URL with errors in it.
     if (window.history?.replaceState) {
         window.history.replaceState(null, '', window.location.pathname);
     }
 
-    // Map errorCode ke pesan user-friendly
     const friendlyMessage = getResetPasswordErrorMessage(errorCode || errorDescription || '');
     const title = _getErrorTitle(errorCode);
 
@@ -315,17 +260,11 @@ function _getErrorTitle(errorCode) {
     return t('auth.reset.error_title', null, 'Link Tidak Valid');
 }
 
-// =============================================================================
-// Detect recovery session (PKCE-aware)
-// =============================================================================
-
 // Check both hash AND query string for recovery markers (PKCE + implicit flow).
 function _hasRecoveryMarker() {
     const hash  = window.location.hash  || '';
     const query = window.location.search || '';
-    // Implicit flow markers (in hash)
     if (hash.includes('type=recovery') || hash.includes('access_token')) return true;
-    // PKCE flow markers (in query string)
     if (query.includes('type=recovery') || query.includes('code='))      return true;
     return false;
 }
@@ -344,7 +283,6 @@ async function _tryGetSessionWithRetry() {
         } catch (err) {
             console.warn(`[ResetPassword] getSession attempt ${attempt} threw:`, err?.message);
         }
-        // Wait before next probe (skip wait after last attempt)
         if (attempt < RECOVERY_DETECT_RETRIES) {
             await new Promise(r => setTimeout(r, RECOVERY_DETECT_RETRY_MS));
         }
@@ -352,45 +290,35 @@ async function _tryGetSessionWithRetry() {
     return { session: null, error: null };
 }
 
-/**
- * Detect recovery session.
- *
- * Production-grade recovery detection (PKCE-aware):
- *   1. Capture recovery marker from URL IMMEDIATELY (before Supabase
- *      auto-exchange cleans the URL). Marker can be in:
- *        - Hash fragment (legacy implicit flow): #access_token=xxx&type=recovery
- *        - Query string (PKCE flow, default since Supabase JS v2.39):
- *          ?code=xxx&type=recovery
- *   2. If Supabase returned an error in URL, show the appropriate error.
- *   3. Wait for Supabase, then probe getSession() up to RECOVERY_DETECT_RETRIES
- *      times. Supabase's auto-detection is asynchronous.
- *   4. If the URL had a recovery marker but no session is established after
- *      all retries, the link is invalid/expired → show clear error.
- *   5. If a session exists and the URL had a recovery marker → show the form.
- *   6. If a session exists but NO recovery marker (user navigated here
- *      directly while logged in) → sign out and show "Link Diperlukan".
- */
+// Detect recovery session (PKCE-aware).
+//
+//   1. Capture recovery marker from URL IMMEDIATELY (before Supabase
+//      auto-exchange cleans the URL). Marker can be in:
+//        - Hash (legacy implicit): #access_token=xxx&type=recovery
+//        - Query (PKCE, default since Supabase JS v2.39): ?code=xxx&type=recovery
+//   2. If Supabase returned an error in URL, show the appropriate error.
+//   3. Wait for Supabase, then probe getSession() up to RECOVERY_DETECT_RETRIES
+//      times. Supabase's auto-detection is asynchronous.
+//   4. If URL had a recovery marker but no session is established after all
+//      retries, the link is invalid/expired → show clear error.
+//   5. If a session exists and URL had a recovery marker → show the form.
+//   6. If a session exists but NO recovery marker (user navigated here
+//      directly while logged in) → sign out and show "Link Diperlukan".
 async function detectRecoverySession() {
-    // STEP 0: Capture recovery marker ONCE at function entry — BEFORE Supabase
-    // SDK has a chance to exchange the code and clean the URL. This is critical
-    // for PKCE flow where ?code= is removed after auto-exchange.
+    // Capture recovery marker ONCE at function entry — BEFORE Supabase SDK
+    // has a chance to exchange the code and clean the URL. Critical for
+    // PKCE flow where ?code= is removed after auto-exchange.
     const hadRecoveryMarkerAtLoad = _hasRecoveryMarker();
 
     try {
-        // STEP 1: Check URL for Supabase error markers FIRST.
-        // URL is available immediately on page load, no need to wait for SDK.
         const urlErr = _parseSupabaseErrorFromUrl();
         if (urlErr) {
             handleUrlError(urlErr);
             return;
         }
 
-        // STEP 2: Wait for Supabase SDK to be ready.
         await waitForSupabaseReady();
 
-        // STEP 3: If a non-recovery session already exists AND the user did
-        // NOT come from a recovery link, sign out to give the recovery flow a
-        // clean slate.
         if (!hadRecoveryMarkerAtLoad) {
             const initialProbe = await window.AlbEdu?.supabase?.client.auth.getSession();
             if (initialProbe.data?.session) {
@@ -403,8 +331,8 @@ async function detectRecoverySession() {
             }
         }
 
-        // STEP 4: Probe for session. If URL had a recovery marker, retry
-        // a few times because Supabase's async hash/code consumption may lag.
+        // Probe for session. If URL had a recovery marker, retry a few
+        // times because Supabase's async hash/code consumption may lag.
         const { session, error } = await _tryGetSessionWithRetry();
 
         if (error) {
@@ -414,9 +342,6 @@ async function detectRecoverySession() {
         }
 
         if (!session) {
-            // No session established. If the URL had a recovery marker at
-            // load, the link is invalid/expired. Otherwise the user navigated
-            // here directly without a reset link.
             if (hadRecoveryMarkerAtLoad) {
                 showErrorState(
                     'Link Sudah Kadaluarsa',
@@ -431,9 +356,6 @@ async function detectRecoverySession() {
             return;
         }
 
-        // STEP 5: We have a session. If the URL had a recovery marker at
-        // load (either hash for implicit flow or ?code= for PKCE), this is
-        // a legitimate recovery flow — show the form.
         if (hadRecoveryMarkerAtLoad) {
             showFormState();
             return;
@@ -463,17 +385,12 @@ async function detectRecoverySession() {
     }
 }
 
-// =============================================================================
-// Submit handler
-// =============================================================================
-
 async function handleSubmit(event) {
     event.preventDefault();
     clearMessage();
 
     if (isSubmitting) return;
 
-    // Client-side validation
     const validationError = validateForm();
     if (validationError) {
         showMessage(validationError);
@@ -490,8 +407,8 @@ async function handleSubmit(event) {
             throw new Error('Sistem autentikasi belum siap. Silakan muat ulang halaman.');
         }
 
-        // Cek session sekali lagi sebelum updateUser — session mungkin sudah
-        // expired antara detect & submit (race condition).
+        // Re-check session right before updateUser — session may have
+        // expired between detect & submit (race condition).
         const { data: sessionCheck } = await window.AlbEdu?.supabase?.client.auth.getSession();
         if (!sessionCheck?.session) {
             showErrorState(
@@ -517,10 +434,8 @@ async function handleSubmit(event) {
                 backendCode: errorCode,
             });
 
-            // Tampilkan pesan error
-            // Untuk error yang berhubungan dengan token/session expired,
-            // tampilkan error state (bukan form message) karena user perlu
-            // minta link baru.
+            // Token/session-expired errors go to errorState (user needs a
+            // new link); password-validation errors stay on the form.
             const lower = errorCode.toLowerCase();
             if (lower.includes('expired') ||
                 lower.includes('token') ||
@@ -528,16 +443,14 @@ async function handleSubmit(event) {
                 lower.includes('user not found')) {
                 showErrorState(_getErrorTitle(lower), friendlyMessage);
             } else {
-                // Error validasi password (weak, same, dll) → tampilkan di form
                 showMessage(friendlyMessage);
             }
             return;
         }
 
-        // ── Success ─────────────────────────────────────────────────────
-        // Sign out the recovery session so it can't be reused.
-        // Use a timeout-bounded signOut: if Supabase is slow/unreachable,
-        // we still proceed and clear local storage manually.
+        // Success — sign out the recovery session so it can't be reused.
+        // Timeout-bounded: if Supabase is slow/unreachable we still proceed
+        // and clear local storage manually.
         try {
             await Promise.race([
                 window.AlbEdu?.supabase?.client.auth.signOut(),
@@ -550,11 +463,10 @@ async function handleSubmit(event) {
             _clearSupabaseStorage();
         }
 
-        // Always clear local storage as defense-in-depth — signOut()
-        // sometimes leaves stale entries in localStorage on certain browsers.
+        // Always scrub local storage — signOut() sometimes leaves stale
+        // entries on certain browsers.
         _clearSupabaseStorage();
 
-        // Bersihkan hash & query dari URL untuk keamanan
         if (window.history?.replaceState) {
             window.history.replaceState(null, '', window.location.pathname);
         }
@@ -568,8 +480,6 @@ async function handleSubmit(event) {
             backendCode: err.message,
         });
 
-        // Untuk network error & error lain yang throw (bukan return),
-        // tampilkan pesan spesifik via mapper
         const friendly = getResetPasswordErrorMessage(err.message || 'unknown_error');
 
         if (err.message?.includes('belum siap')) {
@@ -587,16 +497,11 @@ async function handleSubmit(event) {
     }
 }
 
-// =============================================================================
-// Redirect countdown
-// =============================================================================
-
 function startRedirectCountdown() {
     let remaining = REDIRECT_SECONDS;
 
     if (countdownNum) countdownNum.textContent = remaining;
 
-    // Animate countdown bar
     if (countdownBar) {
         countdownBar.style.transform = 'scaleX(1)';
         countdownBar.style.transition = `transform ${REDIRECT_SECONDS}s linear`;
@@ -620,7 +525,6 @@ function startRedirectCountdown() {
         }
     }, 1000);
 
-    // Cancel timer jika user klik login manual
     loginNowBtn?.addEventListener('click', () => {
         if (_redirectTimerId) {
             clearInterval(_redirectTimerId);
@@ -630,16 +534,10 @@ function startRedirectCountdown() {
     });
 }
 
-// =============================================================================
-// Init
-// =============================================================================
-
 form?.addEventListener('submit', handleSubmit);
 newPasswordInput?.addEventListener('input', updateStrengthIndicator);
 setupToggleVisibility();
 
-// Sembunyikan form sampai recovery session terdeteksi
 if (formContent) formContent.classList.add('hidden');
 
-// Deteksi recovery session
 detectRecoverySession();

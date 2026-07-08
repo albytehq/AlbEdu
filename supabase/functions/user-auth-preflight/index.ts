@@ -107,30 +107,18 @@ serve(async (req) => {
       );
     }
 
-    // ── Rate-limit checks BEFORE Turnstile verification ─────────────────────
+    // Rate-limit pre-checks run BEFORE Turnstile verification and before
+    // the registration_attempts INSERT. The original ordering consumed a
+    // valid Turnstile token and INSERTed a row before realising the request
+    // was already over the rate limit — every failed attempt that passed
+    // Turnstile advanced the counter toward 429, even when the frontend
+    // already had a cached preflight. Page reload + rapid re-click could
+    // exhaust the 10-attempt device window and trigger 429s that looked
+    // like a hard block.
     //
-    // FIX 4 – Move rate-limit checks before the Turnstile call and the
-    // registration_attempts INSERT.
-    //
-    // Original ordering:
-    //   1. Verify Turnstile  ← consumes a valid challenge token
-    //   2. INSERT attempt    ← increments the counter
-    //   3. Check rate limit  ← 429 returned AFTER the token was consumed
-    //
-    // Problem: every failed attempt (rapid clicks, double-submit, retries)
-    // that passed Turnstile would still INSERT a row and advance the counter
-    // toward the 429 threshold, even when the frontend already had a cached
-    // preflight.  Because the frontend mutex only protects within a single
-    // page session, a page reload + rapid re-click could quickly exhaust the
-    // 10-attempt device window and trigger 429 responses that appear to the
-    // user as a hard block.
-    //
-    // Fix: perform a read-only pre-check on both the device and IP counters
-    // before touching Turnstile.  Only proceed to the expensive Turnstile
-    // call and INSERT when the request is within limits.  This prevents
-    // legitimate Turnstile tokens from being consumed by requests that would
-    // be rate-limited anyway, and prevents the attempt counter from being
-    // inflated by retries that never had a chance of succeeding.
+    // Fix: read-only pre-check on both the device and IP counters BEFORE
+    // touching Turnstile. Only proceed to the expensive Turnstile call and
+    // INSERT when the request is within limits.
 
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -153,8 +141,7 @@ serve(async (req) => {
       return genericError(headers, 500);
     }
 
-    // Use threshold 9 (one below the original 10) so there is always headroom
-    // for the INSERT that follows a successful check.
+    // Threshold 9 leaves headroom for the INSERT that follows a successful check.
     if ((preCheckDevice ?? 0) >= 9) {
       return json(
         { success: false, error: "rate_limit_exceeded" },
@@ -188,19 +175,17 @@ serve(async (req) => {
       }
     }
 
-    // ── Turnstile verification ────────────────────────────────────────────────
-    // Only reached when the request is within rate limits.
+    // Turnstile verification — only reached when the request is within rate limits.
     const turnstileOk = await verifyTurnstile(turnstileToken, ipAddress);
     if (!turnstileOk) {
-      // Do NOT insert an attempt row for a failed Turnstile check.
-      // The client cannot retry without solving a new challenge, so this
-      // failure does not represent a legitimate attempt and should not count
-      // toward the rate-limit quota.
+      // Do NOT insert an attempt row for a failed Turnstile check. The client
+      // cannot retry without solving a new challenge, so this failure does
+      // not represent a legitimate attempt and should not count toward the
+      // rate-limit quota.
       return json({ success: false, error: "turnstile_failed" }, 403, headers);
     }
 
-    // ── Record the attempt ────────────────────────────────────────────────────
-    // Only inserted after both rate-limit pre-checks and Turnstile pass.
+    // Record the attempt — only after both rate-limit pre-checks and Turnstile pass.
     const { data: attempt, error: insertErr } = await supabase
       .from("registration_attempts")
       .insert({
@@ -222,10 +207,9 @@ serve(async (req) => {
       return genericError(headers, 500);
     }
 
-    // ── Post-insert checks ────────────────────────────────────────────────────
-    // These use the count that NOW includes the row we just inserted, giving
-    // the correct inclusive total.  They serve as a final safety net in case
-    // of a race condition (two concurrent requests both passing the pre-check).
+    // Post-insert checks use the count that NOW includes the row we just
+    // inserted, giving the correct inclusive total. Final safety net against
+    // a race condition (two concurrent requests both passing the pre-check).
 
     const { count: deviceAttempts, error: deviceErr } = await supabase
       .from("registration_attempts")
@@ -248,21 +232,20 @@ serve(async (req) => {
       );
     }
 
-    // NOTE: Device account-limit check REMOVED from preflight.
+    // Device account-limit check is intentionally NOT enforced in preflight.
     //
-    // The preflight runs BEFORE the user authenticates with Google,
-    // so it cannot distinguish between a login (sign in to an existing
-    // account) and a registration (create a new account).  When the
-    // device already had 2 verified accounts, every attempt — even a
-    // legitimate login by an existing user — was blocked with
-    // "device_limit_reached", which is incorrect.
+    // Preflight runs BEFORE the user authenticates with Google, so it cannot
+    // distinguish between a login (sign in to an existing account) and a
+    // registration (create a new account). When the device already had 2
+    // verified accounts, every attempt — even a legitimate login by an
+    // existing user — was blocked with "device_limit_reached", which is
+    // incorrect.
     //
     // The device-limit enforcement now lives exclusively in
-    // user-auth-complete, which runs AFTER Google OAuth and can
-    // correctly check `if (!existingUser)` before applying the limit.
-    // This ensures existing users can always log in, while new
-    // registrations on devices that already have ≥ 2 accounts are
-    // still properly blocked.
+    // user-auth-complete, which runs AFTER Google OAuth and can correctly
+    // check `if (!existingUser)` before applying the limit. Existing users
+    // can always log in, while new registrations on devices that already
+    // have ≥ 2 accounts are still properly blocked.
 
     return json({ success: true, preflightId: attempt.id }, 200, headers);
   } catch (err) {

@@ -1,8 +1,5 @@
-// =============================================================================
-// theme-system/index.js — Theme System public API (v1.0.0)
-// =============================================================================
-// Google Form-like simplicity: 1 primary color → auto-derive everything.
-// =============================================================================
+// theme-system/index.js — Theme System public API.
+// One primary color → auto-derive the rest.
 
 import { deriveColors } from './derive.js';
 import { validateTheme } from './validate.js';

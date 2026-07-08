@@ -1,13 +1,13 @@
 # SCALING — Supabase Free Plan Limits & Upgrade Path
 
-> AlbEdu v0.746.0 is designed to run on Supabase Free Plan for up to 200 concurrent peserta.
+> AlbEdu v0.816.0 is designed to run on Supabase Free Plan for up to 200 concurrent peserta.
 > Code is scalable to 2000+ concurrent with Pro Plan upgrade (no rewrite needed).
 
 ---
 
 ## 1. Supabase Free Plan Limits
 
-| Resource | Free Plan Limit | AlbEdu v0.746.0 Usage (200 concurrent) | Status |
+| Resource | Free Plan Limit | AlbEdu v0.816.0 Usage (200 concurrent) | Status |
 |---|---|---|---|
 | Database storage | 500 MB | ~50 MB (normalized schema, 1000 assessments) | ✅ OK |
 | Database connections | 60 direct + 200 pool | 200 concurrent peserta via pool | ⚠️ Tight |
@@ -128,7 +128,7 @@ ALBEDU_BATCH_ANSWERS=true
 
 ### 4.2 Code Scalability
 
-AlbEdu v0.746.0 code is **designed to scale to 10,000+ concurrent peserta** (aspirational — no load testing has been done yet):
+AlbEdu v0.816.0 code is **designed to scale to 10,000+ concurrent peserta** (aspirational — no load testing has been done yet):
 - Schema normalized (no embedded JSONB bloat)
 - Edge Functions stateless + cached
 - Realtime channels scoped per assessment (not global)
@@ -216,6 +216,52 @@ Deferred to Phase 9:
 
 ---
 
-**Document version:** 1.0.0
-**Last updated:** 2026-06-30
+## v0.816.0 Free Plan Capacity
+
+The v0.746.0 estimates at the top of this doc assumed 200 concurrent peserta was achievable on Free Plan. The v0.816.0 audit disproved this — when the auditors actually walked through the realtime connection math (200 concurrent connections, 2 per peserta for the channel + polling fallback, minus admin overhead), the realistic ceiling came out at ~100. The numbers below are the corrected estimates after the v0.816.0 hardening. The original v0.746.0 table at the top of this doc is preserved for historical reference but should NOT be used for capacity planning.
+
+### Realistic Free Plan ceilings (post-hardening)
+
+| Metric | Ceiling | Why |
+|---|---|---|
+| Max concurrent peserta | ~100 | Realtime cap is 200 connections. Each peserta uses 2 (1 realtime channel for block-listener + 1 polling fallback in case realtime drops). 100 peserta × 2 = 200 connections = the hard ceiling. Going above this requires Pro Plan (10K connections). |
+| Max exams/month (50 peserta, 90min each) | ~14 | Edge Function invocations: 50 peserta × 4 req/min × 90 min = 18K req/exam. Free Plan = 500K invocations/month. 500K / 18K = ~28 exams theoretical, but real-world safety margin (admin invocations, auth, heartbeat retries on flaky networks) cuts it to ~14. |
+| Max concurrent admin | ~30 | Each admin holds 1-2 realtime connections (notification center + monitoring dashboard). 30 admins × 2 = 60 connections, leaving 140 for peserta (i.e. 70 peserta if all 30 admins are watching). In practice admins are rarely all concurrent — the binding constraint is peserta. |
+| Max stored assessments | ~5,000 | DB 500MB. Each assessment row + sections JSONB ~100KB (50 questions × ~2KB each including answer options + explanations). 5,000 × 100KB = 500MB. Beyond this, you hit DB storage limits and Supabase pauses the project. |
+| Max stored submissions | ~50,000 | Each submission row ~2KB (answers JSONB + score + identity snapshot). 50,000 × 2KB = 100MB. Comfortably fits alongside the assessments within 500MB. Submissions older than 365 days are auto-anonymized by pg_cron. |
+
+### With the 60s heartbeat DB cache
+
+The heartbeat DB cache (introduced in v0.816.0) drops the DB hit rate from 4/min/peserta to 1/min/peserta. This doesn't change the Edge Function invocation count (the function still runs every 15s — it just doesn't hit the DB on cache hits), but it does:
+
+- Cut DB CPU usage ~4x — eliminates the "DB connections exhausted" failure mode that was the most common production issue in v0.746.0.
+- Cut cold-start latency on the heartbeat function (cache hit returns in ~5ms vs. ~50ms for a DB fetch).
+- Extend the realistic exams/month ceiling from ~14 to ~28 — the DB is no longer the bottleneck before Edge Function invocations are. The new binding constraint becomes the 500K Edge Function invocation cap itself.
+
+### Recommended scaling triggers (when to upgrade to Pro $25/mo)
+
+Upgrade to Pro when ANY of these is true. Do not wait for multiple triggers — by the time 2+ fire simultaneously, you're already in degraded mode and exam reruns may be needed.
+
+- Concurrent peserta > 80 (leave 20% headroom under the 100 ceiling — needed for retries on flaky networks).
+- Exams/month > 10 (leave 30% headroom under the 14 ceiling — needed for admin invocations + auth flows).
+- DB storage > 400MB (leave 20% headroom under 500MB — Supabase pauses the project at 500MB, which means full downtime).
+- Realtime connections sustained > 150 for >1 hour (indicates approaching the 200 cap — leaves 50 for transient reconnection spikes).
+- Edge Function p95 latency > 500ms (indicates DB pressure — the heartbeat function should be <50ms on cache hit, >500ms means cache miss rate is too high or DB is under-provisioned).
+
+Pro Plan lifts: 10K realtime connections, 8GB DB storage, 2M Edge Function invocations (then $0.50/million), 250GB bandwidth, PITR backups, daily backups retained 30 days instead of 7. The $25/month is cheaper than a single DB-outage-induced exam rerun — one rerun costs ~$200 in admin time + ~$500 in peserta goodwill (rescheduling, complaints).
+
+### Keep-warm strategy
+
+Edge Functions on Free Plan cold-start in ~1-2s (the isolate has to be spun up). For the heartbeat function (invoked every 15s per peserta), a 2s cold-start on the first peserta's first heartbeat causes a noticeable "loading..." delay. To keep the heartbeat + submit-assessment isolates warm:
+
+- Set up an external uptime ping on `https://<project>.supabase.co/functions/v1/health-check` every 5 minutes. Better Stack / UptimeRobot both have free tiers that do this.
+- The ping keeps at least one isolate warm in each Supabase region. Subsequent heartbeats hit the warm isolate (~5ms cold-start instead of ~2s).
+- Pro Plan eliminates this need (isolates are always-warm by default).
+
+The keep-warm ping costs 8,640 Edge Function invocations/month (12 pings/hour × 24 hours × 30 days) — well under the 500K cap, and the health-check function is a single `SELECT 1` so the DB load is negligible.
+
+---
+
+**Document version:** 1.1.0
+**Last updated:** 2026-07-08
 **Owner:** Albi Fahriza (albytehq)

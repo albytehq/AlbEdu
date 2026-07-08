@@ -36,11 +36,48 @@ Test setiap skenario secara manual di browser. Centang jika pass.
 
 - [ ] **17. Low-end device (1GB RAM)** — Buka exam di device dengan 1GB RAM. Springs tidak cause OOM. will-change di-clean up.
 - [ ] **18. localStorage quota exceeded** — Fill localStorage sampai quota. QNotify draft save harus catch error, tidak crash.
-- [ ] **19. Image upload 50MB** — Upload image 50MB ke profile avatar. Validation harus reject dengan message jelas, tidak crash browser. (Note: Bank Soal feature removed in v0.746.0.)
+- [ ] **19. Image upload 50MB** — Upload image 50MB ke profile avatar. Validation harus reject dengan message jelas, tidak crash browser. (Note: Bank Soal feature removed.)
 
 ### Browser Edge Cases
 
 - [ ] **20. Private mode** — Buka di private/incognito mode. localStorage mungkin disabled. Auth session harus tetap work (persistSession: true menggunakan memory fallback).
+
+---
+
+## v0.816.0 Hardening Verified
+
+The following edge cases were uncovered by the v0.816.0 stability audit and are now handled. Each one was a real bug that would have manifested in production under specific user conditions — they are NOT hypothetical. Re-verify each after any refactor that touches the listed file.
+
+### Submit / publish races
+
+- **Double-click publish → guarded.** `src/pages/buat-ujian/publish-card.js` disables the publish button on first click (sets `disabled` attribute + adds `is-publishing` class for visual feedback) and re-enables on error response. Prevents duplicate assessment rows when the user double-clicks "Publish" before the first request returns. Without this guard, a slow network would create 2-3 duplicate assessments per double-click.
+- **Multiple tabs same exam → UNIQUE constraint + idempotent submit RPC.** `submissions(session_id)` has a UNIQUE constraint, and the atomic `submit_assessment()` RPC is idempotent — a second submit for the same session returns the first submit's result instead of throwing. The second tab's UI shows "submitted" without error.
+
+### Browser quirks
+
+- **Safari Private Mode localStorage → in-memory fallback.** `src/utils/self-storage.js` catches `QuotaExceededError` on `localStorage.setItem()` and falls back to a `Map` for the session. Auth session still works because Supabase's `persistSession: true` was already using memory fallback — but our own QNotify draft-save was crashing on Safari Private Mode.
+- **Heartbeat backoff timer leak → tracked + cleared in `stop()`.** `src/security/heartbeat.js` now stores `this._backoffTimer` (the setTimeout handle for the next retry) and clears it alongside `this._interval` (the regular heartbeat) inside `stop()`. The old code left the backoff timer running after `signOut()`, so the next sign-in would cause double-heartbeats that competed for the same session row.
+- **DevTools console.log monkey-patch → restored in `_restoreConsoleTrap()`.** `src/security/devtools-detector.js` was overriding `console.log` permanently (for the console.log getter detection method). The override was never restored, which broke any third-party library that relied on `console.log` returning its return value. `_restoreConsoleTrap()` is now called on `stop()` and on `pagehide`.
+- **Block-listener `_onSubmitted` → now wired.** `src/security/block-listener.js` was subscribing to realtime updates on `assessment_sessions` but the `_onSubmitted` callback that locks the UI on `status='blocked'` was never connected (the callback existed but wasn't passed to `subscribe()`). Peserta would continue answering for ~15s until the next heartbeat poll caught the block. Now wired via the 4-arg `subscribe(name, table, callback, filter)` form.
+
+### Deployment / runtime
+
+- **Service worker subfolder deploy → `BASE_PATH` computed.** `public/service-worker.js` now derives its `CACHE_VERSION` scope from `registration.scope` instead of hardcoding `/`. The service worker now works correctly whether deployed at root (localhost) or under `/AlbEdu/` on GitHub Pages. Previously, the SW was caching assets under `/styles/...` when the actual path was `/AlbEdu/styles/...`, causing 404s on every cached request.
+- **Boot platform timeout → 30s, resolves optimistically for degraded mode.** `AlbEdu.boot.ready` now resolves `true` after a 30s timeout even if the `albedu:platform-ready` event never fires. A slow or degraded Supabase region no longer freezes the UI indefinitely — the user sees the page shell after 30s with a "retry" banner, instead of an infinite spinner.
+
+### Security edge cases
+
+- **Consent `previousVersion` XSS → escaped.** `src/security/consent.js` was rendering `previousVersion` as raw `innerHTML` (to show "you previously agreed to v3.0.0"). A tampered consent record with `previousVersion: '<img src=x onerror=alert(1)>'` would execute. Now uses `AlbEdu.sanitize.setText()` which escapes via `textContent`.
+- **ipify timeout → 5s `AbortController`.** The ipify.com IP lookup (used for audit logs) was hanging indefinitely on slow networks, blocking the entire consent flow. Now wraps the `fetch()` in a 5s `AbortController`; on timeout, the audit log records `ip: null` instead of blocking.
+
+### Image / asset upload
+
+- **Image upload timeout → 10s per call.** `src/utils/image-compress.js` wraps each `fetch()` to the Cloudflare Worker in a 10s `AbortController`. Previously, a hung R2 response on the Worker side would block the image upload UI forever — the user would stare at a spinner with no recovery path.
+- **Image cleanup timeouts → 10s per call.** `src/utils/image-cleanup.js` (the orphaned-asset GC) now wraps each cleanup call in a 10s `AbortController` so a hung R2 response doesn't block the cleanup queue. Without this, one bad cleanup call would block the entire GC loop indefinitely.
+
+### Realtime
+
+- **ANC thundering herd → filter + 200ms debounce.** `src/utils/admin-notification-center.js` was subscribing to ALL violation events on ALL sessions (3-arg `subscribe` form). When 50+ peserta triggered violations simultaneously (e.g. a new section opened and they all switched tabs), the admin dashboard would receive 50+ callbacks in <1s and re-render the notification list 50 times — visible jank + CPU spike. Now uses the 4-arg `subscribe(name, table, callback, filter)` form (filtered to the active assessment) and debounces the callback by 200ms so rapid-fire events coalesce into one re-render.
 
 ---
 

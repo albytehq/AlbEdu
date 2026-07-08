@@ -1,16 +1,8 @@
-// =============================================================================
-// secondary.js — AlbEdu Icon System · Secondary Icon Registry (Layer 2)
-// =============================================================================
-// Secondary icons are bundled into the main icons.js (so they're available
-// immediately after the deferred script loads) but NOT in the inline sprite.
-// They render via the cached-template renderer (cloneNode — ~0.005ms each).
-//
-// Secondary icons cover feature-specific UI (charts, editor, admin tools).
-// For truly lazy-loaded icons (rarely used), use dynamic import chunks:
-//   const editorIcons = await import('../../src/shared/icons/modules/registry/feature-editor.js')
-//
-// License: ISC (Lucide icons — https://lucide.dev)
-// =============================================================================
+// secondary.js — feature-specific icons (charts, editor, admin tools).
+// Bundled into the main icons.js so they're available immediately after the
+// deferred script loads, but NOT in the inline sprite. They render via the
+// cached-template renderer (cloneNode).
+// Lucide (ISC license — https://lucide.dev).
 
 window.AlbEdu = window.AlbEdu || {};
 window.AlbEdu.__iconRegistrySecondary = {

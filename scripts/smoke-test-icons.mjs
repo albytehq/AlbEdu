@@ -1,7 +1,5 @@
-// =============================================================================
-// smoke-test-icons.mjs — Verify the v7.0 icon system works end-to-end.
+// smoke-test-icons.mjs — verify the icon system works end-to-end.
 // Uses jsdom for realistic browser simulation.
-// =============================================================================
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -12,11 +10,9 @@ const ROOT = path.resolve(__dirname, '..');
 const ICONS_JS = path.join(ROOT, 'src/shared/icons/icons.js');
 const CRITICAL_CSS_JS = path.join(ROOT, 'src/shared/head/critical-css.js');
 
-console.log('─'.repeat(72));
-console.log('AlbEdu Icon System v7.0 — Smoke Test');
-console.log('─'.repeat(72));
+console.log('AlbEdu Icon System — Smoke Test');
 
-// Build a JSDOM environment that simulates a real browser
+// Build a JSDOM environment that simulates a real browser.
 const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body></body></html>`, {
   url: 'http://localhost/',
   runScripts: 'dangerously',
@@ -70,8 +66,8 @@ assert('AlbEdu.bindIcons is a function', typeof window.AlbEdu.bindIcons === 'fun
 assert('AlbEdu.listIcons is a function', typeof window.AlbEdu.listIcons === 'function');
 assert('AlbEdu.hasIcon is a function', typeof window.AlbEdu.hasIcon === 'function');
 assert('AlbEdu.getMetrics is a function', typeof window.AlbEdu.getMetrics === 'function');
-assert('AlbEdu.preloadIcons is a function (NEW v7.0)', typeof window.AlbEdu.preloadIcons === 'function');
-assert('AlbEdu.preloadAll is a function (NEW v7.0)', typeof window.AlbEdu.preloadAll === 'function');
+assert('AlbEdu.preloadIcons is a function', typeof window.AlbEdu.preloadIcons === 'function');
+assert('AlbEdu.preloadAll is a function', typeof window.AlbEdu.preloadAll === 'function');
 
 console.log('\n[2] Inline SVG sprite (critical icons)');
 const sprite = document.getElementById('albedu-icon-sprite');
@@ -197,17 +193,14 @@ window.AlbEdu.addEventListener('icon-missing', () => { missingFired = true; });
 window.AlbEdu.icon('totally-nonexistent-icon');
 assert('icon-missing event fires for unknown icons', missingFired);
 
-console.log('\n[12] Backward compatibility (v6.0 API)');
+console.log('\n[12] Backward compatibility (legacy API)');
 assert('AlbEdu.on alias works', typeof window.AlbEdu.on === 'function');
 assert('AlbEdu.resetMetrics works', typeof window.AlbEdu.resetMetrics === 'function');
 
-// Final summary
-console.log('\n' + '─'.repeat(72));
-console.log(`Results: ${pass} passed, ${fail} failed`);
-console.log('─'.repeat(72));
+console.log('\nResults: ' + pass + ' passed, ' + fail + ' failed');
 if (fail > 0) {
   console.error('SMOKE TEST FAILED');
   process.exit(1);
 } else {
-  console.log('✓ All smoke tests passed — icon system v7.0 is operational.');
+  console.log('✓ All smoke tests passed — icon system is operational.');
 }

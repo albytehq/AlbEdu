@@ -12,7 +12,7 @@
         padding: 16px;
         background: var(--albedu-surface, #fff);
         border: 1px solid var(--albedu-border, #e2e8f0);
-        border-radius: var(--albedu-radius-lg, 14px);
+        border-radius: var(--albedu-radius-lg, 8px);
         flex-wrap: wrap;
       }
       .ra-controls > div { flex: 1; min-width: 240px; }
@@ -29,7 +29,7 @@
         width: 100%;
         padding: 10px 12px;
         border: 1px solid var(--albedu-border, #e2e8f0);
-        border-radius: var(--albedu-radius-md, 10px);
+        border-radius: var(--albedu-radius, 8px);
         background: var(--albedu-surface, #fff);
         color: var(--albedu-heading, #0f172a);
         font-size: 14px;
@@ -54,7 +54,7 @@
       .ra-stat-card {
         background: var(--albedu-surface, #fff);
         border: 1px solid var(--albedu-border, #e2e8f0);
-        border-radius: var(--albedu-radius-lg, 14px);
+        border-radius: var(--albedu-radius-lg, 8px);
         padding: 16px;
         display: flex;
         flex-direction: column;
@@ -83,7 +83,7 @@
       .ra-section {
         background: var(--albedu-surface, #fff);
         border: 1px solid var(--albedu-border, #e2e8f0);
-        border-radius: var(--albedu-radius-lg, 14px);
+        border-radius: var(--albedu-radius-lg, 8px);
         padding: 20px;
         margin-bottom: 20px;
       }
@@ -266,3 +266,21 @@
         .ra-stat-value { font-size: 22px; }
       }
     
+
+      /* ====================================================================
+         DARK MODE — prefers-color-scheme: dark (or [data-theme="dark"])
+         Surface/text colors flow through --albedu-* tokens (already flipped
+         in tokens.css). Below: bump difficulty/distractor bar contrast.
+         ==================================================================== */
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .ra-difficulty-fill.easy   { background: #34d399; }
+        :root:not([data-theme="light"]) .ra-difficulty-fill.medium { background: #fbbf24; }
+        :root:not([data-theme="light"]) .ra-difficulty-fill.hard   { background: #f87171; }
+        :root:not([data-theme="light"]) .ra-distractor-bar-fill.correct { background: #34d399; }
+        :root:not([data-theme="light"]) .ra-table tbody tr:hover { background: rgba(59, 130, 246, 0.08); }
+      }
+      [data-theme="dark"] .ra-difficulty-fill.easy   { background: #34d399; }
+      [data-theme="dark"] .ra-difficulty-fill.medium { background: #fbbf24; }
+      [data-theme="dark"] .ra-difficulty-fill.hard   { background: #f87171; }
+      [data-theme="dark"] .ra-distractor-bar-fill.correct { background: #34d399; }
+      [data-theme="dark"] .ra-table tbody tr:hover { background: rgba(59, 130, 246, 0.08); }

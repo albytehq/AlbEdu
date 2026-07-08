@@ -1,20 +1,13 @@
-// =============================================================
-//  assets/js/imageCompress.js
-//  AlbEdu · Client-side Image Compression  (v1)
+// image-compress.js — client-side image compression.
+// Accepts any image format/size, outputs a JPEG File ≤ 500 KB with best-effort
+// quality preservation.
 //
-//  Accepts ANY image format and size.
-//  Outputs: JPEG File, max 500 KB, best-effort quality preservation.
+// Strategy: draw onto <canvas>, binary-search JPEG quality 0.92 → 0.30 until
+// size ≤ TARGET_BYTES; if still over limit, halve dimensions and retry.
 //
-//  Strategy:
-//    1. Draw image onto offscreen <canvas>
-//    2. Binary-search JPEG quality from 0.92 → 0.30 until size ≤ TARGET_BYTES
-//    3. If still over limit after quality search, halve dimensions and retry
-//    4. Return a new File({ type: 'image/jpeg', name: '*.jpg' })
-//
-//  Public API:
-//    await ImageCompress.compress(file)          → File (JPEG ≤ 500 KB)
-//    await ImageCompress.compressAll(fileList)   → File[]
-// =============================================================
+// Public API:
+//   await ImageCompress.compress(file)        → File (JPEG ≤ 500 KB)
+//   await ImageCompress.compressAll(fileList) → File[]
 
 const ImageCompress = (() => {
 
@@ -24,7 +17,6 @@ const ImageCompress = (() => {
     const QUALITY_LOW     = 0.30;
     const QUALITY_STEPS   = 8;            // binary-search iterations
 
-    // ── Load a File into an HTMLImageElement ───────────────────────────────
     function _loadImage(file) {
         return new Promise((resolve, reject) => {
             const url = URL.createObjectURL(file);
@@ -35,7 +27,6 @@ const ImageCompress = (() => {
         });
     }
 
-    // ── Draw img onto canvas at given scale, return canvas ─────────────────
     function _drawCanvas(img, scale = 1) {
         let w = Math.round(img.naturalWidth  * scale);
         let h = Math.round(img.naturalHeight * scale);
@@ -58,7 +49,6 @@ const ImageCompress = (() => {
         return canvas;
     }
 
-    // ── Canvas → Blob (JPEG at given quality) ─────────────────────────────
     function _canvasToBlob(canvas, quality) {
         return new Promise((resolve, reject) => {
             canvas.toBlob(
@@ -69,7 +59,6 @@ const ImageCompress = (() => {
         });
     }
 
-    // ── Binary-search best quality for a given canvas ─────────────────────
     async function _findQuality(canvas) {
         // Fast path: try high quality first
         const highBlob = await _canvasToBlob(canvas, QUALITY_HIGH);
@@ -89,7 +78,6 @@ const ImageCompress = (() => {
         return bestBlob;
     }
 
-    // ── Main compress function ─────────────────────────────────────────────
     /**
      * Compress any image File to JPEG ≤ 500 KB.
      * @param   {File} file
@@ -129,13 +117,33 @@ const ImageCompress = (() => {
         return new File([blob], outName, { type: 'image/jpeg' });
     }
 
-    // ── Batch compress ─────────────────────────────────────────────────────
     /**
+     * Compress many files. A single corrupted or non-image file no longer
+     * fails the entire batch — bad files fall back to the original File
+     * so the caller can still proceed (the upload step will reject them).
+     *
      * @param   {File[]} files
-     * @returns {Promise<File[]>}
+     * @returns {Promise<{ok: File[], failed: {file: File, error: Error}[]}>}
      */
     async function compressAll(files) {
-        return Promise.all(files.map(compress));
+        const results = await Promise.allSettled(files.map(compress));
+        const ok = [];
+        const failed = [];
+        results.forEach((r, i) => {
+            if (r.status === 'fulfilled') {
+                ok.push(r.value);
+            } else {
+                // Fall back to the original file so a single bad apple
+                // doesn't spoil the batch. The caller decides whether to
+                // re-attempt compression or upload the original.
+                ok.push(files[i]);
+                failed.push({ file: files[i], error: r.reason });
+            }
+        });
+        if (failed.length) {
+            console.warn('[image-compress] ' + failed.length + ' file(s) failed compression, using originals');
+        }
+        return { ok, failed };
     }
 
     return { compress, compressAll };

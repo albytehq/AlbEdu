@@ -1,20 +1,13 @@
-// =============================================================
-//  assets/js/imageCleanup.js
-//  AlbEdu · Image Cleanup Helper  (v2 — Worker + GitHub CDN)
+//  image-cleanup.js — release uploaded images from the Cloudflare Worker
+//  (new { url, hash } entries) or the legacy GitHub CDN (plain URL strings).
 //
-//  Supports two asset generations:
-//    [NEW] { url, hash } objects  → POST /release to Cloudflare Worker
-//    [OLD] plain string URLs      → POST /api/delete-image to Vercel API
-//
-//  Call sites (unchanged public API):
+//  Public API:
 //    ImageCleanup.deleteImage(urlOrEntry)
 //    ImageCleanup.deleteExamImages(examData)
 //    ImageCleanup.deleteImages(urlsOrEntries)
-// =============================================================
 
 const ImageCleanup = (() => {
 
-  // ── Config ────────────────────────────────────────────────
 
   const getWorkerBase = () =>
     (window.ALBYTE_WORKER_URL || 'https://edu.albyte-inc.workers.dev/upload')
@@ -24,8 +17,7 @@ const ImageCleanup = (() => {
     window.ALBYTE_UPLOAD_API_URL?.replace('/api/upload', '')
     || 'https://albyte-upload-api.vercel.app';
 
-  // ── Compat normalizer ────────────────────────────────────
-  // Accepts either a plain URL string (old) or a { url, hash } object (new).
+  // Accepts a plain URL string (legacy) or a { url, hash } object (current).
   // Returns { url, hash } — hash may be null for legacy entries.
   function _normalize(entry) {
     if (typeof entry === 'object' && entry !== null) {
@@ -34,33 +26,44 @@ const ImageCleanup = (() => {
     return { url: entry || '', hash: null };
   }
 
-  // ── New flow: call Worker /release ────────────────────────
   async function _workerRelease(hash) {
-    const res = await fetch(`${getWorkerBase()}/release`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hash }),
-    });
-    if (!res.ok) throw new Error(`Worker /release error (${res.status})`);
-    return true;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch(`${getWorkerBase()}/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hash }),
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`Worker /release error (${res.status})`);
+      return true;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  // ── Legacy flow: call Vercel /api/delete-image ────────────
   async function _legacyDelete(url) {
     if (!url || !url.startsWith('https://raw.githubusercontent.com/')) {
       console.warn('[ImageCleanup] Not a legacy CDN URL, skipping:', url);
       return false;
     }
-    const res = await fetch(`${getLegacyBase()}/api/delete-image`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-    });
-    const data = await res.json();
-    return data.success === true;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch(`${getLegacyBase()}/api/delete-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+        signal: controller.signal,
+      });
+      const data = await res.json();
+      return data.success === true;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  // ── 1. Delete ONE image ───────────────────────────────────
   /**
    * @param {string | { url: string, hash: string }} entry
    * @returns {Promise<boolean>}
@@ -76,12 +79,11 @@ const ImageCleanup = (() => {
     }
   }
 
-  // ── 2. Delete ALL images in an exam ──────────────────────
   /**
    * Walks the full examData object and releases every image entry found.
-   * Compatible with both old string arrays and new object arrays.
+   * Compatible with both legacy string arrays and current object arrays.
    *
-   * @param {object} examData  - Full exam record from Supabase/Firestore
+   * @param {object} examData  - Full exam record from Supabase
    * @returns {Promise<{ deleted: number, failed: number }>}
    */
   async function deleteExamImages(examData) {
@@ -101,7 +103,6 @@ const ImageCleanup = (() => {
     return deleteImages(entries);
   }
 
-  // ── 3. Delete many entries at once ───────────────────────
   /**
    * @param {Array<string | { url: string, hash: string }>} entries
    * @returns {Promise<{ deleted: number, failed: number }>}
@@ -109,10 +110,9 @@ const ImageCleanup = (() => {
   async function deleteImages(entries) {
     if (!Array.isArray(entries) || entries.length === 0) return { deleted: 0, failed: 0 };
     let deleted = 0, failed = 0;
-    await Promise.all(entries.map(async (entry) => {
-      const ok = await deleteImage(entry).catch(() => false);
-      ok ? deleted++ : failed++;
-    }));
+    // allSettled so one slow Worker doesn't block the rest of the batch.
+    const results = await Promise.allSettled(entries.map((entry) => deleteImage(entry)));
+    results.forEach((r) => { r.status === 'fulfilled' && r.value ? deleted++ : failed++; });
     return { deleted, failed };
   }
 

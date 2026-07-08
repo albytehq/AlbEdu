@@ -1,9 +1,5 @@
-// =============================================================================
-// IdentityFormBuilder.js — AlbEdu Identity Form Builder v1.0.0
-// =============================================================================
-//
-// Admin-side form builder untuk mode "Manual" identity.
-// Menghasilkan konfigurasi fields[] yang akan disimpan di assessments.identity_config.
+// IdentityFormBuilder.js — admin-side form builder for "Manual" identity
+// mode. Produces the fields[] config stored in assessments.identity_config.
 //
 // Field types yang didukung:
 //   - text      → textbox biasa (Nama, NISN, dll)
@@ -32,7 +28,6 @@
 //
 // Events (dispatched ke document):
 //   - identity-fields-change     → detail: { fields: [...] }
-// =============================================================================
 
 window.IdentityFormBuilder = (() => {
   const t = (key, vars, fallback) => fallback;
@@ -53,12 +48,12 @@ window.IdentityFormBuilder = (() => {
     { value: 'email',    label: t('identity.type_email', null, 'Email'),        icon: '@',   desc: t('identity.type_email_desc', null, 'Input email dengan validasi') },
   ];
 
-  // ── State ────────────────────────────────────────────────────────────────
+  // State
   let _container = null;
   let _fields    = [];
   let _onChangeCb = null;
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // Helpers
 
   function _genFieldId() {
     return 'field_' + Math.random().toString(36).slice(2, 10);
@@ -104,7 +99,7 @@ window.IdentityFormBuilder = (() => {
     _render(); // re-render setelah state berubah
   }
 
-  // ── Validation ───────────────────────────────────────────────────────────
+  // Validation
 
   function validate() {
     const errors = [];
@@ -201,7 +196,7 @@ window.IdentityFormBuilder = (() => {
     return errors;
   }
 
-  // ── Public: getState & setState ──────────────────────────────────────────
+  // Public: getState & setState
 
   function getFieldConfig() {
     return _cloneFields();
@@ -230,7 +225,7 @@ window.IdentityFormBuilder = (() => {
     _onChangeCb = cb;
   }
 
-  // ── Field operations ─────────────────────────────────────────────────────
+  // Field operations
 
   function addField(type = 'text') {
     if (_fields.length >= MAX_FIELDS) return;
@@ -277,7 +272,7 @@ window.IdentityFormBuilder = (() => {
     reorderFields(idx, idx + 1);
   }
 
-  // ── Rendering ────────────────────────────────────────────────────────────
+  // Rendering
 
   function _render() {
     if (!_container) return;
@@ -474,7 +469,7 @@ window.IdentityFormBuilder = (() => {
     inp.type = type;
     inp.value = value || '';
     if (placeholder) inp.placeholder = placeholder;
-    if (maxlength) inp.maxlength = maxlength;
+    if (maxlength) inp.maxLength = maxlength;
     if (min != null) inp.min = min;
     if (max != null) inp.max = max;
     inp.oninput = e => onChange(e.target.value);
@@ -524,7 +519,7 @@ window.IdentityFormBuilder = (() => {
       inp.type = 'text';
       inp.value = opt || '';
       inp.placeholder = `Option #${i + 1}`;
-      inp.maxlength = MAX_OPTION_LEN;
+      inp.maxLength = MAX_OPTION_LEN;
       inp.oninput = e => {
         const newOpts = [...options];
         newOpts[i] = e.target.value;
@@ -561,7 +556,7 @@ window.IdentityFormBuilder = (() => {
     return wrap;
   }
 
-  // ── Lifecycle ────────────────────────────────────────────────────────────
+  // Lifecycle
 
   function mount(container, initialConfig = null) {
     if (!container) throw new Error('Container required');
@@ -588,7 +583,7 @@ window.IdentityFormBuilder = (() => {
     _onChangeCb = null;
   }
 
-  // ── Public API ───────────────────────────────────────────────────────────
+  // Public API
 
   return {
     // Constants

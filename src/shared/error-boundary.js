@@ -1,27 +1,6 @@
-// =============================================================================
-// error-boundary.js — AlbEdu Production Hardening · The Surgeon
-// =============================================================================
-// Global error boundary + graceful degradation system.
-//
-// Catches:
-//   - window.onerror (synchronous errors)
-//   - unhandledrejection (async promise rejections)
-//   - Resource loading failures (image, script, css)
-//
-// Actions on error:
-//   1. Log structured error to console (dev) + audit log (prod, via Edge Function)
-//   2. Show user-facing error toast (non-blocking, non-scary)
-//   3. Track error count for error budget monitoring
-//   4. Graceful degradation: if critical JS fails, show fallback UI
-//
-// Offline detection:
-//   - navigator.onLine + window online/offline events
-//   - When offline: show offline banner, queue actions to IndexedDB
-//   - When online: replay queued actions, hide banner
-//
-// Usage: loaded via <script defer> in canonical head, after boot.js.
-// Auto-initializes on DOMContentLoaded.
-// =============================================================================
+// error-boundary.js — global error boundary + offline detection.
+// Catches window.onerror, unhandledrejection, and resource-load failures.
+// Shows user-facing toast + tracks error count for SLO budget.
 
 (function () {
   'use strict';
@@ -29,23 +8,20 @@
   if (window.__albeduErrorBoundary) return;
   window.__albeduErrorBoundary = true;
 
-  // ── Error tracking ──────────────────────────────────────────────────
   const _errorCount = { total: 0, byType: {} };
-  const ERROR_BUDGET_PER_1000 = 1; // SLO: 99.9% = 1 error per 1000 requests
+  const ERROR_BUDGET_PER_1000 = 1; // SLO: 1 error per 1000 requests (99.9%)
 
   function _trackError(type) {
     _errorCount.total++;
     _errorCount.byType[type] = (_errorCount.byType[type] || 0) + 1;
 
-    // Alert if error budget exceeded
     if (_errorCount.total % 100 === 0) {
       console.warn(`[error-boundary] Error count: ${_errorCount.total}`, _errorCount.byType);
     }
   }
 
-  // ── Safe error display (non-blocking, non-scary) ────────────────────
   function _showErrorToast(message) {
-    // Don't spam — max 1 error toast per 5 seconds
+    // Throttle to max 1 toast per 5 seconds to avoid spamming.
     if (_lastErrorToast && Date.now() - _lastErrorToast < 5000) return;
     _lastErrorToast = Date.now();
 
@@ -57,13 +33,10 @@
   }
   let _lastErrorToast = 0;
 
-  // ── Global error handlers ───────────────────────────────────────────
-
-  // 1. Synchronous errors
+  // Synchronous errors
   window.addEventListener('error', function (e) {
     _trackError('error');
 
-    // Sanitize — don't leak stack traces to user
     const safeMsg = _sanitizeMessage(e.message);
     console.error('[error-boundary] window.onerror:', {
       message: safeMsg,
@@ -72,34 +45,33 @@
       colno: e.colno,
     });
 
-    // Don't show toast for script loading errors (they're usually non-critical)
+    // Don't show toast for script loading errors (usually non-critical)
     if (e.target && e.target.tagName === 'SCRIPT') return;
 
     _showErrorToast('Terjadi kesalahan sistem. Tim kami telah diberi tahu.');
   });
 
-  // 2. Unhandled promise rejections
+  // Unhandled promise rejections
   window.addEventListener('unhandledrejection', function (e) {
     _trackError('unhandledrejection');
 
     const reason = e.reason;
     const safeMsg = _sanitizeMessage(reason?.message || String(reason));
 
-    console.error('[error-boundary] unhandledrejection:', {
-      message: safeMsg,
-      // Don't log full reason — may contain sensitive data
-    });
+    // Don't log full reason — may contain sensitive data
+    console.error('[error-boundary] unhandledrejection:', { message: safeMsg });
 
-    // Prevent default browser warning (our toast is more user-friendly)
+    // Our toast is friendlier than the default browser warning.
     e.preventDefault();
 
-    // Only show toast for non-abort errors (AbortError is expected behavior)
+    // AbortError is expected behavior, don't toast it.
     if (reason?.name === 'AbortError') return;
 
     _showErrorToast('Operasi gagal. Periksa koneksi internet Anda.');
   });
 
-  // 3. Resource loading failures (images, scripts, css)
+  // Resource-load failures (images, scripts, css). Use capture phase —
+  // these don't bubble.
   window.addEventListener('error', function (e) {
     const target = e.target;
     if (target && target.tagName) {
@@ -108,28 +80,26 @@
         _trackError('resource');
         console.warn(`[error-boundary] Resource failed: ${tag} src=${target.src || target.href}`);
 
-        // For images: replace with placeholder
+        // Hide broken image without spamming a toast.
         if (tag === 'img' && target.parentNode) {
           target.style.display = 'none';
-          // Don't show toast for image failures — too noisy
         }
       }
     }
-  }, true); // capture phase — resource errors don't bubble
+  }, true);
 
-  // ── Message sanitizer ───────────────────────────────────────────────
   function _sanitizeMessage(msg) {
+    // Strip stack traces + cap length so we never leak internals to users.
     if (!msg) return 'Unknown error';
     const str = String(msg);
-    // Strip stack traces
     return str
       .replace(/at\s+.*?\(.*?\)/g, '')
       .replace(/\n\s*at\s+.*/g, '')
       .trim()
-      .substring(0, 200); // cap length
+      .substring(0, 200);
   }
 
-  // ── Offline detection + banner ──────────────────────────────────────
+  // Offline banner
   let _offlineBanner = null;
 
   function _isOnline() {
@@ -167,13 +137,10 @@
     console.info('[error-boundary] Network online');
     _hideOfflineBanner();
     try { window.notify?.success('Kembali Online', 'Menyinkronkan data...', 3000); } catch (_) {}
-    // Trigger any queued sync operations
     document.dispatchEvent(new CustomEvent('albedu:online'));
   });
 
-  // Check initial state
   if (!_isOnline()) {
-    // Defer to DOMContentLoaded in case body isn't ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', _showOfflineBanner, { once: true });
     } else {
@@ -181,7 +148,6 @@
     }
   }
 
-  // ── Public API ──────────────────────────────────────────────────────
   if (!window.AlbEdu) window.AlbEdu = {};
   window.AlbEdu.errorBoundary = {
     getErrorCount: () => _errorCount.total,

@@ -1,19 +1,15 @@
-// =============================================================================
-// sanitize.js — AlbEdu Security Layer · DOM sanitization
-// =============================================================================
+// security/sanitize.js — DOM sanitization helpers
+//
 // Single responsibility: provide safe DOM insertion helpers that consumers
 // use instead of raw innerHTML. All user-controlled content MUST go through
 // these helpers.
 //
-// Strategy:
-//   1. escapeHtml(str) — pure text escaping. Use for text content.
-//   2. sanitizeHtml(str, allowedTags) — DOMPurify-style allowlist filtering.
-//      Falls back to a tag-stripping allowlist if DOMPurify isn't loaded.
-//   3. setText(el, str) — sets textContent safely.
-//   4. setHTML(el, str, allowedTags) — sanitizes then sets innerHTML.
-//
-// Consumers MUST call these instead of `el.innerHTML = userInput`.
-// =============================================================================
+//   escapeHtml(str)             — pure text escaping, use for text content
+//   sanitizeHtml(str, opts)     — DOMPurify-style allowlist filtering
+//                                 (falls back to a tag-stripping allowlist
+//                                 if DOMPurify isn't loaded)
+//   setText(el, str)            — sets textContent safely
+//   setHTML(el, str, opts)      — sanitizes then sets innerHTML
 
 (function () {
   'use strict';
@@ -51,12 +47,10 @@
     template.innerHTML = String(html);
 
     const _walk = (node) => {
-      // Remove comments, processing instructions
       if (node.nodeType === Node.COMMENT_NODE || node.nodeType === Node.PROCESSING_INSTRUCTION_NODE) {
         node.parentNode?.removeChild(node);
         return;
       }
-      // Script/style/iframe/marquee — remove entirely
       if (node.nodeType === Node.ELEMENT_NODE) {
         const tag = node.tagName.toLowerCase();
         const dangerous = ['script', 'style', 'iframe', 'object', 'embed', 'marquee', 'meta', 'link', 'base', 'form', 'input', 'button'];
@@ -85,7 +79,6 @@
           }
         }
       }
-      // Recurse
       if (node.childNodes) {
         for (const child of Array.from(node.childNodes)) _walk(child);
       }
@@ -124,7 +117,6 @@
     el.innerHTML = sanitizeHtml(html, opts);
   }
 
-  // ── Public surface ─────────────────────────────────────────────────────
   if (!window.AlbEdu) window.AlbEdu = {};
   window.AlbEdu.sanitize = {
     escapeHtml,
@@ -135,6 +127,6 @@
     DEFAULT_ALLOWED_ATTRS,
   };
 
-  // Convenience globals (used by existing code that calls escapeHTML directly)
+  // Convenience global for existing code that calls escapeHTML directly
   window.escapeHTML = escapeHtml;
 })();

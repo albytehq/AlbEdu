@@ -1,13 +1,11 @@
--- =============================================================================
 -- 20260702_012b_helper_functions_fix.sql
--- AlbEdu v1.0.0 — Phase 1.12b — FIX for log_audit() + missing helpers
--- =============================================================================
--- Original 012 failed because pooler (Transaction mode) doesn't support
--- multi-statement function creation that references itself.
--- This file adds the missing helpers individually.
--- =============================================================================
+-- Companion to migration 012: defines org_id, is_admin, is_peserta,
+-- generate_access_code, count_active_sessions_for_user, count_submissions_for_user,
+-- and log_audit separately so each can succeed when the Supabase pooler is in
+-- Transaction mode (multi-statement function bodies that reference themselves
+-- don't work there).
 
--- ── org_id() — returns organization_id of current user (SCloud-ready) ──
+-- org_id() — returns organization_id of current user (multi-tenant).
 CREATE OR REPLACE FUNCTION public.org_id()
 RETURNS uuid
 LANGUAGE sql
@@ -19,9 +17,9 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION public.org_id() IS
-  'Returns organization_id of current user. NULL in single-tenant mode. SCloud-ready (Phase 9).';
+  'Returns organization_id of current user. NULL in single-tenant mode.';
 
--- ── is_admin() — convenience boolean check ──
+-- is_admin() — convenience boolean check
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE sql
@@ -32,7 +30,7 @@ AS $$
   SELECT peran_user() = 'admin';
 $$;
 
--- ── is_peserta() — convenience boolean check ──
+-- is_peserta() — convenience boolean check
 CREATE OR REPLACE FUNCTION public.is_peserta()
 RETURNS boolean
 LANGUAGE sql
@@ -43,7 +41,7 @@ AS $$
   SELECT peran_user() = 'peserta';
 $$;
 
--- ── generate_access_code() — 6-digit random string ──
+-- generate_access_code() — 6-digit random string
 CREATE OR REPLACE FUNCTION public.generate_access_code()
 RETURNS text
 LANGUAGE sql
@@ -55,7 +53,7 @@ $$;
 COMMENT ON FUNCTION public.generate_access_code() IS
   'Generates random 6-digit string for assessment access_code. Caller must handle uniqueness via UNIQUE constraint.';
 
--- ── count_active_sessions_for_user(assessment_uuid) ──
+-- count_active_sessions_for_user(assessment_uuid)
 CREATE OR REPLACE FUNCTION public.count_active_sessions_for_user(
   p_assessment_id uuid,
   p_user_id uuid
@@ -72,7 +70,7 @@ AS $$
     AND status IN ('active', 'paused');
 $$;
 
--- ── count_submissions_for_user(assessment_uuid) ──
+-- count_submissions_for_user(assessment_uuid)
 CREATE OR REPLACE FUNCTION public.count_submissions_for_user(
   p_assessment_id uuid,
   p_user_id uuid
@@ -88,7 +86,7 @@ AS $$
     AND user_id = p_user_id;
 $$;
 
--- ── log_audit() — convenience function for Edge Functions ──
+-- log_audit() — convenience function for Edge Functions.
 -- Edge Functions call this to insert audit log entries (uses service role,
 -- bypasses RLS — only callable server-side).
 CREATE OR REPLACE FUNCTION public.log_audit(

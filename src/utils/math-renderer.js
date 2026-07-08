@@ -1,11 +1,9 @@
-// MathRenderer.js — v0.3.0
-// Feature 4: KaTeX auto-render for math expressions
-// Feature 5: RTL / Arab / CJK auto-detect and CSS class injection
+// MathRenderer.js — KaTeX auto-render for math expressions + RTL/Arab/CJK
+// auto-detect with CSS class injection.
 //
 // Load this AFTER KaTeX CDN scripts. Both functions are idempotent — safe to
-// call multiple times on the same container (e.g. after pagination).
+// call multiple times on the same container (for example, after pagination).
 
-// ── Feature 4: KaTeX Render Helper ──────────────────────────────────────────
 /**
  * Render all math expressions inside a container element using KaTeX auto-render.
  * Safe to call before KaTeX has loaded — schedules render on 'katex-ready' event.
@@ -49,7 +47,6 @@ window.renderMathIn = function(containerEl) {
   }
 };
 
-// ── Feature 5: RTL / Arab / CJK Language Class Auto-Detector ────────────────
 /**
  * Scan text nodes inside a container for non-LTR scripts.
  * Adds .lang-ar or .lang-cjk CSS class to matching elements.

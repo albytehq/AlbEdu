@@ -1,23 +1,6 @@
-// =============================================================================
-// assessment-entry.js — Token entry page controller (v1.0.0)
-// =============================================================================
-// Handles 6-digit access code input + validation + session creation.
-//
-// Edge cases (25):
-//   - Input: 6 digits auto-submit, 5 wait, paste 7+ take first 6, alphanumeric filter
-//   - Backspace → focus previous | Tab → arrow nav | Refresh → clear
-//   - Token not found → error | Draft/archived → not found
-//   - Scheduled not started → "Mulai: {time}" | Finished → "Selesai"
-//   - Paused → "Dijeda. Sisa: X menit" | Already submitted → "Sudah kumpulkan"
-//   - Cross-device resume → "Lanjutkan sesi?" | Blocked → "Diblokir: {reason}"
-//   - Rate limit (5/hr) → cooldown | Honeypot + timing anti-bot
-//   - Network error → retry | Not logged in → redirect login
-//   - Admin logged in → redirect dashboard | Soft-deleted → "Akun dihapus"
-//   - Email not verified → "Verifikasi email" | No consent → show consent popup
-//   - allow_retake=false + submitted → block | allow_retake=true → new attempt
-//   - 2 tabs → UNIQUE constraint | Close before session → can re-input
-//   - Slow network → loading, block re-submit
-// =============================================================================
+// assessment-entry.js — 6-digit access-code entry page. Validates the token,
+// resolves the assessment, runs anti-bot checks, creates/resumes a session,
+// then redirects to take.html.
 
 (function () {
   'use strict';
@@ -68,16 +51,25 @@
       // Focus first input
       this._inputs[0]?.focus();
 
-      console.info('[assessment-entry] v1.0.0 initialized');
+      console.info('[assessment-entry] initialized');
     },
 
     _getDeviceId() {
-      let id = localStorage.getItem('albedu_exam_device_id');
-      if (!id) {
-        id = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-        localStorage.setItem('albedu_exam_device_id', id);
+      // Safari Private Mode throws on setItem when quota=0. Fall back to
+      // an in-memory value so the rest of the flow doesn't crash.
+      try {
+        let id = localStorage.getItem('albedu_exam_device_id');
+        if (!id) {
+          id = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+          localStorage.setItem('albedu_exam_device_id', id);
+        }
+        return id;
+      } catch (err) {
+        if (!this._fallbackDeviceId) {
+          this._fallbackDeviceId = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
+        return this._fallbackDeviceId;
       }
-      return id;
     },
 
     _waitForAuth() {
@@ -90,8 +82,7 @@
           } else if (window.Auth?.authReady === false && attempts < 100) {
             setTimeout(check, 100);
           } else if (attempts >= 100) {
-            // No auth after 10s — redirect to login
-            // v0.742.7: login page is at pages/login.html (not ../login.html)
+            // No auth after 10s — redirect to login.
             console.warn('[assessment-entry] Auth timeout, redirecting to login');
             const basePath = window.Auth?.getBasePath?.() || '/';
             window.location.href = basePath + 'pages/login.html';
@@ -205,12 +196,12 @@
       const allFilled = this._inputs.every((i) => i.value);
       this._updateSubmitState();
       if (allFilled) {
-        // v1.1.0: Auto-submit once all 6 digits are present (typed or pasted).
-        // The old min-800ms anti-bot timing check used to *reject* fast
-        // completions, which is why auto-submit was removed before. It now
-        // just waits out the remainder of that window inside _submit()
-        // instead of failing — so real users get a seamless auto-submit and
-        // bots still can't shortcut the timing signal.
+        // Auto-submit once all 6 digits are present (typed or pasted). The
+        // minimum-interaction anti-bot timing used to reject fast completions,
+        // which is why auto-submit was removed before. We now wait out the
+        // remainder of that window inside _submit() instead of failing — so
+        // real users get an auto-submit and bots still can't shortcut the
+        // timing signal.
         this._autoSubmit();
       }
     },
@@ -312,7 +303,7 @@
       }
 
       // The token can change while we were waiting out the timing window
-      // (e.g. the user hit backspace right after auto-submit queued) —
+      // (for example the user hit backspace right after auto-submit queued) —
       // re-read and re-validate before doing any network work.
       token = this._getToken();
       if (token.length !== 6) {
@@ -326,9 +317,8 @@
         return;
       }
 
-      // v1.2.0: Run the actual network flow under a hard watchdog. No matter
-      // what hangs downstream (a slow query, a misbehaving RLS policy, a
-      // dead endpoint), the user gets their UI back within
+      // Hard watchdog so no matter what hangs downstream (slow query,
+      // misbehaving RLS, dead endpoint), the user gets their UI back within
       // SUBMIT_WATCHDOG_MS instead of staring at "Memvalidasi..." forever.
       const myGen = ++this._submitGeneration;
       const SUBMIT_WATCHDOG_MS = 15000;
@@ -353,13 +343,13 @@
       }
     },
 
-    /** True if a newer submit attempt has started since `myGen` began. */
+    // True if a newer submit attempt has started since `myGen` began.
     _isStale(myGen) {
       return myGen !== this._submitGeneration;
     },
 
     async _runSubmitFlow(token, myGen) {
-      // Step 1: Rate limit check via Edge Function
+      // Rate limit check via Edge Function
       const rateLimitRes = await this._checkRateLimit();
       if (this._isStale(myGen)) return;
       if (!rateLimitRes.allowed) {
@@ -368,7 +358,7 @@
         return;
       }
 
-      // Step 2: Check if peserta already has active session (cross-device resume)
+      // Cross-device resume: peserta may already have an active session.
       const existingSession = await this._checkExistingSession(token);
       if (this._isStale(myGen)) return;
 
@@ -396,7 +386,7 @@
         return;
       }
 
-      // Step 3: Fetch assessment (via peserta view — strips admin fields)
+      // Fetch assessment via peserta view (strips admin fields like total_score, ac_override).
       const assessment = await this._fetchAssessment(token);
       if (this._isStale(myGen)) return;
       if (!assessment) {
@@ -405,7 +395,7 @@
         return;
       }
 
-      // Step 4: Check assessment status
+      // Check assessment access (open / closed / paused / scheduled)
       const accessCheck = this._checkAccess(assessment);
       if (!accessCheck.allowed) {
         this._setLoading(false);
@@ -413,7 +403,7 @@
         return;
       }
 
-      // Step 5: Check allow_retake
+      // allow_retake=false: has the peserta already submitted?
       if (!assessment.allow_retake) {
         const submissions = await this._checkSubmissions(assessment.id);
         if (this._isStale(myGen)) return;
@@ -424,7 +414,7 @@
         }
       }
 
-      // Step 6: Create new session
+      // Create new session
       const session = await this._createSession(assessment);
       if (this._isStale(myGen)) return;
       if (!session) {
@@ -432,22 +422,21 @@
         return;
       }
 
-      // Step 7: Proceed to assessment
+      // Hand off to the exam runtime.
       this._proceedToAssessment(token, session);
     },
 
     async _checkRateLimit() {
-      // v1.2.0 FIX: this used to fetch a HARDCODED Supabase project URL
-      // ('kzsrerxhhrtsxnpnmqgl.supabase.co') that has nothing to do with
-      // the project this app actually connects to (that URL is loaded
-      // dynamically from the Cloudflare Worker config in
-      // supabase-client.js). If that hardcoded project is unreachable,
-      // paused, or simply not yours, the fetch had NO TIMEOUT and could
-      // hang indefinitely — which is exactly what froze the submit button
-      // on "Memvalidasi..." forever.
+      // This used to fetch a HARDCODED Supabase project URL
+      // ('kzsrerxhhrtsxnpnmqgl.supabase.co') that has nothing to do with the
+      // project this app actually connects to (that URL is loaded dynamically
+      // from the Cloudflare Worker config in supabase-client.js). If that
+      // hardcoded project is unreachable, paused, or simply not yours, the
+      // fetch had NO TIMEOUT and could hang indefinitely — which is exactly
+      // what froze the submit button on "Memvalidasi..." forever.
       //
-      // Fix: call the Edge Function through window.AlbEdu.supabase, which
-      // always targets the correctly configured project, AND wrap it in a
+      // We now call the Edge Function through window.AlbEdu.supabase (which
+      // always targets the correctly configured project) AND wrap it in a
       // hard timeout so this check can never block the submit flow again.
       try {
         const fingerprintHash = await this._generateFingerprintHash();
@@ -485,11 +474,9 @@
       }
     },
 
-    /**
-     * Race a promise against a timeout so slow/hanging network calls can
-     * never freeze the UI forever. Rejects with an Error whose message is
-     * `label` if the timeout wins.
-     */
+    // Race a promise against a timeout so slow/hanging network calls can
+    // never freeze the UI forever. Rejects with an Error whose message is
+    // `label` if the timeout wins.
     _withTimeout(promise, ms, label) {
       let timer;
       const timeout = new Promise((_, reject) => {
@@ -697,16 +684,18 @@
     },
 
     _proceedToAssessment(token, session) {
-      // Save to sessionStorage
-      // NOTE: `.uid` is a Firebase-shaped field that no longer exists on the
-      // native Supabase AuthService user object (which exposes `.id`). This
-      // previously wrote the literal string "undefined" into sessionStorage,
-      // breaking anything downstream keyed on assessment_user_key.
-      sessionStorage.setItem('assessment_token', token);
-      sessionStorage.setItem('assessment_session_id', session.id);
-      sessionStorage.setItem('assessment_user_key', window.AlbEdu.supabase.auth.currentUser.id);
+      // `.uid` is a Firebase-shaped field that no longer exists on the native
+      // Supabase user object (which exposes `.id`). Storing the literal
+      // string "undefined" here would break downstream lookups.
+      const userId = window.AlbEdu?.supabase?.auth?.currentUser?.id;
+      try {
+        sessionStorage.setItem('assessment_token', token);
+        sessionStorage.setItem('assessment_session_id', session.id);
+        if (userId) sessionStorage.setItem('assessment_user_key', userId);
+      } catch (err) {
+        console.warn('[assessment-entry] sessionStorage unavailable, continuing without cache:', err);
+      }
 
-      // Redirect
       window.location.href = `take.html?token=${token}`;
     },
   };

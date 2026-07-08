@@ -1,10 +1,7 @@
-// =============================================================================
-// dsr-handler/index.ts — Data Subject Request handler (UU PDP)
-// =============================================================================
+// dsr-handler/index.ts — Data Subject Request handler (UU PDP).
 // POST /functions/v1/dsr-handler
 // Headers: Authorization: Bearer <token>
 // Body: { request_type: 'access'|'correct'|'delete'|'portability', details?: object }
-// =============================================================================
 
 import { handler } from '../_shared/cors.ts';
 import { HTTPError, successResponse } from '../_shared/error.ts';
@@ -33,7 +30,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
       `request_type must be one of: ${[...VALID_TYPES].join(', ')}`);
   }
 
-  // Rate limit: 5 DSR/hour
+  // Rate limit: 5 DSR/hour.
   const rateLimit = checkDSRRate(user.id);
   if (!rateLimit.allowed) {
     throw new HTTPError(429, 'RATE_LIMITED', 'Too many DSR requests', {
@@ -43,7 +40,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
 
   const db = new SupabaseDB(env);
 
-  // Check for existing pending DSR of same type
+  // Check for existing pending DSR of same type.
   const existing = await db.selectOne<any>(
     'data_subject_requests',
     `id,status&user_id=eq.${user.id}&request_type=eq.${body.request_type}&status=eq.pending`
@@ -58,7 +55,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     });
   }
 
-  // Insert DSR
+  // Insert DSR.
   const dsr = await db.insert<any>(
     'data_subject_requests',
     {
@@ -72,7 +69,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     { returnRepresentation: true }
   );
 
-  // Audit log
+  // Audit log.
   logAudit(env, {
     action: 'DSR_REQUEST',
     targetType: 'data_subject_request',

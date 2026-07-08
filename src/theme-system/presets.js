@@ -1,6 +1,4 @@
-// =============================================================================
-// theme-system/presets.js — 5 theme presets (Google Form-like quick picks)
-// =============================================================================
+// theme-system/presets.js — theme presets + quick-pick colors.
 
 export const PRESETS = [
   {

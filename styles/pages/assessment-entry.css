@@ -130,7 +130,7 @@
         80% { transform: translateX(6px); }
       }
 
-      /* v0.746.0: Turnstile removed — using honeypot + timing + DB rate limiting */
+      /* v0.816.0: Turnstile removed — using honeypot + timing + DB rate limiting */
 
       .token-submit {
         width: 100%;

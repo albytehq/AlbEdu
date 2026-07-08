@@ -5,7 +5,7 @@
 
   <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buat Asesmen - AlbEdu</title>
+    <title>Buat Asesmen — AlbEdu</title>
     <meta name="description" content="AlbEdu - Assessment Platform">
     <meta name="theme-color" content="#2563eb">
 
@@ -40,8 +40,9 @@
     <link rel="stylesheet" href="../../styles/skeleton-loading.css">
     <link rel="stylesheet" href="../../styles/navigasi.css">
     <link rel="stylesheet" href="../../styles/notification-panel.css">
-    <!-- v0.746.0 — Enterprise design system -->
+    
     <link rel="stylesheet" href="../../styles/albedu-v1.css">
+    <link rel="stylesheet" href="../../styles/albedu-components.css">
     <link rel="stylesheet" href="../../styles/identity-form.css"><!-- Fonts --><!-- Supabase SDK --><!-- Auth baseline -->
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
@@ -63,7 +64,7 @@
     </style>
 </head>
 <body>
-    <a href="#main-content" class="skip-to-main">Langsung ke konten utama</a>
+    <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
 
     <div class="container">
         <!-- Sidebar (consistent with other admin pages) -->
@@ -204,7 +205,7 @@
                         </div>
                     </div>
 
-                    <!-- ─── Step 1: Informasi + Identitas + Tema ─── -->
+                    <!-- Informasi + Identitas + Tema -->
                     <section class="albedu-step-content" id="step-1" role="tabpanel">
                         <h2 class="albedu-step-title">Informasi Asesmen</h2>
                         <p class="albedu-step-desc">Detail dasar asesmen, identitas peserta, dan tema visual</p>
@@ -217,7 +218,7 @@
                             </div>
                             <div class="albedu-field">
                                 <label for="assessment-subject">Mata Pelajaran</label>
-                                <input type="text" id="assessment-subject" class="albedu-input" placeholder="e.g. Matematika" placeholder="e.g. Matematika" list="subject-list" autocomplete="off">
+                                <input type="text" id="assessment-subject" class="albedu-input" placeholder="e.g. Matematika" list="subject-list" autocomplete="off">
                                 <datalist id="subject-list">
                                     <option value="Matematika"></option>
                                     <option value="Bahasa Indonesia"></option>
@@ -305,7 +306,7 @@
                                 </div>
                                 <div class="albedu-field" id="note-text-field" hidden>
                                     <label for="note-text">Isi Catatan</label>
-                                    <textarea id="note-text" class="albedu-textarea" maxlength="500" placeholder="Catatan untuk peserta..." placeholder="Catatan untuk peserta..." rows="2"></textarea>
+                                    <textarea id="note-text" class="albedu-textarea" maxlength="500" placeholder="Catatan untuk peserta..." rows="2"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -421,7 +422,7 @@
                         </div>
                     </section>
 
-                    <!-- ─── Step 2: Soal ─── -->
+                    <!-- Soal -->
                     <section class="albedu-step-content" id="step-2" role="tabpanel" hidden>
                         <h2 class="albedu-step-title">Soal Asesmen</h2>
                         <p class="albedu-step-desc">Tambahkan bagian dan soal. Maksimal 2 bagian, minimal 3 soal per bagian.</p>
@@ -454,7 +455,7 @@
                         <div class="albedu-sections-list" id="sections-list" hidden></div>
                     </section>
 
-                    <!-- ─── Step 3: Publish ─── -->
+                    <!-- Publish -->
                     <section class="albedu-step-content" id="step-3" role="tabpanel" hidden>
                         <h2 class="albedu-step-title">Ringkasan & Publish</h2>
                         <p class="albedu-step-desc">Review detail asesmen sebelum dipublish ke sistem.</p>
@@ -505,31 +506,31 @@
 
             <footer class="footer">
                 <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
-                <p>v0.746.0</p>
+                <p>v0.816.0</p>
             </footer>
         </main>
     </div>
 
     <!-- Modal: Question Editor -->
-    <div class="albedu-modal-overlay" id="question-modal-overlay" hidden style="z-index: var(--albedu-z-overlay);">
-      <div class="albedu-modal" id="question-modal" role="dialog" aria-modal="true" style="background: var(--albedu-surface); border-radius: var(--albedu-radius-lg); box-shadow: var(--albedu-shadow-modal); border: 1px solid var(--albedu-border); max-width: 720px; width: 100%; margin: auto;">
-        <header style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--albedu-border);">
+    <div class="albedu-modal-overlay" id="question-modal-overlay" hidden>
+      <div class="albedu-modal albedu-modal--lg" id="question-modal" role="dialog" aria-modal="true" aria-labelledby="question-modal-title">
+        <div class="albedu-modal-header">
           <div>
-            <h2 style="font-size: 18px; font-weight: 700; margin: 0; color: var(--albedu-heading);" id="question-modal-title">Tambah Soal</h2>
-            <p style="font-size: 13px; color: var(--albedu-body); margin: 4px 0 0;" id="question-modal-subtitle">Bagian 1 • Soal baru</p>
+            <h3 class="albedu-modal-title" id="question-modal-title">Tambah Soal</h3>
+            <p class="albedu-modal-subtitle" id="question-modal-subtitle">Bagian 1 • Soal baru</p>
           </div>
-          <button id="question-modal-close" type="button" aria-label="Tutup" style="background: transparent; border: none; cursor: pointer; color: var(--albedu-body); padding: 8px;">
+          <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="question-modal-close" type="button" aria-label="Tutup">
             <span data-albedu-icon="close"><svg class="albedu-icon" aria-hidden="true"><use href="#i-close"/></svg></span>
           </button>
-        </header>
-        <div id="question-modal-body" style="padding: 24px; max-height: 60vh; overflow-y: auto;"></div>
-        <footer style="display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--albedu-border);">
+        </div>
+        <div class="albedu-modal-body" id="question-modal-body"></div>
+        <div class="albedu-modal-footer">
           <button class="albedu-btn albedu-btn-secondary" id="question-modal-cancel" type="button">Batal</button>
           <button class="albedu-btn albedu-btn-primary" id="question-modal-save" type="button">
             <span data-albedu-icon="check"></span>
             <span>Simpan Soal</span>
           </button>
-        </footer>
+        </div>
       </div>
     </div>
 
@@ -539,7 +540,7 @@
     </script>
 
     <script type="module" src="../../src/theme-system/index.js"></script>
-<!-- Buat Ujian v0.2.0 modules (still working — will be replaced in next iteration) -->
+<!-- Buat Ujian modules (still working — will be replaced in next iteration) -->
     <script src="../../src/pages/buat-ujian/templates.js" defer></script>
     <script src="../../src/pages/buat-ujian/keyboard-shortcuts.js" defer></script>
     <script src="../../src/pages/buat-ujian/metadata-card.js" defer></script>
@@ -549,7 +550,7 @@
     <script src="../../src/pages/buat-ujian/wizard-controller.js" defer></script>
     <script src="../../src/pages/buat-ujian/list-view.js" defer></script>
 
-    <!-- Create Assessment v0.746.0 page controller (NEW) -->
+    <!-- Create Assessment page controller -->
     <script src="../../src/pages/create-assessment.js" defer></script>
 
     <!-- Notification Center -->

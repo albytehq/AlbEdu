@@ -2,16 +2,19 @@
    AlbEdu Login – Industrial Production Grade UI
 ===================================================== */
 
+/* Local aliases — mapped to canonical --albedu-* tokens so they auto-flip
+   in dark mode (tokens.css has dark-mode overrides for --albedu-*).
+   These exist for backwards-compat with the legacy Industrial block below. */
 :root {
-    --blue: #2563eb;
-    --blue-dark: #1d4ed8;
-    --blue-darker: #1e40af;
-    --bg: #f1f5f9;
-    --white: #ffffff;
-    --text: #0f172a;
-    --muted: #64748b;
-    --border: #cbd5e1;
-    --industrial-accent: #475569;
+    --blue:              var(--albedu-primary);
+    --blue-dark:         var(--albedu-primary-hover);
+    --blue-darker:       var(--albedu-primary-hover);
+    --bg:                var(--albedu-surface-alt);
+    --white:             var(--albedu-surface);
+    --text:              var(--albedu-heading);
+    --muted:             var(--albedu-body);
+    --border:            var(--albedu-border);
+    --industrial-accent: var(--albedu-body);
 }
 
 /* RESET */
@@ -496,7 +499,7 @@ body::before {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #1E40AF 100%);
+            background: linear-gradient(135deg, var(--albedu-primary), var(--albedu-primary-hover));
             padding: var(--sp-12) var(--sp-8);
             position: relative;
             overflow: hidden;
@@ -729,7 +732,7 @@ body::before {
             height: 18px;
         }
 
-        .field-password .input {
+        .field-password .albedu-input {
             padding-right: 48px;
         }
 
@@ -954,1025 +957,6 @@ body::before {
             }
         }
 
-
-/*
- * login.css — Extracted from pages/login.html
- * ─────────────────────────────────────────────────────────────────────────────
- * Auto-extracted during v2.0.0 restructure.
- * Loaded by: pages/login.html
- * ─────────────────────────────────────────────────────────────────────────────
- */
-
-/* ── Split-screen layout ──────────────────────────────────── */
-        .split-screen {
-            display: flex;
-            min-height: 100dvh;
-            width: 100%;
-        }
-
-        /* Left panel — form */
-        .split-left {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--color-surface);
-            padding: var(--sp-12) var(--sp-6);
-            position: relative;
-            z-index: 1;
-        }
-
-        .form-container {
-            width: 100%;
-            max-width: 480px;
-            animation: cardIn var(--duration-slow) var(--ease-spring) both;
-        }
-
-        @keyframes cardIn {
-            from {
-                opacity: 0;
-                transform: translateY(16px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Right panel — branding */
-        .split-right {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #1E40AF 100%);
-            padding: var(--sp-12) var(--sp-8);
-            position: relative;
-            overflow: hidden;
-            color: #fff;
-        }
-
-        /* Dot grid overlay */
-        .split-right::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
-            background-size: 28px 28px;
-            pointer-events: none;
-        }
-
-        /* Decorative floating shapes */
-        .split-right::after {
-            content: '';
-            position: absolute;
-            width: 320px;
-            height: 320px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.03);
-            top: -80px;
-            right: -80px;
-            pointer-events: none;
-        }
-
-        .branding-content {
-            position: relative;
-            z-index: 1;
-            text-align: center;
-            max-width: 400px;
-            animation: cardIn var(--duration-slow) var(--ease-spring) 0.1s both;
-        }
-
-        .branding-logo {
-            width: 64px;
-            height: 64px;
-            border-radius: var(--radius-xl);
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(8px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto var(--sp-6);
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .branding-logo img {
-            width: 40px;
-            height: 40px;
-        }
-
-        .branding-title {
-            font-size: var(--text-2xl);
-            font-weight: var(--fw-extrabold);
-            color: #fff;
-            margin-bottom: var(--sp-2);
-            letter-spacing: var(--tracking-tight);
-        }
-
-        .branding-tagline {
-            font-size: var(--text-md);
-            color: rgba(255,255,255,0.8);
-            line-height: var(--leading-relaxed);
-            margin-bottom: var(--sp-10);
-        }
-
-        /* Feature bullets */
-        .feature-list {
-            display: flex;
-            flex-direction: column;
-            gap: var(--sp-5);
-            text-align: left;
-            width: 100%;
-        }
-
-        .feature-item {
-            display: flex;
-            align-items: flex-start;
-            gap: var(--sp-3);
-        }
-
-        .feature-icon {
-            width: 40px;
-            height: 40px;
-            min-width: 40px;
-            border-radius: var(--radius-md);
-            background: rgba(255,255,255,0.12);
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid rgba(255,255,255,0.15);
-        }
-
-        .feature-icon svg {
-            width: 20px;
-            height: 20px;
-            color: #fff;
-        }
-
-        .feature-text-wrap {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .feature-label {
-            font-size: var(--text-base);
-            font-weight: var(--fw-semibold);
-            color: #fff;
-        }
-
-        .feature-desc {
-            font-size: var(--text-sm);
-            color: rgba(255,255,255,0.65);
-            line-height: var(--leading-normal);
-        }
-
-        /* ── Form header ──────────────────────────────────────────── */
-        .form-header {
-            margin-bottom: var(--sp-8);
-        }
-
-        .form-logo-row {
-            display: flex;
-            align-items: center;
-            gap: var(--sp-3);
-            margin-bottom: var(--sp-6);
-        }
-
-        .form-logo-row img {
-            width: 36px;
-            height: 36px;
-            border-radius: var(--radius-md);
-            flex-shrink: 0;
-        }
-
-        .form-logo-name {
-            font-size: var(--text-lg);
-            font-weight: var(--fw-bold);
-            color: var(--color-text);
-            letter-spacing: var(--tracking-tight);
-        }
-
-        .form-title {
-            font-size: var(--text-2xl);
-            font-weight: var(--fw-extrabold);
-            color: var(--color-text);
-            letter-spacing: var(--tracking-tight);
-            margin-bottom: var(--sp-1);
-        }
-
-        .form-subtitle {
-            font-size: var(--text-base);
-            color: var(--color-text-muted);
-        }
-
-        /* ── Form fields ──────────────────────────────────────────── */
-        .auth-form {
-            display: grid;
-            gap: var(--sp-5);
-        }
-
-        .field {
-            display: grid;
-            gap: var(--sp-1-5);
-        }
-
-        .field label {
-            font-size: var(--text-base);
-            font-weight: var(--fw-semibold);
-            color: var(--color-text-2);
-        }
-
-        .field-label-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: var(--sp-2);
-        }
-
-        .field-label-row a {
-            font-size: var(--text-sm);
-            color: var(--color-primary);
-            font-weight: var(--fw-medium);
-            text-decoration: none;
-            transition: color var(--transition-fast);
-        }
-
-        .field-label-row a:hover,
-        .field-label-row a:focus-visible {
-            color: var(--color-primary-hover);
-            text-decoration: underline;
-            text-underline-offset: 2px;
-            outline: none;
-        }
-
-        /* Password field with toggle */
-        .field-password {
-            position: relative;
-        }
-
-        .toggle-visibility {
-            position: absolute;
-            right: var(--sp-3);
-            top: 33px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: var(--color-text-faint);
-            padding: var(--sp-1);
-            display: flex;
-            align-items: center;
-            transition: color var(--transition-fast);
-            min-width: 44px;
-            min-height: 44px;
-            justify-content: center;
-        }
-
-        .toggle-visibility:hover {
-            color: var(--color-text-muted);
-        }
-
-        .toggle-visibility svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        .field-password .input {
-            padding-right: 48px;
-        }
-
-        /* ── Primary login button ─────────────────────────────────── */
-        .primary-login-btn {
-            width: 100%;
-            height: 44px;
-            border: none;
-            border-radius: var(--radius-md);
-            background: var(--color-primary);
-            color: #fff;
-            font-family: var(--font-sans);
-            font-size: var(--text-md);
-            font-weight: var(--fw-semibold);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--sp-2);
-            position: relative;
-            min-height: 44px;
-            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2), 0 4px 12px rgba(37, 99, 235, 0.15);
-            transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
-        }
-
-        .primary-login-btn:hover:not(:disabled) {
-            background: var(--color-primary-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25), 0 6px 18px rgba(37, 99, 235, 0.2);
-        }
-
-        .primary-login-btn:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        .primary-login-btn:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-            transform: none !important;
-        }
-
-        .primary-login-btn.loading::after {
-            content: '';
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255, 255, 255, .35);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-
-        .primary-login-btn.loading .btn-text {
-            opacity: 0;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* ── Google login button ──────────────────────────────────── */
-        .google-login-btn {
-            width: 100%;
-            height: 44px;
-            border: 1px solid var(--color-border-2);
-            border-radius: var(--radius-md);
-            background: var(--color-surface);
-            color: var(--color-text);
-            font-family: var(--font-sans);
-            font-size: var(--text-base);
-            font-weight: var(--fw-medium);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--sp-2-5);
-            position: relative;
-            min-height: 44px;
-            transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
-        }
-
-        .google-login-btn:hover:not(:disabled) {
-            background: var(--color-surface-2);
-            border-color: var(--color-text-muted);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .google-login-btn:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        .google-login-btn:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-            transform: none !important;
-        }
-
-        .google-login-btn.loading::after {
-            content: '';
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(15, 23, 42, .25);
-            border-top-color: var(--color-text);
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-
-        .google-login-btn.loading .btn-text {
-            opacity: 0;
-        }
-
-        .google-login-btn.authenticating {
-            position: relative;
-            overflow: hidden;
-            pointer-events: none;
-            cursor: wait;
-        }
-
-        .google-login-btn.authenticating::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(
-                90deg,
-                transparent 0%,
-                rgba(37, 99, 235, 0.08) 50%,
-                transparent 100%
-            );
-            animation: auth-shimmer 1.6s ease-in-out infinite;
-        }
-
-        @keyframes auth-shimmer {
-            0%   { transform: translateX(-110%); }
-            100% { transform: translateX(110%); }
-        }
-
-        /* ── Error message ────────────────────────────────────────── */
-        .error-message {
-            padding: var(--sp-3) var(--sp-4);
-            border-radius: var(--radius-md);
-            background: var(--color-destructive-bg);
-            color: var(--color-destructive);
-            font-size: var(--text-sm);
-            line-height: var(--leading-normal);
-            border-left: 3px solid var(--color-destructive);
-            animation: errorIn 0.25s var(--ease-spring) both;
-        }
-
-        @keyframes errorIn {
-            from { opacity: 0; transform: translateY(-4px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .error-message.info-message {
-            background: var(--color-primary-light);
-            color: var(--color-primary);
-            border-left-color: var(--color-primary);
-        }
-
-        /* ── Footer links ─────────────────────────────────────────── */
-        .footer-links {
-            display: flex;
-            flex-direction: column;
-            gap: var(--sp-2);
-            text-align: center;
-            margin-top: var(--sp-4);
-        }
-
-        .footer-links a,
-        .footer-links span {
-            font-size: var(--text-sm);
-            color: var(--color-text-muted);
-            text-decoration: none;
-        }
-
-        .footer-links a:hover,
-        .footer-links a:focus {
-            color: var(--color-primary);
-            text-decoration: underline;
-            text-underline-offset: 3px;
-        }
-
-        .footer-links strong a {
-            color: var(--color-primary);
-            font-weight: var(--fw-semibold);
-        }
-
-        /* ── Page footer ──────────────────────────────────────────── */
-        .page-footer {
-            margin-top: var(--sp-8);
-            text-align: center;
-            font-size: var(--text-sm);
-            color: var(--color-text-faint);
-        }
-
-        /* ── Mobile: hide right panel ─────────────────────────────── */
-        @media (max-width: 768px) {
-            .split-screen {
-                flex-direction: column;
-            }
-            .split-right {
-                display: none;
-            }
-            .split-left {
-                padding: var(--sp-8) var(--sp-5);
-            }
-        }
-
-        @media (max-width: 480px) {
-            .split-left {
-                padding: var(--sp-6) var(--sp-4);
-            }
-        }
-
-        /* ── Reduced motion ───────────────────────────────────────── */
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-
-
-/*
- * login.css — Extracted from pages/login.html
- * ─────────────────────────────────────────────────────────────────────────────
- * Auto-extracted during v2.0.0 restructure.
- * Loaded by: pages/login.html
- * ─────────────────────────────────────────────────────────────────────────────
- */
-
-/* ── Split-screen layout ──────────────────────────────────── */
-        .split-screen {
-            display: flex;
-            min-height: 100dvh;
-            width: 100%;
-        }
-
-        /* Left panel — form */
-        .split-left {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--color-surface);
-            padding: var(--sp-12) var(--sp-6);
-            position: relative;
-            z-index: 1;
-        }
-
-        .form-container {
-            width: 100%;
-            max-width: 480px;
-            animation: cardIn var(--duration-slow) var(--ease-spring) both;
-        }
-
-        @keyframes cardIn {
-            from {
-                opacity: 0;
-                transform: translateY(16px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Right panel — branding */
-        .split-right {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #1E40AF 100%);
-            padding: var(--sp-12) var(--sp-8);
-            position: relative;
-            overflow: hidden;
-            color: #fff;
-        }
-
-        /* Dot grid overlay */
-        .split-right::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
-            background-size: 28px 28px;
-            pointer-events: none;
-        }
-
-        /* Decorative floating shapes */
-        .split-right::after {
-            content: '';
-            position: absolute;
-            width: 320px;
-            height: 320px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.03);
-            top: -80px;
-            right: -80px;
-            pointer-events: none;
-        }
-
-        .branding-content {
-            position: relative;
-            z-index: 1;
-            text-align: center;
-            max-width: 400px;
-            animation: cardIn var(--duration-slow) var(--ease-spring) 0.1s both;
-        }
-
-        .branding-logo {
-            width: 64px;
-            height: 64px;
-            border-radius: var(--radius-xl);
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(8px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto var(--sp-6);
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .branding-logo img {
-            width: 40px;
-            height: 40px;
-        }
-
-        .branding-title {
-            font-size: var(--text-2xl);
-            font-weight: var(--fw-extrabold);
-            color: #fff;
-            margin-bottom: var(--sp-2);
-            letter-spacing: var(--tracking-tight);
-        }
-
-        .branding-tagline {
-            font-size: var(--text-md);
-            color: rgba(255,255,255,0.8);
-            line-height: var(--leading-relaxed);
-            margin-bottom: var(--sp-10);
-        }
-
-        /* Feature bullets */
-        .feature-list {
-            display: flex;
-            flex-direction: column;
-            gap: var(--sp-5);
-            text-align: left;
-            width: 100%;
-        }
-
-        .feature-item {
-            display: flex;
-            align-items: flex-start;
-            gap: var(--sp-3);
-        }
-
-        .feature-icon {
-            width: 40px;
-            height: 40px;
-            min-width: 40px;
-            border-radius: var(--radius-md);
-            background: rgba(255,255,255,0.12);
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid rgba(255,255,255,0.15);
-        }
-
-        .feature-icon svg {
-            width: 20px;
-            height: 20px;
-            color: #fff;
-        }
-
-        .feature-text-wrap {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .feature-label {
-            font-size: var(--text-base);
-            font-weight: var(--fw-semibold);
-            color: #fff;
-        }
-
-        .feature-desc {
-            font-size: var(--text-sm);
-            color: rgba(255,255,255,0.65);
-            line-height: var(--leading-normal);
-        }
-
-        /* ── Form header ──────────────────────────────────────────── */
-        .form-header {
-            margin-bottom: var(--sp-8);
-        }
-
-        .form-logo-row {
-            display: flex;
-            align-items: center;
-            gap: var(--sp-3);
-            margin-bottom: var(--sp-6);
-        }
-
-        .form-logo-row img {
-            width: 36px;
-            height: 36px;
-            border-radius: var(--radius-md);
-            flex-shrink: 0;
-        }
-
-        .form-logo-name {
-            font-size: var(--text-lg);
-            font-weight: var(--fw-bold);
-            color: var(--color-text);
-            letter-spacing: var(--tracking-tight);
-        }
-
-        .form-title {
-            font-size: var(--text-2xl);
-            font-weight: var(--fw-extrabold);
-            color: var(--color-text);
-            letter-spacing: var(--tracking-tight);
-            margin-bottom: var(--sp-1);
-        }
-
-        .form-subtitle {
-            font-size: var(--text-base);
-            color: var(--color-text-muted);
-        }
-
-        /* ── Form fields ──────────────────────────────────────────── */
-        .auth-form {
-            display: grid;
-            gap: var(--sp-5);
-        }
-
-        .field {
-            display: grid;
-            gap: var(--sp-1-5);
-        }
-
-        .field label {
-            font-size: var(--text-base);
-            font-weight: var(--fw-semibold);
-            color: var(--color-text-2);
-        }
-
-        .field-label-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: var(--sp-2);
-        }
-
-        .field-label-row a {
-            font-size: var(--text-sm);
-            color: var(--color-primary);
-            font-weight: var(--fw-medium);
-            text-decoration: none;
-            transition: color var(--transition-fast);
-        }
-
-        .field-label-row a:hover,
-        .field-label-row a:focus-visible {
-            color: var(--color-primary-hover);
-            text-decoration: underline;
-            text-underline-offset: 2px;
-            outline: none;
-        }
-
-        /* Password field with toggle */
-        .field-password {
-            position: relative;
-        }
-
-        .toggle-visibility {
-            position: absolute;
-            right: var(--sp-3);
-            top: 33px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: var(--color-text-faint);
-            padding: var(--sp-1);
-            display: flex;
-            align-items: center;
-            transition: color var(--transition-fast);
-            min-width: 44px;
-            min-height: 44px;
-            justify-content: center;
-        }
-
-        .toggle-visibility:hover {
-            color: var(--color-text-muted);
-        }
-
-        .toggle-visibility svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        .field-password .input {
-            padding-right: 48px;
-        }
-
-        /* ── Primary login button ─────────────────────────────────── */
-        .primary-login-btn {
-            width: 100%;
-            height: 44px;
-            border: none;
-            border-radius: var(--radius-md);
-            background: var(--color-primary);
-            color: #fff;
-            font-family: var(--font-sans);
-            font-size: var(--text-md);
-            font-weight: var(--fw-semibold);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--sp-2);
-            position: relative;
-            min-height: 44px;
-            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2), 0 4px 12px rgba(37, 99, 235, 0.15);
-            transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
-        }
-
-        .primary-login-btn:hover:not(:disabled) {
-            background: var(--color-primary-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25), 0 6px 18px rgba(37, 99, 235, 0.2);
-        }
-
-        .primary-login-btn:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        .primary-login-btn:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-            transform: none !important;
-        }
-
-        .primary-login-btn.loading::after {
-            content: '';
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255, 255, 255, .35);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-
-        .primary-login-btn.loading .btn-text {
-            opacity: 0;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* ── Google login button ──────────────────────────────────── */
-        .google-login-btn {
-            width: 100%;
-            height: 44px;
-            border: 1px solid var(--color-border-2);
-            border-radius: var(--radius-md);
-            background: var(--color-surface);
-            color: var(--color-text);
-            font-family: var(--font-sans);
-            font-size: var(--text-base);
-            font-weight: var(--fw-medium);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--sp-2-5);
-            position: relative;
-            min-height: 44px;
-            transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
-        }
-
-        .google-login-btn:hover:not(:disabled) {
-            background: var(--color-surface-2);
-            border-color: var(--color-text-muted);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .google-login-btn:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        .google-login-btn:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-            transform: none !important;
-        }
-
-        .google-login-btn.loading::after {
-            content: '';
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(15, 23, 42, .25);
-            border-top-color: var(--color-text);
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-
-        .google-login-btn.loading .btn-text {
-            opacity: 0;
-        }
-
-        .google-login-btn.authenticating {
-            position: relative;
-            overflow: hidden;
-            pointer-events: none;
-            cursor: wait;
-        }
-
-        .google-login-btn.authenticating::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(
-                90deg,
-                transparent 0%,
-                rgba(37, 99, 235, 0.08) 50%,
-                transparent 100%
-            );
-            animation: auth-shimmer 1.6s ease-in-out infinite;
-        }
-
-        @keyframes auth-shimmer {
-            0%   { transform: translateX(-110%); }
-            100% { transform: translateX(110%); }
-        }
-
-        /* ── Error message ────────────────────────────────────────── */
-        .error-message {
-            padding: var(--sp-3) var(--sp-4);
-            border-radius: var(--radius-md);
-            background: var(--color-destructive-bg);
-            color: var(--color-destructive);
-            font-size: var(--text-sm);
-            line-height: var(--leading-normal);
-            border-left: 3px solid var(--color-destructive);
-            animation: errorIn 0.25s var(--ease-spring) both;
-        }
-
-        @keyframes errorIn {
-            from { opacity: 0; transform: translateY(-4px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .error-message.info-message {
-            background: var(--color-primary-light);
-            color: var(--color-primary);
-            border-left-color: var(--color-primary);
-        }
-
-        /* ── Footer links ─────────────────────────────────────────── */
-        .footer-links {
-            display: flex;
-            flex-direction: column;
-            gap: var(--sp-2);
-            text-align: center;
-            margin-top: var(--sp-4);
-        }
-
-        .footer-links a,
-        .footer-links span {
-            font-size: var(--text-sm);
-            color: var(--color-text-muted);
-            text-decoration: none;
-        }
-
-        .footer-links a:hover,
-        .footer-links a:focus {
-            color: var(--color-primary);
-            text-decoration: underline;
-            text-underline-offset: 3px;
-        }
-
-        .footer-links strong a {
-            color: var(--color-primary);
-            font-weight: var(--fw-semibold);
-        }
-
-        /* ── Page footer ──────────────────────────────────────────── */
-        .page-footer {
-            margin-top: var(--sp-8);
-            text-align: center;
-            font-size: var(--text-sm);
-            color: var(--color-text-faint);
-        }
-
-        /* ── Mobile: hide right panel ─────────────────────────────── */
-        @media (max-width: 768px) {
-            .split-screen {
-                flex-direction: column;
-            }
-            .split-right {
-                display: none;
-            }
-            .split-left {
-                padding: var(--sp-8) var(--sp-5);
-            }
-        }
-
-        @media (max-width: 480px) {
-            .split-left {
-                padding: var(--sp-6) var(--sp-4);
-            }
-        }
-
-        /* ── Reduced motion ───────────────────────────────────────── */
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
 /* REMOVE pill morph — replace with clean status text */
 .google-login-btn.authenticating {
     background: #f8fafc;
@@ -2018,4 +1002,108 @@ body::before {
 
 @keyframes btnSpin {
     to { transform: rotate(360deg); }
+}
+
+/* =====================================================
+   Dark mode — flip remaining hardcoded light-mode colors.
+   Most rules use --albedu-* / --color-* tokens that already
+   flip via tokens.css; this block covers the legacy Industrial
+   block (lines 1-446) which has hardcoded hex values.
+===================================================== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* Body background gradient */
+    body {
+      background:
+        radial-gradient(ellipse at top left, rgba(59, 130, 246, 0.10) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+        linear-gradient(180deg, var(--albedu-surface-alt) 0%, var(--albedu-surface) 100%);
+    }
+
+    /* Grid pattern overlay */
+    body::before {
+      background-image:
+        linear-gradient(rgba(59, 130, 246, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.04) 1px, transparent 1px);
+    }
+
+    /* Google button hover (hardcoded #94a3b8 / #f8fafc) */
+    .google-login-btn:hover:not(:disabled) {
+      border-color: var(--albedu-border);
+      background: var(--albedu-surface-alt);
+    }
+
+    /* Error message (hardcoded #fef2f2 / #dc2626) */
+    .error-message {
+      background: rgba(239, 68, 68, 0.10);
+      color: var(--albedu-danger);
+      border-left-color: var(--albedu-danger);
+    }
+
+    /* Info-message variant (hardcoded #eff6ff / #1d4ed8) */
+    .error-message.info-message {
+      background: var(--albedu-primary-muted);
+      color: var(--albedu-primary);
+      border-left-color: var(--albedu-primary);
+    }
+
+    /* Footer disclaimer (hardcoded #94a3b8) */
+    .footer-disclaimer {
+      color: var(--albedu-body);
+    }
+
+    /* Loading-indicator overlay (hardcoded #f8fafc / #e2e8f0) */
+    .loading-indicator {
+      background: linear-gradient(135deg, var(--albedu-surface-alt) 0%, var(--albedu-surface) 100%) !important;
+    }
+    .loading-indicator .spinner-lg {
+      border-color: var(--albedu-border) !important;
+      border-top-color: var(--albedu-primary) !important;
+    }
+    .loading-text {
+      color: var(--albedu-heading) !important;
+    }
+    .progress-bar {
+      background: var(--albedu-border) !important;
+    }
+    .progress-fill {
+      background: linear-gradient(90deg, var(--albedu-primary), var(--albedu-primary-hover)) !important;
+    }
+
+    /* Tail override: .google-login-btn.authenticating uses hardcoded #f8fafc */
+    .google-login-btn.authenticating {
+      background: var(--albedu-surface-alt);
+    }
+  }
+}
+
+/* Manual dark theme toggle takes precedence over OS preference. */
+[data-theme="dark"] {
+  /* Same overrides as above — duplicated for explicit toggle support. */
+}
+[data-theme="dark"] body {
+  background:
+    radial-gradient(ellipse at top left, rgba(59, 130, 246, 0.10) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+    linear-gradient(180deg, var(--albedu-surface-alt) 0%, var(--albedu-surface) 100%);
+}
+[data-theme="dark"] .google-login-btn:hover:not(:disabled) {
+  border-color: var(--albedu-border);
+  background: var(--albedu-surface-alt);
+}
+[data-theme="dark"] .error-message {
+  background: rgba(239, 68, 68, 0.10);
+  color: var(--albedu-danger);
+  border-left-color: var(--albedu-danger);
+}
+[data-theme="dark"] .error-message.info-message {
+  background: var(--albedu-primary-muted);
+  color: var(--albedu-primary);
+  border-left-color: var(--albedu-primary);
+}
+[data-theme="dark"] .loading-indicator {
+  background: linear-gradient(135deg, var(--albedu-surface-alt) 0%, var(--albedu-surface) 100%) !important;
+}
+[data-theme="dark"] .google-login-btn.authenticating {
+  background: var(--albedu-surface-alt);
 }

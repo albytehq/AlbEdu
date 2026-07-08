@@ -1,21 +1,7 @@
-// =============================================================================
-// _shared/cors.ts — CORS handler with origin whitelist
-// =============================================================================
-// AlbEdu v1.0.0: albedu-id → albytehq (owner rename)
-//
-// v1.1.0 FIX: this used to hardcode a 6-origin whitelist baked into the
-// source (github.io + a handful of localhost ports). Every other Edge
-// Function in this project (user-auth-complete, register-admin,
-// user-auth-preflight) reads its allowed origins from the ALLOWED_ORIGINS
-// env var instead — this module was the odd one out. Any deployment whose
-// real origin (production domain, a different dev port, a preview URL)
-// wasn't in the hardcoded list would get silently CORS-blocked here, with
-// no visible error beyond a generic "failed to fetch" in the browser.
-//
-// Fix: read ALLOWED_ORIGINS from the environment, same as the other
-// functions, with the old hardcoded list kept ONLY as a fallback for
-// deployments that haven't set the env var yet.
-// Set it in Supabase: Project Settings → Edge Functions → Secrets:
+// _shared/cors.ts — CORS handler with origin allowlist.
+// Falls back to a hardcoded list only if ALLOWED_ORIGINS is unset, so a
+// misconfigured deployment logs a warning instead of silently blocking
+// every request. Set ALLOWED_ORIGINS in Supabase → Edge Functions → Secrets:
 //   ALLOWED_ORIGINS=https://your-domain.com,http://localhost:5500,...
 
 import { handleError } from './error.ts';
@@ -76,7 +62,7 @@ export function withCors(res: Response, origin: string | null): Response {
   });
 }
 
-// Helper: wrap an async handler with CORS + error handling
+// Wrap an async handler with CORS + error handling.
 export function handler(
   fn: (req: Request, env: any, ctx: any) => Promise<Response>
 ): (req: Request, env: any, ctx: any) => Promise<Response> {
@@ -91,7 +77,6 @@ export function handler(
       const res = await fn(req, env, ctx);
       return withCors(res, origin);
     } catch (err: any) {
-      // handleError imported at top of file (ES module, not require)
       const errorRes = handleError(err);
       return withCors(errorRes, origin);
     }

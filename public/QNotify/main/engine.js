@@ -1,17 +1,11 @@
-// engine.js — QNotify 1.0.5 For AlbEdu
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  QNotify — engine.js 1.0.5 For AlbEdu                                 ║
- * ║  "Pusat Kontrol — Glitch-Free, Jank-Free, Spike-Free"      ║
- * ╚══════════════════════════════════════════════════════════════╝
- *
- * 1.0.5 CRITICAL FIXES:
- *  🎭 Backdrop spike lag — prewarmBackdrop() di _init(), GPU layer ready sebelum dialog pertama
- *  🔀 Z-index stacking conflict — unified Z constants dari glitch.js
- *  💥 Layout thrash di activateDialog() — stamp SEBELUM DOM insert, satu forceReflow
- *  🌊 Backdrop transition double-define — dihapus dari critical CSS, hanya di dialog.css
- *  🎬 Triple rAF barrier — lebih reliable di mid-range Android
- */
+// engine.js — QNotify engine. Central state + show/dismiss pipeline.
+//
+// Anti-glitch pipeline used for show() and alert():
+//   stampTheme()           — FOWT prevention (theme applied before append)
+//   stampInitialState()    — FOIS + initial-jump prevention
+//   appendToContainer()    — DOM insert with element already off-screen
+//   forceReflow()          — lock in the stamped initial state
+//   afterTwoFrames()       — triple-barrier (rAF→rAF→µtask) prevents animation flash
 
 import { TYPE_ALIAS, SHADOW_TINTS, LIMITS, NOTIFICATION_TYPES, SPAWN, DEFAULT_DURATION, VERSION } from './config.js';
 import {
@@ -83,17 +77,15 @@ export class QNotifyEngine {
         this._setupResize();
         this._setupMorphCompleteListener();
 
-        // [1.0.5] Pre-warm backdrop: GPU layer allocated NOW, not on first dialog open.
-        // Eliminates the "spike lag" bug where first dialog open was visibly slow.
+        // Pre-warm backdrop: GPU layer allocated NOW, not on first dialog
+        // open. Eliminates the spike-lag where the first dialog open was
+        // visibly slow because the browser had to allocate the layer on-demand.
         prewarmBackdrop();
 
         // Init banner — styled, informative, once per page load.
         // Disable with: window.__QNOTIFY_SILENT__ = true (before script loads).
-        // This is intentional and follows the convention of professional libraries
-        // (Axios, Socket.io, Three.js) that announce themselves in the console.
         if (!window.__QNOTIFY_SILENT__) {
             const lang = this.lang === 'id' ? 'Indonesia 🇮🇩' : 'English 🇬🇧';
-            // Phase 11 rebrand: QNotify 1.0.5 For AlbEdu
             // eslint-disable-next-line no-console
             console.log(
                 `%c QNotify ${VERSION} For AlbEdu %c ${lang} `,
@@ -120,7 +112,7 @@ export class QNotifyEngine {
     }
 
     _setupResize() {
-        // onResize() dari glitch.js: throttled ke satu rAF per resize, tidak jank
+        // glitch.onResize(): throttled to one rAF per resize — no jank.
         this._unregisterResize = onResize(() => {
             this._updateMode();
             recalcAllHeights(this.notifications);
@@ -147,15 +139,7 @@ export class QNotifyEngine {
         return window.innerWidth > LIMITS.MOBILE_BREAKPOINT;
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  SHOW — Anti-Glitch Pipeline:
-    //   1. stampTheme()          FOWT prevention
-    //   2. stampInitialState()   FOIS + Initial Jump prevention
-    //   3. appendToContainer()   DOM insert saat sudah off-screen
-    //   4. forceReflow()         lock in initial state
-    //   5. afterTwoFrames()      triple-barrier (rAF→rAF→µtask) → Animation Flash prevention
-    // ══════════════════════════════════════════════════════════════
-
+    // SHOW — Anti-Glitch pipeline (see file header).
     show(options = {}) {
         this._loadFonts();
 
@@ -175,7 +159,7 @@ export class QNotifyEngine {
             id, type: finalType, title, message, icon, isDesktop, duration, lang: this.lang,
         });
 
-        // [FOWT] Theme sebelum append
+        // FOWT: theme applied before append.
         stampTheme(element, finalType);
         applyShadowColor(element, finalType);
         setupProgressBar(element, duration, isDesktop);
@@ -197,7 +181,7 @@ export class QNotifyEngine {
         initBumpState(notification);
         applySpawnShadow(notification);
 
-        // [FOIS + Initial Jump] Stamp sebelum append — tidak ada "posisi salah" frame
+        // FOIS + Initial Jump: stamp before append — no "wrong position" frame.
         if (isDesktop) {
             stampInitialState(element, { translateX: SPAWN.DESKTOP_TRANSLATE_X, scale: SPAWN.DESKTOP_SCALE, opacity: 0, gpuPromote: true });
         } else {
@@ -207,11 +191,13 @@ export class QNotifyEngine {
         this.notifications.set(id, notification);
         appendToContainer(this.container, element);
 
-        // [Animation Flash] One forceReflow locks the stamped state before triple-barrier.
+        // Animation Flash: one forceReflow locks the stamped state before
+        // the triple-barrier.
         forceReflow(element);
 
-        // [Animation Flash] Triple-barrier: rAF1 → rAF2 → microtask → animation starts.
-        // Browser needs 2 frames to allocate compositor layer; microtask flushes CSS vars.
+        // Animation Flash: triple-barrier — rAF1 → rAF2 → microtask → animation starts.
+        // Browser needs 2 frames to allocate the compositor layer; the microtask
+        // flushes CSS vars.
         const cancelFrames = afterTwoFrames(() => {
             if (notification.isDead) return;
 
@@ -251,9 +237,7 @@ export class QNotifyEngine {
         return id;
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  DISMISS
-    // ══════════════════════════════════════════════════════════════
+    // DISMISS
 
     dismiss(id) {
         const n = this.notifications.get(id);
@@ -263,7 +247,8 @@ export class QNotifyEngine {
         n.isDead = true;
         n.state  = 'exit';
 
-        // Batalkan pending frame barrier kalau dismiss sebelum animasi mulai
+        // Cancel any pending frame barrier if dismiss fires before the
+        // animation starts.
         if (n._cancelFrames) { n._cancelFrames(); n._cancelFrames = null; }
 
         detachBumpEvents(n);
@@ -299,9 +284,7 @@ export class QNotifyEngine {
         requestStackingUpdate(this.notifications);
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  CLEANUP
-    // ══════════════════════════════════════════════════════════════
+    // CLEANUP
 
     _cleanup(id) {
         const n = this.notifications.get(id);
@@ -327,7 +310,7 @@ export class QNotifyEngine {
             n.handlers.events = [];
         }
 
-        // [GPU Fix] Bersihkan will-change — hemat compositor memory
+        // GPU Fix: clear will-change to free compositor memory.
         if (n.element) clearInitialState(n.element);
 
         removeElement(n.element);
@@ -345,9 +328,7 @@ export class QNotifyEngine {
         Array.from(this.notifications.keys()).forEach(id => this.dismiss(id));
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  ALERT — Anti-Glitch pipeline sama dengan show()
-    // ══════════════════════════════════════════════════════════════
+    // ALERT — same Anti-Glitch pipeline as show().
 
     alert(options) {
         this._loadFonts();
@@ -368,19 +349,19 @@ export class QNotifyEngine {
 
         const element = createAlertElement({ id, title: finalTitle, message: finalMessage, icon, lang, intent, okText });
 
-        // [FOWT] Theme sebelum append
+        // FOWT: theme applied before append.
         // WHY: label.css intent selectors use .danger (not .error) for red accent vars.
         // stampTheme preserves .danger class; only applyShadowColor maps to SHADOW_TINTS['error'].
         stampTheme(element, intent);
         applyShadowColor(element, intent === 'danger' ? 'error' : intent);
 
-        // [v7.5.0 FOIS Fix — Alert Special Case]
-        // label-alert uses position:fixed + left:50% + top:50% + translate(-50%,-50%).
-        // stampInitialState({ scale:0.88 }) produces "scale(0.88)" which REMOVES the
-        // centering translate — element appears at top-left.
-        // FIX: CSS .spawn { visibility:hidden } = FOUC guard.
-        //      JS only sets will-change for GPU layer.
-        //      animateAlertEnter() spring jump(0.88) is the animation start ground truth.
+        // Special-case FOIS fix for label-alert: it uses position:fixed +
+        // left:50% + top:50% + translate(-50%,-50%). stampInitialState({
+        // scale:0.88 }) would produce "scale(0.88)" which REMOVES the
+        // centering translate — element would appear at top-left.
+        // CSS .spawn { visibility:hidden } is the FOUC guard here. JS only
+        // sets will-change for the GPU layer. animateAlertEnter() spring
+        // jump(0.88) is the animation start ground truth.
         element.style.willChange = 'transform, opacity';
 
         const notification = {
@@ -388,10 +369,11 @@ export class QNotifyEngine {
         };
 
         showBackdrop();
-        // [D2] Alert goes directly to body — must NOT be inside #qnotify-container.
-        // container has z-index:10000 + isolation:isolate = new stacking context.
-        // backdrop z-index:10001 is at body level → would cover everything inside container.
-        // Direct body append = alert z-index:10002 competes in body context → dialog wins.
+        // Alert goes directly to body — must NOT be inside #qnotify-container.
+        // The container has z-index:10000 + isolation:isolate = new stacking
+        // context. backdrop z-index:10001 is at body level → would cover
+        // everything inside container. Direct body append = alert z-index:10002
+        // competes in body context → dialog wins.
         document.body.appendChild(element);
         forceReflow(element);
 
@@ -454,9 +436,7 @@ export class QNotifyEngine {
         return id;
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  CONFIRM / ASYNC CONFIRM / HOLD / HOLD ASYNC
-    // ══════════════════════════════════════════════════════════════
+    // CONFIRM / ASYNC CONFIRM / HOLD / HOLD ASYNC
 
     confirm({ title, message, icon, onYes, onNo, intent = 'info' } = {}) {
         this._loadFonts();
@@ -520,9 +500,7 @@ export class QNotifyEngine {
         return id;
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  READ NOTE
-    // ══════════════════════════════════════════════════════════════
+    // READ NOTE
 
     readNote(options = {}) {
         this._loadFonts();
@@ -542,19 +520,21 @@ export class QNotifyEngine {
             uiType, readType, progress, lang: this.lang, closeText, continueText, steps,
         });
 
-        // [v7.5.0 FOIS Fix — ReadNote Special Case]
-        // .rn-card uses position:fixed + left:50% + top:50% + translate(-50%,-50%).
-        // stampInitialState() would overwrite this centering with translate(0,60px) scale(0.97).
-        // FIX: CSS .label-readnote.spawn .rn-card { visibility:hidden } = FOUC guard.
-        //      will-change set manually for GPU layer.
-        //      animateReadNoteEnter() spring jumps (scaleSpring=0.97, txYSpring=60) are ground truth.
+        // Special-case FOIS fix for ReadNote: .rn-card uses position:fixed +
+        // left:50% + top:50% + translate(-50%,-50%). stampInitialState()
+        // would overwrite this centering with translate(0,60px) scale(0.97).
+        // CSS .label-readnote.spawn .rn-card { visibility:hidden } is the
+        // FOUC guard. will-change is set manually for the GPU layer.
+        // animateReadNoteEnter() spring jumps (scaleSpring=0.97, txYSpring=60)
+        // are ground truth.
         element.style.willChange = 'transform, opacity';
 
         const notification = {
             id, element, isDead: false, type: 'readnote', isDesktop, state: 'spawn', handlers: null,
         };
 
-        // [D2] ReadNote goes directly to body — same stacking context fix as dialog/alert.
+        // ReadNote goes directly to body — same stacking-context fix as
+        // dialog/alert.
         document.body.appendChild(element);
         forceReflow(element);
 
@@ -653,9 +633,9 @@ export class QNotifyEngine {
         const defaultMechanic = { danger: 'hold-async', warning: 'confirm', info: 'confirm' };
         const finalMechanic   = mechanic || defaultMechanic[intent] || 'confirm';
 
-        // [BUG FIX v7.5.1] NOTIFICATION_TYPES tidak punya key 'danger' — hanya 'error'.
-        // Sebelumnya intentConfig bisa undefined kalau intent='danger', menyebabkan
-        // getText(undefined.title) crash. Map 'danger' → 'error' SEBELUM lookup.
+        // NOTIFICATION_TYPES has no 'danger' key — only 'error'. Map
+        // 'danger' → 'error' BEFORE lookup, otherwise intentConfig could be
+        // undefined and getText(undefined.title) would crash.
         const typeKey    = intent === 'danger' ? 'error' : intent;
         const intentConfig = NOTIFICATION_TYPES[typeKey] || NOTIFICATION_TYPES.info;
 

@@ -1,22 +1,11 @@
-// =============================================================================
-// wizard-controller.js — Step navigation + list/wizard view toggle (v0.2.0)
-// =============================================================================
-// 3 steps:
-//   Step 1: Informasi Asesmen + Identitas Peserta + Tema Visual (hybrid)
-//   Step 2: Soal Asesmen (sections + questions)
-//   Step 3: Ringkasan & Publish
+// wizard-controller.js — step navigation + list/wizard view toggle.
 //
-// List view is default. Clicking "Buat Asesmen Baru" reveals the wizard view.
-// Clicking "Batal" returns to list view. PublishCard._publish() also returns
-// to list view after successful publish.
+// 3 steps: (1) Informasi + Identitas + Tema, (2) Soal, (3) Ringkasan + Publish.
+// List view is default; "Buat Asesmen Baru" reveals the wizard, "Batal" /
+// publish success returns to the list.
 //
-// Step navigation rules:
-//   - Next validates the CURRENT step before advancing
-//   - Prev always allowed (no validation)
-//   - Step indicator clicks allow jumping back to completed steps only
-//
-// Loaded as classic <script defer>. Exposes window.WizardController.
-// =============================================================================
+// Navigation rules: Next validates the current step; Prev always allowed;
+// step-indicator clicks only jump back to completed steps.
 
 (function () {
   'use strict';
@@ -25,7 +14,7 @@
 
   const TOTAL_STEPS = 3;
 
-  // Field-name prefixes that belong to each step (used for partial validation)
+  // Field-name prefixes used by _filterErrorsForStep for partial validation.
   const STEP1_FIELDS = [
     'judul', 'mapel', 'time', 'mode_pembuka', 'identity_mode',
     'identity_fields', 'identity_daftar', 'scheduled_start', 'is_catatan',
@@ -54,7 +43,7 @@
       }
 
       this._currentStep = 1;
-      this._completedSteps = new Set(); // steps the user has passed via Next
+      this._completedSteps = new Set();
 
       this._btnNewExam?.addEventListener('click', () => this._openWizard());
       this._btnCancel?.addEventListener('click', () => this._closeWizard());
@@ -62,7 +51,7 @@
       this._btnNext?.addEventListener('click', () => this._nextStep());
       this._btnPublishFinal?.addEventListener('click', () => window.PublishCard?._publish());
 
-      // Step indicator clicks — only allow jumping back to completed steps
+      // Step indicator clicks — only allow jumping back to completed steps.
       this._stepIndicators.forEach((el) => {
         el.addEventListener('click', () => {
           const step = parseInt(el.dataset.step, 10);
@@ -82,11 +71,10 @@
     },
 
     _closeWizard() {
-      // Confirm before discarding
       const doClose = () => {
         this._wizardView.hidden = true;
         this._listView.hidden = false;
-        // Refresh list view to show any newly-published exam
+        // Refresh list view to show any newly-published exam.
         window.ListView?.refresh?.();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       };
@@ -107,22 +95,19 @@
       if (step < 1 || step > TOTAL_STEPS) return;
       this._currentStep = step;
 
-      // Show/hide step content
       this._stepContents.forEach((el, i) => {
         el.hidden = (i + 1) !== step;
       });
 
-      // Update step indicator states
       this._stepIndicators.forEach((el) => {
         const s = parseInt(el.dataset.step, 10);
         el.classList.toggle('albedu-step-active', s === step);
         el.classList.toggle('albedu-step-complete', this._completedSteps.has(s) && s !== step);
-        // Clickable if completed and not current
+        // Clickable if completed and not current.
         el.dataset.clickable = (this._completedSteps.has(s) && s !== step) ? 'true' : 'false';
         el.setAttribute('aria-selected', s === step ? 'true' : 'false');
       });
 
-      // Show/hide footer buttons
       this._btnPrev.hidden = step === 1;
       this._btnNext.hidden = step === TOTAL_STEPS;
       this._btnPublishFinal.hidden = step !== TOTAL_STEPS;
@@ -146,7 +131,6 @@
     _nextStep() {
       if (this._currentStep >= TOTAL_STEPS) return;
 
-      // Validate current step
       const { valid, errors } = window.CreateAssessment.validate();
       if (!valid) {
         const stepErrors = this._filterErrorsForStep(errors, this._currentStep);
@@ -156,7 +140,6 @@
         }
       }
 
-      // Mark current step as completed
       this._completedSteps.add(this._currentStep);
       this._goToStep(this._currentStep + 1);
     },
@@ -179,7 +162,7 @@
       return errors;
     },
 
-    // Public API — allows PublishCard to return to list view after publish
+    // Allows PublishCard to return to the list view after a successful publish.
     returnToListView() {
       this._wizardView.hidden = true;
       this._listView.hidden = false;

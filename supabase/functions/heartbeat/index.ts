@@ -1,20 +1,11 @@
-// =============================================================================
-// heartbeat/index.ts — Peserta progress sync (15s interval)
-// =============================================================================
+// heartbeat/index.ts — Peserta progress sync (15s interval).
 // POST /functions/v1/heartbeat
-//
 // Headers: Authorization: Bearer <token>
 // Body: {
-//   session_id: string,
-//   current_section: number,
-//   current_question: number,
-//   progress_pct: number,
-//   violation_count: number,
-//   draft_answers: object  // partial sync
+//   session_id, current_section, current_question,
+//   progress_pct, violation_count, draft_answers (partial sync)
 // }
-//
 // Returns: { ok, blocked, server_time, session_status }
-// =============================================================================
 
 import { handler } from '../_shared/cors.ts';
 import { HTTPError, successResponse } from '../_shared/error.ts';
@@ -36,7 +27,23 @@ interface HeartbeatBody {
 const MAX_DRAFT_SIZE = 100_000;  // 100KB
 const BLOCKED_STATUSES = new Set(['blocked', 'submitted', 'expired']);
 
+// Per-session DB rate-limit verdict cache. Cuts DB writes from 4/min to
+// 1/min per peserta without weakening the hard limit.
+const heartbeatDbCache = new Map<string, { allowed: boolean; resetAt: number; checkedAt: number; }>();
+
+// Evict stale entries every 5 minutes to keep the Map bounded.
+let _lastHbCacheGc = Date.now();
+function _gcHeartbeatCache() {
+  const now = Date.now();
+  if (now - _lastHbCacheGc < 5 * 60_000) return;
+  _lastHbCacheGc = now;
+  for (const [k, v] of heartbeatDbCache) {
+    if (now - v.checkedAt > 5 * 60_000) heartbeatDbCache.delete(k);
+  }
+}
+
 export default handler(async (req: Request, env: Env, _ctx: any) => {
+  _gcHeartbeatCache();
   const user = await requirePeserta(req, env);
 
   let body: HeartbeatBody;
@@ -47,23 +54,39 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     throw new HTTPError(400, 'VALIDATION_ERROR', 'session_id is required');
   }
 
-  // Rate limit: 4 req/min per session (15s interval)
-  // [v2.0 Hardening] In-memory soft limit + DB-based hard limit (cross-isolate)
+  // 4 req/min per session (matches the 15s client interval).
+  // In-memory check is the fast path. The DB check is the hard limit so
+  // cross-isolate bypass can't slip through, but we only run it once per
+  // session per 60s to avoid burning 4 DB writes/min/peserta (which on a
+  // 50-peserta 90-min exam = 18K inserts, hitting the 60K-row soft cap
+  // in ~5 hours and consuming ~12K rows/hour of DB egress budget).
   const rateLimit = checkHeartbeatRate(body.session_id);
   if (!rateLimit.allowed) {
     throw new HTTPError(429, 'RATE_LIMITED', 'Heartbeat too frequent', {
       reset_at: new Date(rateLimit.resetAt).toISOString(),
     });
   }
-  // DB-based hard limit — catches cross-isolate bypass
-  const dbRateLimit = await checkHeartbeatRateDB(env, body.session_id);
-  if (!dbRateLimit.allowed) {
-    throw new HTTPError(429, 'RATE_LIMITED', 'Heartbeat rate limit exceeded (DB)', {
-      reset_at: new Date(dbRateLimit.resetAt).toISOString(),
+  // Cache the DB verdict per session for 60s. If the in-memory check
+  // passed, the DB check is a backup layer — we don't need to re-run it
+  // on every single beat.
+  const now = Date.now();
+  const cacheKey = `hbdb:${body.session_id}`;
+  const cached = heartbeatDbCache.get(cacheKey);
+  if (!cached || now - cached.checkedAt > 60_000) {
+    const dbRateLimit = await checkHeartbeatRateDB(env, body.session_id);
+    heartbeatDbCache.set(cacheKey, { allowed: dbRateLimit.allowed, resetAt: dbRateLimit.resetAt, checkedAt: now });
+    if (!dbRateLimit.allowed) {
+      throw new HTTPError(429, 'RATE_LIMITED', 'Heartbeat rate limit exceeded (DB)', {
+        reset_at: new Date(dbRateLimit.resetAt).toISOString(),
+      });
+    }
+  } else if (!cached.allowed) {
+    throw new HTTPError(429, 'RATE_LIMITED', 'Heartbeat rate limit exceeded (DB cached)', {
+      reset_at: new Date(cached.resetAt).toISOString(),
     });
   }
 
-  // Validate draft_answers size
+  // Validate draft_answers size.
   if (body.draft_answers) {
     const draftStr = JSON.stringify(body.draft_answers);
     if (draftStr.length > MAX_DRAFT_SIZE) {
@@ -71,7 +94,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     }
   }
 
-  // Validate progress_pct
+  // Validate progress_pct.
   let progressPct = 0;
   if (typeof body.progress_pct === 'number') {
     progressPct = Math.max(0, Math.min(100, body.progress_pct));
@@ -79,7 +102,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
 
   const db = new SupabaseDB(env);
 
-  // Fetch session (with current status — critical for instant block detection)
+  // Fetch current status — drives instant block detection on the client.
   const session = await db.selectOne<AssessmentSession>(
     'assessment_sessions',
     `id,user_id,status,blocked_reason,attempt_number,violation_count&id=eq.${body.session_id}`
@@ -93,7 +116,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     throw new HTTPError(403, 'FORBIDDEN', 'Session does not belong to authenticated user');
   }
 
-  // Check if blocked/submitted/expired — return signal to client
+  // If blocked/submitted/expired, signal the client to redirect.
   if (BLOCKED_STATUSES.has(session.status)) {
     return successResponse({
       ok: false,
@@ -106,7 +129,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     });
   }
 
-  // Update session (atomic — only if still active/paused)
+  // Atomic update — only fires if the session is still active/paused.
   const updateData: any = {
     last_heartbeat_at: new Date().toISOString(),
     current_section: typeof body.current_section === 'number' ? body.current_section : 0,
@@ -128,7 +151,8 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     updateData
   );
 
-  // If update failed (status changed mid-heartbeat), re-fetch and return current state
+  // If the update hit 0 rows the status changed mid-heartbeat — re-fetch
+  // and return the current state so the client can redirect.
   if (updated === 0) {
     const freshSession = await db.selectOne<AssessmentSession>(
       'assessment_sessions',

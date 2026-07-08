@@ -1,41 +1,17 @@
-// timer.js — QNotify 1.0.5 For AlbEdu
-/**
- * ╔══════════════════════════════════════╗
- * ║  QNotify — timer.js 1.0.5 For AlbEdu ║
- * ║  "Auto-dismiss manager"             ║
- * ╚══════════════════════════════════════╝
- *
- * Mengurus semua timer untuk auto-dismiss notifikasi.
- * Setiap notifikasi punya satu entry di Map `timers`.
- *
- * FITUR YANG ADA:
- *  - startTimer   → mulai countdown, auto-dismiss setelah duration
- *  - clearTimer   → batalkan timer (misal saat user dismiss manual)
- *  - pauseTimer   → bekukan waktu (untuk hover/interaksi masa depan)
- *  - resumeTimer  → lanjutkan dari posisi terakhir setelah pause
- *  - hasTimer     → cek apakah timer masih aktif
- *  - clearAllTimers → bersihkan semua sekaligus (saat clearAll)
- *
- * CATATAN DEVELOPER:
- *  duration = 0 → notifikasi permanen, tidak perlu timer sama sekali.
- *  Jangan panggil startTimer kalau duration <= 0.
- */
+// timer.js — QNotify auto-dismiss manager.
+//
+// Mengurus semua timer untuk auto-dismiss notifikasi. Setiap notifikasi punya
+// satu entry di Map `timers`. duration = 0 → notifikasi permanen, jangan
+// panggil startTimer (skip di engine.js).
 
-// Registry semua timer aktif — key: notificationId, value: timer entry
+// Registry semua timer aktif — key: notificationId, value: timer entry.
 const timers = new Map();
 
-/**
- * Mulai countdown timer untuk satu notifikasi.
- *
- * @param {string}   id        - Notification ID (dari engine._makeId)
- * @param {number}   duration  - Berapa ms sebelum auto-dismiss
- * @param {Function} onExpire  - Callback: dipanggil saat waktu habis
- */
+// Mulai countdown timer untuk satu notifikasi. Duration 0 = permanen, skip.
 export function startTimer(id, duration, onExpire) {
-    // Duration 0 = permanen, skip
     if (duration <= 0) return;
 
-    // Pastikan tidak ada timer lama yang masih jalan untuk ID yang sama
+    // Pastikan tidak ada timer lama yang masih jalan untuk ID yang sama.
     clearTimer(id);
 
     const handle = setTimeout(() => {
@@ -52,12 +28,8 @@ export function startTimer(id, duration, onExpire) {
     });
 }
 
-/**
- * Hentikan dan hapus timer untuk satu notifikasi.
- * Dipanggil saat user dismiss manual atau clearAll.
- *
- * @param {string} id
- */
+// Hentikan dan hapus timer untuk satu notifikasi. Dipanggil saat user dismiss
+// manual atau clearAll.
 export function clearTimer(id) {
     const entry = timers.get(id);
     if (entry) {
@@ -66,35 +38,24 @@ export function clearTimer(id) {
     }
 }
 
-/**
- * Bekukan timer sementara.
- * Timer tidak akan fire sampai resumeTimer() dipanggil.
- *
- * Ini disiapkan untuk fitur hover-to-pause di masa depan —
- * belum ada UI yang memanggilnya secara langsung sekarang.
- *
- * @param {string} id
- */
+// Bekukan timer sementara. Timer tidak akan fire sampai resumeTimer() dipanggil.
+// Disiapkan untuk fitur hover-to-pause di masa depan — belum ada UI yang
+// memanggilnya secara langsung sekarang.
 export function pauseTimer(id) {
     const entry = timers.get(id);
     if (!entry || entry.paused) return;
 
     clearTimeout(entry.handle);
 
-    // Simpan berapa sisa waktu — ini yang nanti dipakai saat resume
+    // Simpan berapa sisa waktu — ini yang nanti dipakai saat resume.
     entry.remaining = entry.duration - (Date.now() - entry.startedAt);
     entry.paused    = true;
 
     timers.set(id, entry);
 }
 
-/**
- * Lanjutkan timer yang sedang di-pause.
- * Akan fire setelah sisa waktu yang tersimpan habis.
- *
- * @param {string}   id
- * @param {Function} onExpire - Callback saat waktu habis
- */
+// Lanjutkan timer yang sedang di-pause. Akan fire setelah sisa waktu yang
+// tersimpan habis.
 export function resumeTimer(id, onExpire) {
     const entry = timers.get(id);
     if (!entry || !entry.paused) return;
@@ -109,20 +70,13 @@ export function resumeTimer(id, onExpire) {
     timers.set(id, entry);
 }
 
-/**
- * Cek apakah timer untuk ID ini masih aktif.
- *
- * @param {string} id
- * @returns {boolean}
- */
+// Cek apakah timer untuk ID ini masih aktif.
 export function hasTimer(id) {
     return timers.has(id);
 }
 
-/**
- * Hapus semua timer sekaligus.
- * Dipanggil oleh engine.clearAll() saat semua notif dibersihkan.
- */
+// Hapus semua timer sekaligus. Dipanggil oleh engine.clearAll() saat semua
+// notif dibersihkan.
 export function clearAllTimers() {
     timers.forEach(entry => clearTimeout(entry.handle));
     timers.clear();

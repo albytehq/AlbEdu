@@ -1,62 +1,18 @@
-// label.js — QNotify 1.0.5 For AlbEdu
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  QNotify — label.js 1.0.5 For AlbEdu [PERF REWRITE]                        ║
- * ║  "Label Family — Alert DOM Builder + Hybrid Animations"     ║
- * ╚══════════════════════════════════════════════════════════════╝
- *
- * PERFORMANCE CHANGES v7.3.0-perf:
- *
- *  [F1] REMOVED: All plain CSS @keyframes for Family enter/exit.
- *       laCardIn, laCardOut, laBarIn, laRingPop, laGlyphPop,
- *       laRingGlow, laFadeUp, laBtnPop — all gone from CSS.
- *       These are now driven by Hybrid Animations (AnalyticSpring).
- *
- *  [F2] NEW: animateAlertEnter() — JS spring driven enter.
- *       Card:   scale(0.88→1) + translateY(18→0) + opacity(0→1) via spring.
- *       Bar:    scaleX(0→1) via spring (delay 60ms).
- *       Icon:   scale(0.45→1) + opacity via spring (delay 80ms).
- *       Glyph:  scale(0.15→1) + opacity via spring (delay 160ms).
- *       Title:  translateY(10→0) + opacity via spring (delay 200ms).
- *       Msg:    translateY(10→0) + opacity via spring (delay 240ms).
- *       Btn:    translateY(14→0) + scale(0.92→1) + opacity via spring (delay 280ms).
- *
- *  [F3] NEW: animateAlertExit() — JS spring driven exit.
- *       Card: scale(1→0.93) + translateY(0→10) + opacity(1→0).
- *       Children reset instantly (no fragmentation).
- *       onDone callback — clean handoff to engine cleanup.
- *
- *  [F4] Architecture: all springs are AnalyticSpring.
- *       Consistent with Hybrid Animation spec:
- *         UI animations (enter/exit/hover) → analytic ✓
- *         Gesture/bump interactions → RK4 (N/A for alert)
- *       Result: "full spring behavior" through the Hybrid approach.
- *
- *  [F5] No animation: laRingGlow (box-shadow keyframe) REMOVED entirely.
- *       Animating box-shadow triggers paint — not compositor-safe.
- *       Ring has a static shadow from CSS (no animation). Visual identity preserved.
- *
- * Why this is better than CSS keyframes:
- *   - Interruption-safe: any spring can be stopped/redirected mid-flight.
- *   - No animationend race conditions (engine no longer listens for CSS events).
- *   - No stale animation state when alert is dismissed while entering.
- *   - Deterministic: frame-rate independent, exact analytic solution.
- *   - will-change set/cleared per animation — no permanent memory layers.
- */
+// label.js — QNotify alert DOM builder + spring-driven enter/exit animations.
+//
+// All Family enter/exit animations are JS spring-driven (AnalyticSpring), not CSS
+// @keyframes. Springs are interruption-safe (any spring can be stopped mid-flight),
+// frame-rate independent, and avoid the animationend race conditions that plague
+// CSS-driven staggered enter. Box-shadow animations are avoided entirely because
+// they trigger paint instead of compositor — the alert ring uses a static shadow.
 
 import { TEXTS } from './config.js';
 import { getText, applyShadowColor } from './render.js';
 import { acquireSpring } from './spring.js';
 import { escapeHtml } from '../security/sanitize.js';
-// [v7.5.0] glitch.js: stampInitialState already ran before DOM insert (from engine.js).
-// We only clear will-change on exit.
+// glitch.js owns the pre-DOM-insert stamp; we only clear will-change on exit.
 import { clearInitialState } from './glitch.js';
 
-// ════════════════════════════════════════════════════════════
-//  HELPERS
-// ════════════════════════════════════════════════════════════
-
-/** Always analytic for Family UI animations — Hybrid Architecture. */
 function _aSpring(cfg) {
     return acquireSpring(cfg, 'analytic');
 }
@@ -83,21 +39,6 @@ const NO_SELECT = [
     '-webkit-touch-callout:none',
 ].join(';');
 
-// ════════════════════════════════════════════════════════════
-//  DOM BUILDER  (unchanged structure — only class names updated)
-// ════════════════════════════════════════════════════════════
-
-/**
- * @param {Object} params
- * @param {string} params.id
- * @param {string} params.title
- * @param {string} params.message
- * @param {string} [params.icon]
- * @param {string} params.lang
- * @param {string} [params.intent]
- * @param {string} [params.okText]
- * @returns {HTMLElement}
- */
 export function createAlertElement({ id, title, message, icon, lang, intent = 'info', okText }) {
     const finalIntent   = ['danger', 'warning', 'success', 'info'].includes(intent) ? intent : 'info';
     const defaultOkText = getText(TEXTS.confirm.yes, lang);
@@ -108,8 +49,8 @@ export function createAlertElement({ id, title, message, icon, lang, intent = 'i
     const el = document.createElement('div');
     el.id = id;
 
-    // [F1] 'spawn' class sets initial hidden state via CSS.
-    // 'active' class no longer triggers CSS animation — JS spring handles it.
+    // 'spawn' class sets initial hidden state via CSS. 'active' is set later
+    // by the engine; it no longer triggers a CSS animation — JS spring handles it.
     el.className = `qnotify-item qnotify-label notification-item label-alert ${finalIntent} spawn`;
 
     el.setAttribute('data-notification-id', id);
@@ -154,28 +95,16 @@ export function createAlertElement({ id, title, message, icon, lang, intent = 'i
     return el;
 }
 
-// ════════════════════════════════════════════════════════════
-//  [F2] HYBRID ANIMATION — ENTER
-// ════════════════════════════════════════════════════════════
-
-/**
- * Animate label-alert enter using Hybrid Animations (AnalyticSpring).
- *
- * Replaces: CSS @keyframes laCardIn + staggered child animations.
- * Result:   Same spring-overshoot feel, but JS-driven, interruption-safe,
- *           and deterministic at any frame rate.
- *
- * Spring parameters match original CSS cubic-bezier intent:
- *   Card:   k=300, c=22 → slight overshoot (matches laCardIn 50% keyframe)
- *   Icon:   k=340, c=18 → snappy pop (matches laRingPop/laGlyphPop)
- *   Text:   k=260, c=20 → smooth ease-out (matches laFadeUp)
- *   Btn:    k=320, c=16 → poppy spring (matches laBtnPop)
- *
- * @param {HTMLElement} el       — the .label-alert element
- * @param {Function}    [onReady] — called when all springs settle
- */
+// HYBRID ANIMATION — ENTER
+//
+// Replaces CSS @keyframes laCardIn + staggered child animations. Same spring-
+// overshoot feel, but JS-driven so it's interruption-safe and deterministic.
+// Spring params are tuned to match the original CSS cubic-bezier intent:
+//   Card:   k=300, c=22 → slight overshoot
+//   Icon:   k=340, c=18 → snappy pop
+//   Text:   k=260, c=20 → smooth ease-out
+//   Btn:    k=320, c=16 → poppy spring
 export function animateAlertEnter(el, onReady) {
-    // [F4] Guard against double-trigger
     if (el._laAnimating) return;
     el._laAnimating = true;
 
@@ -188,21 +117,15 @@ export function animateAlertEnter(el, onReady) {
     const msg     = el.querySelector('.alert-message');
     const btn     = el.querySelector('.alert-btn');
 
-    // ── Initial states ─────────────────────────────────────
-    // [v7.5.0] Card initial state is already stamped by glitch.stampInitialState()
-    // BEFORE the element entered the DOM (in engine.js alert()).
-    // afterTwoFrames() in engine.js guarantees compositor commit happened.
-    // We only set will-change here (GPU layer) — DO NOT re-write opacity/transform.
-    // Re-writing would cause one extra style recalc + potential 1-frame flash.
-    // [v7.5.0] Card: write full initial state with centering transform.
-    // CSS .spawn { visibility:hidden } = FOUC guard — card invisible before this.
-    // We write here (not in engine.js) because centering requires translate(-50%,-50%).
-    // Springs start from these exact values → zero discontinuity on first frame.
+    // Card initial state: centering transform comes from the spawn stamp in
+    // engine.js (CSS .spawn { visibility:hidden } = FOUC guard). We write the
+    // full initial state here too so springs start from exact values → zero
+    // discontinuity on the first frame. Children have never been visible, so
+    // writing opacity/transform on them is safe.
     card.style.willChange = 'transform, opacity';
     card.style.opacity    = '0';
     card.style.transform  = 'translate(-50%,-50%) scale(0.88) translateY(18px)';
 
-    // Children: hidden before JS spring stagger — safe to write, never been visible.
     if (header) { header.style.transform = 'scaleX(0)'; header.style.opacity = '0.5'; header.style.transformOrigin = 'left center'; }
     if (icon)   { icon.style.opacity = '0'; icon.style.transform = 'scale(0.45) rotate(-12deg)'; }
     if (glyph)  { glyph.style.opacity = '0'; glyph.style.transform = 'scale(0.15) rotate(-22deg)'; }
@@ -223,7 +146,6 @@ export function animateAlertEnter(el, onReady) {
         }
     };
 
-    // ── Card spring ────────────────────────────────────────
     _register(); _register(); _register(); // 3 parts: scale, ty, opacity
 
     const cardSc = _aSpring({ k: 300, c: 22, m: 0.9 });
@@ -238,7 +160,6 @@ export function animateAlertEnter(el, onReady) {
     cardTy.to(0, { onUpdate: _applyCard, onRest: _onSettle });
     cardOp.to(1, { onUpdate: v => { card.style.opacity = v.toFixed(3); }, onRest: _onSettle });
 
-    // ── Header bar ────────────────────────────────────────
     if (header) {
         _register();
         const barSc = _aSpring({ k: 260, c: 22, m: 1.0 });
@@ -259,10 +180,9 @@ export function animateAlertEnter(el, onReady) {
         }, 60);
     }
 
-    // ── Icon ring ─────────────────────────────────────────
     if (icon) {
         _register(); _register(); // scale + opacity
-        const iconSc  = _aSpring({ k: 340, c: 18, m: 0.9 }); // snappy pop
+        const iconSc  = _aSpring({ k: 340, c: 18, m: 0.9 });
         const iconRot = _aSpring({ k: 320, c: 20, m: 0.9 });
         const iconOp  = _aSpring({ k: 280, c: 22, m: 1.0 });
         iconSc.jump(0.45); iconRot.jump(-12); iconOp.jump(0);
@@ -277,10 +197,9 @@ export function animateAlertEnter(el, onReady) {
         }, 80);
     }
 
-    // ── Glyph ─────────────────────────────────────────────
     if (glyph) {
         _register(); _register();
-        const glSc  = _aSpring({ k: 360, c: 18, m: 0.85 }); // very snappy
+        const glSc  = _aSpring({ k: 360, c: 18, m: 0.85 });
         const glRot = _aSpring({ k: 340, c: 20, m: 0.9 });
         const glOp  = _aSpring({ k: 300, c: 22, m: 1.0 });
         glSc.jump(0.15); glRot.jump(-22); glOp.jump(0);
@@ -295,7 +214,6 @@ export function animateAlertEnter(el, onReady) {
         }, 160);
     }
 
-    // ── Title ─────────────────────────────────────────────
     if (title) {
         _register(); _register();
         const tTy = _aSpring({ k: 260, c: 20, m: 1.0 });
@@ -308,7 +226,6 @@ export function animateAlertEnter(el, onReady) {
         }, 200);
     }
 
-    // ── Message ───────────────────────────────────────────
     if (msg) {
         _register(); _register();
         const mTy = _aSpring({ k: 260, c: 20, m: 1.0 });
@@ -321,10 +238,9 @@ export function animateAlertEnter(el, onReady) {
         }, 240);
     }
 
-    // ── Button ────────────────────────────────────────────
     if (btn) {
         _register(); _register(); _register();
-        const bTy = _aSpring({ k: 320, c: 16, m: 0.9 }); // lively pop
+        const bTy = _aSpring({ k: 320, c: 16, m: 0.9 });
         const bSc = _aSpring({ k: 340, c: 18, m: 0.9 });
         const bOp = _aSpring({ k: 280, c: 20, m: 1.0 });
         bTy.jump(14); bSc.jump(0.92); bOp.jump(0);
@@ -340,28 +256,14 @@ export function animateAlertEnter(el, onReady) {
     }
 }
 
-// ════════════════════════════════════════════════════════════
-//  [F3] HYBRID ANIMATION — EXIT
-// ════════════════════════════════════════════════════════════
-
-/**
- * Animate label-alert exit using Hybrid Animations (AnalyticSpring).
- *
- * Replaces: CSS @keyframes laCardOut + animationend listener.
- * Result:   Clean callback handoff, no race conditions.
- *
- * Children are reset instantly before card animates out.
- * This prevents visual fragmentation (child animations conflicting
- * with card collapse) — same policy as CSS .exit reset, but reliable.
- *
- * @param {HTMLElement} el
- * @param {Function}    onDone   — called when exit springs settle
- */
+// HYBRID ANIMATION — EXIT
+// Children are reset instantly before the card animates out, so they don't
+// fragment against the collapsing card. Backdrop fade is synced with card exit
+// (was delay-hiding before, causing a visible gap).
 export function animateAlertExit(el, onDone) {
-    // Abort any in-progress enter
+    // Abort any in-progress enter.
     el._laAnimating = false;
 
-    // FIX: Sync backdrop fade with card exit (was delay-hiding)
     const backdrop = document.getElementById('qnotify-backdrop');
     if (backdrop) {
         const curOp = parseFloat(getComputedStyle(backdrop).opacity) || 1;
@@ -373,7 +275,7 @@ export function animateAlertExit(el, onDone) {
         });
     }
 
-    // Reset children instantly — no individual animations during exit
+    // Reset children instantly — no individual animations during exit.
     [
         '.alert-header', '.alert-icon', '.alert-icon-ring',
         '.alert-icon .material-icons-round', '.alert-title',
@@ -406,7 +308,6 @@ export function animateAlertExit(el, onDone) {
         onUpdate: v => { el.style.opacity = v.toFixed(3); },
         onRest: () => {
             el.style.willChange = 'auto';
-            // [v7.5.0] Clean up stamped data-qn-stamped + will-change
             clearInitialState(el);
             if (onDone) onDone();
         },

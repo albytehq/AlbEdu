@@ -1,105 +1,33 @@
-// =============================================================
-//  OptionProfile.js — AlbEdu Global Profile Dropdown v3.2
+// OptionProfile.js — global profile dropdown (Apple-styled) for both admin and
+// peserta contexts. Anchors to the cursor on click and pops a frosted-glass
+// menu with avatar, role chip, and actions (edit profile, navigate, logout).
+// Zero external deps beyond Auth + ProfileEditorPanel.
 //
-//  v3.2 CHANGES (cursor-follow + scroll fix):
-//   - SCROLL FIX: Removed the scroll listener that repositioned the
-//     dropdown on scroll. Previously, scrolling caused the dropdown to
-//     "jump" from its initial cursor-anchored position to a trigger-
-//     rect-anchored position. Now the dropdown stays at its initial
-//     viewport position when the page scrolls (it's position:fixed,
-//     so it naturally stays put). The trigger may scroll out of view,
-//     but the dropdown remains visible and stable.
-//
-//   - CURSOR FOLLOW: Rewrote _position() to center the dropdown on
-//     the cursor X (instead of offsetting 30px to the right). The
-//     dropdown now appears EXACTLY above or below the cursor:
-//       • Below: dropdown top = cursorY + GAP (8px below cursor)
-//       • Above: dropdown bottom = cursorY - GAP (8px above cursor)
-//     Previously, "below" used cursorY + 30 (way too far down) and
-//     "above" used cursorY - 8 (correct). Now both are consistent.
-//
-//   - RESIZE FIX: Resize listener now uses cursor coords (useCursor=true)
-//     instead of trigger rect, so the dropdown stays anchored to where
-//     the user originally clicked even after viewport resize.
-//
-//   - ARROW PRECISION: Arrow now points exactly at cursor X (clamped
-//     within dropdown width). When dropdown is centered on cursor,
-//     arrow appears at dropdown center, perfectly aligned with cursor.
-//
-//  v3.1 CHANGES (stuck hover fix):
-//   - Removed auto-focus on first item (was causing "stuck hover" look)
-//   - Scoped :hover to @media (hover: hover) — no more stuck hover on touch
-//   - Added :focus:not(:focus-visible) to clear programmatic focus styling
-//   - Added mouseleave handler to blur items on mouse exit
-//   - Click handler blurs item immediately (no ring during close anim)
-//   - close() blurs ALL items for thorough cleanup
-//
-//  v3.0 CHANGES (brutal animation + UX upgrade + bug fixes):
-//   - TRIANGLE FIX: Removed rotate(45deg) on .op-arrow (was producing
-//     malformed triangle). Now uses pure clip-path triangle.
-//   - ADMIN PANEL FIX: Added option-profile-ready event dispatch.
-//   - SHADE FIX: Removed .op-shade (was stealing clicks from trigger).
-//     Replaced with document-level outside-click listener.
-//   - Spring open animation with overshoot (420ms)
-//   - Stagger menu items (35ms delay × index)
-//   - Avatar spring-in with bounce (500ms)
-//   - Hover lift on items (icon scale 1.12 + rotate -3°)
-//   - Ripple effect on item click
-//   - Backdrop blur on dropdown (frosted glass)
-//   - New APIs: isOpen(), update(), destroy()
-//
-//  v2.1 CHANGES (28 bug fixes — see BUGFIX comments inline):
-//   - _initialized guard + _attachedTriggers WeakSet → no double-init
-//   - Removed inline onerror; use addEventListener('error')
-//   - _safeUrl() validates scheme (https: or data:image/) for avatars
-//   - _handleAction awaits close animation before executing action
-//   - _toggleDebounce (60ms) prevents flicker on rapid clicks
-//   - Reposition uses trigger rect, not stale cursor coords
-//   - Shade gets aria-label for screen readers
-//   - Keyboard nav: ArrowUp on first item is no-op (no wrap-around)
-//   - aria-expanded synced on trigger
-//   - aria-live region announces open/close
-//   - initials escaped in SVG
-//   - _navigateToAdmin uses Auth.getBasePath() not hardcoded path
-//   - _doLogout checks return value; re-opens dropdown if cancelled
-//   - workerBase required (throw if missing)
-//   - _bootstrapPEP resolves base path from current script src reliably
-//   - visibilitychange/blur closes dropdown
-//   - Footer version → "AlbEdu v0.746.0"
-//   - _user removed (dead state)
-//   - Focus restored to trigger on close
-//   - Close timer 200ms (matches CSS 180ms + 20ms margin)
-//   - Public API: addTrigger(el), getTriggers() — no more _cfg access
-//
-//  Lightweight dropdown (bukan panel/modal), Apple-styled.
-//  Works for both Admin and Peserta contexts.
-//  Zero external dependencies beyond Auth + ProfileEditorPanel.
-// =============================================================
+// Public API: init({triggers, context, workerBase}), open(triggerEl, x, y),
+// close(), toggle(), isOpen(), update(), destroy(), addTrigger(el),
+// getTriggers().
 
 ;(function (global) {
   'use strict';
 
-  // ── Constants ──────────────────────────────────────────────
+  // Animation easings
   const ANIM_SPRING_OVERSHOOT = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
   const ANIM_SPRING           = 'cubic-bezier(0.32, 0.72, 0, 1)';
   const ANIM_EASE             = 'cubic-bezier(0.22, 1, 0.36, 1)';
   const ANIM_EASE_IN          = 'cubic-bezier(0.4, 0, 1, 1)';
 
   const DROPDOWN_W    = 280;
-  const GAP           = 24;  // gap between cursor and dropdown (v3.3: 8 → 12 for more breathing room)
+  const GAP           = 24;  // gap between cursor and dropdown
   const EDGE_PAD      = 12;  // minimum distance from viewport edge
-  const CURSOR_OFFSET = 30;  // px from cursor to dropdown edge (legacy, unused in v3.2+)
 
-  // Toggle debounce — short enough to allow intentional rapid toggles,
-  // long enough to swallow genuine double-clicks (~50-100ms apart).
+  // Toggle debounce — short enough to allow intentional rapid toggles, long
+  // enough to swallow genuine double-clicks (~50-100ms apart).
   const TOGGLE_DEBOUNCE_MS = 60;
   const CLOSE_ANIM_MS = 200;       // matches CSS 180ms + 20ms margin
 
-  // Stagger animation timing
   const STAGGER_DELAY_MS = 35;     // delay between each menu item
   const STAGGER_BASE_MS  = 60;     // base delay before first item
 
-  // ── State ──────────────────────────────────────────────────
   let _cfg          = null;
   let _dropdown     = null;
   let _arrow        = null;
@@ -108,11 +36,8 @@
   let _activeTrigger = null;
   let _cursorX      = 0;
   let _cursorY      = 0;
-  // v3.4: Save original cursor position when dropdown opens, so we can
-  // re-open at the SAME position after logout cancel (instead of jumping
-  // to trigger rect). Without this, cancelled logout → dropdown re-opens
-  // at trigger's bottom-center, which is a different position from where
-  // the user originally clicked → looks like dropdown "moved".
+  // Saved on open so a cancelled logout can re-open the dropdown at the
+  // original cursor position instead of jumping to the trigger's rect.
   let _origCursorX  = 0;
   let _origCursorY  = 0;
   let _ppeReady     = false;
@@ -123,21 +48,21 @@
   let _focusBeforeOpen = null;
   let _cachedHeight = null;
   let _closeResolver = null;
-  let _docClickHandler = null;   // outside-click listener (replaces shade)
+  let _docClickHandler = null;   // outside-click listener
   let _docContextHandler = null; // outside-right-click listener
 
   // Track attached triggers so we never double-bind. WeakSet means when
-  // an element is GC'd, its entry vanishes — no leak.
-  // Declared with `let` (not `const`) so destroy() can reset it.
+  // an element is GC'd, its entry vanishes — no leak. `let` so destroy() can
+  // reset it.
   let _attachedTriggers = new WeakSet();
 
-  // ── CSS (scoped: op-*) ─────────────────────────────────────
+  // CSS (scoped: op-* prefix)
   function _injectStyles() {
     if (document.getElementById('op-styles')) return;
     const s = document.createElement('style');
     s.id = 'op-styles';
     s.textContent = `
-      /* ── Dropdown shell ── */
+      /* Dropdown shell */
       .op-dropdown {
         position: fixed; z-index: 9997;
         width: ${DROPDOWN_W}px; max-width: calc(100vw - ${EDGE_PAD * 2}px);
@@ -177,8 +102,8 @@
           opacity   140ms ${ANIM_EASE_IN};
         pointer-events: none;
       }
-      /* v3.1: Container focus — no visible outline (keyboard users get
-         item-level focus rings via :focus-visible on items). */
+      /* Container focus: no visible outline. Keyboard users get item-level
+         focus rings via :focus-visible below. */
       .op-dropdown:focus {
         outline: none;
       }
@@ -186,10 +111,9 @@
         outline: none;
       }
 
-      /* ── Arrow (clean triangle pointing at trigger) ── */
-      /* v3.0 FIX: Removed the rotation transform that previously combined
-         with clip-path to produce the "weird triangle" artifact.
-         Now: pure clip-path triangle, no rotation, visually correct. */
+      /* Arrow — pure clip-path triangle pointing at the trigger. (Earlier
+         versions tried to combine a rotate(45deg) with clip-path and produced
+         a malformed shape; this is the clean version.) */
       .op-arrow {
         position: fixed; z-index: 9998;
         width: 16px; height: 8px;
@@ -214,7 +138,7 @@
         clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
       }
 
-      /* ── User header ── */
+      /* User header */
       .op-header {
         display: flex; align-items: center; gap: 12px;
         padding: 16px 14px 13px;
@@ -306,7 +230,7 @@
       }
       .op-incomplete-chip i { font-size: 8px; }
 
-      /* ── Separator ── */
+      /* Separator */
       .op-sep {
         height: 1px;
         background: linear-gradient(90deg,
@@ -314,7 +238,7 @@
         margin: 0 12px;
       }
 
-      /* ── Menu items ── */
+      /* Menu items */
       .op-menu {
         padding: 6px 6px 7px;
       }
@@ -346,11 +270,10 @@
       /* Stagger — set via inline --op-delay */
       .op-item { animation-delay: var(--op-delay, 0ms); }
 
-      /* v3.1 FIX: Explicitly clear any focus styling on programmatic focus.
-         Without this, browsers may apply a default outline or background
-         to the auto-focused first item, making it look "stuck hovered"
-         even after the mouse moves away. Only :focus-visible (keyboard
-         navigation) gets a visible ring; programmatic focus gets nothing. */
+      /* Clear focus styling on programmatic focus. Without this, browsers
+         keep a default outline/background on the auto-focused first item,
+         making it look "stuck hovered" even after the mouse moves away.
+         Only :focus-visible (keyboard nav) gets a visible ring. */
       .op-item:focus {
         outline: none;
       }
@@ -364,10 +287,9 @@
         background: transparent;
         box-shadow: inset 0 0 0 1.5px rgba(37,99,235,0.22);
       }
-      /* v3.1 FIX: Scope :hover to devices that actually support hover
-         (mouse). On touch devices, :hover can "stick" after a tap and
-         won't clear until the user taps elsewhere — looks like a stuck
-         hover state. @media (hover: hover) excludes touch devices. */
+      /* Scope :hover to devices that actually support hover (mouse). On
+         touch devices, :hover sticks after a tap and won't clear until the
+         user taps elsewhere — looks like a stuck hover state. */
       @media (hover: hover) {
         .op-item:hover {
           background: linear-gradient(180deg, #f0f5ff 0%, #e8eeff 100%);
@@ -428,7 +350,7 @@
       }
       /* (chevron hover is scoped inside @media (hover: hover) above) */
 
-      /* ── Danger item ── */
+      /* Danger item */
       .op-item.op-danger {
         color: #dc2626;
       }
@@ -450,7 +372,7 @@
       }
       /* (danger hover is scoped inside @media (hover: hover) above) */
 
-      /* ── Footer ── */
+      /* Footer */
       .op-footer {
         padding: 7px 14px 9px;
         text-align: right;
@@ -461,7 +383,7 @@
         background: rgba(248, 250, 252, 0.6);
       }
 
-      /* ── Live region (sr-only) ── */
+      /* Live region (sr-only) */
       .op-live {
         position: absolute;
         width: 1px; height: 1px;
@@ -472,7 +394,7 @@
         border: 0;
       }
 
-      /* ── Ripple effect on item click ── */
+      /* Ripple effect on item click */
       .op-ripple {
         position: absolute;
         border-radius: 50%;
@@ -491,7 +413,7 @@
         }
       }
 
-      /* ── Responsive: on small screens, slightly wider ── */
+      /* Responsive: slightly wider on small screens */
       @media (max-width: 400px) {
         .op-dropdown {
           width: calc(100vw - ${EDGE_PAD * 2}px);
@@ -499,7 +421,7 @@
         }
       }
 
-      /* ── Reduced motion: collapse all animations ── */
+      /* Reduced motion: collapse all animations */
       @media (prefers-reduced-motion: reduce) {
         .op-dropdown,
         .op-arrow,
@@ -519,7 +441,7 @@
     document.head.appendChild(s);
   }
 
-  // ── Escape HTML ──────────────────────────────────────────────
+  // Escape HTML
   function _esc(str) {
     return String(str ?? '')
       .replace(/&/g, '&amp;')
@@ -538,7 +460,7 @@
     return '';
   }
 
-  // ── Fallback avatar (initials SVG data-URI) ────────────────
+  // Fallback avatar (initials SVG data-URI)
   function _initialsAvatar(seed) {
     const rawInitials = (seed || '?')
       .trim()
@@ -563,7 +485,7 @@
     return 'data:image/svg+xml,' + encodeURIComponent(svg);
   }
 
-  // ── Build DOM ─────────────────────────────────────────────
+  // Build DOM
   function _buildDOM() {
     // Arrow: clean triangle pointing at trigger
     _arrow = document.createElement('div');
@@ -626,12 +548,10 @@
     });
   }
 
-  // ── Document-level outside click handler (replaces shade) ──
-  // v3.0 FIX: The old .op-shade was an invisible full-viewport div that
-  // intercepted ALL clicks while the dropdown was open — including clicks
-  // on the trigger itself, which broke the toggle-close UX. Replaced with
-  // a document-level listener that ignores clicks on the dropdown or
-  // the active trigger, letting the trigger's own click handler run.
+  // Document-level outside-click handler. Earlier versions used an invisible
+  // full-viewport .op-shade div, but it intercepted ALL clicks (including on
+  // the trigger itself, breaking toggle-close). Replaced with a document
+  // listener that ignores clicks on the dropdown or the active trigger.
   function _attachOutsideClickHandlers() {
     if (_docClickHandler) return; // already attached
 
@@ -670,7 +590,7 @@
     }
   }
 
-  // ── Ripple effect on item click ──
+  // Ripple effect on item click
   function _spawnRipple(btn, e) {
     const rect = btn.getBoundingClientRect();
     const size = Math.max(rect.width, rect.height);
@@ -687,7 +607,7 @@
     setTimeout(() => ripple.remove(), 520);
   }
 
-  // ── Populate dropdown content ─────────────────────────────
+  // Populate dropdown content
   function _populate() {
     // Invalidate height cache — content may have changed
     _cachedHeight = null;
@@ -699,7 +619,7 @@
     const avatarUrl  = user.avatar_url || user.foto_profil || user.fotoProfil || '';
     const role       = user.peran || 'peserta';
     const isAdmin    = role === 'admin';
-    // NOTE: DB column is `profile_complete` (renamed from `profil_lengkap` by
+    // DB column is `profile_complete` (renamed from `profil_lengkap` by
     // migration 20260701_002_alter_users_snake_case.sql). `profilLengkap` is
     // never actually set anywhere, so that check was always false — this
     // banner silently never showed. Kept as fallback for any legacy caller.
@@ -784,7 +704,7 @@
         ${itemsHtml}
       </div>
 
-      <div class="op-footer">AlbEdu v0.746.0</div>
+      <div class="op-footer">AlbEdu v0.816.0</div>
     `;
 
     // Attach onerror via event listener (CSP-friendly)
@@ -802,21 +722,20 @@
       }, { once: true });
     }
 
-    // Wire click handlers + ripple effect + mouseleave blur (v3.1 fix)
+    // Wire click handlers + ripple effect + mouseleave blur.
     _dropdown.querySelectorAll('[data-op]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         _spawnRipple(btn, e);
-        // v3.1 FIX: Blur immediately on click so the focus ring (which
-        // looks like a stuck hover) is removed BEFORE the close animation
-        // starts. Otherwise the ring stays visible during the 200ms close.
+        // Blur immediately on click so the focus ring (which looks like a
+        // stuck hover) is removed before the close animation starts.
         btn.blur();
         _handleAction(btn.dataset.op, btn);
       });
-      // v3.1 FIX: On mouseleave, blur the item. This catches the edge
-      // case where focus was set programmatically (e.g., via keyboard
-      // navigation) and the user then moves the mouse over a DIFFERENT
-      // item — without this, the originally-focused item keeps its
-      // ring while the newly-hovered item also shows hover state.
+      // On mouseleave, blur the item. Catches the edge case where focus was
+      // set programmatically (for example via keyboard navigation) and the
+      // user then moves the mouse over a different item — without this, the
+      // originally-focused item keeps its ring while the newly-hovered item
+      // also shows hover state.
       btn.addEventListener('mouseleave', () => {
         // Only blur if this item is the active element AND the user is
         // using mouse (not keyboard). We detect "mouse user" by checking
@@ -831,7 +750,7 @@
     });
   }
 
-  // ── _handleAction (async — awaits close before executing action) ──
+  // _handleAction (async — awaits close before executing action)
   async function _handleAction(action, sourceBtn) {
     const trigger = _activeTrigger;
 
@@ -847,19 +766,15 @@
       case 'logout':
         const loggedOut = await _doLogout();
         if (!loggedOut && trigger) {
-          // v3.4: Re-open at ORIGINAL cursor position (not trigger rect).
-          // Previously: open(trigger) → fell back to trigger's bottom-center
-          // → dropdown appeared at a DIFFERENT position than where user
-          // originally clicked → looked like dropdown "jumped".
-          // Now: pass saved _origCursorX/_origCursorY so dropdown re-appears
-          // at the EXACT same spot.
+          // Re-open at the ORIGINAL cursor position (not the trigger rect) —
+          // otherwise the dropdown visually "jumps" when logout is cancelled.
           setTimeout(() => open(trigger, _origCursorX, _origCursorY), 120);
         }
         break;
     }
   }
 
-  // ── Profile editor ─────────────────────────────────────────
+  // Profile editor
   async function _openProfileEditor() {
     _bootstrapPEP();
     if (window.ProfileEditorPanel) {
@@ -925,17 +840,16 @@
     _ppeReady = true;
   }
 
-  // ── Navigate ───────────────────────────────────────────────
+  // Navigate
   function _navigateToAdmin() {
     const basePath = window.Auth?.getBasePath?.() || '/';
-    // v0.742.3 FIX: admin panel lives at /pages/admin/index.html, not
-    // /admin/index.html. Old code used the pre-v0.741.5 path structure,
-    // so clicking "Panel Admin" in the option-profile dropdown 404'd.
+    // Admin panel lives at /pages/admin/index.html (not /admin/index.html —
+    // the older path structure 404'd from this dropdown).
     const target = basePath + 'pages/admin/index.html';
     window.location.replace(target);
   }
 
-  // ── Logout ─────────────────────────────────────────────────
+  // Logout
   async function _doLogout() {
     if (!window.Auth?.authLogout) {
       console.warn('[OptionProfile] _doLogout: window.Auth.authLogout not available');
@@ -950,7 +864,7 @@
     }
   }
 
-  // ── Measure dropdown height (heavy — only call when content changes) ──
+  // Measure dropdown height (heavy — only call when content changes)
   function _measureHeight() {
     if (!_dropdown) return 0;
     const pw = Math.min(DROPDOWN_W, window.innerWidth - EDGE_PAD * 2);
@@ -974,22 +888,13 @@
     return ph;
   }
 
-  // ── Position dropdown ──
-  // v3.2 REWRITE: Centers dropdown on cursor X, places it EXACTLY above
-  // or below cursor Y with a small GAP (8px) for the arrow.
-  //
-  // Placement logic:
-  //   1. Determine anchor point (cursor or trigger center as fallback)
-  //   2. Check if dropdown fits below cursor (cursorY + GAP + ph ≤ vh - EDGE_PAD)
-  //      → if yes, place BELOW: top = cursorY + GAP
-  //   3. Else check if dropdown fits above cursor (cursorY - GAP - ph ≥ EDGE_PAD)
-  //      → if yes, place ABOVE: top = cursorY - GAP - ph
-  //   4. Else (neither fits), place in whichever side has more space, clamped
-  //   5. X: center dropdown on cursor X (left = cursorX - pw/2), clamped to viewport
+  // Position dropdown: centers on cursor X, places it exactly above or below
+  // cursor Y with a small GAP for the arrow. Below cursor wins if it fits;
+  // otherwise above; otherwise whichever side has more space, clamped.
   //
   // The dropdown is position:fixed, so it stays at this viewport position
-  // even when the page scrolls. The scroll listener was removed in v3.2
-  // to prevent the dropdown from "jumping" to a different position.
+  // even when the page scrolls. No scroll listener — repositioning on scroll
+  // would make the dropdown visually "jump" away from where the user clicked.
   function _position(useCursor = true) {
     if (!_dropdown) return;
 
@@ -1002,8 +907,8 @@
     }
     const ph = _cachedHeight;
 
-    // ── Determine anchor point ──
-    // Prefer cursor (stored at open time); fall back to trigger rect.
+    // Determine anchor point. Prefer cursor (stored at open time); fall back
+    // to trigger rect.
     let anchorX, anchorY;
     if (useCursor && _cursorX && _cursorY) {
       anchorX = _cursorX;
@@ -1017,10 +922,8 @@
       anchorY = 60;
     }
 
-    // ── Vertical placement: EXACTLY above or below cursor ──
-    // The dropdown should appear with its top edge GAP pixels below the
-    // cursor (for "below" placement) or its bottom edge GAP pixels above
-    // the cursor (for "above" placement). The arrow fills the GAP.
+    // Vertical placement: top edge GAP px below cursor (below) or bottom
+    // edge GAP px above cursor (above). The arrow fills the GAP.
     let placeBelow = true;
     let top;
 
@@ -1048,10 +951,8 @@
       }
     }
 
-    // ── Horizontal placement: CENTER dropdown on cursor X ──
-    // The dropdown's horizontal center should align with the cursor X,
-    // so the arrow (which points at cursor X) appears at the dropdown's
-    // center. Clamp within viewport edges.
+    // Horizontal placement: center dropdown on cursor X so the arrow
+    // (which points at cursor X) appears centered. Clamp within viewport.
     let left = anchorX - pw / 2;
     left = Math.max(EDGE_PAD, Math.min(left, vw - pw - EDGE_PAD));
 
@@ -1059,36 +960,32 @@
     _dropdown.style.left  = left + 'px';
     _dropdown.style.width = pw + 'px';
 
-    // ── Transform origin: scale from the anchor point ──
-    // This makes the open animation feel like the dropdown "grows" from
-    // the cursor position, which is more natural.
+    // Transform origin: scale from the anchor point so the open animation
+    // feels like the dropdown grows from the cursor position.
     const originX = Math.max(0, Math.min(100, ((anchorX - left) / pw * 100)));
     const originY = placeBelow ? '0%' : '100%';
     _dropdown.style.transformOrigin = `${originX.toFixed(0)}% ${originY}`;
 
-    // ── Position arrow toward anchor (cursor) ──
+    // Position arrow toward anchor (cursor).
     _positionArrow(top, left, pw, ph, placeBelow, anchorX);
   }
 
   function _positionArrow(dropTop, dropLeft, dropWidth, dropHeight, placeBelow, anchorX) {
-    // v3.2: Arrow points EXACTLY at cursor X (clamped within dropdown
-    // width so it doesn't overflow the dropdown's rounded corners).
-    // When the dropdown is centered on the cursor, arrowX = anchorX =
-    // dropdown center, so the arrow appears perfectly centered.
+    // Arrow points at cursor X (clamped within dropdown width so it doesn't
+    // overflow the rounded corners). When the dropdown is centered on the
+    // cursor, arrowX = anchorX = dropdown center, so the arrow is centered.
     const arrowX = Math.max(dropLeft + 18, Math.min(anchorX, dropLeft + dropWidth - 18));
 
     if (placeBelow) {
-      // Dropdown is BELOW cursor → arrow at top edge of dropdown,
-      // pointing UP toward cursor. Arrow bottom edge overlaps dropdown
-      // top by 1px for seamless visual connection.
+      // Dropdown is BELOW cursor → arrow at top edge, pointing UP. Bottom
+      // edge overlaps dropdown top by 1px for visual connection.
       _arrow.style.left = (arrowX - 8) + 'px';   // center 16px arrow on arrowX
       _arrow.style.top  = (dropTop - 7) + 'px';   // 8px tall arrow, 7px above dropdown top
       _arrow.classList.remove('op-above');
       _arrow.classList.add('op-below');
     } else {
-      // Dropdown is ABOVE cursor → arrow at bottom edge of dropdown,
-      // pointing DOWN toward cursor. Arrow top edge overlaps dropdown
-      // bottom by 1px for seamless visual connection.
+      // Dropdown is ABOVE cursor → arrow at bottom edge, pointing DOWN. Top
+      // edge overlaps dropdown bottom by 1px for visual connection.
       _arrow.style.left = (arrowX - 8) + 'px';
       _arrow.style.top  = (dropTop + dropHeight - 1) + 'px';  // 1px overlap with dropdown bottom
       _arrow.classList.remove('op-below');
@@ -1096,7 +993,7 @@
     }
   }
 
-  // ── Open ───────────────────────────────────────────────────
+  // Open
   async function open(triggerEl, cursorX, cursorY) {
     if (!_dropdown) _buildDOM();
 
@@ -1131,11 +1028,9 @@
       _cursorY = 60;
     }
 
-    // v3.4: Save original cursor position for re-open after logout cancel.
-    // Only update if new cursor coords were EXPLICITLY provided (not fallback).
-    // This way, when _handleAction calls open(trigger, _origCursorX, _origCursorY)
-    // after logout cancel, the dropdown re-appears at the EXACT same spot
-    // where the user originally clicked — no visual "jump".
+    // Save original cursor position for re-open after logout cancel.
+    // Only update if new cursor coords were EXPLICITLY provided (not fallback),
+    // so _handleAction's re-open call lands at the exact same spot.
     if (typeof cursorX === 'number' && typeof cursorY === 'number') {
       _origCursorX = cursorX;
       _origCursorY = cursorY;
@@ -1172,31 +1067,15 @@
       _liveRegion.textContent = 'Menu profil dibuka. Gunakan tombol panah untuk navigasi.';
     }
 
-    // v3.1 FIX: Removed auto-focus on first item.
-    // Previously, the first item (Edit Profile) was auto-focused 280ms
-    // after open. This caused a persistent "stuck hover" appearance
-    // because:
-    //   - The focused item received a focus ring (box-shadow inset)
-    //   - Focus does NOT follow the mouse — moving the mouse away from
-    //     Edit Profile did NOT remove the focus state
-    //   - To the user, this looked like "Edit Profile is hovered and
-    //     the hover won't go away"
-    //
-    // Now: no auto-focus. The dropdown container itself gets focus
-    // (via tabindex=-1) so keyboard users can press Tab/Arrow keys to
-    // enter the menu naturally. Mouse users see no persistent state.
-    //
-    // Accessibility: keyboard users can still navigate — they press
-    // Tab from the trigger to enter the menu, then Arrow keys to move
-    // between items (handled by the keydown listener in _buildDOM).
+    // No auto-focus on first item — auto-focus caused a persistent
+    // "stuck hover" ring on Edit Profile because focus doesn't follow the
+    // mouse. Instead, focus the dropdown container itself so keyboard
+    // events are captured without painting a focus state on any item.
     setTimeout(() => {
       if (_isOpen && _dropdown) {
-        // Focus the dropdown container itself (not an item) so keyboard
-        // events are captured, but no item shows a visible focus state
-        // until the user actually navigates to it.
         _dropdown.setAttribute('tabindex', '-1');
         // Only focus if the user isn't already interacting with mouse
-        // (i.e., activeElement is body or the trigger).
+        // (that is, activeElement is body or the trigger).
         const ae = document.activeElement;
         if (ae === document.body || ae === _activeTrigger) {
           _dropdown.focus({ preventScroll: true });
@@ -1205,7 +1084,7 @@
     }, 280);
   }
 
-  // ── Close ──────────────────────────────────────────────────
+  // Close
   function close() {
     return new Promise((resolve) => {
       if (!_dropdown || !_isOpen) {
@@ -1228,17 +1107,15 @@
       // Detach outside-click handlers (dropdown is closing)
       _detachOutsideClickHandlers();
 
-      // v3.1 FIX: Blur ALL items (not just :focus) to clear any stuck
-      // hover/focus state. Some browsers (especially mobile) keep :hover
-      // applied to the last-tapped item until the user taps elsewhere.
-      // Explicitly blurring every item forces the browser to re-evaluate
-      // hover state cleanly. Also remove any inline ripple spans that
-      // might still be animating.
+      // Blur ALL items (not just :focus) to clear any stuck hover/focus
+      // state. Some browsers (especially mobile) keep :hover applied to the
+      // last-tapped item until the user taps elsewhere. Explicitly blurring
+      // every item forces the browser to re-evaluate hover cleanly.
       _dropdown.querySelectorAll('[data-op]').forEach(item => {
         if (typeof item.blur === 'function') item.blur();
       });
-      // Also blur the dropdown container itself (it may have focus
-      // from the v3.1 container-focus behavior in open()).
+      // Also blur the dropdown container itself (it may have focus from
+      // the container-focus behavior in open()).
       if (_dropdown && typeof _dropdown.blur === 'function') {
         _dropdown.blur();
       }
@@ -1269,7 +1146,7 @@
     });
   }
 
-  // ── Toggle ─────────────────────────────────────────────────
+  // Toggle
   function toggle(triggerEl, cursorX, cursorY) {
     const now = Date.now();
     if (now - _lastToggleAt < TOGGLE_DEBOUNCE_MS) {
@@ -1284,19 +1161,19 @@
     }
   }
 
-  // ── Update (refresh dropdown content if open) ──
+  // Update (refresh dropdown content if open)
   function update() {
     if (!_isOpen) return;
     _populate();
     _position(false);
   }
 
-  // ── isOpen (check dropdown state) ──
+  // isOpen (check dropdown state)
   function isOpen() {
     return _isOpen;
   }
 
-  // ── Destroy (teardown everything — for hot-reload / tests) ──
+  // Destroy (teardown everything — for hot-reload / tests)
   function destroy() {
     if (_closeTimer) {
       clearTimeout(_closeTimer);
@@ -1324,9 +1201,8 @@
     _attachedTriggers = new WeakSet(); // reset
   }
 
-  // ── Init ───────────────────────────────────────────────────
-  // Idempotent — safe to call multiple times. Re-calls only add new
-  // triggers (via addTrigger), never double-bind existing ones.
+  // Init. Idempotent — safe to call multiple times. Re-calls only add
+  // new triggers (via addTrigger), never double-bind existing ones.
   function init(cfg) {
     _cfg = cfg || {};
 
@@ -1367,22 +1243,18 @@
         if (e.key === 'Escape' && _isOpen) close();
       });
 
-      // v3.2: Reposition on RESIZE only (not scroll).
-      // The dropdown is position:fixed, so it stays at its initial
-      // viewport position when the page scrolls — no listener needed.
-      // Previously, a scroll listener repositioned the dropdown using
-      // the trigger rect, which caused a visible "jump" from the
-      // cursor-anchored position (set at open) to the trigger-anchored
-      // position. Removing this listener fixes the jump.
+      // Reposition on RESIZE only (not scroll). The dropdown is
+      // position:fixed, so it stays at its initial viewport position when
+      // the page scrolls. A scroll listener would re-anchor to the trigger
+      // rect and cause a visible "jump" from the cursor-anchored position.
       //
-      // On resize, we reposition using the CURSOR coords (useCursor=true)
-      // so the dropdown stays anchored to where the user originally
-      // clicked, even if the viewport dimensions change.
+      // On resize, reposition using the CURSOR coords so the dropdown stays
+      // anchored to where the user originally clicked.
       const _repositionOnResize = () => {
         if (_isOpen) {
           if (_rafId) cancelAnimationFrame(_rafId);
           _rafId = requestAnimationFrame(() => {
-            _position(true);  // v3.2: use cursor, not trigger rect
+            _position(true);  // use cursor, not trigger rect
             _rafId = null;
           });
         }
@@ -1391,7 +1263,7 @@
         _cachedHeight = null;  // invalidate cache (responsive CSS may change height)
         _repositionOnResize();
       });
-      // v3.2: NO scroll listener — dropdown stays at initial viewport position
+      // No scroll listener — dropdown stays at initial viewport position
 
       // Listen for profile updates from PEP / other sources
       window.addEventListener('pep-saved', (e) => {
@@ -1414,7 +1286,7 @@
     }
   }
 
-  // ── Public API to add a trigger at runtime ──
+  // Public API to add a trigger at runtime.
   // Idempotent — calling addTrigger(el) multiple times with the same el
   // only binds the click handler ONCE.
   function addTrigger(el) {
@@ -1439,12 +1311,12 @@
     }
   }
 
-  // ── Public getter for triggers ──
+  // Public getter for triggers
   function getTriggers() {
     return _cfg?.triggers ? [..._cfg.triggers] : [];
   }
 
-  // ── Public API ──
+  // Public API
   global.OptionProfile = {
     init,
     open,
@@ -1452,9 +1324,9 @@
     toggle,
     addTrigger,
     getTriggers,
-    isOpen,     // NEW v3.0
-    update,     // NEW v3.0
-    destroy,    // NEW v3.0
+    isOpen,
+    update,
+    destroy,
   };
 
 }(window));

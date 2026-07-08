@@ -1,9 +1,5 @@
-// =============================================================================
-// supabase-client.js — AlbEdu Platform Layer · Native Supabase client
-// =============================================================================
-// SINGLE responsibility: bootstrap ONE Supabase client and expose it through
-// a clearly named, typed service surface. No Firebase vocabulary, no shims,
-// no compat events. Supabase is used as Supabase.
+// supabase-client.js — AlbEdu platform layer: bootstrap one Supabase client
+// and expose it through a typed service surface.
 //
 // Public API (window.AlbEdu.supabase):
 //   .client             → raw SupabaseClient (escape hatch, used sparingly)
@@ -30,21 +26,18 @@
 //   - No top-level await — init is fire-and-forget.
 //   - HTML shell is rendered by the browser BEFORE this module runs (defer).
 //   - All consumers await window.AlbEdu.supabase.ready — never block paint.
-// =============================================================================
 
 (function () {
   'use strict';
 
-  // ── Constants ──────────────────────────────────────────────────────────
   const WORKER_BASE = 'https://edu.albyte-inc.workers.dev';
   const CONFIG_ENDPOINT = `${WORKER_BASE}/api/supabase-config`;
   const CONFIG_CACHE_KEY = 'albedu_sb_config';
   const CONFIG_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-  const SDK_TIMEOUT_MS = 30_000; // [Fix] 10s → 30s: CDN can be slow on first load
+  const SDK_TIMEOUT_MS = 30_000; // CDN can be slow on first load
   const FETCH_RETRY_COUNT = 3;
   const FETCH_RETRY_BASE_MS = 1500;
 
-  // ── Module state ───────────────────────────────────────────────────────
   let _client = null;
   let _ready = false;
   let _error = null;
@@ -64,7 +57,7 @@
     _readyResolvers.forEach(r => r.reject(err));
   }
 
-  // ── Config cache (sessionStorage) ──────────────────────────────────────
+  // Config cache (sessionStorage).
   function _readConfigCache() {
     try {
       const raw = sessionStorage.getItem(CONFIG_CACHE_KEY);
@@ -85,7 +78,7 @@
     } catch (_) { /* sessionStorage may be full or disabled */ }
   }
 
-  // ── Fetch config from Cloudflare Worker (retry + stale fallback) ───────
+  // Fetch config from Cloudflare Worker (retry + stale fallback).
   async function _fetchConfig(retryLeft = FETCH_RETRY_COUNT) {
     const cached = _readConfigCache();
     if (cached) return cached;
@@ -126,15 +119,15 @@
     }
   }
 
-  // ── Wait for Supabase SDK global (loaded via CDN defer) ────────────────
+  // Wait for Supabase SDK global (loaded via CDN defer).
   function _waitForSDK() {
     return new Promise((resolve, reject) => {
       if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
         return resolve();
       }
 
-      // [Fix] If SDK not found after 3s, try injecting it dynamically.
-      // The defer script tag might have failed silently (CSP, network, etc).
+      // If SDK not found after 3s, try injecting it dynamically. The defer
+      // script tag might have failed silently (CSP, network, etc).
       let dynamicallyInjected = false;
       const injectTimer = setTimeout(() => {
         if (typeof window.supabase !== 'undefined' && window.supabase.createClient) return;
@@ -169,7 +162,7 @@
     });
   }
 
-  // ── AuthService — thin native wrapper around supabase.auth ─────────────
+  // AuthService — thin wrapper around supabase.auth.
   function _buildAuthService(client) {
     // Single source of truth for "current user", updated by onAuthStateChange.
     // Avoids the per-call getSession() round-trip that the legacy shim did.
@@ -273,7 +266,7 @@
     };
   }
 
-  // ── DbService — thin native wrapper around supabase.from() ─────────────
+  // DbService — thin wrapper around supabase.from().
   function _buildDbService(client) {
     return {
       /**
@@ -284,8 +277,9 @@
        */
       async select(table, columns = '*', opts = {}) {
         let q = client.from(table).select(columns);
-        if (opts.filter) q = q.filter.apply(q, _parseFilterString(opts.filter));
-        // Simpler: support eq()/neq() chaining via opts
+        // opts.eq is the canonical filter API. opts.filter was a stub that
+        // referenced an undefined helper — removed. Use opts.eq / opts.neq /
+        // opts.order / opts.limit instead.
         if (opts.eq) {
           for (const [col, val] of Object.entries(opts.eq)) q = q.eq(col, val);
         }
@@ -337,7 +331,7 @@
     };
   }
 
-  // ── RealtimeService — channel management ───────────────────────────────
+  // RealtimeService — channel management.
   function _buildRealtimeService(client) {
     const _channels = new Map();
 
@@ -348,7 +342,7 @@
        * @param {string} table
        * @param {string} event — '*' | 'INSERT' | 'UPDATE' | 'DELETE'
        * @param {function} callback — (payload) => void
-       * @param {string} [filter] — e.g. 'access_code=eq.ABC123'
+       * @param {string} [filter] — for example 'access_code=eq.ABC123'
        */
       subscribe(name, table, event, callback, filter) {
         if (_channels.has(name)) {
@@ -382,12 +376,12 @@
     };
   }
 
-  // ── RpcService — Edge Function invocation ──────────────────────────────
+  // RpcService — Edge Function invocation.
   function _buildRpcService(client) {
     return {
       /**
        * Invoke an Edge Function with the current user's access token.
-       * @param {string} name — function name (e.g. 'submit-assessment')
+       * @param {string} name — function name (for example 'submit-assessment')
        * @param {object} body — JSON body
        * @param {object} [opts] — { headers?: object, noAuth?: boolean }
        */
@@ -404,7 +398,7 @@
     };
   }
 
-  // ── Bootstrap (fire-and-forget — never blocks paint) ───────────────────
+  // Bootstrap (fire-and-forget — never blocks paint).
   async function _bootstrap() {
     try {
       const config = await _fetchConfig();
@@ -436,7 +430,7 @@
         document.dispatchEvent(new CustomEvent('albedu:platform-reconnected'));
       }, { passive: true });
 
-      // Expose through window.AlbEdu namespace (NOT window.firebase / window.sb)
+      // Expose through window.AlbEdu namespace.
       if (!window.AlbEdu) window.AlbEdu = {};
       window.AlbEdu.supabase = {
         client: _client,

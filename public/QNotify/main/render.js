@@ -1,72 +1,51 @@
-// render.js — QNotify 1.0.5 For AlbEdu
-/**
- * ╔══════════════════════════════════════════╗
- * ║  QNotify — render.js 1.0.5 For AlbEdu   ║
- * ║  "DOM only. No state lives here."       ║
- * ╚══════════════════════════════════════════╝
- *
- * 1.0.5 CHANGES:
- *  - showBackdrop/hideBackdrop now use getBackdrop() from glitch.js
- *    (pre-warmed, no spike on first show)
- *  - ensureBackdrop() preserved for backward compat — delegates to getBackdrop()
- *  - Z-index values sourced from glitch.Z constants (single source of truth)
- *
- * Phase 12 (Security L2):
- *  - All user-controlled inputs (title, message, icon) now pass through escapeHtml()
- *    from security/sanitize.js before being interpolated into innerHTML.
- */
+// render.js — QNotify DOM builders. No state lives here, just element factories.
+// All user-controlled inputs (title, message, icon) pass through escapeHtml()
+// from security/sanitize.js before being interpolated into innerHTML.
 
 import { NOTIFICATION_TYPES, TEXTS, SHADOW_TINTS } from './config.js';
 import { getBackdrop, Z } from './glitch.js';
 import { escapeHtml } from '../security/sanitize.js';
 
-// ── Get text by language code ─────────────────────────────────────────────────
 export function getText(obj, lang) {
     if (!obj || typeof obj !== 'object') return String(obj ?? '');
     return obj[lang] ?? obj.id ?? '';
 }
 
-// ── Ensure main notification container exists in DOM ─────────────────────────
 export function ensureContainer() {
     let container = document.getElementById('qnotify-container');
     if (!container) {
         container = document.createElement('div');
         container.id        = 'qnotify-container';
         container.className = 'qnotify-notification-container notification-container';
-        // [v7.5.0 Perf] isolation:isolate creates new stacking context without
-        // creating a new layer — prevents paint bleeding into parent stacking contexts.
+        // isolation:isolate creates a new stacking context without allocating a
+        // new GPU layer — keeps paint from bleeding into parent stacking contexts.
         container.style.isolation = 'isolate';
         document.body.appendChild(container);
     }
     return container;
 }
 
-// ── Ensure dialog backdrop exists in DOM ─────────────────────────────────────
-// [1.0.5] Delegates to glitch.getBackdrop() which uses the pre-warmed element.
-// Kept for backward compat with dialog.js lockScroll() calls.
+// Backward-compat shim — delegates to glitch.getBackdrop() which uses the
+// pre-warmed element. dialog.js lockScroll() still calls this.
 export function ensureBackdrop() {
     return getBackdrop();
 }
 
-// ── Show backdrop + lock body scroll ─────────────────────────────────────────
-// [1.0.5] No spike: getBackdrop() returns pre-warmed element.
-// Only a class toggle needed — GPU layer already allocated.
+// getBackdrop() returns the pre-warmed element so the GPU layer is already
+// allocated — only a class toggle needed here.
+//
+// WHY rAF: scroll-lock and backdrop reveal must be ATOMIC. If scroll-lock
+// happened sync and .active happened async, there'd be a ~16ms window where
+// the page is locked but the darkened backdrop isn't visible yet.
 export function showBackdrop() {
     const backdrop = getBackdrop();
 
-    // WHY rAF: backdrop is pre-warmed (GPU layer already allocated by prewarmBackdrop()).
-    // We still use rAF so scroll-lock and backdrop reveal are ATOMIC — both happen
-    // in the same frame paint. If scroll-lock happened sync and .active happened async,
-    // there would be a ~16ms window where the page is locked but the darkened backdrop
-    // is not yet visible — a confusing flash for the user.
     requestAnimationFrame(() => {
         backdrop.classList.add('active');
-        // Scroll lock inside rAF = same frame as backdrop reveal = zero perceived gap
         document.body.classList.add('qnotify-no-scroll', 'no-scroll');
     });
 }
 
-// ── Hide backdrop + unlock body scroll ───────────────────────────────────────
 export function hideBackdrop() {
     const backdrop = document.getElementById('qnotify-backdrop');
     if (backdrop) {
@@ -75,14 +54,12 @@ export function hideBackdrop() {
     document.body.classList.remove('qnotify-no-scroll', 'no-scroll');
 }
 
-// ── Set tinted shadow color CSS variables on element ─────────────────────────
 export function applyShadowColor(element, type) {
     const tint = SHADOW_TINTS[type] || SHADOW_TINTS.info;
     element.style.setProperty('--shadow-primary-color',   tint.primary);
     element.style.setProperty('--shadow-secondary-color', tint.secondary);
 }
 
-// ── Set all shadow value CSS variables ───────────────────────────────────────
 export function applyShadowVars(element, {
     primaryY, primaryBlur, primaryOpacity,
     secondaryY, secondaryBlur, secondaryOpacity,
@@ -95,7 +72,6 @@ export function applyShadowVars(element, {
     element.style.setProperty('--shadow-secondary-opacity', secondaryOpacity);
 }
 
-// ── Create standard toast notification element ───────────────────────────────
 export function createNotifyElement({ id, type, title, message, icon, isDesktop, duration, lang }) {
     const config       = NOTIFICATION_TYPES[type] || NOTIFICATION_TYPES.info;
     const finalTitle   = title   || getText(config.title, lang);
@@ -129,14 +105,13 @@ export function createNotifyElement({ id, type, title, message, icon, isDesktop,
     return el;
 }
 
-// ── Attach CSS animation to progress bar ─────────────────────────────────────
 export function setupProgressBar(element, duration, isDesktop) {
     const bar = element.querySelector('.progress-bar');
     if (!bar || duration <= 0) return;
 
     bar.style.transformOrigin = isDesktop ? 'bottom' : 'left';
     const animName = isDesktop ? 'qnotify-progress-vertical' : 'qnotify-progress-horizontal';
-    // [v7.5.0] animation-play-state starts paused (CSS: .spawn .progress-bar is paused).
+    // animation-play-state starts paused (CSS: .spawn .progress-bar is paused).
     // When .spawn is removed by engine.js afterTwoFrames(), CSS rule kicks in
     // and sets animation-play-state:running — timer starts exactly when user sees notif.
     bar.style.animation = `${animName} ${duration}ms linear forwards`;
@@ -144,37 +119,31 @@ export function setupProgressBar(element, duration, isDesktop) {
     bar.dataset.qnAnimName = animName;
 }
 
-// ── Update progress direction when window resizes ─────────────────────────────
 export function updateProgressBarOrientation(element, isDesktop, duration) {
     const bar = element?.querySelector('.progress-bar');
     if (!bar || duration === 0) return;
-    // [v7.5.0 CLS Fix] Only update transformOrigin — do NOT restart animation.
-    // Restarting animation on resize resets progress bar to full → looks like timer reset.
-    // Changing only transformOrigin changes the visual direction while preserving elapsed %.
+    // Only update transformOrigin — do NOT restart animation. Restarting would
+    // reset progress bar to full (looks like timer reset). Changing just
+    // transformOrigin flips the visual direction while preserving elapsed %.
     bar.style.transformOrigin = isDesktop ? 'bottom' : 'left';
-    // Swap animation name to match new direction without restarting
     const newName = isDesktop ? 'qnotify-progress-vertical' : 'qnotify-progress-horizontal';
     if (bar.dataset.qnAnimName && bar.dataset.qnAnimName !== newName) {
-        // Freeze current progress, swap keyframe, continue from same progress value
+        // Freeze current progress, swap keyframe, continue from same progress value.
+        // animation-delay is left unchanged so the browser continues from the same
+        // elapsed point instead of restarting.
         const computed = window.getComputedStyle(bar);
         const delay    = computed.animationDelay;
         bar.dataset.qnAnimName  = newName;
-        // Preserve animation-delay offset so position is continuous
         bar.style.animationName = newName;
-        // animation-delay unchanged — browser continues from same elapsed point
     }
 }
 
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   UNIFIED DIALOG ELEMENT CREATOR — v7.3.0
-   ══════════════════════════════════════════════════════════════════════════════
-   All dialog types share the EXACT same DOM structure.
-   Differences:
-     - hasLoader: includes SVG spinner inside icon-blob
-     - isHold:    yes button gets .hold-btn class + hold label + data-hold attr
-   This guarantees identical layout across all dialog types.
-   ══════════════════════════════════════════════════════════════════════════════ */
+// All dialog types share the EXACT same DOM structure.
+// Differences:
+//   - hasLoader: includes SVG spinner inside icon-blob
+//   - isHold:    yes button gets .hold-btn class + hold label + data-hold attr
+// This guarantees identical layout across all dialog types.
 
 export function createDialogElement({ id, title, message, icon, lang, intent = 'info', hasLoader = false, isHold = false }) {
     const dialogTitle = title || getText(TEXTS.dialog.confirmTitle, lang);
@@ -248,10 +217,8 @@ function _getIntentIcon(intent) {
 }
 
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   LEGACY COMPAT — Keep old function names as aliases to createDialogElement
-   These are no longer used by dialog.js but kept for any external references
-   ══════════════════════════════════════════════════════════════════════════════ */
+// Legacy aliases for createDialogElement — no longer used by dialog.js but
+// kept in case external code references them.
 
 export function createConfirmElement(opts) {
     return createDialogElement({ ...opts, hasLoader: false, isHold: false });
@@ -270,14 +237,12 @@ export function createHoldAsyncElement(opts) {
 }
 
 
-// ── Safely remove element from DOM ───────────────────────────────────────────
 export function removeElement(element) {
     if (element && element.parentNode) {
         element.parentNode.removeChild(element);
     }
 }
 
-// ── Append element to notification container ─────────────────────────────────
 export function appendToContainer(container, element) {
     container.appendChild(element);
 }

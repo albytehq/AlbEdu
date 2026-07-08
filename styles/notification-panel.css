@@ -11,8 +11,8 @@
 :root {
   /* Panel sizing */
   --anc-panel-width:    440px;
-  --anc-radius:         14px;
-  --anc-radius-sm:      10px;
+  --anc-radius:         8px;
+  --anc-radius-sm:      8px;
   --anc-radius-xs:      8px;
   --anc-shadow:         0 0 0 1px rgba(15,23,42,.04), 0 20px 50px -10px rgba(15,23,42,.18), 0 8px 24px -8px rgba(15,23,42,.10);
   --anc-z-overlay:      9998;
@@ -177,7 +177,7 @@
   height: 40px;
   background: var(--anc-brand-soft);
   border: 1px solid var(--anc-brand-border);
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 20px;
   color: var(--anc-brand);
   flex-shrink: 0;
@@ -209,7 +209,7 @@
   padding: 2px 8px 2px 6px;
   background: var(--anc-green-bg);
   border: 1px solid var(--anc-green-border);
-  border-radius: 20px;
+  border-radius: 8px;
   font-size: 10px;
   font-weight: 700;
   color: var(--anc-green);
@@ -374,7 +374,7 @@
   min-width: 19px;
   height: 19px;
   padding: 0 6px;
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--anc-slate-200);
   color: var(--anc-slate-600);
   font-size: 10.5px;
@@ -930,4 +930,82 @@
   .anc-live-pulse {
     animation: none !important;
   }
+}
+
+/* ====================================================================
+   DARK MODE — prefers-color-scheme: dark (or [data-theme="dark"])
+   Flip the --anc-slate-* palette + catch the few #ffffff literals.
+   Severity tints (red/orange/green) keep their hue but darken.
+   ==================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --anc-slate-50:  #0f172a;
+    --anc-slate-100: #1e293b;
+    --anc-slate-200: #334155;
+    --anc-slate-300: #475569;
+    --anc-slate-400: #64748b;
+    --anc-slate-500: #94a3b8;
+    --anc-slate-600: #cbd5e1;
+    --anc-slate-700: #e2e8f0;
+    --anc-slate-800: #f1f5f9;
+    --anc-slate-900: #f8fafc;
+    --anc-brand-soft: rgba(59, 130, 246, 0.12);
+    --anc-brand-border: rgba(59, 130, 246, 0.35);
+    --anc-red-bg: rgba(239, 68, 68, 0.12);
+    --anc-red-border: rgba(239, 68, 68, 0.35);
+    --anc-red-soft: rgba(239, 68, 68, 0.18);
+    --anc-orange-bg: rgba(245, 158, 11, 0.12);
+    --anc-orange-border: rgba(245, 158, 11, 0.35);
+    --anc-orange-soft: rgba(245, 158, 11, 0.18);
+    --anc-green-bg: rgba(16, 185, 129, 0.12);
+    --anc-green-border: rgba(16, 185, 129, 0.35);
+    --anc-green-soft: rgba(16, 185, 129, 0.18);
+  }
+  :root:not([data-theme="light"]) .anc-panel,
+  :root:not([data-theme="light"]) .anc-header,
+  :root:not([data-theme="light"]) .anc-mark-read-btn,
+  :root:not([data-theme="light"]) .anc-clear-all-btn,
+  :root:not([data-theme="light"]) .anc-tab,
+  :root:not([data-theme="light"]) .anc-list,
+  :root:not([data-theme="light"]) .anc-empty {
+    background: var(--albedu-surface, #1e293b);
+  }
+  :root:not([data-theme="light"]) .anc-tab.active {
+    border: 2px solid var(--albedu-surface, #1e293b);
+  }
+}
+[data-theme="dark"] {
+  --anc-slate-50:  #0f172a;
+  --anc-slate-100: #1e293b;
+  --anc-slate-200: #334155;
+  --anc-slate-300: #475569;
+  --anc-slate-400: #64748b;
+  --anc-slate-500: #94a3b8;
+  --anc-slate-600: #cbd5e1;
+  --anc-slate-700: #e2e8f0;
+  --anc-slate-800: #f1f5f9;
+  --anc-slate-900: #f8fafc;
+  --anc-brand-soft: rgba(59, 130, 246, 0.12);
+  --anc-brand-border: rgba(59, 130, 246, 0.35);
+  --anc-red-bg: rgba(239, 68, 68, 0.12);
+  --anc-red-border: rgba(239, 68, 68, 0.35);
+  --anc-red-soft: rgba(239, 68, 68, 0.18);
+  --anc-orange-bg: rgba(245, 158, 11, 0.12);
+  --anc-orange-border: rgba(245, 158, 11, 0.35);
+  --anc-orange-soft: rgba(245, 158, 11, 0.18);
+  --anc-green-bg: rgba(16, 185, 129, 0.12);
+  --anc-green-border: rgba(16, 185, 129, 0.35);
+  --anc-green-soft: rgba(16, 185, 129, 0.18);
+}
+[data-theme="dark"] .anc-panel,
+[data-theme="dark"] .anc-header,
+[data-theme="dark"] .anc-mark-read-btn,
+[data-theme="dark"] .anc-clear-all-btn,
+[data-theme="dark"] .anc-tab,
+[data-theme="dark"] .anc-list,
+[data-theme="dark"] .anc-empty {
+  background: var(--albedu-surface, #1e293b);
+}
+[data-theme="dark"] .anc-tab.active {
+  border: 2px solid var(--albedu-surface, #1e293b);
 }

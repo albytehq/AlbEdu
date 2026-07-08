@@ -6,9 +6,9 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AlbEdu — Kelola Asesmen Online, Tanpa Ribet</title>
+  <title>Kelola Asesmen Online, Tanpa Ribet — AlbEdu</title>
   <meta name="description" content="Platform asesmen untuk semua kebutuhan evaluasi — SD, SMP, SMA, kuliah, hingga personal use. Buat asesmen dalam hitungan menit, koreksi otomatis, data hasil real-time.">
-  <meta name="theme-color" content="#1E40AF">
+  <meta name="theme-color" content="#2563eb">
 
   <!-- Favicon set (single source of truth) -->
   <link rel="icon" type="image/x-icon" href="public/images/favicon/favicon.ico">
@@ -22,6 +22,7 @@
 
   <!-- ═══ Design tokens (full system) ═══ -->
   <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/albedu-components.css">
 
   <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
   <script defer src="src/shared/head/fonts.js"></script>
@@ -30,6 +31,7 @@
     <script type="module" src="src/shared/resilience.js"></script>
   <script defer src="src/platform/repository.js"></script>
   <script defer src="src/security/sanitize.js"></script>
+  <script defer src="src/shared/boot.js"></script>
 
     <!-- ═══ Page CSS ═══ -->
   <link rel="stylesheet" href="styles/landing.css">
@@ -49,11 +51,11 @@
         <span class="nav-brand-name">AlbEdu</span>
       </a>
       <nav class="nav-actions" aria-label="Navigasi utama">
-        <a href="pages/login.html" class="nav-btn-login" aria-label="Masuk ke akun">
+        <a href="pages/login.html" class="albedu-btn albedu-btn-ghost albedu-btn-sm nav-btn-login" aria-label="Masuk ke akun">
           <span data-albedu-icon="login" class="albedu-icon--20" aria-hidden="true"></span>
           <span>Login</span>
         </a>
-        <a href="pages/register-admin.html" class="nav-btn-primary" aria-label="Daftar akun admin baru">
+        <a href="pages/register-admin.html" class="albedu-btn albedu-btn-primary albedu-btn-sm nav-btn-primary" aria-label="Daftar akun admin baru">
           <span data-albedu-icon="person-add" class="albedu-icon--20" aria-hidden="true"></span>
           <span>Daftar Admin</span>
         </a>
@@ -79,11 +81,11 @@
           Buat asesmen dalam hitungan menit, koreksi otomatis, dan pantau hasil peserta secara real-time. Semua dari satu platform — untuk sekolah, kampus, dan kebutuhan personal.
         </p>
         <div class="hero-ctas reveal reveal-delay-3">
-          <a href="pages/login.html" class="hero-cta-primary">
+          <a href="pages/login.html" class="albedu-btn albedu-btn-primary albedu-btn-lg hero-cta-primary">
             <span data-albedu-icon="rocketLaunch" class="albedu-icon--20" aria-hidden="true"></span>
             <span>Mulai Sekarang</span>
           </a>
-          <a href="#how" class="hero-cta-secondary">
+          <a href="#how" class="albedu-btn albedu-btn-secondary albedu-btn-lg hero-cta-secondary">
             <span data-albedu-icon="play-circle" class="albedu-icon--20" aria-hidden="true"></span>
             <span>Lihat Demo</span>
           </a>
@@ -146,7 +148,7 @@
               <span data-albedu-icon="smart-toy" class="albedu-icon--24"></span>
             </div>
             <h3>Koreksi Otomatis</h3>
-            <p>Sistem mengoreksi jawaban pilihan ganda dan isian secara instan saat peserta selesai mengerjakan. Tanpa delay, tanpa kesalahan.</p>
+            <p>Sistem mengoreksi jawaban pilihan ganda dan isian secara otomatis saat peserta selesai mengerjakan. Tanpa mengoreksi manual, tanpa delay.</p>
           </article>
           <article class="solution-card reveal reveal-delay-3">
             <div class="solution-icon" aria-hidden="true">
@@ -165,7 +167,7 @@
         <div class="section-header reveal">
           <span class="section-label">Cara Kerja</span>
           <h2 id="how-title" class="section-title">Tiga Langkah Simpel</h2>
-          <p class="section-desc">Dari nol hingga hasil, hanya butuh 3 langkah mudah.</p>
+          <p class="section-desc">Dari nol hingga hasil, hanya butuh 3 langkah.</p>
         </div>
         <div class="steps-container">
           <article class="step-card reveal reveal-delay-1">
@@ -226,11 +228,11 @@
       <div class="container">
         <div class="cta-card reveal">
           <div class="cta-content">
-            <h2 id="cta-title" class="cta-title">Siap Jadi Yang Pertama?</h2>
-            <p class="cta-desc">Akses awal AlbEdu sudah tersedia. Daftar sekarang dan jadilah pengguna pertama yang membentuk platform ini.</p>
-            <a href="pages/register-admin.html" class="cta-btn">
+            <h2 id="cta-title" class="cta-title">Siap Mengelola Asesmen?</h2>
+            <p class="cta-desc">Akses awal AlbEdu sudah tersedia. Daftar sebagai admin untuk membuat dan mengelola asesmen. Peserta tidak perlu mendaftar — masuk langsung dengan Google.</p>
+            <a href="pages/register-admin.html" class="albedu-btn albedu-btn-primary albedu-btn-lg cta-btn">
               <span data-albedu-icon="person-add" class="albedu-icon--20" aria-hidden="true"></span>
-              <span>Daftar Sekarang</span>
+              <span>Daftar Admin</span>
             </a>
           </div>
         </div>
@@ -250,7 +252,7 @@
         <nav aria-label="Footer navigasi">
           <ul class="footer-links">
             <li><a href="pages/login.html">Login</a></li>
-            <li><a href="pages/register-admin.html">Daftar</a></li>
+            <li><a href="pages/register-admin.html">Daftar Admin</a></li>
             <li><a href="mailto:support@albedu.id">Bantuan</a></li>
           </ul>
         </nav>

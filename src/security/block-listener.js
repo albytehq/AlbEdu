@@ -1,19 +1,4 @@
-// =============================================================================
-// security/block-listener.js — Instant block via Supabase Realtime
-// =============================================================================
-// Subscribes to `assessment_sessions` row changes for this session.
-// When admin blocks peserta, status changes to 'blocked' → instant redirect.
-//
-// Latency: <500ms (Supabase Realtime postgres_changes)
-// Fallback: heartbeat polling (15s) catches block if Realtime fails.
-//
-// Edge cases:
-//   - Realtime connection fails → fallback to polling (heartbeat)
-//   - Multiple block events → idempotent (only redirect once)
-//   - Peserta navigates away → unsubscribe
-//   - Block reason null → show generic message
-//   - Block during submit → cancel submit, redirect
-// =============================================================================
+// block-listener.js — Realtime block/submitted signal for peserta exam runtime
 
 (function () {
   'use strict';
@@ -22,17 +7,44 @@
     _subscription: null,
     _sessionId: null,
     _onBlocked: null,
+    _onSubmitted: null,
     _redirected: false,
 
-    start(sessionId, onBlocked) {
+    // start(sessionId, handlers) — handlers: { onBlocked, onSubmitted }
+    // onSubmitted fires when the server marks the session as 'submitted'
+    // (admin force-submit or auto-expire). Without it the peserta stays on
+    // a stale exam page.
+    start(sessionId, handlers = {}) {
+      this.stop();
       this._sessionId = sessionId;
-      this._onBlocked = onBlocked;
+      this._onBlocked = handlers.onBlocked || null;
+      this._onSubmitted = handlers.onSubmitted || null;
       this._redirected = false;
 
-      // Try Supabase Realtime (native platform layer)
       const sb = window.AlbEdu?.supabase?.client;
-      if (sb) {
-        try {
+      if (!sb) {
+        console.warn('[block-listener] Supabase client unavailable, relying on heartbeat');
+        return;
+      }
+
+      try {
+        // Route through AlbEdu.supabase.realtime so the channel is tracked
+        // in the shared _channels Map and cleaned up by unsubscribeAll()
+        // on logout / page teardown.
+        const realtime = window.AlbEdu?.supabase?.realtime;
+        if (realtime && typeof realtime.subscribe === 'function') {
+          this._subscription = realtime.subscribe(
+            `session-${sessionId}`,
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'assessment_sessions',
+              filter: `id=eq.${sessionId}`,
+            },
+            (payload) => this._handleChange(payload)
+          );
+        } else {
+          // Fallback: direct channel (still works, just not tracked)
           this._subscription = sb
             .channel(`session-${sessionId}`)
             .on(
@@ -46,13 +58,9 @@
               (payload) => this._handleChange(payload)
             )
             .subscribe();
-
-          console.info(`[block-listener] Subscribed to session-${sessionId}`);
-        } catch (err) {
-          console.warn('[block-listener] Realtime subscribe failed, relying on heartbeat:', err);
         }
-      } else {
-        console.warn('[block-listener] Supabase client not available, relying on heartbeat');
+      } catch (err) {
+        console.warn('[block-listener] Realtime subscribe failed:', err);
       }
     },
 
@@ -65,46 +73,41 @@
         }
         this._subscription = null;
       }
-      console.info('[block-listener] Stopped');
+      this._onBlocked = null;
+      this._onSubmitted = null;
     },
 
     _handleChange(payload) {
       if (this._redirected) return;
-
       const newRow = payload.new;
       if (!newRow) return;
 
       if (newRow.status === 'blocked') {
         this._redirected = true;
-        console.warn('[block-listener] BLOCKED signal received:', newRow.blocked_reason);
         this.stop();
         this._onBlocked?.(newRow.blocked_reason || 'Diblokir oleh admin');
       } else if (newRow.status === 'submitted') {
-        // Someone (or server) marked as submitted
         this._redirected = true;
-        console.info('[block-listener] SUBMITTED signal received');
         this.stop();
         this._onSubmitted?.();
       }
     },
 
-    // Manual check (fallback if Realtime not available)
+    // Manual fallback when Realtime is unavailable.
     async checkNow() {
       if (this._redirected || !this._sessionId) return;
-
       try {
-        const user = window.AlbEdu?.supabase?.auth?.currentUser;
-        if (!user) return;
-
-        // Use native repository helper
         const doc = await window.AlbEdu?.repository?.getDoc('assessment_sessions', this._sessionId);
         if (!doc?.exists) return;
-
         const data = doc.data();
         if (data.status === 'blocked' && !this._redirected) {
           this._redirected = true;
           this.stop();
           this._onBlocked?.(data.blocked_reason || 'Diblokir oleh admin');
+        } else if (data.status === 'submitted' && !this._redirected) {
+          this._redirected = true;
+          this.stop();
+          this._onSubmitted?.();
         }
       } catch (err) {
         console.warn('[block-listener] checkNow error:', err);

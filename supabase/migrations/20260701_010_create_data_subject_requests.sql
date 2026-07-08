@@ -1,13 +1,7 @@
--- =============================================================================
 -- 20260701_010_create_data_subject_requests.sql
--- AlbEdu v1.0.0 — Phase 1.10 — UU PDP Compliance
--- =============================================================================
 -- Creates `data_subject_requests` — tracks DSR (Data Subject Request) lifecycle.
 -- UU PDP Article 5-13: peserta can request access, correction, or deletion of
--- their personal data.
---
--- Q17: basic compliance. Admin reviews + resolves DSRs via UI.
--- =============================================================================
+-- their personal data. Admin reviews + resolves DSRs via UI.
 
 CREATE TABLE IF NOT EXISTS public.data_subject_requests (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,13 +36,13 @@ CREATE TABLE IF NOT EXISTS public.data_subject_requests (
   updated_at      timestamptz DEFAULT now()
 );
 
--- ── Indexes ──
+-- Indexes
 CREATE INDEX idx_dsr_user        ON public.data_subject_requests(user_id);
 CREATE INDEX idx_dsr_status      ON public.data_subject_requests(status);
 CREATE INDEX idx_dsr_type        ON public.data_subject_requests(request_type);
 CREATE INDEX idx_dsr_created     ON public.data_subject_requests(created_at DESC);
 
--- ── RLS Policies ──
+-- RLS Policies
 ALTER TABLE public.data_subject_requests ENABLE ROW LEVEL SECURITY;
 
 -- Admins: read all DSRs (for review queue)
@@ -79,7 +73,7 @@ CREATE POLICY "dsr_peserta_cancel_own"
 
 -- No DELETE — DSRs are audit history (append-only with status transitions)
 
--- ── Trigger: auto-update updated_at ──
+-- Trigger: auto-update updated_at
 DROP TRIGGER IF EXISTS dsr_updated_at ON public.data_subject_requests;
 CREATE TRIGGER dsr_updated_at
   BEFORE UPDATE ON public.data_subject_requests

@@ -1,9 +1,5 @@
-// =============================================================================
-// _shared/db.ts — Supabase REST API helper (raw fetch, no SDK overhead)
-// =============================================================================
-// Uses service role key (bypasses RLS) for server-side operations.
-// All methods return parsed JSON or throw HTTPError on failure.
-// =============================================================================
+// _shared/db.ts — Thin Supabase REST API helper (raw fetch, no SDK).
+// Uses the service role key so it bypasses RLS for server-side operations.
 
 import { HTTPError } from './error.ts';
 import type { Env } from './types.ts';
@@ -21,7 +17,7 @@ export class SupabaseDB {
 
   async select<T = any>(
     table: string,
-    query: string,  // e.g. "id,access_code,title&status=eq.active&limit=10"
+    query: string,  // PostgREST query: "id,access_code,title&status=eq.active&limit=10"
   ): Promise<T[]> {
     const res = await fetch(
       `${this.env.SUPABASE_URL}/rest/v1/${table}?select=${query}`,
@@ -62,7 +58,6 @@ export class SupabaseDB {
       const text = await res.text();
       console.error(`[db.insert] ${table} ${res.status}:`, text);
 
-      // Parse common errors
       if (res.status === 409) {
         throw new HTTPError(409, 'CONFLICT', 'Resource already exists');
       }
@@ -87,7 +82,7 @@ export class SupabaseDB {
 
   async update<T = any>(
     table: string,
-    filter: string,  // e.g. "id=eq.abc-123"
+    filter: string,  // PostgREST filter: "id=eq.abc-123"
     data: any,
     options: { returnRepresentation?: boolean } = {}
   ): Promise<T | null> {
@@ -166,7 +161,7 @@ export class SupabaseDB {
     }
   }
 
-  // Call RPC function (e.g. log_audit, generate_access_code)
+  // Call an RPC (for example log_audit, generate_access_code).
   async rpc<T = any>(functionName: string, params: any): Promise<T> {
     const res = await fetch(`${this.env.SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
       method: 'POST',

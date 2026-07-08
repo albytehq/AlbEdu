@@ -1,25 +1,6 @@
-// =============================================================================
-// take-assessment/exam.js — Exam runtime: rendering, answers, timer, security
-// =============================================================================
-// Part of the take-assessment split (see README.md in this directory).
-//
-// This is the largest module — contains the exam phase rendering, answer
-// saving, countdown timer, security integration, and lifecycle handlers.
-//
-// Functions:
-//   _startExam, _renderPageTabs, _renderQuestion, _buildQuestionCard,
-//   _buildMediaHTML, _updateQuestionAnsweredState,
-//   _saveAnswer, _debounceEsai, _scheduleDraftSync, _saveLocalDraft,
-//   _clearLocalDraft, _buildAnswersPayload,
-//   _wireNavButtons, _updateNavButtons, _updateProgress,
-//   _startTimer, _stopTimer, _updateTimerDisplay, _updateSubmitLockState,
-//   _getCurrentSisa,
-//   _startSecurity, _stopSecurity, _pauseSecurity, _resumeSecurity,
-//   _handleMaxViolations, _handleBlocked, _handleSubmitted, _handleExpired,
-//   _wireGlobalEvents, _beforeUnloadGuard, _popstateTrap
-//
-// Load order: MUST load after utils.js, fetch.js, identity.js.
-// =============================================================================
+// take-assessment/exam.js — exam runtime: rendering, answers, timer, security.
+// This is the largest module of the split. MUST load after utils.js, fetch.js,
+// and identity.js.
 
 (function () {
   'use strict';
@@ -34,7 +15,6 @@
   const TIMER_CRITICAL_SECONDS = C.TIMER_CRITICAL_SECONDS || 60;
   const DRAFT_SYNC_DEBOUNCE_MS = C.DRAFT_SYNC_DEBOUNCE_MS || 800;
 
-  // ── Start exam ──────────────────────────────────────────────────────────
   function _startExam(identity, options = {}) {
     const isResume = options?.isResume === true;
     const state = I.state;
@@ -62,25 +42,44 @@
     _startSecurity();
     _updateSubmitLockState();
 
-    window.addEventListener('beforeunload', _beforeUnloadGuard);
+    // Single teardown controller — every listener added during the exam
+    // phase takes this signal so any exit path (blocked / submitted /
+    // expired / result) can clean them up in one shot.
+    if (I._examAbort) I._examAbort.abort();
+    I._examAbort = new AbortController();
+    const sig = I._examAbort.signal;
+
+    window.addEventListener('beforeunload', _beforeUnloadGuard, { signal: sig });
 
     if (!isResume) {
       history.pushState({ albEduExamActive: true }, '', location.href);
     }
-    window.addEventListener('popstate', _popstateTrap);
+    window.addEventListener('popstate', _popstateTrap, { signal: sig });
 
     console.info('[take] exam started. resume=', isResume, 'seed=', seed,
       'questions=', state.soalPages.reduce((s, p) => s + (p.questions?.length || 0), 0));
   }
 
-  // ── Page tabs ───────────────────────────────────────────────────────────
+  // Tear down everything _startExam wired up. Idempotent — safe to call from
+  // any exit path (blocked / submitted / expired / result).
+  function _teardownExam() {
+    _stopTimer();
+    _stopSecurity();
+    if (I._examAbort) {
+      try { I._examAbort.abort(); } catch (_) {}
+      I._examAbort = null;
+    }
+    if (I.dom.questionList && I.dom.questionList._delegatedAbort) {
+      try { I.dom.questionList._delegatedAbort.abort(); } catch (_) {}
+      I.dom.questionList._delegatedAbort = null;
+    }
+  }
+
+  // Page tabs — always visible for consistent navigation context, even
+  // when the assessment has only one section. Peserta gets a clearer
+  // sense of structure (and prev/next still works for future sections).
   function _renderPageTabs() {
     const state = I.state;
-    if (state.soalPages.length <= 1) {
-      I.dom.pageTabs.innerHTML = '';
-      I.dom.pageTabs.hidden = true;
-      return;
-    }
     I.dom.pageTabs.hidden = false;
     I.dom.pageTabs.innerHTML = state.soalPages.map((p, idx) => `
       <button class="page-tab ${idx === state.activePageIdx ? 'active' : ''}"
@@ -102,7 +101,7 @@
     });
   }
 
-  // ── Render question page ────────────────────────────────────────────────
+  // Render question page
   function _renderQuestion(idx) {
     const state = I.state;
     const page = state.soalPages[idx];
@@ -115,7 +114,8 @@
 
     I.dom.questionList.innerHTML = shuffled.map((q, i) => _buildQuestionCard(q, i, page)).join('');
 
-    // Wire option clicks (event delegation)
+    // Wire option clicks via event delegation on the question list. A fresh
+    // AbortController per render so re-renders don't accumulate handlers.
     if (I.dom.questionList._delegatedAbort) I.dom.questionList._delegatedAbort.abort();
     I.dom.questionList._delegatedAbort = new AbortController();
     I.dom.questionList.addEventListener('click', (e) => {
@@ -138,7 +138,7 @@
       _updateProgress();
     }, { signal: I.dom.questionList._delegatedAbort.signal });
 
-    // Wire esai textareas
+    // Wire esai textareas + image previews, then render math + icons.
     I.dom.questionList.querySelectorAll('textarea.esai-textarea').forEach(ta => {
       const pageKey = ta.dataset.pagekey;
       const idq = ta.dataset.idq;
@@ -172,7 +172,7 @@
     let bodyHTML = '';
     if (page.typeQuestion === 'esai') {
       bodyHTML = `
-        <textarea class="esai-textarea"
+        <textarea class="albedu-textarea esai-textarea"
                   data-pagekey="${_internal._escAttr(pageKey)}"
                   data-idq="${_internal._escAttr(q.idq)}"
                   placeholder="Tulis jawaban Anda di sini..."
@@ -266,7 +266,7 @@
     if (card) card.classList.toggle('answered', answered);
   }
 
-  // ── Answer save ─────────────────────────────────────────────────────────
+  // Answer save
   function _saveAnswer(pageKey, idq, answer) {
     const state = I.state;
     const key = `${pageKey}__${idq}`;
@@ -336,8 +336,10 @@
     return out;
   }
 
-  // ── Navigation ──────────────────────────────────────────────────────────
+  // Navigation
   function _wireNavButtons() {
+    if (!I._examAbort) return;
+    const sig = I._examAbort.signal;
     I.dom.btnPrev.addEventListener('click', () => {
       if (I.state.activePageIdx > 0) {
         I.state.activePageIdx--;
@@ -345,7 +347,7 @@
         _renderPageTabs();
         I.dom.examPhase.querySelector('.exam-main').scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    });
+    }, { signal: sig });
     I.dom.btnNext.addEventListener('click', () => {
       if (I.state.activePageIdx < I.state.soalPages.length - 1) {
         I.state.activePageIdx++;
@@ -353,11 +355,11 @@
         _renderPageTabs();
         I.dom.examPhase.querySelector('.exam-main').scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    });
+    }, { signal: sig });
     I.dom.btnSubmit.addEventListener('click', () => {
       if (I.dom.btnSubmit.disabled) return;
       _internal._submitExam();
-    });
+    }, { signal: sig });
   }
 
   function _updateNavButtons() {
@@ -378,7 +380,7 @@
     if (I.dom.navProgress) I.dom.navProgress.textContent = `${answered}/${total}`;
   }
 
-  // ── Timer ───────────────────────────────────────────────────────────────
+  // Timer
   function _startTimer(assessment) {
     _stopTimer();
     const state = I.state;
@@ -462,7 +464,7 @@
     return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
   }
 
-  // ── Security ────────────────────────────────────────────────────────────
+  // Security
   function _startSecurity() {
     const state = I.state;
     if (window.AntiCheat?.start) {
@@ -490,7 +492,10 @@
         });
       }
       if (window.BlockListener?.start) {
-        window.BlockListener.start(state.session.id, (reason) => _handleBlocked(reason));
+        window.BlockListener.start(state.session.id, {
+          onBlocked:  (reason) => _handleBlocked(reason),
+          onSubmitted: () => _handleSubmitted(),
+        });
       }
       if (window.ExamGuardian?.activate) {
         window.ExamGuardian.onViolation?.(({ pesan, ke, maks }) => {
@@ -529,7 +534,8 @@
     }
   }
 
-  // ── EDGE #14: 4 violations → reset + reshuffle ─────────────────────────
+  // On max violations, reset + reshuffle. The peserta keeps their session
+  // but loses all answers so far.
   async function _handleMaxViolations() {
     const state = I.state;
     window.notify?.error(
@@ -579,12 +585,11 @@
     _startSecurity();
   }
 
-  // ── Blocked / Submitted / Expired ───────────────────────────────────────
+  // Blocked / Submitted / Expired handlers
   function _handleBlocked(reason) {
     if (I.state._redirected) return;
     I.state._redirected = true;
-    _stopSecurity();
-    _stopTimer();
+    _teardownExam();
     const reasonEnc = encodeURIComponent(reason || 'Diblokir oleh admin');
     window.location.replace(`blocked.html?reason=${reasonEnc}`);
   }
@@ -592,8 +597,7 @@
   function _handleSubmitted() {
     if (I.state._redirected) return;
     I.state._redirected = true;
-    _stopSecurity();
-    _stopTimer();
+    _teardownExam();
     window.location.replace('submitted.html');
   }
 
@@ -607,7 +611,7 @@
     _internal._submitExam({ skipConfirm: true, isAuto: true });
   }
 
-  // ── Global event handlers ───────────────────────────────────────────────
+  // Global event handlers (online/offline + alt+arrow nav)
   function _wireGlobalEvents() {
     window.addEventListener('online', () => {
       window.notify?.success(
@@ -660,7 +664,6 @@
     }
   }
 
-  // ── Expose ──────────────────────────────────────────────────────────────
   Object.assign(_internal, {
     _startExam,
     _renderPageTabs,
@@ -686,6 +689,7 @@
     _stopSecurity,
     _pauseSecurity,
     _resumeSecurity,
+    _teardownExam,
     _handleMaxViolations,
     _handleBlocked,
     _handleSubmitted,

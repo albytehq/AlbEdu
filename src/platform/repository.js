@@ -1,15 +1,9 @@
-// =============================================================================
-// repository.js — AlbEdu Platform Layer · Table access helpers
-// =============================================================================
+// repository.js — AlbEdu platform layer: thin table-access helpers.
 // Native Supabase table access, with a tiny ergonomic API so consumer code
 // doesn't have to repeat the .from().select().eq() chain.
 //
 // All async methods return native Supabase { data, error } shapes (or throw
 // on auth/network errors). Callers choose how to handle errors.
-//
-// The goal is NOT to emulate Firestore. The goal is to give callers a thin,
-// predictable native API so the call sites stay short and readable.
-// =============================================================================
 
 (function () {
   'use strict';
@@ -22,9 +16,9 @@
     return sb.client;
   }
 
-  // ── DocResult: normalized row result ───────────────────────────────────
-  // Mimics the parts of Firestore DocumentSnapshot that consumers actually
-  // read: { id, exists, data() } — but with native Supabase semantics.
+  // DocResult: normalized row result. Mimics the parts of a Firestore
+  // DocumentSnapshot that consumers actually read: { id, exists, data() } —
+  // but with native Supabase semantics.
   function _rowToDoc(row, idCol = 'id') {
     if (!row) {
       return { exists: false, id: null, data: () => null, _raw: null };
@@ -66,7 +60,6 @@
     };
   }
 
-  // ── Repository public API ──────────────────────────────────────────────
   const Repository = {
     /**
      * Fetch a single row by its primary key.
@@ -184,7 +177,7 @@
      *   payload.event: 'INSERT' | 'UPDATE' | 'DELETE'
      *   payload.new: new row (for INSERT/UPDATE)
      *   payload.old: old row (for DELETE/UPDATE)
-     * @param {string} [filter] — e.g. 'access_code=eq.ABC123'
+     * @param {string} [filter] — for example 'access_code=eq.ABC123'
      * @returns unsubscribe function
      */
     subscribe(name, table, callback, filter) {

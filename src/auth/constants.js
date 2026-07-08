@@ -1,6 +1,4 @@
-// =============================================================================
-// auth/constants.js — Konstanta dan konfigurasi autentikasi
-// =============================================================================
+// auth/constants.js — auth timing, rate-limit, and key constants
 
 export const AUTH_CONFIG = {
     TURNSTILE_SITE_KEY: '0x4AAAAAADtSMQt5KNMPWBzW',
@@ -14,7 +12,7 @@ export const TIMING_CONFIG = {
     REDIRECT_DELAY_MS: 300,
     LOGOUT_REDIRECT_DELAY_MS: 500,
     LOGIN_NOTICE_REDIRECT_DELAY_MS: 1_800,
-    TURNSTILE_READY_TIMEOUT_MS: 30_000,  // was 10s — bumped for slow networks/DNS
+    TURNSTILE_READY_TIMEOUT_MS: 30_000,  // bumped for slow networks/DNS
     SUPABASE_READY_TIMEOUT_MS: 15_000,
 };
 

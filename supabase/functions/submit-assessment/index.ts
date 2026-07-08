@@ -1,39 +1,15 @@
-// =============================================================================
-// submit-assessment/index.ts — Server-side scoring Edge Function
-// =============================================================================
+// submit-assessment/index.ts — Server-side scoring Edge Function.
 // POST /functions/v1/submit-assessment
-//
 // Headers: Authorization: Bearer <supabase_access_token>
 // Body: {
-//   session_id: string,
-//   answers: { "section_0": { "1": "A", "2": "B" }, "section_1": { "1": "esai answer" } },
-//   duration_seconds: number,
-//   violation_count: number
+//   session_id, answers: { section_0: { "1": "A", ... }, ... },
+//   duration_seconds, violation_count
 // }
+// Returns: { score, correct_count, total_count, grading_detail }
 //
-// Logic:
-//   1. Verify JWT → user_id (peserta only)
-//   2. Rate limit: 2 req/min per session (idempotency + anti-spam)
-//   3. Fetch session → verify user_id matches (anti-impersonation)
-//   4. Check session.status === 'active' (not blocked, not submitted)
-//   5. Fetch assessment → get sections (with jawaban_benar)
-//   6. Validate answers structure
-//   7. Re-score PG server-side (iterate sections, compare answers)
-//   8. Atomic: insert submission + update session.status='submitted'
-//   9. Audit log: SUBMIT_ASSESSMENT
-//  10. Return { score, correct_count, total_count, grading_detail }
-//
-// Edge cases handled:
-//   - Double-submit → UNIQUE constraint on submissions.session_id
-//   - Session blocked mid-submit → check status before insert
-//   - Session expired mid-submit → check ac_end, allow 30s grace
-//   - Malformed answers → validate structure, return 400
-//   - Assessment archived mid-submit → check status
-//   - Peserta tries to submit another user's session → RLS + ownership check
-//   - DB error mid-submit → atomic transaction, rollback on error
-//   - Network retry → idempotency via session_id UNIQUE
-//   - Peserta modifies answers in transit → server re-scores from submitted answers
-// =============================================================================
+// The client's answers payload is validated against the stored assessment
+// sections and RE-Scored server-side — never trust a client-sent score.
+// Double-submit is caught by the UNIQUE constraint on submissions.session_id.
 
 import { handler } from '../_shared/cors.ts';
 import { HTTPError, successResponse } from '../_shared/error.ts';
@@ -54,10 +30,9 @@ const GRACE_PERIOD_SECONDS = 30;
 const MAX_ANSWERS_SIZE = 100_000;
 
 export default handler(async (req: Request, env: Env, _ctx: any) => {
-  // 1. Auth
   const user = await requirePeserta(req, env);
 
-  // 2. Parse + validate body
+  // Parse + validate body.
   let body: SubmitBody;
   try {
     body = await req.json();
@@ -77,7 +52,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     throw new HTTPError(413, 'PAYLOAD_TOO_LARGE', `Answers payload exceeds ${MAX_ANSWERS_SIZE} bytes`);
   }
 
-  // 3. Rate limit — in-memory soft + DB-based hard (cross-isolate)
+  // Rate limit — in-memory soft + DB-based hard (cross-isolate).
   const rateLimit = checkSubmitRate(body.session_id);
   if (!rateLimit.allowed) {
     throw new HTTPError(429, 'RATE_LIMITED', 'Too many submit attempts. Wait before retrying.', {
@@ -93,7 +68,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
 
   const db = new SupabaseDB(env);
 
-  // 4. Fetch session
+  // Fetch session.
   const session = await db.selectOne<AssessmentSession>(
     'assessment_sessions',
     `id,assessment_id,user_id,user_email,identity_snapshot,status,started_at,attempt_number&id=eq.${body.session_id}`
@@ -103,12 +78,12 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     throw new HTTPError(404, 'NOT_FOUND', 'Session not found');
   }
 
-  // 5. Ownership check
+  // Ownership check.
   if (session.user_id !== user.id) {
     throw new HTTPError(403, 'FORBIDDEN', 'Session does not belong to authenticated user');
   }
 
-  // 6. State check
+  // State check.
   if (session.status === 'submitted') {
     const existing = await db.selectOne<any>(
       'submissions',
@@ -124,7 +99,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
   }
   // expired / disconnected → allow submit (grace)
 
-  // 7. Fetch assessment
+  // Fetch assessment.
   const assessment = await db.selectOne<Assessment>(
     'assessments',
     `id,access_code,title,subject,sections,total_score,status,access_mode,ac_end,ac_manual_status,ac_scheduled_end,allow_retake&id=eq.${session.assessment_id}`
@@ -138,7 +113,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     throw new HTTPError(409, 'ASSESSMENT_NOT_ACTIVE', 'Assessment has been archived');
   }
 
-  // 8. Time expiry check (with grace)
+  // Time expiry check (with grace).
   const now = Date.now();
   let isTimeExpired = false;
   if (assessment.access_mode === 'manual' && assessment.ac_end) {
@@ -151,7 +126,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     }
   }
 
-  // 9. Server-side scoring
+  // Server-side scoring.
   const sections: Section[] = Array.isArray(assessment.sections) ? assessment.sections : [];
   const gradingDetail: any[] = [];
   let correctCount = 0;
@@ -200,7 +175,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     ? Math.min(body.duration_seconds, assessment.duration_minutes * 60 + 300)
     : null;
 
-  // 10. Atomic insert + update
+  // Atomic insert + update.
   try {
     await db.insert('submissions', {
       assessment_id: session.assessment_id,
@@ -235,7 +210,7 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     { status: 'submitted', submitted_at: new Date().toISOString() }
   );
 
-  // 11. Audit log
+  // Audit log.
   logAudit(env, {
     action: 'SUBMIT_ASSESSMENT',
     targetType: 'assessment',
@@ -253,7 +228,6 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     ipAddress: getClientIP(req), userAgent: getUserAgent(req),
   });
 
-  // 12. Return
   return successResponse({
     session_id: session.id,
     assessment_id: session.assessment_id,

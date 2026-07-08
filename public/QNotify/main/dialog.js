@@ -1,25 +1,8 @@
-// dialog.js — QNotify 1.0.5 For AlbEdu
-/**
- * ╔══════════════════════════════════════════════════╗
- * ║  QNotify — dialog.js 1.0.5 For AlbEdu ║
- * ║  \"Interactive Dialog Controller\"                ║
- * ╚══════════════════════════════════════════════════╝
- *
- * v7.4.0 CHANGES:
- *  - FIX: Async no longer stuck — dual-pattern support:
- *      (a) Callback: onAsyncYes(resolve => resolve(true/false))  [legacy]
- *      (b) Promise:  onAsyncYes(async () => { ... return true }) [new]
- *      Both patterns auto-detected via fn.length === 0 heuristic.
- *  - NEW: Satisfying morph transition — dialog height smoothly
- *    animates when switching from idle → processing → result states.
- *  - NEW: Icon blob gets a spring-driven scale bounce on theme morph.
- *  - NEW: Buttons dissolve out with staggered opacity + translateY
- *    before processing state, reappear on result (if re-enabled).
- *  - IMPROVED: morphTitle uses vertical slide + blur (filter) for
- *    a premium feel matching iOS/macOS system dialogs.
- *  - IMPROVED: Processing state hides message text with fade+slide,
- *    not just opacity — more intentional spatial motion.
- */
+// dialog.js — QNotify interactive dialog controller.
+// Build/exit lifecycle for confirm / async / hold / hold-async dialogs.
+// onAsyncYes supports both callback-style (resolve => resolve(true/false)) and
+// Promise-style (async () => true); the two patterns are auto-detected via
+// fn.length === 0.
 
 import { SHADOW_TINTS, TEXTS, MORPH_THEME, TIMING } from './config.js';
 import {
@@ -29,16 +12,14 @@ import {
 } from './render.js';
 import { applySpawnShadow, applyDepthShadow } from './motion.js';
 import { acquireSpring } from './spring.js';
-// [1.0.5] Anti-glitch: triple-barrier + pre-stamped initial state
 import { afterTwoFrames, forceReflow, clearInitialState } from './glitch.js';
 
-// Always analytic for dialog UI — Hybrid Architecture
 function _aSpring(cfg) { return acquireSpring(cfg, 'analytic'); }
 
-// [1.0.5] Stamp dialog initial state BEFORE DOM insert
-// Dialog uses position:fixed + left:50% + top:50% centering.
-// Initial transform includes the centering translate so springs
-// start from the correct world-space position.
+// Stamps the dialog initial state BEFORE DOM insert — eliminates layout thrash
+// (the old append→stamp→reflow→animate sequence caused 2x layout reads).
+// Dialog uses position:fixed + left:50% + top:50% centering. Initial transform
+// includes the centering translate so springs start from the correct world-space position.
 function _stampDialogInitial(el) {
     el.style.willChange = 'transform, opacity';
     el.style.opacity    = '0';
@@ -52,7 +33,7 @@ function _stampDialogInitial(el) {
 const _dialogEnterCancels = new Map();
 
 
-// ── Build base state object used by engine.js and motion.js ──────────────────
+// Build base state object used by engine.js and motion.js.
 function makeDialogNotification({ id, element, isDesktop, type, tintKey }) {
     return {
         id,
@@ -79,17 +60,13 @@ function makeDialogNotification({ id, element, isDesktop, type, tintKey }) {
 }
 
 
-/* ════════════════════════════════════════════════════════════════
-   ASYNC RESOLVER — Dual-pattern: callback OR async Promise
-   ════════════════════════════════════════════════════════════════
-   Detects which pattern the user passed:
-     fn.length === 0 → async fn, no params → await it, read return value
-     fn.length >= 1  → callback fn         → pass resolve callback
-
-   This fixes the "stuck in processing" bug where an async function
-   was passed but the internal Promise never resolved because the
-   callback was never called.
-   ════════════════════════════════════════════════════════════════ */
+// Async resolver — dual-pattern: callback OR async Promise.
+// Detects which pattern the user passed:
+//   fn.length === 0 → async fn, no params → await it, read return value
+//   fn.length >= 1  → callback fn         → pass resolve callback
+// This fixes the "stuck in processing" bug where an async function was
+// passed but the internal Promise never resolved because the callback was
+// never called.
 
 async function _runAsyncFn(fn) {
     if (!fn) return true;
@@ -110,12 +87,8 @@ async function _runAsyncFn(fn) {
 }
 
 
-/* ════════════════════════════════════════════════════════════════
-   TITLE MORPH SYSTEM — v7.4.0 premium slide + blur
-   ════════════════════════════════════════════════════════════════
-   Out: slide up + blur out. In: slide from below + blur in.
-   Blur filter gives a "focus shift" depth illusion.
-   ════════════════════════════════════════════════════════════════ */
+// Title morph: slide up + blur out, then slide from below + blur in.
+// The blur filter gives a "focus shift" depth illusion.
 
 function morphTitle(element, newText, newColor) {
     const titleEl = element.querySelector('.text-main');
@@ -171,19 +144,16 @@ function morphTitle(element, newText, newColor) {
 }
 
 
-/* ════════════════════════════════════════════════════════════════
-   BODY MORPH — message + buttons fade/slide during state changes
-   ════════════════════════════════════════════════════════════════
-   Dialog DOM structure (from render.js createDialogElement):
-     .text-small  → subtitle label ("Konfirmasi")
-     .text-main   → user message body  ← NOT the title element here
-     .confirmation-actions → button row
-
-   IMPORTANT: .text-main is ALSO the element morphTitle() animates.
-   morphBodyOut/In must NOT set opacity/transform on .text-main —
-   morphTitle() owns that element entirely. Only .text-small and
-   .confirmation-actions are safe to dissolve here.
-   ════════════════════════════════════════════════════════════════ */
+// Body morph — message + buttons fade/slide during state changes.
+// Dialog DOM structure (from render.js createDialogElement):
+//   .text-small  → subtitle label ("Konfirmasi")
+//   .text-main   → user message body  ← NOT the title element here
+//   .confirmation-actions → button row
+//
+// .text-main is ALSO the element morphTitle() animates. morphBodyOut/In
+// must NOT set opacity/transform on .text-main — morphTitle() owns that
+// element entirely. Only .text-small and .confirmation-actions are safe
+// to dissolve here.
 
 function morphBodyOut(element) {
     // .text-small = "Konfirmasi" subtitle label — fade + slide up
@@ -191,7 +161,7 @@ function morphBodyOut(element) {
     // .confirmation-actions = Yes/No button row — slide down + fade
     const actions   = element.querySelector('.confirmation-actions');
 
-    // NOTE: intentionally skip .text-main — morphTitle() owns it
+    // Intentionally skip .text-main — morphTitle() owns that element.
 
     if (textSmall) {
         textSmall.style.transition = 'opacity 0.20s ease, transform 0.20s ease';
@@ -230,9 +200,7 @@ function morphBodyIn(element) {
 }
 
 
-/* ════════════════════════════════════════════════════════════════
-   THEME MORPH — icon blob + button color with spring scale bounce
-   ════════════════════════════════════════════════════════════════ */
+// Theme morph — icon blob + button color with spring scale bounce.
 
 function morphTheme(element, themeKey) {
     const theme    = MORPH_THEME[themeKey];
@@ -284,9 +252,7 @@ function morphTheme(element, themeKey) {
 }
 
 
-/* ════════════════════════════════════════════════════════════════
-   HOLD FILL — Dynamic Progress System (unchanged)
-   ════════════════════════════════════════════════════════════════ */
+// Hold-fill: dynamic progress track that fills as the user holds the button.
 
 function _parseRGB(colorStr) {
     const m = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -393,17 +359,11 @@ function createHoldFill(btnYes, holdDuration) {
 }
 
 
-// ── Transition from spawn → active state ─────────────────────────────────────
-// [1.0.5] LAYOUT THRASH FIX:
-//   Old flow: appendToContainer → stampInitialState → forceReflow → afterTwoFrames
-//             = READ (reflow) → WRITE (transform) → READ (reflow) = 2x layout!
-//
-//   New flow: stampInitialState → appendToContainer → forceReflow (1x) → afterTwoFrames
-//             = WRITE (before DOM) → insert → READ (1x) → animate
-//
-//   This matches the same pipeline as show() in engine.js.
-//   The stamp happens in createConfirmDialog BEFORE this function is called.
-//   activateDialog only needs to kick off the animation sequence.
+// Transition from spawn → active state.
+// Stamp-then-append pipeline (matches show() in engine.js): the stamp happens
+// in createConfirmDialog BEFORE this function is called, so activateDialog
+// only needs to kick off the animation sequence. The old append-then-stamp
+// flow triggered READ→WRITE→READ = 2x layout.
 function activateDialog(notification, focusElement) {
     const el = notification.element;
 
@@ -412,16 +372,13 @@ function activateDialog(notification, focusElement) {
         _dialogEnterCancels.delete(el);
     }
 
-    // [1.0.5] Initial state is ALREADY stamped by caller before DOM insert.
-    // We only set will-change here (compositor hint — not a layout trigger).
-    // Then one clean forceReflow to lock in the stamped state.
+    // Initial state is already stamped by the caller before DOM insert.
+    // We only set will-change here (compositor hint — not a layout trigger),
+    // then one clean forceReflow to lock in the stamped state.
     el.style.willChange = 'transform, opacity';
-
-    // Single reflow — AFTER DOM insert, reads committed state once.
-    // No second write after this read → no layout thrash.
     forceReflow(el);
 
-    // [Animation Flash] Triple barrier: rAF1 → rAF2 → microtask → animate
+    // Triple barrier: rAF1 → rAF2 → microtask → animate.
     const cancelFrames = afterTwoFrames(() => {
         if (notification.isDead) {
             _dialogEnterCancels.delete(el);
@@ -470,14 +427,12 @@ function activateDialog(notification, focusElement) {
             if (cancelled) return;
             cardDone++;
             if (cardDone >= 3) {
-                // [1.0.5] DIALOG TEXT CENTERING FIX.
-                // Spring rests at target ± float epsilon (e.g. scale=0.99997, ty=0.02).
-                // Inline `transform: translate(-50%,-50%) scale(0.99997) translateY(0.02px)`
-                // technically overrides CSS, and sub-pixel scale differences can cause
-                // text to appear fractionally off-center (especially noticeable on HiDPI).
-                // Setting the exact CSS rest state eliminates float drift entirely.
+                // Dialog text centering fix: springs rest at target ± float
+                // epsilon (scale=0.99997, ty=0.02). Inline transform overrides
+                // CSS, and sub-pixel scale can shift text off-center on HiDPI.
+                // Setting the exact CSS rest state eliminates float drift.
                 el.style.transform  = 'translate(-50%,-50%)';
-                el.style.opacity    = '';  // let CSS / default control opacity at rest
+                el.style.opacity    = '';
                 el.style.willChange = 'auto';
                 el._dlgAnimating = false;
                 _dialogEnterCancels.delete(el);
@@ -532,7 +487,7 @@ function activateDialog(notification, focusElement) {
     notification._cancelFrames = cancelFrames;
 }
 
-// ── Dialog spring exit ────────────────────────────────────────────────────────
+// Dialog spring exit.
 export function animateDialogExit(element, onDone) {
     if (_dialogEnterCancels.has(element)) {
         _dialogEnterCancels.get(element)();
@@ -547,12 +502,12 @@ export function animateDialogExit(element, onDone) {
     const opSpring = _aSpring({ k: 340, c: 28, m: 1.0 });
     scSpring.jump(1); tySpring.jump(0); opSpring.jump(1);
 
-    // [1.0.5] Backdrop exit: spring to 0, let CSS transition handle cleanup.
+    // Backdrop exit: spring to 0, let CSS transition handle cleanup.
     // We DON'T call backdrop.classList.remove('active') here because
     // engine._cleanup() calls hideBackdrop() after this — avoid double removal.
     const backdrop = document.getElementById('qnotify-backdrop');
     if (backdrop && backdrop.classList.contains('active')) {
-        // Spring-driven backdrop exit synced with dialog exit
+        // Spring-driven backdrop exit synced with dialog exit.
         const bdSpring = _aSpring({ k: 300, c: 24, m: 1.0 });
         const curOpacity = parseFloat(backdrop.style.opacity) || 1;
         bdSpring.jump(curOpacity);
@@ -561,7 +516,7 @@ export function animateDialogExit(element, onDone) {
                 if (backdrop) backdrop.style.opacity = v.toFixed(3);
             },
             onRest: () => {
-                // Restore to CSS-controlled state after spring finishes
+                // Restore to CSS-controlled state after spring finishes.
                 if (backdrop) backdrop.style.opacity = '';
             },
         });
@@ -577,8 +532,8 @@ export function animateDialogExit(element, onDone) {
     opSpring.to(0, {
         onUpdate: v => { element.style.opacity = v.toFixed(3); },
         onRest: () => {
-            // [1.0.5] Finalize opacity to exact 0 and clear willChange.
-            // Avoids any sub-pixel opacity bleed (e.g. 0.0014) on the last frame.
+            // Finalize opacity to exact 0 and clear willChange — avoids any
+            // sub-pixel opacity bleed (0.0014 etc) on the last frame.
             element.style.opacity   = '0';
             element.style.willChange = 'auto';
             clearInitialState(element);
@@ -589,15 +544,12 @@ export function animateDialogExit(element, onDone) {
 
 
 // Scroll lock + backdrop reveal delegated entirely to render.showBackdrop().
-// Single source of truth: render.js owns the backdrop lifecycle.
-// Eliminates duplication that caused timing divergence in previous versions.
+// render.js owns the backdrop lifecycle — single source of truth.
 const lockScroll   = showBackdrop;
 const unlockScroll = hideBackdrop;
 
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   ASYNC STATE HANDLERS — Unified morphing v7.4.0
-   ══════════════════════════════════════════════════════════════════════════════ */
+// Async state handlers — morph dialog body/title/theme between processing/result.
 
 async function _enterProcessingState(element, lang) {
     const loader     = element.querySelector('.qnotify-loader');
@@ -669,9 +621,7 @@ async function _enterErrorState(element, lang) {
 }
 
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   CONFIRM DIALOG — Standard Yes / No
-   ══════════════════════════════════════════════════════════════════════════════ */
+// CONFIRM DIALOG — standard Yes / No.
 export function createConfirmDialog({
     id, container, lang, isDesktop,
     title, message, icon, onYes, onNo, dismissFn, intent = 'info',
@@ -709,7 +659,7 @@ export function createConfirmDialog({
         ],
     };
 
-    // [1.0.5] Stamp BEFORE DOM insert — eliminates layout thrash in activateDialog()
+    // Stamp BEFORE DOM insert — eliminates layout thrash in activateDialog().
     _stampDialogInitial(element);
     appendToContainer(container, element);
     lockScroll();
@@ -719,13 +669,10 @@ export function createConfirmDialog({
 }
 
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   ASYNC CONFIRM DIALOG — Confirm + async callback + morphing states
-   ══════════════════════════════════════════════════════════════════════════════
-   v7.4.0: Dual-pattern async — supports both:
-     onAsyncYes: async () => { await doWork(); return true; }        // Promise pattern
-     onAsyncYes: (resolve) => { doWork().then(() => resolve(true)); } // Callback pattern
-   ══════════════════════════════════════════════════════════════════════════════ */
+// ASYNC CONFIRM DIALOG — Confirm + async callback + morphing states.
+// _runAsyncFn supports both patterns:
+//   onAsyncYes: async () => { await doWork(); return true; }        // Promise
+//   onAsyncYes: (resolve) => { doWork().then(() => resolve(true)); } // Callback
 export function createAsyncConfirmDialog({
     id, container, lang, isDesktop,
     title, message, icon, onAsyncYes, onAsyncNo, dismissFn, intent = 'info',
@@ -790,7 +737,7 @@ export function createAsyncConfirmDialog({
         ],
     };
 
-    // [1.0.5] Stamp BEFORE DOM insert — eliminates layout thrash in activateDialog()
+    // Stamp BEFORE DOM insert — eliminates layout thrash in activateDialog().
     _stampDialogInitial(element);
     appendToContainer(container, element);
     lockScroll();
@@ -800,9 +747,7 @@ export function createAsyncConfirmDialog({
 }
 
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   HOLD CONFIRM DIALOG — Must hold button for holdDuration ms
-   ══════════════════════════════════════════════════════════════════════════════ */
+// HOLD CONFIRM DIALOG — must hold button for holdDuration ms.
 export function createHoldConfirmDialog({
     id, container, lang, isDesktop,
     title, message, icon, holdDuration = TIMING.HOLD_DURATION_DEFAULT_MS,
@@ -873,7 +818,7 @@ export function createHoldConfirmDialog({
     events.forEach(({ el, type, fn, options }) => el.addEventListener(type, fn, options));
     notification.handlers = { events };
 
-    // [1.0.5] Stamp BEFORE DOM insert — eliminates layout thrash
+    // Stamp BEFORE DOM insert — eliminates layout thrash.
     _stampDialogInitial(element);
     appendToContainer(container, element);
     lockScroll();
@@ -887,11 +832,8 @@ export function createHoldConfirmDialog({
 }
 
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   HOLD ASYNC CONFIRM DIALOG — Hold + async loader after hold completes
-   ══════════════════════════════════════════════════════════════════════════════
-   v7.4.0: Same dual-pattern async fix applied here.
-   ══════════════════════════════════════════════════════════════════════════════ */
+// HOLD ASYNC CONFIRM DIALOG — Hold + async loader after hold completes.
+// Same dual-pattern async as createAsyncConfirmDialog.
 export function createHoldAsyncConfirmDialog({
     id, container, lang, isDesktop,
     title, message, icon, holdDuration = TIMING.HOLD_DURATION_DEFAULT_MS,
@@ -993,7 +935,7 @@ export function createHoldAsyncConfirmDialog({
     events.forEach(({ el, type, fn, options }) => el.addEventListener(type, fn, options));
     notification.handlers = { events };
 
-    // [1.0.5] Stamp BEFORE DOM insert — eliminates layout thrash
+    // Stamp BEFORE DOM insert — eliminates layout thrash.
     _stampDialogInitial(element);
     appendToContainer(container, element);
     lockScroll();

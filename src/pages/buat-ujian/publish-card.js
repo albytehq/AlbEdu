@@ -1,17 +1,6 @@
-// =============================================================================
-// publish-card.js — Card 3: summary + token + publish to Supabase
-// =============================================================================
-// v1.0.0 — Publish logic now lives in create-assessment.js `publishToSupabase()`.
-//   - INSERT into `assessments` table (was `ujian`)
-//   - Auto-generated UUID doc id (was doc=kode_id)
-//   - 6-digit access_code (was 5-digit kode_id)
-//   - access_mode stored flat on examData (was nested access_control)
-//   - Server timestamps via db.FieldValue.serverTimestamp()
-//   - created_by = user.uid, status = 'active' (no draft state in DB)
-//   - localStorage draft system REMOVED in v1.0.0
-//
-// Loaded as classic <script defer>. Exposes window.PublishCard.
-// =============================================================================
+// publish-card.js — Card 3 of buat-ujian: summary, access-code display,
+// and publish button. The actual publish to the `assessments` table lives
+// in create-assessment.js `publishToSupabase()`; this card only triggers it.
 
 (function () {
   'use strict';
@@ -119,7 +108,7 @@
           2000
         );
       }).catch(() => {
-        // Fallback — select text
+        // Clipboard API unavailable — select the text so the user can copy manually.
         const range = document.createRange();
         range.selectNode(this._tokenValue);
         const sel = window.getSelection();
@@ -133,6 +122,20 @@
     },
 
     async _publish() {
+      // Guard against rapid double-click: the confirm dialog is async, so a
+      // second click would stack a second publish call. The UNIQUE constraint
+      // on access_code would catch the duplicate, but the resulting error UX
+      // is confusing ("duplicate key" — what?).
+      if (this._isPublishing) return;
+      this._isPublishing = true;
+      try {
+        await this._doPublish();
+      } finally {
+        this._isPublishing = false;
+      }
+    },
+
+    async _doPublish() {
       const { valid, errors } = window.CreateAssessment.validate();
       if (!valid) {
         window.notify?.error(
@@ -153,7 +156,7 @@
 
       try {
         window.UI?.showAuthLoading?.(t('wizard.publishing', null, 'Publishing asesmen...'));
-        // v1.0.0 — publishToSupabase handles validate + token + DB insert
+        // publishToSupabase handles validate + token + DB insert
         const result = await window.CreateAssessment.publishToSupabase();
 
         window.UI?.hideAuthLoading?.();

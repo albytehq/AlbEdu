@@ -1,14 +1,7 @@
-// =============================================================================
-// take-assessment/utils.js — Pure utilities for the assessment runtime
-// =============================================================================
-// Part of the take-assessment split (see README.md in this directory).
-//
-// This file contains ONLY pure functions — no state/dom access, no side effects.
-// They access shared state via window.TakeAssessment._internal when needed
-// (constants only).
-//
-// Load order: MUST load before take-assessment.js (the orchestrator).
-// =============================================================================
+// take-assessment/utils.js — pure helpers for the assessment runtime.
+// No state/dom access, no side effects. Constants come in via
+// window.TakeAssessment._internal when needed.
+// MUST load before take-assessment.js (the orchestrator).
 
 (function () {
   'use strict';
@@ -17,7 +10,8 @@
   _internal._internal = _internal._internal || { state: {}, dom: {}, constants: {}, t: null };
   const I = _internal._internal;
 
-  // ── HTML Sanitizer (subset of ExamViewer.sanitize) ──────────────────────
+  // HTML sanitizer (subset of ExamViewer.sanitize). Prefers DOMPurify if
+  // available, falls back to a regex-based stripper.
   function _sanitizeHTML(html) {
     if (html == null) return '';
     const str = String(html);
@@ -66,7 +60,7 @@
     return fallback || key;
   }
 
-  // ── Waiters ─────────────────────────────────────────────────────────────
+  // Waiters
   function _waitForAuth() {
     return new Promise((resolve) => {
       let attempts = 0;
@@ -120,7 +114,8 @@
     });
   }
 
-  // ── Shuffle (mulberry32 PRNG — stable per session) ──────────────────────
+  // mulberry32 PRNG — stable per session so a peserta's shuffle is the same
+  // on refresh (the seed is derived from session.id + started_at).
   function mulberry32(seed) {
     return function () {
       seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
@@ -156,7 +151,7 @@
     return out;
   }
 
-  // ── Parse sections → soalPages ──────────────────────────────────────────
+  // Parse sections → soalPages (one entry per non-empty section).
   function _parseSections(sections) {
     if (!Array.isArray(sections)) return [];
     return sections.map((sec, idx) => {
@@ -171,7 +166,7 @@
     }).filter(p => p.questions.length > 0);
   }
 
-  // ── Misc helpers ────────────────────────────────────────────────────────
+  // Misc helpers
   function _formatDuration(sec) {
     if (sec == null || sec < 0) return '-';
     const h = Math.floor(sec / 3600);
@@ -219,7 +214,6 @@
     }
   }
 
-  // ── Expose all utilities on the namespace ───────────────────────────────
   Object.assign(_internal, {
     _sanitizeHTML,
     _escAttr,

@@ -1,17 +1,13 @@
-// =============================================================================
-// DaftarNama.js — AlbEdu Data Daftar v1.0.0
-// =============================================================================
+// DaftarNama.js — admin's "daftar nama" store (max 3 lists, each with up to 10
+// tabs of up to 150 names). Backed by the `daftar_nama` Supabase table.
 //
-// Kelola data daftar untuk admin. Bergantung pada SelfStorage.js.
-//
-// RULES:
-//   - Maks 3 data daftar per admin / storage.
-//   - Setiap daftar punya nama (5-30 char) dan tipe (Kelas/Sekolah/Negara/Custom).
-//   - Setiap daftar punya tabs (1-10). Nama tab maks 15 char. Tidak boleh duplicate.
-//   - Setiap tab punya daftar nama. Nama maks 50 char. Total nama maks 150.
-//   - Tab tidak boleh kosong saat save (minimal 1 nama).
-//   - Nama duplikat dibolehkan tapi wajib konfirmasi sebelum save.
-// =============================================================================
+// Limits enforced here (validateDaftarNama):
+//   - max 3 daftar per admin
+//   - daftar name: 5-30 chars
+//   - 1-10 tabs, tab name max 15 chars, unique within a daftar
+//   - per-name max 50 chars, total names across tabs max 150
+//   - every tab must have at least one name
+//   - duplicate names within a tab are allowed but flagged via checkDuplicateNama
 
 window.DaftarNama = (() => {
   const t = (key, vars, fallback) => fallback;
@@ -27,8 +23,6 @@ window.DaftarNama = (() => {
 
   const TIPE_OPTIONS = ['Kelas', 'Sekolah', 'Negara', 'Custom'];
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-
   function _sb() { return window.AlbEdu?.supabase?.client; }
 
   async function _getStorageId() {
@@ -37,18 +31,14 @@ window.DaftarNama = (() => {
   }
 
   function _getAdminId() {
-    // NOTE: `.uid` is a Firebase-shaped field that no longer exists on the
-    // native Supabase AuthService user object (which exposes `.id`). This
-    // always returned null before, silently breaking anything keyed on the
-    // admin's identity here.
+    // `.uid` is a Firebase-shaped field that doesn't exist on the native
+    // Supabase user object (which exposes `.id`). Always return that.
     return window.Auth?.currentUser?.id || null;
   }
 
   function _genTabId() {
     return 'tab_' + Math.random().toString(36).slice(2, 9);
   }
-
-  // ── Validation ────────────────────────────────────────────────────────────
 
   function validateDaftarNama(namaDaftar, tipeDaftar, tipeCustom, tabs) {
     const errors = [];
@@ -96,10 +86,8 @@ window.DaftarNama = (() => {
     return errors;
   }
 
-  /**
-   * Periksa apakah ada nama duplikat di dalam satu tab.
-   * Return { hasDup, details } di mana details adalah array { tabNama, nama }.
-   */
+  // Returns { hasDup, details: [{ tabNama, nama }] } so the caller can show
+  // a confirm dialog before persisting duplicates.
   function checkDuplicateNama(tabs) {
     const details = [];
     tabs.forEach(tab => {
@@ -113,8 +101,6 @@ window.DaftarNama = (() => {
     });
     return { hasDup: details.length > 0, details };
   }
-
-  // ── CRUD ──────────────────────────────────────────────────────────────────
 
   async function getAll() {
     const sb        = _sb();
@@ -199,12 +185,8 @@ window.DaftarNama = (() => {
     return data;
   }
 
-  /**
-   * Simpan seluruh state daftar (nama, tipe, tabs).
-   * Validasi penuh dijalankan di sini.
-   * Untuk duplikat nama: caller harus konfirmasi dulu via checkDuplicateNama,
-   * lalu pass forceSaveWithDup = true.
-   */
+  // Full validation runs here. Callers must call checkDuplicateNama first
+  // and only re-call save with forceSaveWithDup=true after the user confirms.
   async function save(id, namaDaftar, tipeDaftar, tipeCustom, tabs, forceSaveWithDup = false) {
     const sb = _sb();
     if (!sb || !id) throw new Error('Parameter tidak lengkap.');
@@ -249,8 +231,6 @@ window.DaftarNama = (() => {
       .eq('id', id);
     if (error) throw new Error(error.message);
   }
-
-  // ── Tab helpers ───────────────────────────────────────────────────────────
 
   function addTab(tabs) {
     if (tabs.length >= MAX_TABS) throw new Error(`Maksimal ${MAX_TABS} tab.`);
@@ -303,8 +283,6 @@ window.DaftarNama = (() => {
       return { ...t, anggota };
     });
   }
-
-  // ── Public API ────────────────────────────────────────────────────────────
 
   return {
     // Constants

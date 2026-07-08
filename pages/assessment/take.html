@@ -5,7 +5,7 @@
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Kerjakan Asesmen - AlbEdu</title>
+  <title>Kerjakan Asesmen — AlbEdu</title>
   <meta name="description" content="AlbEdu - Runtime pengerjaan asesmen peserta" />
   <meta name="theme-color" content="#2563eb" />
   <meta name="robots" content="noindex, nofollow" />
@@ -40,6 +40,7 @@
     <script type="module" src="../../src/shared/qnotify-loader.js"></script>
     <link rel="stylesheet" href="../../styles/loading.css" />
   <link rel="stylesheet" href="../../styles/albedu-v1.css" />
+  <link rel="stylesheet" href="../../styles/albedu-components.css">
   <link rel="stylesheet" href="../../styles/identity-form.css" />
   <link rel="stylesheet" href="../../styles/peserta-floating-profile.css" />
 
@@ -49,7 +50,7 @@
   <script async src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
           onload="window.__katexReady = true; window.dispatchEvent(new Event('katex-ready'))"></script>
 
-  <!-- v0.746.0: Turnstile removed from assessment runtime — using honeypot + timing + DB rate limiting instead -->
+  <!-- Turnstile removed from assessment runtime — using honeypot + timing + DB rate limiting instead -->
 
   <!-- Supabase SDK + Bridge --><!-- Auth baseline -->
   <script src="../../src/auth/security.js" defer></script>
@@ -70,7 +71,7 @@
     });
   </script>
 
-  <!-- Security modules (v0.742.8 Phase 5 — Anti-Cheat Hardening) -->
+  <!-- Security modules (anti-cheat hardening) -->
   <script src="../../src/security/consent.js" defer></script>
   <script src="../../src/exam/guardian.js" defer></script>
   <script src="../../src/security/devtools-detector.js" defer></script>
@@ -85,7 +86,7 @@
   <!-- Math renderer + language class helpers (KaTeX + RTL/CJK detection) -->
   <script src="../../src/utils/math-renderer.js" defer></script>
 
-  <!-- v0.742.8: Floating profile button (triggers OptionProfile — gives peserta logout) -->
+  <!-- Floating profile button (triggers OptionProfile — gives peserta logout) -->
   <script src="../../src/profile/peserta-profile-fab.js" defer></script>
 
   <!-- Page controller -->
@@ -102,9 +103,7 @@
 <body>
 
       <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
-<!-- ──────────────────────────────────────────────────────────────────────
-       PHASE 1: LOADING
-       ────────────────────────────────────────────────────────────────────── -->
+<!-- PHASE 1: LOADING -->
   <div id="loading-screen" role="status" aria-live="polite">
     <div class="loading-logo" aria-hidden="true">
       <span data-albedu-icon="school"></span>
@@ -114,9 +113,7 @@
     <p id="loading-status">Memuat data peserta</p>
   </div>
 
-  <!-- ──────────────────────────────────────────────────────────────────────
-       PHASE 0: CLOSED / ERROR / PAUSED
-       ────────────────────────────────────────────────────────────────────── -->
+  <!-- PHASE 0: CLOSED / ERROR / PAUSED -->
   <div id="closed-screen" class="take-status-screen" hidden role="alert" aria-live="assertive">
     <div class="status-icon" id="closed-icon">
       <span data-albedu-icon="lock"></span>
@@ -135,9 +132,7 @@
     </div>
   </div>
 
-  <!-- ──────────────────────────────────────────────────────────────────────
-       PHASE 2: IDENTITY
-       ────────────────────────────────────────────────────────────────────── -->
+  <!-- PHASE 2: IDENTITY -->
   <main id="identity-phase" hidden aria-labelledby="identity-title">
     <section class="identity-card">
       <header class="identity-banner">
@@ -152,9 +147,7 @@
     </section>
   </main>
 
-  <!-- ──────────────────────────────────────────────────────────────────────
-       PHASE 3: EXAM
-       ────────────────────────────────────────────────────────────────────── -->
+  <!-- PHASE 3: EXAM -->
   <main id="exam-phase" hidden aria-labelledby="exam-title">
     <header class="exam-header">
       <div class="exam-header__left">
@@ -209,9 +202,7 @@
     </nav>
   </main>
 
-  <!-- ──────────────────────────────────────────────────────────────────────
-       PHASE 4: RESULT
-       ────────────────────────────────────────────────────────────────────── -->
+  <!-- PHASE 4: RESULT -->
   <main id="result-phase" hidden aria-labelledby="result-title">
     <div class="result-container">
       <div class="result-hero">
@@ -235,9 +226,7 @@
     </div>
   </main>
 
-  <!-- ──────────────────────────────────────────────────────────────────────
-       PAUSE BANNER (overlay saat assessment di-pause admin)
-       ────────────────────────────────────────────────────────────────────── -->
+  <!-- PAUSE BANNER (overlay saat assessment di-pause admin) -->
   <div id="pause-banner" hidden role="alert" aria-live="assertive">
     <span data-albedu-icon="pause_circle"></span>
     <span id="pause-text">Asesmen dijeda oleh admin. Mohon tunggu.</span>

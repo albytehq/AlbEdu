@@ -1,7 +1,7 @@
 # Contributing to AlbEdu
 
-**Version:** 0.746.0
-**Last updated:** 2026-07-05
+**Version:** 0.816.0
+**Last updated:** 2026-07-08
 
 ---
 
@@ -15,6 +15,24 @@ npm run dev
 ```
 
 Buka http://127.0.0.1:8765/ di browser.
+
+---
+
+## Before You Edit
+
+Before writing or modifying any code in this repo, read [`docs/STRICT-COMMENTING-FOR-AI.md`](./STRICT-COMMENTING-FOR-AI.md). That document codifies the human-style commenting rules that all contributors (human AND AI assistant) must follow. The rules exist because the codebase accumulated ~1,400+ AI-generated noise patterns (ASCII-art headers, version archaeology, marketing-speak, JSDoc on internal helpers) that made the code harder to read, not easier.
+
+The 5 rules in brief:
+
+1. Comments explain WHY, not WHAT. Don't restate the code in English.
+2. No ASCII art, no boxes, no dividers. A single-line `// filename.js — description` is the only file header allowed.
+3. No version archaeology. Git blame already records when a line changed.
+4. No marketing-speak. "Enterprise-grade", "robust", "seamless" are banned.
+5. JSDoc only on public API (exported functions, `window.AlbEdu.*` namespace). Internal helpers get a one-liner or nothing.
+
+PRs that violate these rules will be requested-for-changes — even if the code logic is correct. The reviewer will run `rg -n '^/\* ={5,}' src/` and similar greps (see the "Enforcement" section of that doc) before approving.
+
+Also read [`docs/AI-CONTEXT.md`](./AI-CONTEXT.md) for a quick lookup table of "if you need to change X, edit file Y". And if your task involves URLs, redirects, or navigation, read [`rule-url-albedu.md`](../rule-url-albedu.md) FIRST — there are 7 routing rules that are easy to break by accident.
 
 ---
 
@@ -99,7 +117,7 @@ export default { ArchiveController, ArchiveViewer };
 pages/admin/exam-archive.html
 ```
 
-> **v0.742.0+:** Admin HTML pages live directly under `pages/admin/` — the
+> Admin HTML pages live directly under `pages/admin/` — the
 > old `pages/admin/pages/` subfolder has been flattened. Use `../../` for
 > asset paths (`../../styles/...`, `../../src/...`) from any admin page.
 

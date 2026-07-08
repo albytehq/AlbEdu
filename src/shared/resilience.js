@@ -1,37 +1,22 @@
-// =============================================================================
-// resilience.js — AlbEdu Production Hardening · The Surgeon (Stability-First)
-// =============================================================================
-// Wrapper Actly 1.2.0 untuk semua network calls di AlbEdu.
-// Setiap call ke Supabase / Edge Function / Worker dilindungi oleh:
-//   - Circuit breaker (stop setelah N failures, cooldown)
-//   - Retry exponential backoff + jitter (tidak hammer server saat down)
-//   - Timeout (fail fast, tidak hang selamanya)
-//   - Dedupe (collapse concurrent calls ke satu)
-//   - Fallback (graceful degradation, return default saat service down)
-//
-// Policy presets:
-//   READ    — 10s timeout, 3x retry, 30s total, dedupe, 60s cache, circuit breaker
-//   WRITE   — 30s timeout, 2x retry, 60s total, no dedupe, no cache, circuit breaker
-//   HEARTBEAT — 5s timeout, 1x retry (fail fast), no cache, circuit breaker
-//   SUBMIT  — 30s timeout, 3x retry, 90s total, no dedupe (idempotent via session_id),
-//             circuit breaker, fallback: queue to IndexedDB
+// resilience.js — wraps every network call (Supabase / Edge Function / Worker)
+// with circuit breaker, exponential-backoff retry with jitter, timeout,
+// dedupe, and cache. Presets:
+//   READ      10s timeout, 3x retry, 30s total, dedupe, 60s cache
+//   WRITE     30s timeout, 2x retry, 60s total, no dedupe/cache
+//   HEARTBEAT 5s timeout, 1x retry (fail fast), no cache
+//   SUBMIT    30s timeout, 3x retry, 90s total, no dedupe (idempotent via session_id)
 //
 // Usage:
-//   import { resilientRead, resilientWrite, resilientHeartbeat, resilientSubmit } from './resilience.js';
-//
+//   import { resilientRead, resilientWrite } from './resilience.js';
 //   const result = await resilientRead('user-profile', async (signal) => {
 //     return fetch('/api/user', { signal });
 //   });
-//   if (result.ok) { console.log(result.value); }
-//   else { console.error(result.error); }
-// =============================================================================
+//   if (result.ok) { console.log(result.value); } else { console.error(result.error); }
 
 // Actly is loaded from public/lib/actly/ (bundled dist).
 // Browser cannot resolve bare module specifiers like "actly" — must use relative path.
 
 import { act, sanitizeErrorMessage } from '../../public/lib/actly/index.js';
-
-// ── Policy Presets ──────────────────────────────────────────────────────
 
 const READ_PRESET = {
   retry: {
@@ -127,8 +112,6 @@ const SUBMIT_PRESET = {
   },
 };
 
-// ── Observability hooks (shared by all presets) ─────────────────────────
-
 const _observability = {
   onFinalFailure: (e) => {
     const safeMsg = sanitizeErrorMessage(e.error);
@@ -141,17 +124,6 @@ const _observability = {
   },
 };
 
-// ── Public API ──────────────────────────────────────────────────────────
-
-/**
- * Execute a READ operation with resilience policies.
- * Suitable for: fetching user data, assessment data, question bank, etc.
- *
- * @param {string} key — unique identifier for dedupe + cache
- * @param {function} fn — async function receiving AbortSignal
- * @param {object} [overrides] — override preset options
- * @returns {Promise<{ok: boolean, value?: any, error?: unknown, attempts: number}>}
- */
 export async function resilientRead(key, fn, overrides = {}) {
   return act(key, fn, {
     ...READ_PRESET,
@@ -160,14 +132,6 @@ export async function resilientRead(key, fn, overrides = {}) {
   });
 }
 
-/**
- * Execute a WRITE operation with resilience policies.
- * Suitable for: creating assessments, updating profile, deleting questions.
- *
- * @param {string} key — unique identifier
- * @param {function} fn — async function receiving AbortSignal
- * @param {object} [overrides]
- */
 export async function resilientWrite(key, fn, overrides = {}) {
   return act(key, fn, {
     ...WRITE_PRESET,
@@ -176,15 +140,8 @@ export async function resilientWrite(key, fn, overrides = {}) {
   });
 }
 
-/**
- * Execute a HEARTBEAT with resilience policies.
- * Fail fast — 5s timeout, minimal retry. Heartbeat runs every 15s,
- * a failed one is non-critical (next heartbeat will retry).
- *
- * @param {string} key — unique identifier (e.g. `heartbeat:${sessionId}`)
- * @param {function} fn — async function receiving AbortSignal
- * @param {object} [overrides]
- */
+// Heartbeat runs every 15s; a failed one is non-critical because the next
+// heartbeat will retry.
 export async function resilientHeartbeat(key, fn, overrides = {}) {
   return act(key, fn, {
     ...HEARTBEAT_PRESET,
@@ -193,15 +150,7 @@ export async function resilientHeartbeat(key, fn, overrides = {}) {
   });
 }
 
-/**
- * Execute a SUBMIT operation with resilience policies.
- * Most critical write — 3x retry, 90s total budget. Submit is idempotent
- * via session_id UNIQUE constraint, so retries are safe.
- *
- * @param {string} key — unique identifier (e.g. `submit:${sessionId}`)
- * @param {function} fn — async function receiving AbortSignal
- * @param {object} [overrides]
- */
+// Submit is idempotent via session_id UNIQUE constraint, so retries are safe.
 export async function resilientSubmit(key, fn, overrides = {}) {
   return act(key, fn, {
     ...SUBMIT_PRESET,
@@ -210,12 +159,7 @@ export async function resilientSubmit(key, fn, overrides = {}) {
   });
 }
 
-/**
- * Invalidate cached value for a key.
- * Call this after a WRITE to ensure subsequent READs get fresh data.
- *
- * @param {string} key
- */
+// Call after a WRITE to ensure subsequent READs get fresh data.
 export function invalidateCache(key) {
   try {
     return act.invalidate(key);
@@ -224,18 +168,9 @@ export function invalidateCache(key) {
   }
 }
 
-/**
- * Sanitize an error for user-facing display.
- * Strips stack traces, internal paths, and sensitive details.
- *
- * @param {unknown} error
- * @returns {string} safe error message
- */
 export function safeErrorMessage(error) {
   return sanitizeErrorMessage(error);
 }
-
-// ── Expose to window for non-module scripts ─────────────────────────────
 
 if (typeof window !== 'undefined') {
   if (!window.AlbEdu) window.AlbEdu = {};

@@ -1,11 +1,6 @@
-// =============================================================================
-// soal-card.js — Card 2: sections + questions list
-// =============================================================================
-// Renders sections (max 2) and their questions (min 3, max 50 per section).
-// Each question is a compact row; click → opens SoalEditorModal.
-// Changing a section's type_question clears its questions (schema rule).
-// Loaded as classic <script defer>. Exposes window.SoalCard.
-// =============================================================================
+// soal-card.js — Card 2 of buat-ujian: sections (max 2) + questions per section.
+// Each question is a compact row; click → opens SoalEditorModal. Changing a
+// section's type_question clears its questions (enforced by CreateAssessment).
 
 (function () {
   'use strict';
@@ -76,11 +71,13 @@
               <span class="albedu-section-meta">${sec.questions.length} ${t('create.soal_unit', null, 'soal')} • ${sec.type_question === 'PG' ? t('wizard.type_pg', null, 'Pilihan Ganda') : sec.type_question === 'esai' ? t('wizard.type_essay', null, 'Esai') : t('create.pick_type', null, 'pilih tipe')}</span>
             </div>
             <div class="albedu-section-actions">
-              <select class="albedu-section-type" data-index="${sIdx}" ${sec.questions.length > 0 ? 'disabled' : ''}>
-                <option value="">${t('create.select_type_placeholder', null, '— Pilih tipe —')}</option>
-                <option value="PG" ${sec.type_question === 'PG' ? 'selected' : ''}>${t('wizard.type_pg', null, 'Pilihan Ganda')}</option>
-                <option value="esai" ${sec.type_question === 'esai' ? 'selected' : ''}>${t('wizard.type_essay', null, 'Esai')}</option>
-              </select>
+              <div class="albedu-select-wrap">
+                <select class="albedu-select albedu-section-type" data-index="${sIdx}" ${sec.questions.length > 0 ? 'disabled' : ''}>
+                  <option value="">${t('create.select_type_placeholder', null, '— Pilih tipe —')}</option>
+                  <option value="PG" ${sec.type_question === 'PG' ? 'selected' : ''}>${t('wizard.type_pg', null, 'Pilihan Ganda')}</option>
+                  <option value="esai" ${sec.type_question === 'esai' ? 'selected' : ''}>${t('wizard.type_essay', null, 'Esai')}</option>
+                </select>
+              </div>
               <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-add-question" data-index="${sIdx}" type="button" ${!sec.type_question ? 'disabled' : ''}>
                 <span data-albedu-icon="add"></span> ${t('create.soal_button', null, 'Soal')}
               </button>
@@ -201,11 +198,12 @@
     },
 
     _esc(str) {
-      return String(str || '')
+      return String(str ?? '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     },
   };
 

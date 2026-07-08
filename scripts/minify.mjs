@@ -1,4 +1,4 @@
-// AlbEdu minify pipeline v2.0.0 — production-grade, zero runtime dependency.
+// AlbEdu minify pipeline — esbuild + lightningcss, no runtime deps.
 // Updated for new by-feature structure (src/, styles/, pages/, public/).
 import * as esbuild from 'esbuild';
 import fs from 'fs';
@@ -35,7 +35,6 @@ function walk(dir, out = []) {
 let jsCount = 0, cssCount = 0, htmlCount = 0;
 const errors = [];
 
-// === Minify & copy src/ (JS) ===
 const SRC_DIRS = ['src'];
 for (const srcDir of SRC_DIRS) {
   const srcPath = path.join(ROOT, srcDir);
@@ -69,7 +68,6 @@ for (const srcDir of SRC_DIRS) {
   }
 }
 
-// === Minify & copy styles/ (CSS) ===
 const STYLES_DIR = path.join(ROOT, 'styles');
 if (fs.existsSync(STYLES_DIR)) {
   const cssFiles = walk(STYLES_DIR);
@@ -100,13 +98,10 @@ if (fs.existsSync(STYLES_DIR)) {
   }
 }
 
-// === Copy public/ (images, QNotify — static assets, no minify) ===
 copyDirIfExists(path.join(ROOT, 'public'), path.join(DIST, 'public'));
 
-// === Copy supabase/ ===
 copyDirIfExists(path.join(ROOT, 'supabase'), path.join(DIST, 'supabase'));
 
-// === Copy HTML pages/ ===
 const PAGES_DIR = path.join(ROOT, 'pages');
 if (fs.existsSync(PAGES_DIR)) {
   const htmlFiles = walk(PAGES_DIR);
@@ -119,9 +114,6 @@ if (fs.existsSync(PAGES_DIR)) {
   }
 }
 
-// === Copy root files (index.html, 404.html, package.json, README.md, rule-url-albedu.md, etc.) ===
-// v2.1: Added 404.html (canonical, GitHub Pages auto-serves this) and
-//        rule-url-albedu.md (routing documentation) to the copy list.
 for (const f of fs.readdirSync(ROOT)) {
   const full = path.join(ROOT, f);
   const stat = fs.statSync(full);
@@ -136,7 +128,7 @@ for (const f of fs.readdirSync(ROOT)) {
   }
 }
 
-console.log(`=== AlbEdu Build Complete (v2.1.0) ===`);
+console.log(`AlbEdu build complete`);
 console.log(`JS files minified: ${jsCount}`);
 console.log(`CSS files minified: ${cssCount}`);
 console.log(`HTML files copied:  ${htmlCount}`);

@@ -1,20 +1,8 @@
 #!/usr/bin/env python3
-"""
-verify_audit.py — AlbEdu Phase 6 · Automated Verification Suite
-
-Runs automated checks to prevent regression in:
-  1. Duplicate font imports
-  2. Repeated remote font loads (Material Symbols etc.)
-  3. `type="module"src=` syntax mistakes
-  4. Legacy Firebase shim references in NEW code
-     (src/platform/, src/shared/, src/security/, src/identity/ must not reference firebase shim)
-  5. Unsafe DOM injection (innerHTML = without sanitize)
-  6. Missing defer on non-critical scripts
-  7. Regression in shell-first rendering (critical-css.js missing from pages)
-
-Usage:
-  python3 scripts/verify_audit.py
-"""
+# verify_audit.py — AlbEdu automated verification suite.
+# Catches regressions: duplicate font imports, Material Symbols leftovers,
+# module-syntax typos, legacy Firebase/window.sb refs in new code, unsafe
+# innerHTML, missing defer, missing critical-css.js / notify.js / skip-link.
 
 import re
 import sys
@@ -41,9 +29,7 @@ result = Result()
 def find_files(pattern):
     return sorted(ROOT.rglob(pattern))
 
-# ─────────────────────────────────────────────────────────────────────────
 # Check 1: No duplicate Google Fonts <link> tags in any page
-# ─────────────────────────────────────────────────────────────────────────
 def check_duplicate_fonts():
     print('\n[1] Checking for duplicate font <link> tags...')
     font_pattern = re.compile(
@@ -56,7 +42,7 @@ def check_duplicate_fonts():
         if html.name == 'PAGE-TEMPLATE.html': continue
         content = html.read_text(encoding='utf-8')
         matches = font_pattern.findall(content)
-        # Pages may have ONE font link via the legacy head, but new architecture
+        # Pages may have ONE font link via the legacy head, but the new architecture
         # expects zero (fonts.js handles it).
         if matches:
             rel = html.relative_to(ROOT)
@@ -65,9 +51,7 @@ def check_duplicate_fonts():
     if not found:
         result.ok('No duplicate Google Fonts links found')
 
-# ─────────────────────────────────────────────────────────────────────────
 # Check 2: No Material Symbols font references in HTML pages
-# ─────────────────────────────────────────────────────────────────────────
 def check_material_symbols_html():
     print('\n[2] Checking for Material Symbols font usage in HTML...')
     found = False
@@ -82,9 +66,7 @@ def check_material_symbols_html():
     if not found:
         result.ok('No Material Symbols font references in HTML pages')
 
-# ─────────────────────────────────────────────────────────────────────────
 # Check 3: No broken `type="module"src=` syntax in any HTML
-# ─────────────────────────────────────────────────────────────────────────
 def check_broken_module_syntax():
     print('\n[3] Checking for broken `type="module"src=` syntax...')
     found = False
@@ -99,10 +81,8 @@ def check_broken_module_syntax():
     if not found:
         result.ok('No broken module script syntax found')
 
-# ─────────────────────────────────────────────────────────────────────────
 # Check 4: New code (platform/shared/security/identity) must NOT reference
 # legacy Firebase shim globals (firebaseAuth, firebaseDb, firebase-ready)
-# ─────────────────────────────────────────────────────────────────────────
 def check_no_legacy_refs_in_new_code():
     print('\n[4] Checking new code for legacy Firebase shim references...')
     legacy_pattern = re.compile(
@@ -110,7 +90,6 @@ def check_no_legacy_refs_in_new_code():
         r'firebase-ready|firebase-error|__firebaseReady|__firebaseError',
         re.IGNORECASE
     )
-    # New code lives in these dirs:
     new_code_dirs = [
         ROOT / 'src' / 'platform',
         ROOT / 'src' / 'shared',
@@ -122,7 +101,7 @@ def check_no_legacy_refs_in_new_code():
         if not d.exists(): continue
         for js in d.rglob('*.js'):
             content = js.read_text(encoding='utf-8')
-            # Allow references inside comments — strip them
+            # Allow references inside comments — strip them.
             content_no_comments = re.sub(r'//.*$', '', content, flags=re.MULTILINE)
             content_no_comments = re.sub(r'/\*.*?\*/', '', content_no_comments, flags=re.DOTALL)
             matches = legacy_pattern.findall(content_no_comments)
@@ -133,18 +112,10 @@ def check_no_legacy_refs_in_new_code():
     if not found:
         result.ok('New code does not reference legacy Firebase shim')
 
-# ─────────────────────────────────────────────────────────────────────────
-# Check 5: Unsafe innerHTML = without sanitize call
-# (Allow el.innerHTML = AlbEdu.icon(...) and el.innerHTML = '' (clear))
-# ─────────────────────────────────────────────────────────────────────────
+# Check 5: Unsafe innerHTML = without sanitize call.
+# Allows el.innerHTML = AlbEdu.icon(...) and el.innerHTML = '' (clear).
 def check_unsafe_inner_html():
     print('\n[5] Checking for unsafe innerHTML assignments...')
-    # Match: el.innerHTML = 'something' or el.innerHTML = `something`
-    # where 'something' is NOT:
-    #   - empty string ''
-    #   - AlbEdu.icon(...)
-    #   - sanitizeHtml(...)
-    #   - already-escaped via escapeHTML(...)
     unsafe_pattern = re.compile(
         r'\.innerHTML\s*=\s*([^;]+);',
         re.IGNORECASE
@@ -154,7 +125,6 @@ def check_unsafe_inner_html():
         if 'node_modules' in js.parts: continue
         if js.name == 'icons.js': continue  # icon system itself emits HTML
         content = js.read_text(encoding='utf-8')
-        # Strip comments
         content_nc = re.sub(r'//.*$', '', content, flags=re.MULTILINE)
         content_nc = re.sub(r'/\*.*?\*/', '', content_nc, flags=re.DOTALL)
         for match in unsafe_pattern.finditer(content_nc):
@@ -171,29 +141,27 @@ def check_unsafe_inner_html():
                 continue
             # Allow template literals that use _esc/_escapeHtml/_escAttr/_sanitizeHTML
             # anywhere in the expression — these are the project's sanitize helpers.
-            # The verifier can't fully parse template literal data flow, so we
-            # treat any template literal containing a sanitize call as safe.
+            # The verifier can't fully parse template literal data flow, so we treat
+            # any template literal containing a sanitize call as safe.
             if '`' in rhs:
                 if any(fn in rhs for fn in ['_esc(', '_escAttr(', '_escapeHtml(', '_escapeHTML(',
                                               '_sanitizeHTML(', '_sanitizeHtml(',
                                               'AlbEdu.sanitize', 'AlbEdu._esc',
                                               'window.AlbEdu.sanitize']):
                     continue
-                # [Item 1] Also allow template literals that only use t() —
-                # translation strings are developer-controlled, not user-controlled.
+                # Also allow template literals that only use t() — translation
+                # strings are developer-controlled, not user-controlled.
                 if 't(' in rhs and '${' in rhs:
-                    # Check if ALL ${} interpolations are t() calls or static
-                    import re as _re
-                    interpolations = _re.findall(r'\$\{([^}]+)\}', rhs)
+                    interpolations = re.findall(r'\$\{([^}]+)\}', rhs)
                     all_safe = all('t(' in interp or interp.strip().startswith("'") or interp.strip().startswith('"') for interp in interpolations)
                     if all_safe:
                         continue
-            # Allow .map() chains that produce escaped output (heuristic:
-            # the map callback contains a sanitize call)
+            # Allow .map() chains that produce escaped output (heuristic: the
+            # map callback contains a sanitize call).
             if '.map(' in rhs and any(fn in rhs for fn in ['_esc(', '_escAttr(', '_escapeHtml(',
                                                                        '_sanitizeHTML(', '_sanitizeHtml(']):
                 continue
-            # [Item 1] Allow static HTML strings (no ${} interpolation, no user data)
+            # Allow static HTML strings (no ${} interpolation, no user data).
             if '`' not in rhs and '$' not in rhs and "'" in rhs:
                 continue  # single-quoted static HTML string
             if '`' not in rhs and '$' not in rhs and '"' in rhs:
@@ -201,18 +169,14 @@ def check_unsafe_inner_html():
             # Allow clear/empty assignments
             if rhs.strip() in ("''", '""', '``'):
                 continue
-            # Flag anything else
             rel = js.relative_to(ROOT)
-            # Find line number
             line_no = content[:match.start()].count('\n') + 1
             result.warn(f'{rel}:{line_no}: innerHTML assignment without sanitize — review for XSS')
             found_count += 1
     if found_count == 0:
         result.ok('No unsafe innerHTML assignments found')
 
-# ─────────────────────────────────────────────────────────────────────────
 # Check 6: Non-critical scripts in <head> should have defer or async
-# ─────────────────────────────────────────────────────────────────────────
 def check_defer_on_head_scripts():
     print('\n[6] Checking <head> scripts for defer/async...')
     script_pattern = re.compile(
@@ -224,18 +188,16 @@ def check_defer_on_head_scripts():
         if 'node_modules' in html.parts: continue
         if html.name == 'PAGE-TEMPLATE.html': continue
         content = html.read_text(encoding='utf-8')
-        # Get the <head>...</head> portion
         head_match = re.search(r'<head[^>]*>(.*?)</head>', content, re.IGNORECASE | re.DOTALL)
         if not head_match: continue
         head = head_match.group(1)
         for sm in script_pattern.finditer(head):
             pre_attrs = sm.group(1) + ' ' + sm.group(3)
             src = sm.group(2)
-            # Critical-css.js is intentionally synchronous — exempt
+            # critical-css.js is intentionally synchronous — exempt.
             if 'critical-css.js' in src: continue
-            # If it's a module, it's deferred by default
+            # Modules are deferred by default.
             if 'type="module"' in pre_attrs or "type='module'" in pre_attrs: continue
-            # Check for defer or async
             if 'defer' not in pre_attrs.lower() and 'async' not in pre_attrs.lower():
                 rel = html.relative_to(ROOT)
                 result.warn(f'{rel}: head script "{src}" missing defer/async — blocks HTML parser')
@@ -243,20 +205,16 @@ def check_defer_on_head_scripts():
     if not found:
         result.ok('All non-critical head scripts have defer or async')
 
-# ─────────────────────────────────────────────────────────────────────────
 # Check 7: Every page that renders UI must load critical-css.js
-# ─────────────────────────────────────────────────────────────────────────
 def check_critical_css_loaded():
     print('\n[7] Checking pages load critical-css.js...')
-    # Skip redirect stubs (those with http-equiv refresh)
     found = False
     for html in find_files('*.html'):
         if 'node_modules' in html.parts: continue
         if html.name == 'PAGE-TEMPLATE.html': continue
         content = html.read_text(encoding='utf-8')
-        # Skip redirect stubs
+        # Skip redirect stubs.
         if 'http-equiv="refresh"' in content: continue
-        # Skip pages/404.html (redirect to /404.html)
         if html.name == '404.html' and 'pages/' in str(html.parent): continue
         if 'critical-css.js' not in content:
             rel = html.relative_to(ROOT)
@@ -265,13 +223,9 @@ def check_critical_css_loaded():
     if not found:
         result.ok('All UI pages load critical-css.js')
 
-# ─────────────────────────────────────────────────────────────────────────
 # Check 8: No `type="module"src=` syntax mistakes (also catches `type='module'src=`)
-# ─────────────────────────────────────────────────────────────────────────
 def check_module_script_spacing():
     print('\n[8] Checking module script tag spacing...')
-    pattern = re.compile(r"type=[\"']module[\"']\s*src=", re.IGNORECASE)
-    # Actually we want to FLAG cases where there's NO space between " and src
     bad_pattern = re.compile(r"type=[\"']module[\"']src=", re.IGNORECASE)
     found = False
     for html in find_files('*.html'):
@@ -284,9 +238,7 @@ def check_module_script_spacing():
     if not found:
         result.ok('All module script tags have proper spacing')
 
-# ─────────────────────────────────────────────────────────────────────────
 # Check 9: No supabase-api.js references (old shim, deleted)
-# ─────────────────────────────────────────────────────────────────────────
 def check_no_old_shim_refs():
     print('\n[9] Checking for references to deleted supabase-api.js...')
     found = False
@@ -303,18 +255,14 @@ def check_no_old_shim_refs():
     if not found:
         result.ok('No references to deleted supabase-api.js')
 
-# ─────────────────────────────────────────────────────────────────────────
-# Stage 2 (final): No legacy bridge references anywhere
-# ─────────────────────────────────────────────────────────────────────────
+# Check 10: No legacy bridge references anywhere
 def check_no_legacy_bridge_anywhere():
     print('\n[10] Checking for legacy bridge references...')
     found = False
-    # 1. src/legacy/ directory must not exist
     legacy_dir = ROOT / 'src' / 'legacy'
     if legacy_dir.exists():
         result.error(f'src/legacy/ directory still exists — delete it')
         found = True
-    # 2. No HTML page should reference legacy/firebase-compat.js
     for html in find_files('*.html'):
         if 'node_modules' in html.parts: continue
         if html.name == 'PAGE-TEMPLATE.html': continue
@@ -323,7 +271,6 @@ def check_no_legacy_bridge_anywhere():
             rel = html.relative_to(ROOT)
             result.error(f'{rel}: still loads legacy/firebase-compat.js — delete the <script> tag')
             found = True
-    # 3. No JS file (except comments) should reference window.firebaseAuth/firebaseDb
     for js in (ROOT / 'src').rglob('*.js'):
         content = js.read_text(encoding='utf-8')
         content_no_comments = re.sub(r'//.*$', '', content, flags=re.MULTILINE)
@@ -335,11 +282,8 @@ def check_no_legacy_bridge_anywhere():
     if not found:
         result.ok('No legacy bridge references anywhere')
 
-# ─────────────────────────────────────────────────────────────────────────
-# QNotify v2: Verify QNotify is loaded via qnotify-loader.js (not inline bootstrap)
-# QNotify is INTENTIONALLY kept as AlbEdu's native notification system.
-# This check verifies that pages use the shared loader, not inline bootstraps.
-# ─────────────────────────────────────────────────────────────────────────
+# Check QNotify boot determinism — pages use the shared qnotify-loader.js,
+# not inline bootstraps. QNotify is AlbEdu's native notification system.
 def check_no_qnotify_loads():
     print('\n[10] Checking QNotify boot determinism (qnotify-loader.js)...')
     found_errors = False
@@ -347,12 +291,12 @@ def check_no_qnotify_loads():
         if 'node_modules' in html.parts: continue
         if html.name == 'PAGE-TEMPLATE.html': continue
         content = html.read_text(encoding='utf-8')
-        # Pages that load QNotify CSS should also load qnotify-loader.js
+        # Pages that load QNotify CSS should also load qnotify-loader.js.
         if 'public/QNotify/ui/' in content and 'qnotify-loader.js' not in content:
             rel = html.relative_to(ROOT)
             result.error(f'{rel}: loads QNotify CSS but missing qnotify-loader.js')
             found_errors = True
-        # No inline QNotify bootstrap scripts should remain
+        # No inline QNotify bootstrap scripts should remain.
         if 'import QNotify from' in content:
             rel = html.relative_to(ROOT)
             result.error(f'{rel}: has inline QNotify bootstrap — use qnotify-loader.js instead')
@@ -360,9 +304,7 @@ def check_no_qnotify_loads():
     if not found_errors:
         result.ok('QNotify loaded deterministically via qnotify-loader.js')
 
-# ─────────────────────────────────────────────────────────────────────────
-# Stage 3: No window.sb in new code (platform/, shared/, security/, identity/)
-# ─────────────────────────────────────────────────────────────────────────
+# Check 11: No window.sb in new code (platform/, shared/, security/, identity/)
 def check_no_window_sb_in_new_code():
     print('\n[11] Checking new code for window.sb references...')
     sb_pattern = re.compile(r'\bwindow\.sb\b')
@@ -386,9 +328,7 @@ def check_no_window_sb_in_new_code():
     if not found:
         result.ok('New code does not reference window.sb')
 
-# ─────────────────────────────────────────────────────────────────────────
-# Stage 3: Pages that have notify consumers must load notify.js
-# ─────────────────────────────────────────────────────────────────────────
+# Check 12: Pages that have notify consumers must load notify.js
 def check_notify_js_loaded_on_pages_with_consumers():
     print('\n[12] Checking notify.js loaded on pages with notify consumers...')
     # Pages with consumers: any page that loads auth/main.js OR has an inline
@@ -409,9 +349,7 @@ def check_notify_js_loaded_on_pages_with_consumers():
     if not found:
         result.ok('All pages with notify consumers load notify.js')
 
-# ─────────────────────────────────────────────────────────────────────────
-# Stage 3: Skip link present for accessibility
-# ─────────────────────────────────────────────────────────────────────────
+# Check 13: Skip link present for accessibility
 def check_skip_link_present():
     print('\n[13] Checking for skip-link (accessibility)...')
     found = False
@@ -420,7 +358,6 @@ def check_skip_link_present():
         if html.name == 'PAGE-TEMPLATE.html': continue
         content = html.read_text(encoding='utf-8')
         if 'http-equiv="refresh"' in content: continue  # redirect stub
-        # Look for skip-link class OR skip-to-main class
         if 'skip-link' not in content and 'skip-to-main' not in content and 'albedu-skip-link' not in content:
             rel = html.relative_to(ROOT)
             result.warn(f'{rel}: missing skip-link for keyboard accessibility')
@@ -428,9 +365,7 @@ def check_skip_link_present():
     if not found:
         result.ok('Skip-link present on all pages')
 
-# ─────────────────────────────────────────────────────────────────────────
-# Stage 3: <html lang="id"> present (accessibility)
-# ─────────────────────────────────────────────────────────────────────────
+# Check 14: <html lang="id"> present (accessibility)
 def check_lang_attr_present():
     print('\n[14] Checking for <html lang> attribute (accessibility)...')
     found = False
@@ -439,7 +374,6 @@ def check_lang_attr_present():
         if html.name == 'PAGE-TEMPLATE.html': continue
         content = html.read_text(encoding='utf-8')
         if 'http-equiv="refresh"' in content: continue  # redirect stub
-        # Look for <html lang="...">
         if not re.search(r'<html\s+[^>]*lang="[^"]+"', content, re.IGNORECASE):
             rel = html.relative_to(ROOT)
             result.warn(f'{rel}: missing <html lang> attribute')
@@ -447,12 +381,9 @@ def check_lang_attr_present():
     if not found:
         result.ok('All pages have <html lang> attribute')
 
-# ─────────────────────────────────────────────────────────────────────────
 # Run all checks
-# ─────────────────────────────────────────────────────────────────────────
-print('═══════════════════════════════════════════════════════════════')
-print(' AlbEdu — Automated Verification Suite (Stage 3)')
-print('═══════════════════════════════════════════════════════════════')
+print('AlbEdu automated verification suite')
+print('-' * 60)
 
 check_duplicate_fonts()
 check_material_symbols_html()
@@ -470,11 +401,11 @@ check_notify_js_loaded_on_pages_with_consumers()
 check_skip_link_present()
 check_lang_attr_present()
 
-print('\n═══════════════════════════════════════════════════════════════')
+print('\n' + '-' * 60)
 print(f' PASSED: {result.passed} checks')
 print(f' WARNINGS: {len(result.warnings)}')
 print(f' ERRORS: {len(result.errors)}')
-print('═══════════════════════════════════════════════════════════════')
+print('-' * 60)
 if result.warnings:
     print('\nWarnings:')
     for w in result.warnings:
