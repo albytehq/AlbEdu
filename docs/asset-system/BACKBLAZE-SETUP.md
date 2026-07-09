@@ -1,6 +1,6 @@
 # BackBlaze B2 Setup Guide for AlbEdu
 
-**Version:** v0.818.1+
+**Version:** v0.818.2+
 **Audience:** DevOps / Backend engineers
 **Prerequisites:** BackBlaze account (free, no credit card required), Supabase project, Cloudflare account, GitHub Pages deployment
 
@@ -162,11 +162,14 @@ This is the **most important step** — it makes all downloads from B2 completel
 2. Look for **"Endpoint"** field — it looks like: `s3.us-west-002.backblazeb2.com`
 3. Note this URL (you'll need it for Cloudflare setup)
 
-### 5.2: Add B2 Bucket to Cloudflare
+### 5.2: Add B2 Bucket to Cloudflare (Bandwidth Alliance)
+
+The Bandwidth Alliance is Cloudflare's partnership program with BackBlaze that makes egress from B2 completely free when routed through Cloudflare.
 
 1. Log in to **Cloudflare Dashboard** → **https://dash.cloudflare.com**
 2. Select your domain (e.g., `albedu.id` or the domain hosting the Worker)
-3. Go to **Storage** → **R2** → **Bandwidth Alliance** (or Settings → Bandwidth Alliance)
+3. In the left sidebar, scroll down and click on **"Bandwidth Alliance"** (usually under the **Network** or **Speed** section, depending on dashboard layout)
+   - If you don't see it in the sidebar: go to **Account Home** (top-left) → **Bandwidth Alliance** tab at the top
 4. Click **"Connect BackBlaze B2"**
 5. Enter:
    - **B2 Bucket Name:** `albedu-assets-systems`
@@ -175,6 +178,8 @@ This is the **most important step** — it makes all downloads from B2 completel
 6. Click **"Connect"**
 
 > ✅ **Verify:** Status should show "Connected" with green checkmark. Egress from B2 via Cloudflare is now $0.
+>
+> ⚠️ **Note:** Bandwidth Alliance is NOT under R2 (Cloudflare R2 is a separate paid service that requires a credit card). Bandwidth Alliance is a free partnership program — no credit card needed.
 
 ### 5.3: Alternative — Manual CNAME Setup
 

@@ -1,6 +1,6 @@
 # AlbEdu — Documentation Index
 
-> Index halaman dokumentasi AlbEdu v0.818.1
+> Index halaman dokumentasi AlbEdu v0.818.2
 
 ---
 
@@ -46,7 +46,7 @@
 
 ---
 
-## Project Stats (v0.818.1)
+## Project Stats (v0.818.2)
 
 | Metric | Value |
 |---|---|
@@ -88,7 +88,7 @@ AlbEdu/
 ├── docs/                   # 12 documentation files
 ├── index.html              # Landing page (root)
 ├── rule-url-albedu.md      # URL routing rules
-└── package.json            # v0.818.1
+└── package.json            # v0.818.2
 ```
 
 ---

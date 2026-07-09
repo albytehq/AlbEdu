@@ -3,19 +3,19 @@
 > File ini buat AI assistant (Claude, GPT, Copilot, dst.) cepat onboard ke project AlbEdu.
 > **READ THIS FIRST** sebelum edit code apapun.
 
-**Last verified:** 2026-07-08 (v0.818.1)
+**Last verified:** 2026-07-08 (v0.818.2)
 
 ---
 
-## v0.818.1 Changes
+## v0.818.2 Changes
 
 Before editing any file, read [`docs/STRICT-COMMENTING-FOR-AI.md`](./STRICT-COMMENTING-FOR-AI.md) — it codifies the human-style commenting rules. AI assistants have repeatedly introduced ASCII-art headers, version archaeology, and marketing-speak into this codebase; that doc kills those patterns going forward. If you generate a diff that violates any of the 5 rules in that doc, the diff will be rejected in review.
 
-Key new patterns to know about when working in v0.818.1+ code:
+Key new patterns to know about when working in v0.818.2+ code:
 
 ### Migration `20260708_021_v0815_7_stability_hardening.sql`
 
-Apply this migration before deploying the v0.818.1 Edge Functions. It contains:
+Apply this migration before deploying the v0.818.2 Edge Functions. It contains:
 
 - RLS tightening on `rate_limit_heartbeats`, `rate_limit_submits`, and `violation_events` (now check session ownership via `assessment_sessions.user_id = auth.uid()` join).
 - `peran_user()` SECURITY DEFINER function now filters `WHERE deleted_at IS NULL` — soft-deleted users can no longer authenticate via stale JWTs.
@@ -293,7 +293,7 @@ window.Auth = Auth;  // classic scripts can access
 - `user_devices` — { id, user_id, device_fingerprint, verified_at, ... } (manual)
 - `registration_attempts` — { id, email, ip_address, ... }
 - `rate_limit_heartbeats`, `rate_limit_submits` — rate limiting (manual)
-- `admin_storages`, `assets_manifest` — admin storage. **Note (v0.818.1):** `assets_manifest` now has a proper migration (`20260710_022_create_assets_manifest.sql`) with RLS, indexes, and CHECK constraints. See [`docs/asset-system/ARCHITECTURE-V2.md`](./asset-system/ARCHITECTURE-V2.md) for the new asset system architecture and [`docs/asset-system/ROADMAP.md`](./asset-system/ROADMAP.md) for the migration roadmap.
+- `admin_storages`, `assets_manifest` — admin storage. **Note (v0.818.2):** `assets_manifest` now has a proper migration (`20260710_022_create_assets_manifest.sql`) with RLS, indexes, and CHECK constraints. See [`docs/asset-system/ARCHITECTURE-V2.md`](./asset-system/ARCHITECTURE-V2.md) for the new asset system architecture and [`docs/asset-system/ROADMAP.md`](./asset-system/ROADMAP.md) for the migration roadmap.
 
 ### RLS Policies
 

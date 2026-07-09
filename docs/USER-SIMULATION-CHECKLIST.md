@@ -44,9 +44,9 @@ Test setiap skenario secara manual di browser. Centang jika pass.
 
 ---
 
-## v0.818.1 Hardening Verified
+## v0.818.2 Hardening Verified
 
-The following edge cases were uncovered by the v0.818.1 stability audit and are now handled. Each one was a real bug that would have manifested in production under specific user conditions — they are NOT hypothetical. Re-verify each after any refactor that touches the listed file.
+The following edge cases were uncovered by the v0.818.2 stability audit and are now handled. Each one was a real bug that would have manifested in production under specific user conditions — they are NOT hypothetical. Re-verify each after any refactor that touches the listed file.
 
 ### Submit / publish races
 
@@ -72,8 +72,8 @@ The following edge cases were uncovered by the v0.818.1 stability audit and are 
 
 ### Image / asset upload
 
-- **Image upload timeout → 10s per call.** `src/utils/image-compress.js` wraps each `fetch()` to the Cloudflare Worker in a 10s `AbortController`. Previously, a hung R2 response on the Worker side would block the image upload UI forever — the user would stare at a spinner with no recovery path.
-- **Image cleanup timeouts → 10s per call.** `src/utils/image-cleanup.js` (the orphaned-asset GC) now wraps each cleanup call in a 10s `AbortController` so a hung R2 response doesn't block the cleanup queue. Without this, one bad cleanup call would block the entire GC loop indefinitely.
+- **Image upload timeout → 10s per call.** `src/utils/image-compress.js` wraps each `fetch()` to the Cloudflare Worker in a 10s `AbortController`. Previously, a hung GitHub response on the Worker side would block the image upload UI forever — the user would stare at a spinner with no recovery path.
+- **Image cleanup timeouts → 10s per call.** `src/utils/image-cleanup.js` (the orphaned-asset GC) now wraps each cleanup call in a 10s `AbortController` so a hung GitHub response doesn't block the cleanup queue. Without this, one bad cleanup call would block the entire GC loop indefinitely.
 
 ### Realtime
 

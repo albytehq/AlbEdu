@@ -1,6 +1,6 @@
 # AlbEdu Asset System Architecture v2
 
-**Version:** v0.818.1+ (Phase 0+ of ROADMAP.md)
+**Version:** v0.818.2+ (Phase 0+ of ROADMAP.md)
 **Status:** Active development
 **Audience:** Engineers, architects, DevOps
 **Companion docs:** [ROADMAP.md](./ROADMAP.md) | [DISASTER-RECOVERY.md](./DISASTER-RECOVERY.md) (Phase 6)
@@ -728,7 +728,7 @@ ImageCompress.preload();
 
 ## 7. Migration Strategy (Legacy → New)
 
-### 7.1 Legacy state (v0.818.1)
+### 7.1 Legacy state (v0.818.2)
 
 - Avatar uploads: broken (Worker requires AUTH_TOKEN client doesn't send)
 - Soal images: not built (`media.gambar = []`)
@@ -822,14 +822,16 @@ Retention: 365 days (existing pg_cron job).
 | Trigger | Action |
 |---|---|
 | Storage >50 GB sustained 30 days | Add Filebase IPFS cold archive |
-| Storage >500 GB | Migrate to Cloudflare R2 (single-vendor) |
+| Storage >500 GB | Add B2 paid tier (still ~$3/month) — no migration needed |
 | EU customers with data sovereignty | Enable B2 EU region replication |
 | 1000+ schools | Multi-tenant bucket isolation |
 | Image AI tagging request | Add `asset_tags` table + ML pipeline |
 
 ### 10.2 Technology watch
 
-- **Cloudflare R2 free tier**: if CC requirement stabilizes, evaluate migration from B2
+- **BackBlaze B2 paid tier**: at >10 GB storage, B2 paid is $0.006/GB/month — still absurdly cheap. No vendor migration needed.
+- **Storj**: decentralized alternative, $4/TB/month, no CC required. Evaluate only if B2 discontinues service.
+- **Cloudflare R2**: ❌ EXCLUDED — requires credit card for free tier activation. Not a viable option for AlbEdu.
 - **Supabase Storage v2**: if multi-region becomes available, evaluate for avatars
 - **Web3/IPFS**: only if AlbEdu expands into credentialing (NFT certificates)
 
