@@ -1,6 +1,6 @@
 # BackBlaze B2 Setup Guide for AlbEdu
 
-**Version:** v0.818.2+
+**Version:** v0.818.3+
 **Audience:** DevOps / Backend engineers
 **Prerequisites:** BackBlaze account (free, no credit card required), Supabase project, Cloudflare account, GitHub Pages deployment
 
@@ -152,47 +152,56 @@ supabase secrets set \
 
 ---
 
-## Step 5: Enable Cloudflare Bandwidth Alliance (Free Egress)
+## Step 5: Verify Free Egress (Automatic — No Setup Needed)
 
-This is the **most important step** — it makes all downloads from B2 completely free (normally $0.01/GB).
+> 🎉 **GOOD NEWS (verified July 2026):** Cloudflare Bandwidth Alliance is **automatic** for BackBlaze B2. There is no wizard or "Connect" button to click. Egress from B2 → Cloudflare is automatically free as long as both accounts exist.
+>
+> Source: Backblaze official docs (https://www.backblaze.com/docs/cloud-storage-cloudflare-integrations) and Cloudflare Bandwidth Alliance page (https://www.cloudflare.com/bandwidth-alliance).
 
-### 5.1: Get Your B2 S3 Endpoint URL
+### How it works (no action required from you)
+
+1. **AlbEdu uses a PRIVATE bucket** (`albedu-assets-systems`) — images are NOT publicly accessible.
+2. **Cloudflare Worker (Phase 4)** fetches images from B2 using S3 signed URLs.
+3. **Worker runs on Cloudflare's edge network** — its source IP is recognized as Cloudflare by BackBlaze.
+4. **B2 detects Cloudflare source IP → egress = $0** (Bandwidth Alliance auto-applied).
+
+You don't need to:
+- ❌ Find a "Bandwidth Alliance" menu in Cloudflare (it doesn't exist as a clickable wizard)
+- ❌ Set up a CNAME record (that's for PUBLIC buckets, not AlbEdu's private bucket)
+- ❌ Connect B2 to Cloudflare via any dashboard wizard
+
+### 5.1: Verify Your B2 S3 Endpoint URL (for Phase 4 Worker)
 
 1. In B2 dashboard → **Buckets** → click `albedu-assets-systems`
 2. Look for **"Endpoint"** field — it looks like: `s3.us-west-002.backblazeb2.com`
-3. Note this URL (you'll need it for Cloudflare setup)
+3. Note this URL — you'll add it as `B2_ENDPOINT` to Cloudflare Worker secrets in Phase 4
 
-### 5.2: Add B2 Bucket to Cloudflare (Bandwidth Alliance)
+### 5.2: (Optional) Verify Free Egress Works
 
-The Bandwidth Alliance is Cloudflare's partnership program with BackBlaze that makes egress from B2 completely free when routed through Cloudflare.
+After Phase 4 (when Worker `/img/{hash}` is deployed), you can verify egress is free:
 
-1. Log in to **Cloudflare Dashboard** → **https://dash.cloudflare.com**
-2. Select your domain (e.g., `albedu.id` or the domain hosting the Worker)
-3. In the left sidebar, scroll down and click on **"Bandwidth Alliance"** (usually under the **Network** or **Speed** section, depending on dashboard layout)
-   - If you don't see it in the sidebar: go to **Account Home** (top-left) → **Bandwidth Alliance** tab at the top
-4. Click **"Connect BackBlaze B2"**
-5. Enter:
-   - **B2 Bucket Name:** `albedu-assets-systems`
-   - **B2 Application Key ID:** your `B2_KEY_ID`
-   - **B2 Application Key:** your `B2_APPLICATION_KEY`
-6. Click **"Connect"**
+1. Upload a test image via Edge Function (Phase 2)
+2. Wait 24 hours
+3. Check B2 dashboard → **Account → Usage & Payments**
+4. **"Bandwidth Out"** should show usage but **"Cost"** = $0.00
 
-> ✅ **Verify:** Status should show "Connected" with green checkmark. Egress from B2 via Cloudflare is now $0.
->
-> ⚠️ **Note:** Bandwidth Alliance is NOT under R2 (Cloudflare R2 is a separate paid service that requires a credit card). Bandwidth Alliance is a free partnership program — no credit card needed.
+If you see charges here, contact BackBlaze support — the Bandwidth Alliance should apply automatically.
 
-### 5.3: Alternative — Manual CNAME Setup
+### 5.3: When You WOULD Need a CNAME (Not AlbEdu's Case)
 
-If the Bandwidth Alliance wizard isn't available, set up a CNAME manually:
+A CNAME setup is only needed if you want to **directly serve B2 content via Cloudflare CDN WITHOUT a Worker** — but that requires a **PUBLIC** bucket (anyone with the URL can view images). AlbEdu uses a private bucket + Worker proxy for security, so CNAME is NOT applicable.
 
-1. In Cloudflare DNS, add a CNAME record:
+For reference, the CNAME approach (NOT for AlbEdu):
+1. Set bucket to **Public** in B2 dashboard
+2. In Cloudflare DNS, add a CNAME record:
    - **Type:** `CNAME`
    - **Name:** `b2-assets` (creates `b2-assets.albedu.id`)
    - **Target:** `s3.us-west-002.backblazeb2.com`
    - **Proxy status:** Proxied (orange cloud)
-2. In B2 dashboard → Bucket Settings → **"CDN URL"**, set it to `https://b2-assets.albedu.id`
+3. Add a Cloudflare Transform Rule to rewrite the URL path to include the bucket name
+4. Images accessible at `https://b2-assets.albedu.id/{path}`
 
-This achieves the same free egress via Cloudflare's edge cache.
+**AlbEdu does NOT do this.** AlbEdu keeps the bucket private and uses the Worker cache proxy (Phase 4) for both security and free egress.
 
 ---
 

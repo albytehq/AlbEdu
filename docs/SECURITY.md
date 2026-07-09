@@ -1,6 +1,6 @@
 # SECURITY — Anti-Cheat Architecture
 
-> AlbEdu v0.818.2 enterprise-grade anti-cheat: server-side scoring, heartbeat, DevTools detection, instant block.
+> AlbEdu v0.818.3 enterprise-grade anti-cheat: server-side scoring, heartbeat, DevTools detection, instant block.
 > Note: Guardian.js (`src/exam/guardian.js`) still exists — it's the client-side anti-cheat layer that complements server-side scoring.
 
 ---
@@ -18,7 +18,7 @@
 
 ### 1.2 Attack Vectors
 
-| # | Attack | v0.2.0 Vulnerability | v0.818.2 Mitigation |
+| # | Attack | v0.2.0 Vulnerability | v0.818.3 Mitigation |
 |---|---|---|---|
 | 1 | DevTools override `getHasil()` return 100 | Client-side scoring | Server-side scoring (Q5) — Edge Function re-scores independently |
 | 2 | Clear localStorage to re-take assessment | Submit lock in localStorage | Server-side check in `assessment_sessions` table + `submissions` table |
@@ -90,7 +90,7 @@
 - Visibility change tracking (800ms debounce → violation if hidden >800ms)
 - Max 4 violations → reset assessment + reshuffle
 
-**Added in v0.818.2:**
+**Added in v0.818.3:**
 - DevTools detector integration (see 3.2)
 - Block listener integration (see 3.4)
 - Heartbeat integration (see 3.3)
@@ -278,7 +278,7 @@ Service role key **never** exposed to client. Only in Edge Function environment.
 **Endpoints with Turnstile:**
 - `register-admin` — admin registration
 - `user-auth-preflight` — peserta login preflight
-- `access-code-attempt` — token entry (added v0.818.2)
+- `access-code-attempt` — token entry (added v0.818.3)
 
 **Verification:**
 ```typescript
@@ -354,23 +354,23 @@ if (!success) {
 - [x] IP anonymization after 90 days (Phase 1)
 - [x] Soft delete for users (Phase 1)
 - [x] Data export for DSR (Phase 2)
-- [x] verify_jwt=true for all authenticated Edge Functions (v0.818.2)
-- [x] RLS session-ownership check on rate_limit_heartbeats / rate_limit_submits / violation_events (v0.818.2)
-- [x] peran_user() filters deleted_at (v0.818.2)
-- [x] Cloudflare Worker /upload + /release locked to ALLOWED_ORIGINS + AUTH_TOKEN required (v0.818.2)
-- [x] Worker soft-archive replaces hard-delete (v0.818.2)
-- [x] Atomic submit_assessment() RPC (v0.818.2)
-- [x] Consent previousVersion XSS escaped (v0.818.2)
-- [x] PII leak fixed — auth/main.js no longer logs user.email (v0.818.2)
+- [x] verify_jwt=true for all authenticated Edge Functions (v0.818.3)
+- [x] RLS session-ownership check on rate_limit_heartbeats / rate_limit_submits / violation_events (v0.818.3)
+- [x] peran_user() filters deleted_at (v0.818.3)
+- [x] Cloudflare Worker /upload + /release locked to ALLOWED_ORIGINS + AUTH_TOKEN required (v0.818.3)
+- [x] Worker soft-archive replaces hard-delete (v0.818.3)
+- [x] Atomic submit_assessment() RPC (v0.818.3)
+- [x] Consent previousVersion XSS escaped (v0.818.3)
+- [x] PII leak fixed — auth/main.js no longer logs user.email (v0.818.3)
 - [ ] Camera proctoring (Phase 9)
 - [ ] Hardware attestation (Phase 9)
 - [ ] Screen recording detection (Phase 9)
 
 ---
 
-## v0.818.2 Security Hardening
+## v0.818.3 Security Hardening
 
-The v0.818.2 cycle closed a number of defense-in-depth gaps that were latent in v0.746.0. None were known to be exploited in production, but each represents a class of attack that the audit deemed unacceptable for an exam platform. This section documents the gaps and the specific fixes applied — read it before touching any RLS policy or Edge Function config.
+The v0.818.3 cycle closed a number of defense-in-depth gaps that were latent in v0.746.0. None were known to be exploited in production, but each represents a class of attack that the audit deemed unacceptable for an exam platform. This section documents the gaps and the specific fixes applied — read it before touching any RLS policy or Edge Function config.
 
 ### RLS tightening — session ownership checks
 
@@ -406,7 +406,7 @@ The Cloudflare Worker (`cloudflare-worker/worker-v6.js`) `/upload` and `/release
 - `Origin` header is checked against `ALLOWED_ORIGINS` (configured via env var, currently `albytehq.github.io`, `albedu-id.github.io`, `http://localhost:8765` for dev). Mismatched Origin → 403.
 - `AUTH_TOKEN` header is required. Missing or mismatched → 401. The token is a 32-char random string stored in Cloudflare Worker env vars (set via `wrangler secret put AUTH_TOKEN`).
 
-### Worker soft-archive replaces hard-delete — ⚠️ CORRECTION (v0.818.2)
+### Worker soft-archive replaces hard-delete — ⚠️ CORRECTION (v0.818.3)
 
 **Historical claim (now corrected):** The `/release` endpoint was documented as setting `deleted_at = NOW()` on `assets_manifest` rows and deferring permanent deletion to a 365-day pg_cron retention job.
 

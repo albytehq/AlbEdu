@@ -1,13 +1,13 @@
 # SCALING — Supabase Free Plan Limits & Upgrade Path
 
-> AlbEdu v0.818.2 is designed to run on Supabase Free Plan for up to 200 concurrent peserta.
+> AlbEdu v0.818.3 is designed to run on Supabase Free Plan for up to 200 concurrent peserta.
 > Code is scalable to 2000+ concurrent with Pro Plan upgrade (no rewrite needed).
 
 ---
 
 ## 1. Supabase Free Plan Limits
 
-| Resource | Free Plan Limit | AlbEdu v0.818.2 Usage (200 concurrent) | Status |
+| Resource | Free Plan Limit | AlbEdu v0.818.3 Usage (200 concurrent) | Status |
 |---|---|---|---|
 | Database storage | 500 MB | ~50 MB (normalized schema, 1000 assessments) | ✅ OK |
 | Database connections | 60 direct + 200 pool | 200 concurrent peserta via pool | ⚠️ Tight |
@@ -128,7 +128,7 @@ ALBEDU_BATCH_ANSWERS=true
 
 ### 4.2 Code Scalability
 
-AlbEdu v0.818.2 code is **designed to scale to 10,000+ concurrent peserta** (aspirational — no load testing has been done yet):
+AlbEdu v0.818.3 code is **designed to scale to 10,000+ concurrent peserta** (aspirational — no load testing has been done yet):
 - Schema normalized (no embedded JSONB bloat)
 - Edge Functions stateless + cached
 - Realtime channels scoped per assessment (not global)
@@ -216,9 +216,9 @@ Deferred to Phase 9:
 
 ---
 
-## v0.818.2 Free Plan Capacity
+## v0.818.3 Free Plan Capacity
 
-The v0.746.0 estimates at the top of this doc assumed 200 concurrent peserta was achievable on Free Plan. The v0.818.2 audit disproved this — when the auditors actually walked through the realtime connection math (200 concurrent connections, 2 per peserta for the channel + polling fallback, minus admin overhead), the realistic ceiling came out at ~100. The numbers below are the corrected estimates after the v0.818.2 hardening. The original v0.746.0 table at the top of this doc is preserved for historical reference but should NOT be used for capacity planning.
+The v0.746.0 estimates at the top of this doc assumed 200 concurrent peserta was achievable on Free Plan. The v0.818.3 audit disproved this — when the auditors actually walked through the realtime connection math (200 concurrent connections, 2 per peserta for the channel + polling fallback, minus admin overhead), the realistic ceiling came out at ~100. The numbers below are the corrected estimates after the v0.818.3 hardening. The original v0.746.0 table at the top of this doc is preserved for historical reference but should NOT be used for capacity planning.
 
 ### Realistic Free Plan ceilings (post-hardening)
 
@@ -232,7 +232,7 @@ The v0.746.0 estimates at the top of this doc assumed 200 concurrent peserta was
 
 ### With the 60s heartbeat DB cache
 
-The heartbeat DB cache (introduced in v0.818.2) drops the DB hit rate from 4/min/peserta to 1/min/peserta. This doesn't change the Edge Function invocation count (the function still runs every 15s — it just doesn't hit the DB on cache hits), but it does:
+The heartbeat DB cache (introduced in v0.818.3) drops the DB hit rate from 4/min/peserta to 1/min/peserta. This doesn't change the Edge Function invocation count (the function still runs every 15s — it just doesn't hit the DB on cache hits), but it does:
 
 - Cut DB CPU usage ~4x — eliminates the "DB connections exhausted" failure mode that was the most common production issue in v0.746.0.
 - Cut cold-start latency on the heartbeat function (cache hit returns in ~5ms vs. ~50ms for a DB fetch).
