@@ -968,13 +968,13 @@ body::before {
     pointer-events: none;
 }
 
-/* SHOW text (not hide) — display status text.
-   v0.816.1: Keep the Google icon at full opacity (was 0.3) so the brand
-   mark stays clearly visible during the "Memverifikasi perangkat" /
-   "Menghubungkan ke Google" states. The .btn-spinner already provides
-   a clear loading indicator next to the text. */
+/* HIDE the Google icon during authenticating — only the spinner + status
+   text should be visible (e.g. "Memverifikasi perangkat..."). The user
+   reported the icon was still showing during the verifying state.
+   v0.816.2: opacity:1 → opacity:0 (previously 0.3, then I wrongly set it
+   to 1, now correctly 0 to fully hide the brand mark while loading). */
 .google-login-btn.authenticating svg {
-    opacity: 1;
+    opacity: 0;
     transition: .25s ease;
 }
 
