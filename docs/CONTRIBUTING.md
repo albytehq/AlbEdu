@@ -1,6 +1,6 @@
 # Contributing to AlbEdu
 
-**Version:** 0.816.0
+**Version:** v0.818.0
 **Last updated:** 2026-07-08
 
 ---

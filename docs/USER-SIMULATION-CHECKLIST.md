@@ -44,9 +44,9 @@ Test setiap skenario secara manual di browser. Centang jika pass.
 
 ---
 
-## v0.816.0 Hardening Verified
+## v0.818.0 Hardening Verified
 
-The following edge cases were uncovered by the v0.816.0 stability audit and are now handled. Each one was a real bug that would have manifested in production under specific user conditions — they are NOT hypothetical. Re-verify each after any refactor that touches the listed file.
+The following edge cases were uncovered by the v0.818.0 stability audit and are now handled. Each one was a real bug that would have manifested in production under specific user conditions — they are NOT hypothetical. Re-verify each after any refactor that touches the listed file.
 
 ### Submit / publish races
 

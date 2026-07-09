@@ -3,19 +3,19 @@
 > File ini buat AI assistant (Claude, GPT, Copilot, dst.) cepat onboard ke project AlbEdu.
 > **READ THIS FIRST** sebelum edit code apapun.
 
-**Last verified:** 2026-07-08 (v0.816.0)
+**Last verified:** 2026-07-08 (v0.818.0)
 
 ---
 
-## v0.816.0 Changes
+## v0.818.0 Changes
 
 Before editing any file, read [`docs/STRICT-COMMENTING-FOR-AI.md`](./STRICT-COMMENTING-FOR-AI.md) — it codifies the human-style commenting rules. AI assistants have repeatedly introduced ASCII-art headers, version archaeology, and marketing-speak into this codebase; that doc kills those patterns going forward. If you generate a diff that violates any of the 5 rules in that doc, the diff will be rejected in review.
 
-Key new patterns to know about when working in v0.816.0+ code:
+Key new patterns to know about when working in v0.818.0+ code:
 
 ### Migration `20260708_021_v0815_7_stability_hardening.sql`
 
-Apply this migration before deploying the v0.816.0 Edge Functions. It contains:
+Apply this migration before deploying the v0.818.0 Edge Functions. It contains:
 
 - RLS tightening on `rate_limit_heartbeats`, `rate_limit_submits`, and `violation_events` (now check session ownership via `assessment_sessions.user_id = auth.uid()` join).
 - `peran_user()` SECURITY DEFINER function now filters `WHERE deleted_at IS NULL` — soft-deleted users can no longer authenticate via stale JWTs.
@@ -225,8 +225,8 @@ window.Auth = Auth;  // classic scripts can access
 | Error manager | `src/utils/error-manager.js` |
 | Math rendering (KaTeX) | `src/utils/math-renderer.js` |
 | Math paste converter | `src/utils/math-paste-converter.js` |
-| Image compression | `src/utils/image-compress.js` |
-| Image cleanup | `src/utils/image-cleanup.js` |
+| Image compression (Magic Compress™) | `src/utils/image-compress.js` |
+| Image cleanup (release helper) | `src/utils/image-cleanup.js` |
 | Self-storage (IndexedDB) | `src/utils/self-storage.js` |
 | Admin notification center | `src/utils/admin-notification-center.js` |
 | Supabase client (native) | `src/platform/supabase-client.js` |
@@ -293,7 +293,7 @@ window.Auth = Auth;  // classic scripts can access
 - `user_devices` — { id, user_id, device_fingerprint, verified_at, ... } (manual)
 - `registration_attempts` — { id, email, ip_address, ... }
 - `rate_limit_heartbeats`, `rate_limit_submits` — rate limiting (manual)
-- `admin_storages`, `assets_manifest` — admin storage (manual)
+- `admin_storages`, `assets_manifest` — admin storage. **Note (v0.818.0):** `assets_manifest` now has a proper migration (`20260710_022_create_assets_manifest.sql`) with RLS, indexes, and CHECK constraints. See [`docs/asset-system/ARCHITECTURE-V2.md`](./asset-system/ARCHITECTURE-V2.md) for the new asset system architecture and [`docs/asset-system/ROADMAP.md`](./asset-system/ROADMAP.md) for the migration roadmap.
 
 ### RLS Policies
 

@@ -3,7 +3,7 @@
 > Platform asesmen production-grade untuk semua kebutuhan evaluasi — SD, SMP, SMA, kuliah, hingga personal use.
 > Vanilla JS + Supabase + Cloudflare — zero framework, zero build runtime.
 
-[![Version](https://img.shields.io/badge/version-0.816.0-blue)]()
+[![Version](https://img.shields.io/badge/version-v0.818.0-blue)]()
 [![Structure](https://img.shields.io/badge/structure-by--feature-green)]()
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)]()
 
@@ -52,7 +52,7 @@ npm run verify
 
 ---
 
-## 📁 Project Structure (v0.816.0 — By-Feature)
+## 📁 Project Structure (v0.818.0 — By-Feature)
 
 ```
 AlbEdu/
@@ -210,6 +210,46 @@ AlbEdu/
 | [docs/ICON-SYSTEM-ENTERPRISE.md](./docs/ICON-SYSTEM-ENTERPRISE.md) | Icon system v7.0 |
 | [docs/THEME-SYSTEM.md](./docs/THEME-SYSTEM.md) | Theme system |
 | [docs/PAGE-TEMPLATE.html](./docs/PAGE-TEMPLATE.html) | Canonical page template |
+| [docs/asset-system/ROADMAP.md](./docs/asset-system/ROADMAP.md) | 🆕 Asset system migration roadmap (v0.818.0+) |
+| [docs/asset-system/ARCHITECTURE-V2.md](./docs/asset-system/ARCHITECTURE-V2.md) | 🆕 New asset system architecture (Supabase + B2 + Magic Compress™ v2) |
+| [docs/asset-system/BACKBLAZE-SETUP.md](./docs/asset-system/BACKBLAZE-SETUP.md) | 🆕 Step-by-step BackBlaze B2 + Cloudflare Bandwidth Alliance setup |
+
+---
+
+## 🖼️ Asset System (v0.818.0+)
+
+AlbEdu's asset system (avatar + assessment images) is being migrated from GitHub repos to **Supabase Storage + Backblaze B2** with **Magic Compress™** technology.
+
+### Current State (v0.818.0 — Phase 0 complete)
+- ✅ `assets_manifest` migration created with RLS, indexes, CHECK constraints
+- ✅ Magic Compress™ v2 implemented (`src/utils/image-compress.js` + `image-compress-worker.js`) — perceptual compression with complexity analysis, MozJPEG WASM, SSIM quality check
+- ✅ BackBlaze B2 setup guide created (`docs/asset-system/BACKBLAZE-SETUP.md`)
+- ✅ Documentation corrected (removed false `deleted_at` / R2 / 365-day retention claims)
+- ⏳ Avatar migration to Supabase Storage (Phase 1 — next)
+- ⏳ Assessment image upload UI + B2 (Phase 2)
+- ⏳ GC migration to Supabase Edge Function (Phase 3)
+- ⏳ Cloudflare Worker repurpose as edge cache (Phase 4)
+- ⏳ GitHub repos decommission (Phase 5)
+- ⏳ Monitoring & alerting (Phase 6)
+
+### Magic Compress™ v2 (Perceptual Compression)
+Not "quality = 80" but "human eye barely sees the difference." Every uploaded image goes through a 9-stage adaptive pipeline:
+
+1. **Decode** → ImageBitmap
+2. **Smart Resize** → fit to max 1920×1080, no upscale
+3. **Complexity Analysis** → Shannon Entropy + Sobel Edge Density + Laplacian Noise + Color Variance → Score (0-100) → Tier (low/med/high)
+4. **Smart Denoise** → conditional Gaussian (only if noisy)
+5. **Adaptive Sharpen** → unsharp mask (intensity by complexity)
+6. **MozJPEG Encode** → WASM with progressive + optimized Huffman + trellis + 4:2:0 (fallback: Canvas)
+7. **Binary Search Quality** → target 80-300 KB (converges in 6 steps)
+8. **Resolution Fallback** → 1920→1700→1500→1280 if quality floor (q35) hit
+9. **SSIM Check** → structural similarity (>0.95 excellent, 0.85-0.95 good, <0.75 poor)
+
+**Result:** 10 MB input → 80-300 KB JPEG in 2-4 seconds. 15-25% smaller than v1 at same visual quality. B2 10 GB free tier lasts **90+ years** at current scale.
+
+**Web Worker:** non-blocking compression via `src/utils/image-compress-worker.js` — UI stays responsive during 4-second compression.
+
+See [`docs/asset-system/ARCHITECTURE-V2.md`](./docs/asset-system/ARCHITECTURE-V2.md) §3.8 for full pipeline details and [`docs/asset-system/BACKBLAZE-SETUP.md`](./docs/asset-system/BACKBLAZE-SETUP.md) for B2 setup instructions.
 
 ---
 

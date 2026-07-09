@@ -1,6 +1,6 @@
 {
   "name": "albedu",
-  "version": "0.816.0",
+  "version": "v0.818.0",
   "description": "AlbEdu — Production-grade assessment platform for schools, campuses, and personal use. AI-maintainable by-feature structure.",
   "private": true,
   "type": "module",
