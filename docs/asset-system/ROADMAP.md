@@ -1,6 +1,6 @@
-# AlbEdu Asset System Roadmap v0.818.3
+# AlbEdu Asset System Roadmap v0.819.0
 
-**Status:** Active — Phase 0 in progress
+**Status:** Active — Phase 1 in progress (Phase 0 complete)
 **Last Updated:** 2026-07-10
 **Owner:** AlbEdu Websoftware Architecture
 **Scope:** Migrate asset storage from GitHub repos + Cloudflare Worker → Supabase Storage + Backblaze B2 + repurposed Cloudflare Worker (edge cache)
@@ -80,69 +80,9 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
 
 ## Phased Migration Plan
 
-### Phase 0 — Stabilization (Week 1) — v0.818.3 → v0.818.3
+> ✅ **Phase 0 COMPLETE** — Stabilization done (migration created, race condition fixed, docs corrected, Magic Compress™ v2 implemented). BackBlaze B2 setup complete. Production assets_manifest table now has RLS + indexes + CHECK constraints.
 
-**Goal:** Fix critical bugs and lay foundation without architecture change. No client-facing behavior change.
-
-**Effort:** 3-5 dev-days
-**Risk:** Low (mostly additive — new migration, new RLS, doc fixes)
-**Rollback:** Drop new migration, no client changes to revert
-
-#### Tasks
-
-1. **Create migration `20260710_022_create_assets_manifest.sql`**
-   - Reverse-engineered schema from current production table (manual Studio SQL creation has no migration)
-   - Add `CHECK (ref_count >= 0)` constraint
-   - Add `idx_gc_eligible` partial index on `(pending_delete, last_seen) WHERE pending_delete = true`
-   - Enable RLS: `CREATE POLICY "service_role only" ON assets_manifest USING (auth.role() = 'service_role')`
-   - Idempotent — `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... IF NOT EXISTS`
-
-2. **Fix Cloudflare Worker race condition (worker-v6.js:325-329)**
-   - Cache-hit path currently returns existing `cdn_url` without patching manifest
-   - Add PATCH call: `ref_count = ref_count + 1, pending_delete = false, last_seen = now()`
-   - Eliminates Race 1 from ASSETS-B audit
-
-3. **Fix Cloudflare Worker ref_count negative (worker-v6.js:442)**
-   - Change `const newRef = rows[0].ref_count - 1` to `const newRef = Math.max(0, rows[0].ref_count - 1)`
-   - Prevents GC from deleting still-referenced assets
-
-4. **Fix doc inconsistency: `assets-0…19` vs `assets-1…20`**
-   - Worker code uses `assets-1` to `assets-20` (worker-v6.js:162-165)
-   - GC bot README says `assets-0` to `assets-19`
-   - Reconcile to `assets-1` to `assets-20` (matching production code)
-   - Update `albedu-gc-bot-main/README.md`
-
-5. **Correct false documentation claims**
-   - `docs/SECURITY.md:413` claims `/release` sets `deleted_at` → false, no such column
-   - `docs/ARCHITECTURE-FINAL.md:31` claims 365-day pg_cron retention for assets → false
-   - `docs/ARCHITECTURE-FINAL.md` claims R2 backend → false (it's GitHub + jsDelivr)
-   - Add "Current Reality" section to each, link to ROADMAP.md for migration plan
-
-6. **Bump version: v0.818.3 → v0.818.3**
-   - 16 code files reference version string
-   - 46 markdown files reference version string
-   - Use scripted replacement to ensure consistency
-   - Update `public/manifest.json`, `public/service-worker.js` cache key
-
-#### Deliverables
-- `supabase/migrations/20260710_022_create_assets_manifest.sql` (new)
-- `cloudflare-worker/worker-v6.js` (2-line patch)
-- `docs/asset-system/ROADMAP.md` (this file)
-- `docs/asset-system/ARCHITECTURE-V2.md` (new)
-- Updated `docs/ARCHITECTURE-FINAL.md`, `docs/SECURITY.md`, `docs/AI-CONTEXT.md`, `README.md`
-- All `v0.818.3` → `v0.818.3`
-
-#### Acceptance Criteria
-- [ ] Migration runs cleanly on staging Supabase project
-- [ ] `SELECT * FROM assets_manifest LIMIT 1` returns existing data (no data loss)
-- [ ] `SELECT indexname FROM pg_indexes WHERE tablename = 'assets_manifest'` includes `idx_gc_eligible`
-- [ ] Worker cache-hit now patches manifest (verified via console.log)
-- [ ] All `v0.818.3` references updated to `v0.818.3`
-- [ ] Docs no longer mention `deleted_at` column or 365-day pg_cron for assets
-
----
-
-### Phase 1 — Avatar Migration to Supabase Storage (Week 2) — v0.818.3 → v0.818.3
+### Phase 1 — Avatar Migration to Supabase Storage (Week 2) — v0.819.0 → v0.819.0
 
 **Goal:** Move avatar uploads from broken Cloudflare Worker `/upload` to Supabase Storage. Fix the P0 production bug.
 
@@ -179,7 +119,7 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
    - Path: `{user_id}/avatar-{timestamp}.jpg` (timestamp prevents stale cache)
    - Get public URL: `supabase.storage.from('avatars').getPublicUrl(path)`
    - Update `users.avatar_url` with the public URL (not base64 anymore)
-   - Compression: wire up the dead `image-compress.js` (revive it) — resize to 256×256, JPEG quality 85%
+   - Compression: wire up Magic Compress™ v2 (`ImageCompress.compressInWorker()`) — resize to 256×256, JPEG quality 85%
 
 4. **One-time migration script for existing base64 avatars**
    - Scan `users.avatar_url` for `data:image/` prefix
@@ -198,7 +138,7 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
 #### Deliverables
 - New Supabase Storage bucket + 3 RLS policies
 - Refactored `src/profile/editor-panel.js`
-- Revived `src/utils/image-compress.js` (was dead code)
+- Updated `src/utils/image-compress.js` (Magic Compress™ v2 wired to avatar upload)
 - New `scripts/migrate-base64-avatars.js`
 - Updated `src/utils/image-cleanup.js` (deleteAvatar function)
 - Updated `supabase/functions/dsr-handler/index.ts` (cascade avatar delete)
@@ -214,7 +154,7 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
 
 ---
 
-### Phase 2 — Assessment Image Upload UI + B2 Setup + Magic Compress (Week 3-4) — v0.818.3 → v0.819.0
+### Phase 2 — Assessment Image Upload UI + B2 Setup + Magic Compress (Week 3-4) — v0.819.0 → v0.819.0
 
 **Goal:** Build the missing image-upload UI for assessment questions. Wire to Backblaze B2 via Supabase Edge Function. Implement Magic Compress™ to keep every image in the 80-300 KB sweet spot.
 
@@ -615,7 +555,7 @@ With Magic Compress™, every image is 80-300 KB (avg ~150 KB):
 ## Success Metrics
 
 ### Technical KPIs
-| Metric | Current (v0.818.3) | Target (v0.823.0) |
+| Metric | Current (v0.819.0) | Target (v0.823.0) |
 |---|---|---|
 | Avatar upload success rate | 0% (broken) | 100% |
 | Assessment image upload | Not built | <3s per image |
@@ -640,9 +580,9 @@ With Magic Compress™, every image is 80-300 KB (avg ~150 KB):
 
 | Version | Phase | Date | Summary |
 |---|---|---|---|
-| v0.818.3 | (current) | 2026-07-09 | Pre-migration baseline. Asset system broken. |
-| v0.818.3 | Phase 0 | 2026-07-10 | Stabilization: migration, RLS, index, doc fixes, race condition fix |
-| v0.818.3 | Phase 1 | 2026-07-17 | Avatar migration to Supabase Storage |
+| v0.819.0 | (current) | 2026-07-09 | Pre-migration baseline. Asset system broken. |
+| v0.819.0 | Phase 0 | 2026-07-10 | Stabilization: migration, RLS, index, doc fixes, race condition fix |
+| v0.819.0 | Phase 1 | 2026-07-17 | Avatar migration to Supabase Storage |
 | v0.819.0 | Phase 2 | 2026-07-31 | Assessment image upload UI + B2 setup |
 | v0.820.0 | Phase 3 | 2026-08-07 | GC migration to Supabase Edge Function + pg_cron |
 | v0.821.0 | Phase 4 | 2026-08-14 | Worker repurpose: edge cache + config + health |

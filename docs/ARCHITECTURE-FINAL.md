@@ -1,8 +1,8 @@
 # AlbEdu Architecture — Final State (Stage 3 Complete)
 
-## v0.818.3 Hardening Summary
+## v0.819.0 Hardening Summary
 
-After the three-stage refactor captured above (Stage 1–3), the v0.818.3 cycle executed four parallel audits and applied a substantial set of stability and hardening fixes. This section summarizes what changed and why. For the human-style commenting rules that AI assistants MUST follow when editing this codebase, see [`docs/STRICT-COMMENTING-FOR-AI.md`](./STRICT-COMMENTING-FOR-AI.md).
+After the three-stage refactor captured above (Stage 1–3), the v0.819.0 cycle executed four parallel audits and applied a substantial set of stability and hardening fixes. This section summarizes what changed and why. For the human-style commenting rules that AI assistants MUST follow when editing this codebase, see [`docs/STRICT-COMMENTING-FOR-AI.md`](./STRICT-COMMENTING-FOR-AI.md).
 
 ### Parallel audits performed
 
@@ -28,7 +28,7 @@ After the three-stage refactor captured above (Stage 1–3), the v0.818.3 cycle 
 
 ### Critical backend fixes
 
-- **Worker soft-archive (was hard-delete)** — ⚠️ **CORRECTION (v0.818.3):** This claim was historically inaccurate. The Cloudflare Worker `/release` endpoint never had a `deleted_at` soft-archive path — it directly decremented `ref_count` and set `pending_delete=true`. There is no `deleted_at` column on `assets_manifest`, and no 365-day pg_cron retention job for assets (migration 013 schedules retention for `registration_attempts`, `violation_events`, `audit_logs`, `rate_limit_*` — but NOT `assets_manifest`). The actual asset lifecycle is: ref_count hits 0 → `pending_delete=true` → GC bot (GitHub Actions, weekly) deletes after 7-day safety window. The asset system is being migrated to Supabase + Backblaze B2 — see [`docs/asset-system/ROADMAP.md`](./asset-system/ROADMAP.md) for the full migration plan and [`docs/asset-system/ARCHITECTURE-V2.md`](./asset-system/ARCHITECTURE-V2.md) for the new architecture.
+- **Worker soft-archive (was hard-delete)** — ⚠️ **CORRECTION (v0.819.0):** This claim was historically inaccurate. The Cloudflare Worker `/release` endpoint never had a `deleted_at` soft-archive path — it directly decremented `ref_count` and set `pending_delete=true`. There is no `deleted_at` column on `assets_manifest`, and no 365-day pg_cron retention job for assets (migration 013 schedules retention for `registration_attempts`, `violation_events`, `audit_logs`, `rate_limit_*` — but NOT `assets_manifest`). The actual asset lifecycle is: ref_count hits 0 → `pending_delete=true` → GC bot (GitHub Actions, weekly) deletes after 7-day safety window. The asset system is being migrated to Supabase + Backblaze B2 — see [`docs/asset-system/ROADMAP.md`](./asset-system/ROADMAP.md) for the full migration plan and [`docs/asset-system/ARCHITECTURE-V2.md`](./asset-system/ARCHITECTURE-V2.md) for the new architecture.
 - **heartbeat DB churn reduction** — the heartbeat Edge Function now caches the session row in Worker memory for 60s. With 15s heartbeats, this cuts DB reads from 4/min/peserta to 1/min/peserta — a 4x reduction in DB load on Free Plan.
 - **health-check DB query** — `health-check` now runs a `SELECT 1` instead of a full session-row fetch, cutting cold-start latency ~3x and removing the only DB query on the most-invoked endpoint.
 - **RLS tightening** — `rate_limit_heartbeats`, `rate_limit_submits`, and `violation_events` now check session ownership via `assessment_sessions.user_id = auth.uid()` join, preventing peserta A from inserting heartbeats/violations/rate-limit rows for peserta B's session.
@@ -96,7 +96,7 @@ This document captures the final architecture after the three-stage refactor.
 **What changed:**
 
 ### QNotify library — kept (vendor library, actively loaded)
-- **Clarification (v0.818.3):** The original Stage 2 plan was to delete `public/QNotify/` and replace it with `src/shared/notify.js`. However, in practice, `public/QNotify/` is still present (20 files) and actively loaded via `src/shared/qnotify-loader.js` from multiple HTML pages (3+ admin pages + others). The planned `src/shared/notify.js` was never built.
+- **Clarification (v0.819.0):** The original Stage 2 plan was to delete `public/QNotify/` and replace it with `src/shared/notify.js`. However, in practice, `public/QNotify/` is still present (20 files) and actively loaded via `src/shared/qnotify-loader.js` from multiple HTML pages (3+ admin pages + others). The planned `src/shared/notify.js` was never built.
 - `window.notify`, `window.QNotify` (legacy shim), `window.show` are auto-installed by `qnotify-loader.js`, dispatches `qnotify-ready` event.
 - `public/QNotify/` remains a vendor library — edit only for bug fixes.
 - `src/shared/qnotify-loader.js` is the canonical loader; added to pages via shared boot sequence.
@@ -106,7 +106,7 @@ This document captures the final architecture after the three-stage refactor.
 - Built `src/platform/supabase-client.js` (~280 lines) — native Supabase client with `auth`, `db`, `realtime`, `rpc` services.
 - Built `src/platform/repository.js` (~200 lines) — typed table access helpers (`getDoc`, `getDocs`, `addDoc`, `updateDoc`, `setDoc`, `deleteDoc`, `bulkDelete`, `subscribe`).
 - Built `src/security/sanitize.js` (~140 lines) — DOM sanitization helpers.
-- **Note (v0.818.3):** The planned `src/legacy/firebase-compat.js` bridge was never built — `src/legacy/` directory does not exist. All consumers were migrated directly to the native platform layer. A stale comment in `src/pages/results-analytics.js:11` references `firebase-compat.js` but the file does not exist (dead reference, harmless).
+- **Note (v0.819.0):** The planned `src/legacy/firebase-compat.js` bridge was never built — `src/legacy/` directory does not exist. All consumers were migrated directly to the native platform layer. A stale comment in `src/pages/results-analytics.js:11` references `firebase-compat.js` but the file does not exist (dead reference, harmless).
 
 ### Consumer migrations (16 files migrated to native platform layer)
 - `src/auth/main.js` — 19 legacy refs → 0 (only stale comments remain). All `window.firebaseAuth`/`window.firebaseDb`/`window.sb` replaced with `AlbEdu.supabase.{auth,client,realtime,rpc}` or `AlbEdu.repository.*`. The `onAuthStateChanged` callback renamed to `onAuthStateChange` (native). The `firebase-ready`/`firebase-error` events replaced with `albedu:platform-ready`/`albedu:platform-error`. The `_syncUserDocument` function now uses `repo.subscribe()` + `repo.getDoc()` instead of `db.collection().doc().onSnapshot()`.
@@ -123,10 +123,10 @@ This document captures the final architecture after the three-stage refactor.
 - `src/pages/daftar-nama.js` — uses `AlbEdu.supabase.client`.
 - `src/profile/editor-panel.js` — `_updateUserProfile` and `_fetchCurrentUser` use `AlbEdu.repository`.
 - `src/pages/take-assessment.js` — `_waitForAuth`, `_fetchAssessment`, `_fetchSession`, identity persist, reset sync, and submit all use native platform layer. Submit now uses `AlbEdu.supabase.rpc.invoke('submit-assessment', ...)` instead of raw `fetch()` with manual auth token.
-- ~~`src/pages/question-bank.js`~~ — **REMOVED in v0.818.3** (Bank Soal feature deleted, migration 019: `DROP TABLE question_bank CASCADE`).
+- ~~`src/pages/question-bank.js`~~ — **REMOVED in v0.819.0** (Bank Soal feature deleted, migration 019: `DROP TABLE question_bank CASCADE`).
 
 ### Still pending migration (tracked for future sprints)
-**Note (v0.818.3):** The legacy bridge `src/legacy/firebase-compat.js` was never built, so these files were migrated directly to the native platform layer. The list below is preserved for historical reference; current status may differ — verify with `grep -rn "firebaseDb\|firebaseAuth" src/` before acting.
+**Note (v0.819.0):** The legacy bridge `src/legacy/firebase-compat.js` was never built, so these files were migrated directly to the native platform layer. The list below is preserved for historical reference; current status may differ — verify with `grep -rn "firebaseDb\|firebaseAuth" src/` before acting.
 - `src/pages/results-analytics.js` — read-only queries, low risk.
 - `src/pages/assessment-entry.js` — session creation flow.
 - `src/pages/buat-ujian/list-view.js` — assessment listing.
@@ -177,7 +177,7 @@ A stale comment in `src/pages/results-analytics.js:11` references `firebase-comp
 13. Skip-link present for accessibility
 14. `<html lang>` attribute present
 
-**Result: 15/15 checks passed, 0 errors, 0 warnings** (verified v0.818.3).
+**Result: 15/15 checks passed, 0 errors, 0 warnings** (verified v0.819.0).
 
 ### Architecture documentation
 - ~~`docs/MIGRATION-STATUS.md`~~ — was planned but never created.
@@ -212,7 +212,7 @@ src/
 └── utils/                 # Shared utilities
 ```
 
-**Note (v0.818.3):** `src/legacy/` directory does NOT exist. The planned `firebase-compat.js` bridge was never built. All consumers were migrated directly to the native platform layer. QNotify vendor library is still present in `public/QNotify/` (20 files) and actively loaded via `src/shared/qnotify-loader.js`.
+**Note (v0.819.0):** `src/legacy/` directory does NOT exist. The planned `firebase-compat.js` bridge was never built. All consumers were migrated directly to the native platform layer. QNotify vendor library is still present in `public/QNotify/` (20 files) and actively loaded via `src/shared/qnotify-loader.js`.
 
 ## Public API Surface
 
@@ -250,10 +250,10 @@ src/
 - `src/auth/{main,authFlow,user-auth-portal,preflight,forgot-password,reset-password,admin-onboarding}.js`
 - `src/utils/{index,ui,admin-notification-center,self-storage}.js`
 - `src/profile/editor-panel.js`
-- `src/pages/{take-assessment,daftar-nama}.js` — migrated. ~~`question-bank.js`~~ — removed in v0.818.3 (Bank Soal feature deleted).
+- `src/pages/{take-assessment,daftar-nama}.js` — migrated. ~~`question-bank.js`~~ — removed in v0.819.0 (Bank Soal feature deleted).
 
 ### ⏳ Still Uses Legacy Patterns (chained .collection().doc() calls — historical, verify with grep)
-**Note (v0.818.3):** The legacy bridge `src/legacy/firebase-compat.js` was never built, so these files were migrated directly to the native platform layer. The list below is preserved for historical reference; current status may differ — verify with `grep -rn "firebaseDb\|firebaseAuth" src/` before acting.
+**Note (v0.819.0):** The legacy bridge `src/legacy/firebase-compat.js` was never built, so these files were migrated directly to the native platform layer. The list below is preserved for historical reference; current status may differ — verify with `grep -rn "firebaseDb\|firebaseAuth" src/` before acting.
 - `src/pages/results-analytics.js` — read-only queries, low risk
 - `src/pages/assessment-entry.js` — session creation
 - `src/pages/buat-ujian/list-view.js` — assessment listing
@@ -282,5 +282,5 @@ ERRORS: 0
 ```
 
 
-## v0.818.3 UI Hardening
+## v0.819.0 UI Hardening
 See changelog in rule-url-albedu.md

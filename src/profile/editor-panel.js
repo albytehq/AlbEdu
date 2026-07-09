@@ -1,23 +1,40 @@
 // ProfileEditorPanel.js — floating profile editor modal (avatar + name).
-// Self-contained: zero external deps beyond the platform layer + Worker upload.
+// Self-contained: zero external deps beyond the platform layer + Supabase Storage.
 // All styles are scoped to the `pep-` prefix so it can mount on any page
 // without leaking CSS.
 //
+// v0.819.0: Avatar uploads now go to Supabase Storage (bucket: `avatars`)
+// instead of the broken Cloudflare Worker `/upload` endpoint. Magic Compress™
+// v2 is wired in — every avatar is resized to 256×256, JPEG q85, <50 KB.
+//
 // Usage:
 //   ProfileEditorPanel.init({
-//     trigger:    HTMLElement | HTMLElement[] | NodeList,
-//     workerBase: 'https://edu.albyte-inc.workers.dev',
-//     onSaved:    (updatedUser) => { /* sync avatar/name in the host UI */ }
+//     trigger: HTMLElement | HTMLElement[] | NodeList,
+//     onSaved: (updatedUser) => { /* sync avatar/name in the host UI */ }
 //   })
+//   // Note: workerBase is no longer required — Supabase Storage is used.
 
 ;(function (global) {
   'use strict';
 
   const t = (key, vars, fallback) => fallback;
 
-  const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB client cap (Worker allows 10MB)
-  const ALLOWED_TYPES   = ['image/jpeg', 'image/png', 'image/webp'];
+  // Client cap: 10 MB input → Magic Compress™ will shrink to <50 KB JPEG.
+  // Pre-compression size limit. Server (Storage bucket) enforces 2 MB post-compression.
+  const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB input cap
+  const ALLOWED_TYPES   = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/avif'];
   const NAME_MAX_LEN    = 60;
+
+  // Avatar compression config — overrides Magic Compress™ defaults for avatars.
+  // Avatars are small display pictures (256×256 is plenty for 96px renders).
+  // Target: <50 KB JPEG (small for fast load in daftar-nama lists).
+  const AVATAR_COMPRESS_OPTS = {
+    maxWidth: 256,
+    maxHeight: 256,
+    targetMaxBytes: 50 * 1024,   // 50 KB — avatars are tiny
+    targetMinBytes: 5 * 1024,    // 5 KB floor (don't over-compress)
+    computeSSIM: false,          // skip SSIM for avatars (fast path)
+  };
 
   let _cfg        = null;
   let _panel      = null;
@@ -288,8 +305,8 @@
               </svg>
             </div>
           </div>
-          <span class="pep-avatar-hint">${t('pep.avatar_hint', null, 'Klik foto untuk mengubah<br>JPG, PNG, WebP · maks 4 MB')}</span>
-          <input class="pep-file-input" id="pep-file-input" type="file" accept="image/jpeg,image/png,image/webp" />
+          <span class="pep-avatar-hint">${t('pep.avatar_hint', null, 'Klik foto untuk mengubah<br>Format apapun · maks 10 MB · auto-compress')}</span>
+          <input class="pep-file-input" id="pep-file-input" type="file" accept="image/*" />
         </div>
 
         <div class="pep-field">
@@ -338,15 +355,15 @@
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate type
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      _showToast('Format tidak didukung. Gunakan JPG, PNG, atau WebP.', 'error');
+    // Validate type — Magic Compress™ v2 accepts any image format (will convert to JPEG)
+    if (file.type && !ALLOWED_TYPES.includes(file.type) && !file.type.startsWith('image/')) {
+      _showToast('Format tidak didukung. Gunakan JPG, PNG, WebP, GIF, BMP, atau AVIF.', 'error');
       return;
     }
 
-    // Validate size
+    // Validate size — 10 MB input cap (Magic Compress™ will shrink to <50 KB)
     if (file.size > MAX_IMAGE_BYTES) {
-      _showToast(t('pep.file_too_big', null, 'Foto terlalu besar. Maks 4 MB.'), 'error');
+      _showToast(t('pep.file_too_big', null, 'Foto terlalu besar. Maks 10 MB.'), 'error');
       return;
     }
 
@@ -447,35 +464,105 @@
     }
   }
 
-  // Upload via Worker
+  // Upload via Supabase Storage (Phase 1 — replaces Worker /upload).
+  //
+  // Flow:
+  //   1. Magic Compress™ v2 (compressInWorker): resize to 256×256, JPEG q85, <50 KB
+  //   2. Upload compressed blob to `avatars` bucket at path {user_id}/avatar-{timestamp}.jpg
+  //   3. Get public URL (avatars bucket is public)
+  //   4. Return URL to caller — caller updates users.avatar_url with it
+  //
+  // Auth: uses the user's Supabase session (JWT). RLS policy on storage.objects
+  // requires (storage.foldername(name))[1] = auth.uid() — so the path MUST
+  // start with the user's own ID. Server-enforced; cannot be spoofed.
   async function _uploadImage(file) {
-    const workerBase = _cfg?.workerBase;
-    if (!workerBase) throw new Error('workerBase tidak di-set di ProfileEditorPanel.init()');
-
-    // Validate file type (client-side pre-check)
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      throw new Error('Format file tidak didukung. Gunakan JPEG, PNG, atau WebP.');
+    const supabase = window.AlbEdu?.supabase?.client;
+    const auth = window.AlbEdu?.supabase?.auth;
+    if (!supabase || !auth) {
+      throw new Error('Platform layer belum siap (Supabase client tidak ditemukan).');
     }
 
-    // Validate file size (max 10MB — Worker also validates server-side)
-    if (file.size > 10 * 1024 * 1024) {
-      throw new Error('Ukuran file terlalu besar (maks 10MB).');
+    const userId = auth.currentUser?.id;
+    if (!userId) {
+      throw new Error('Sesi login tidak ditemukan. Silakan login ulang.');
     }
 
-    const form = new FormData();
-    form.append('file', file);
-
-    const res = await fetch(`${workerBase}/upload`, { method: 'POST', body: form });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Upload gagal (HTTP ${res.status})`);
+    // ── 1. Magic Compress™ via Web Worker (non-blocking) ──
+    if (!window.ImageCompress) {
+      throw new Error('ImageCompress module belum dimuat. Refresh halaman dan coba lagi.');
     }
 
-    const data = await res.json();
-    // Worker return { cdn_url } — jsDelivr CDN URL
-    return data.cdn_url;
+    let compressed;
+    try {
+      // Try Worker first (non-blocking). Falls back to main thread automatically
+      // if Worker fails to load (e.g., GitHub Pages CSP edge case).
+      compressed = await window.ImageCompress.compressInWorker(file, AVATAR_COMPRESS_OPTS);
+    } catch (err) {
+      console.warn('[ProfileEditorPanel] Worker compress failed, trying main thread:', err.message);
+      try {
+        compressed = await window.ImageCompress.magicCompress(file, AVATAR_COMPRESS_OPTS);
+      } catch (err2) {
+        throw new Error('Gagal kompres gambar: ' + err2.message);
+      }
+    }
+
+    // Defense in depth: if compression didn't get under 2 MB, reject (Storage bucket limit)
+    if (compressed.compressedSize > 2 * 1024 * 1024) {
+      throw new Error('Gambar terlalu besar bahkan setelah kompresi. Coba gambar lain.');
+    }
+
+    // ── 2. Upload to Supabase Storage ──
+    const path = `${userId}/avatar-${Date.now()}.jpg`;
+    const uploadBtn = _panel?.querySelector('#pep-save-btn');
+    const _origText = uploadBtn?.textContent;
+
+    let uploadResult;
+    try {
+      uploadResult = await supabase.storage
+        .from('avatars')
+        .upload(path, compressed.blob, {
+          contentType: 'image/jpeg',
+          upsert: false,  // don't overwrite — timestamp makes path unique
+          cacheControl: '3600',
+        });
+    } catch (err) {
+      throw new Error('Upload ke Storage gagal: ' + (err.message || 'unknown error'));
+    }
+
+    if (uploadResult.error) {
+      const msg = uploadResult.error.message || '';
+      // Friendly error messages for common RLS / quota failures
+      if (msg.includes('row-level security') || msg.includes('policy')) {
+        throw new Error('Akses ditolak. Anda hanya bisa upload ke folder sendiri. Refresh halaman dan coba lagi.');
+      }
+      if (msg.includes('size') || msg.includes('limit') || msg.includes('too large')) {
+        throw new Error('Ukuran file melebihi batas Storage (2 MB). Kompresi gagal — coba gambar lain.');
+      }
+      if (msg.includes('mime') || msg.includes('type') || msg.includes('format')) {
+        throw new Error('Format file tidak didukung oleh Storage. Gunakan JPEG, PNG, atau WebP.');
+      }
+      throw new Error('Upload ke Storage gagal: ' + msg);
+    }
+
+    // ── 3. Get public URL ──
+    const { data: urlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(path);
+
+    if (!urlData?.publicUrl) {
+      throw new Error('Gagal mendapatkan URL publik avatar. Hubungi admin.');
+    }
+
+    console.info('[ProfileEditorPanel] Avatar uploaded:', {
+      path,
+      originalSize: compressed.originalSize,
+      compressedSize: compressed.compressedSize,
+      compressionRatio: Math.round((1 - compressed.compressedSize / compressed.originalSize) * 100) + '%',
+      qualityUsed: compressed.qualityUsed,
+      url: urlData.publicUrl,
+    });
+
+    return urlData.publicUrl;
   }
 
   // Supabase update

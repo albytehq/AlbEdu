@@ -1,6 +1,6 @@
 # AlbEdu Asset System Architecture v2
 
-**Version:** v0.818.3+ (Phase 0+ of ROADMAP.md)
+**Version:** v0.819.0+ (Phase 1 in progress; Phase 0 complete)
 **Status:** Active development
 **Audience:** Engineers, architects, DevOps
 **Companion docs:** [ROADMAP.md](./ROADMAP.md) | [DISASTER-RECOVERY.md](./DISASTER-RECOVERY.md) (Phase 6)
@@ -728,7 +728,7 @@ ImageCompress.preload();
 
 ## 7. Migration Strategy (Legacy → New)
 
-### 7.1 Legacy state (v0.818.3)
+### 7.1 Legacy state (v0.819.0)
 
 - Avatar uploads: broken (Worker requires AUTH_TOKEN client doesn't send)
 - Soal images: not built (`media.gambar = []`)

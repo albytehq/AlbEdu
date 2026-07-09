@@ -3,7 +3,7 @@
 > Platform asesmen production-grade untuk semua kebutuhan evaluasi — SD, SMP, SMA, kuliah, hingga personal use.
 > Vanilla JS + Supabase + Cloudflare — zero framework, zero build runtime.
 
-[![Version](https://img.shields.io/badge/version-v0.818.3-blue)]()
+[![Version](https://img.shields.io/badge/version-v0.819.0-blue)]()
 [![Structure](https://img.shields.io/badge/structure-by--feature-green)]()
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)]()
 
@@ -52,7 +52,7 @@ npm run verify
 
 ---
 
-## 📁 Project Structure (v0.818.3 — By-Feature)
+## 📁 Project Structure (v0.819.0 — By-Feature)
 
 ```
 AlbEdu/
@@ -210,25 +210,32 @@ AlbEdu/
 | [docs/ICON-SYSTEM-ENTERPRISE.md](./docs/ICON-SYSTEM-ENTERPRISE.md) | Icon system v7.0 |
 | [docs/THEME-SYSTEM.md](./docs/THEME-SYSTEM.md) | Theme system |
 | [docs/PAGE-TEMPLATE.html](./docs/PAGE-TEMPLATE.html) | Canonical page template |
-| [docs/asset-system/ROADMAP.md](./docs/asset-system/ROADMAP.md) | 🆕 Asset system migration roadmap (v0.818.3+) |
+| [docs/asset-system/ROADMAP.md](./docs/asset-system/ROADMAP.md) | 🆕 Asset system migration roadmap (v0.819.0+) |
 | [docs/asset-system/ARCHITECTURE-V2.md](./docs/asset-system/ARCHITECTURE-V2.md) | 🆕 New asset system architecture (Supabase + B2 + Magic Compress™ v2) |
 | [docs/asset-system/BACKBLAZE-SETUP.md](./docs/asset-system/BACKBLAZE-SETUP.md) | 🆕 Step-by-step BackBlaze B2 + Cloudflare Bandwidth Alliance setup |
 
 ---
 
-## 🖼️ Asset System (v0.818.3+)
+## 🖼️ Asset System (v0.819.0+)
 
 AlbEdu's asset system (avatar + assessment images) is being migrated from GitHub repos to **Supabase Storage + Backblaze B2** with **Magic Compress™** technology.
 
 > ⚠️ **Cloudflare R2 is EXCLUDED** — requires credit card even for free tier. AlbEdu uses BackBlaze B2 instead (10 GB free, no CC, free egress via Cloudflare Bandwidth Alliance).
 
-### Current State (v0.818.3 — Phase 0 complete)
+### Current State (v0.819.0 — Phase 1 complete)
 - ✅ `assets_manifest` migration created with RLS, indexes, CHECK constraints
 - ✅ Magic Compress™ v2 implemented (`src/utils/image-compress.js` + `image-compress-worker.js`) — perceptual compression with complexity analysis, MozJPEG WASM, SSIM quality check
 - ✅ BackBlaze B2 setup guide created (`docs/asset-system/BACKBLAZE-SETUP.md`)
 - ✅ Documentation corrected (removed false `deleted_at` / R2 / 365-day retention claims)
-- ⏳ Avatar migration to Supabase Storage (Phase 1 — next)
-- ⏳ Assessment image upload UI + B2 (Phase 2)
+- ✅ **Phase 1 COMPLETE**: Avatar uploads migrated to Supabase Storage `avatars` bucket
+  - New migration `20260711_023_create_avatars_bucket.sql` (bucket + 4 RLS policies)
+  - `editor-panel.js` refactored to use `supabase.storage.from('avatars').upload()`
+  - Magic Compress™ v2 wired to avatar upload (256×256, JPEG q85, <50 KB target)
+  - `image-cleanup.js` updated with `deleteAvatar(userId)` for DSR compliance
+  - `dsr-handler` Edge Function cascades avatar deletion (UU PDP Article 16)
+  - New migration script `scripts/migrate-base64-avatars.js` (one-time)
+  - Worker `/upload` and `/release` endpoints decommissioned (return 410 Gone)
+- ⏳ Assessment image upload UI + B2 (Phase 2 — next)
 - ⏳ GC migration to Supabase Edge Function (Phase 3)
 - ⏳ Cloudflare Worker repurpose as edge cache (Phase 4)
 - ⏳ GitHub repos decommission (Phase 5)
