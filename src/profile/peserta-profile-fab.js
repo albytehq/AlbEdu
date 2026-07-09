@@ -268,10 +268,25 @@
     const useWideCard = _useWideCardMode();
     const trigger = useWideCard ? _buildWideCard() : _buildFab();
 
-    // Click handler — OptionProfile will bind to it via triggers,
-    // but we add a fallback click that calls toggle() directly in case
-    // OptionProfile script load fails.
+    // Click handler — OptionProfile will bind its OWN click handler to this
+    // trigger via addTrigger() once scripts finish loading. We attach a
+    // FALLBACK handler here ONLY for the case where scripts haven't loaded
+    // yet (or failed to load). Once OptionProfile has registered this
+    // trigger, we MUST skip — otherwise both handlers fire on the same
+    // click: our fallback calls open() (sets _isOpen=true), then
+    // addTrigger's toggle() sees _isOpen=true and immediately calls
+    // close(). Net result: dropdown opens then closes in the same event
+    // tick → user sees nothing. The toggle debounce (60ms) doesn't save
+    // us because open() doesn't update _lastToggleAt (only toggle does).
     trigger.addEventListener('click', function (e) {
+      // If OptionProfile has bound to this trigger, let its own handler
+      // do the work — don't double-handle.
+      if (window.OptionProfile?.getTriggers?.().includes(trigger)) {
+        return;
+      }
+      // Fallback: OptionProfile not yet loaded or hasn't bound. Try to
+      // open directly so the first click still works while scripts are
+      // loading in the background.
       if (window.OptionProfile?.isOpen?.()) {
         window.OptionProfile.close();
         return;
@@ -282,8 +297,9 @@
         window.OptionProfile.open(trigger, e.clientX, e.clientY);
         return;
       }
-      // Fallback: if OptionProfile not loaded, do nothing (script load error logged)
-      console.warn('[peserta-profile] OptionProfile not loaded — cannot open dropdown');
+      // Scripts still loading — click is silently ignored. User can click
+      // again once _bootstrapOptionProfile finishes (typically <300ms).
+      console.warn('[peserta-profile] OptionProfile not loaded yet — retry in a moment');
     });
 
     // Bootstrap OptionProfile in the background (non-blocking)
