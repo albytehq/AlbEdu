@@ -3,11 +3,11 @@
    Extends the base .skeleton system in tokens.css with
    page-specific skeleton patterns for profile page.
 
-   v0.818.0: Sidebar skeleton removed — user info shows instantly.
+   v0.818.1: Sidebar skeleton removed — user info shows instantly.
    ============================================================ */
 
 /* ──────────────────────────────────────────────────────────────
-   1. PROFILE PAGE SKELETON (optimized v0.818.0)
+   1. PROFILE PAGE SKELETON (optimized v0.818.1)
    Shown on initial load, hidden when _renderProfile() runs.
 
    Design principles:

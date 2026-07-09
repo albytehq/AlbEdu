@@ -704,7 +704,7 @@
         ${itemsHtml}
       </div>
 
-      <div class="op-footer">AlbEdu v0.818.0</div>
+      <div class="op-footer">AlbEdu v0.818.1</div>
     `;
 
     // Attach onerror via event listener (CSP-friendly)

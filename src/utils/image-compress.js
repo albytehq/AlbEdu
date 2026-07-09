@@ -668,6 +668,76 @@
       return _loadMozjpeg();
     },
 
+    /**
+     * Compress in a Web Worker (non-blocking). Handles worker URL resolution
+     * automatically — callers don't need to worry about GitHub Pages subpath.
+     *
+     * @param {File|Blob} file — input image
+     * @param {object} [opts] — { onProgress(stage, progress), ...compressOptions }
+     * @returns {Promise<object>} same shape as magicCompress() result
+     *
+     * GITHUB PAGES EDGE CASE:
+     *   AlbEdu is at https://albytehq.github.io/AlbEdu/ (subpath).
+     *   Worker URL must be resolved via window.Auth.getBasePath() to get
+     *   /AlbEdu/src/utils/image-compress-worker.js. Hardcoding
+     *   /src/utils/image-compress-worker.js would 404 on GitHub Pages.
+     */
+    compressInWorker(file, opts = {}) {
+      const { onProgress, ...compressOpts } = opts;
+
+      return new Promise((resolve, reject) => {
+        // Resolve worker URL via getBasePath() (AlbEdu's canonical pattern)
+        const basePath = (typeof window !== 'undefined' && window.Auth?.getBasePath?.()) || '/';
+        const workerUrl = basePath + 'src/utils/image-compress-worker.js';
+
+        let worker;
+        try {
+          worker = new Worker(workerUrl);
+        } catch (err) {
+          // Worker creation failed (rare — maybe CSP blocks workers).
+          // Fall back to main-thread compression.
+          console.warn('[MagicCompress] Worker creation failed, falling back to main thread:', err.message);
+          return ImageCompress.magicCompress(file, compressOpts).then(resolve).catch(reject);
+        }
+
+        const cleanup = () => {
+          worker.terminate();
+        };
+
+        worker.onmessage = (e) => {
+          const msg = e.data || {};
+          if (msg.type === 'ready') {
+            // Worker loaded, send the compress command
+            worker.postMessage({ type: 'compress', file, options: compressOpts });
+          } else if (msg.type === 'progress') {
+            if (typeof onProgress === 'function') {
+              try { onProgress(msg.stage, msg.progress); } catch (_) {}
+            }
+          } else if (msg.type === 'result') {
+            cleanup();
+            if (msg.success) {
+              resolve(msg.result);
+            } else {
+              reject(new Error(msg.error || 'Worker compression failed'));
+            }
+          }
+        };
+
+        worker.onerror = (err) => {
+          cleanup();
+          // Worker crashed — fall back to main thread
+          console.warn('[MagicCompress] Worker error, falling back to main thread:', err.message || err);
+          ImageCompress.magicCompress(file, compressOpts).then(resolve).catch(reject);
+        };
+
+        // Safety timeout (30s — compression should never take this long)
+        setTimeout(() => {
+          cleanup();
+          reject(new Error('Compression timed out after 30 seconds'));
+        }, 30000);
+      });
+    },
+
     // Expose internals for testing
     _internals: {
       analyzeComplexity: _analyzeComplexity,

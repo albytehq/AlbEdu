@@ -1,6 +1,6 @@
 # AlbEdu Asset System Architecture v2
 
-**Version:** v0.818.0+ (Phase 0+ of ROADMAP.md)
+**Version:** v0.818.1+ (Phase 0+ of ROADMAP.md)
 **Status:** Active development
 **Audience:** Engineers, architects, DevOps
 **Companion docs:** [ROADMAP.md](./ROADMAP.md) | [DISASTER-RECOVERY.md](./DISASTER-RECOVERY.md) (Phase 6)
@@ -65,7 +65,7 @@
               ┌──────────────────────────────────────────────┐
               │           BACKBLAZE B2 (origin)              │
               │                                              │
-              │  Bucket: albedu-soal-images                  │
+              │  Bucket: albedu-assets-systems                  │
               │  Path: {hash[0:2]}/{hash}.{ext}              │
               │  Free: 10 GB storage + 2500 Class A/B per day│
               │  Egress: $0 (Cloudflare Bandwidth Alliance)  │
@@ -153,12 +153,12 @@ await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id)
 
 ---
 
-### 3.2 Backblaze B2 — `albedu-soal-images` bucket
+### 3.2 Backblaze B2 — `albedu-assets-systems` bucket
 
 **Purpose:** Assessment question image storage (soal illustrations, diagrams, etc.).
 
 **Configuration:**
-- Bucket name: `albedu-soal-images`
+- Bucket name: `albedu-assets-systems`
 - Private: Yes (served only via Cloudflare Worker cache proxy, not directly)
 - Versioning: Disabled (we use hash-based dedup, no need for versions)
 - Lifecycle: None (GC handled by Supabase Edge Function)
@@ -728,7 +728,7 @@ ImageCompress.preload();
 
 ## 7. Migration Strategy (Legacy → New)
 
-### 7.1 Legacy state (v0.818.0)
+### 7.1 Legacy state (v0.818.1)
 
 - Avatar uploads: broken (Worker requires AUTH_TOKEN client doesn't send)
 - Soal images: not built (`media.gambar = []`)
@@ -861,6 +861,66 @@ Retention: 365 days (existing pg_cron job).
 | **S3 API** | AWS Simple Storage Service API — de facto object storage standard |
 | **SPOF** | Single Point of Failure |
 | **Worker** | Cloudflare Worker — serverless edge compute |
+
+---
+
+## 12. GitHub Pages Hosting Considerations
+
+AlbEdu is hosted on **GitHub Pages** at `https://albytehq.github.io/AlbEdu/` (subpath deployment). This section documents how the asset system handles the subpath edge cases.
+
+### 12.1 Path resolution pattern
+
+All asset-system JavaScript uses `window.Auth.getBasePath()` to resolve URLs. This returns:
+- **Production:** `/AlbEdu/` (GitHub Pages subpath)
+- **Local dev:** `/` (root)
+
+**Web Worker URL resolution:**
+```javascript
+// ImageCompress.compressInWorker() handles this internally:
+const basePath = window.Auth?.getBasePath?.() || '/';
+const workerUrl = basePath + 'src/utils/image-compress-worker.js';
+const worker = new Worker(workerUrl);
+```
+
+**Worker-internal script loading:**
+```javascript
+// Inside image-compress-worker.js — uses self.location (not page URL)
+const workerDir = self.location.href.replace(/\/[^/]+$/, '/');
+self.importScripts(workerDir + 'image-compress.js');
+```
+
+This is subpath-safe: the worker derives its own directory from its URL, so `importScripts` always finds `image-compress.js` in the same folder.
+
+### 12.2 CORS configuration (already in place)
+
+| Component | CORS Allow-Origin | File |
+|---|---|---|
+| Cloudflare Worker | `albytehq.github.io` | `cloudflare-worker/worker-v6.js:34` |
+| Supabase Edge Functions | `albytehq.github.io` | `supabase/functions/_shared/cors.ts:10` |
+| esm.sh (MozJPEG WASM) | `*` (public) | N/A — public CDN |
+| BackBlaze B2 | N/A — server-side only | Edge Function uses service role |
+
+### 12.3 Content Security Policy
+
+AlbEdu does **not** set a CSP meta tag in HTML. This means:
+- ✅ `import('https://esm.sh/...')` works (no `script-src` restriction)
+- ✅ `new Worker(...)` works (no `worker-src` restriction)
+- ✅ `fetch('https://edu.albyte-inc.workers.dev/...')` works (no `connect-src` restriction)
+
+If a CSP is added in the future, it must allow:
+```
+script-src  'self' 'unsafe-inline' https://esm.sh;
+worker-src  'self';
+connect-src 'self' https://*.supabase.co https://edu.albyte-inc.workers.dev https://esm.sh;
+img-src     'self' https://edu.albyte-inc.workers.dev data:;
+```
+
+### 12.4 What does NOT work on GitHub Pages
+
+- ❌ **Server-side rendering** — GitHub Pages is static-only. All dynamic logic is client-side JS or via Edge Functions/Worker.
+- ❌ **`.htaccess` / nginx config** — no server config. All routing is client-side.
+- ❌ **Custom response headers** — can't set `Cache-Control` on static files (GitHub Pages sets its own). The Cloudflare Worker `/img/{hash}` endpoint handles cache headers for images.
+- ❌ **Large file serving** — GitHub Pages has a 1 GB per-file limit. Asset images are served from B2 via Worker, not from GitHub Pages. No issue.
 
 ---
 

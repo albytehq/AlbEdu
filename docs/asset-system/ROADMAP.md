@@ -1,4 +1,4 @@
-# AlbEdu Asset System Roadmap v0.818.0
+# AlbEdu Asset System Roadmap v0.818.1
 
 **Status:** Active — Phase 0 in progress
 **Last Updated:** 2026-07-10
@@ -57,7 +57,7 @@ This roadmap migrates the asset system to a **3-tier architecture** (Supabase St
         ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │             BACKBLAZE B2 (object storage)                        │
-│  Bucket: albedu-soal-images                                      │
+│  Bucket: albedu-assets-systems                                      │
 │  Path: {hash[0:2]}/{full-hash}.{ext}                             │
 │  Storage: 10 GB free + $0.006/GB/month after                     │
 │  Egress: $0 (Cloudflare Bandwidth Alliance)                      │
@@ -80,7 +80,7 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
 
 ## Phased Migration Plan
 
-### Phase 0 — Stabilization (Week 1) — v0.818.0 → v0.818.0
+### Phase 0 — Stabilization (Week 1) — v0.818.1 → v0.818.1
 
 **Goal:** Fix critical bugs and lay foundation without architecture change. No client-facing behavior change.
 
@@ -118,7 +118,7 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
    - `docs/ARCHITECTURE-FINAL.md` claims R2 backend → false (it's GitHub + jsDelivr)
    - Add "Current Reality" section to each, link to ROADMAP.md for migration plan
 
-6. **Bump version: v0.818.0 → v0.818.0**
+6. **Bump version: v0.818.1 → v0.818.1**
    - 16 code files reference version string
    - 46 markdown files reference version string
    - Use scripted replacement to ensure consistency
@@ -130,19 +130,19 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
 - `docs/asset-system/ROADMAP.md` (this file)
 - `docs/asset-system/ARCHITECTURE-V2.md` (new)
 - Updated `docs/ARCHITECTURE-FINAL.md`, `docs/SECURITY.md`, `docs/AI-CONTEXT.md`, `README.md`
-- All `v0.818.0` → `v0.818.0`
+- All `v0.818.1` → `v0.818.1`
 
 #### Acceptance Criteria
 - [ ] Migration runs cleanly on staging Supabase project
 - [ ] `SELECT * FROM assets_manifest LIMIT 1` returns existing data (no data loss)
 - [ ] `SELECT indexname FROM pg_indexes WHERE tablename = 'assets_manifest'` includes `idx_gc_eligible`
 - [ ] Worker cache-hit now patches manifest (verified via console.log)
-- [ ] All `v0.818.0` references updated to `v0.818.0`
+- [ ] All `v0.818.1` references updated to `v0.818.1`
 - [ ] Docs no longer mention `deleted_at` column or 365-day pg_cron for assets
 
 ---
 
-### Phase 1 — Avatar Migration to Supabase Storage (Week 2) — v0.818.0 → v0.818.0
+### Phase 1 — Avatar Migration to Supabase Storage (Week 2) — v0.818.1 → v0.818.1
 
 **Goal:** Move avatar uploads from broken Cloudflare Worker `/upload` to Supabase Storage. Fix the P0 production bug.
 
@@ -214,7 +214,7 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
 
 ---
 
-### Phase 2 — Assessment Image Upload UI + B2 Setup + Magic Compress (Week 3-4) — v0.818.0 → v0.819.0
+### Phase 2 — Assessment Image Upload UI + B2 Setup + Magic Compress (Week 3-4) — v0.818.1 → v0.819.0
 
 **Goal:** Build the missing image-upload UI for assessment questions. Wire to Backblaze B2 via Supabase Edge Function. Implement Magic Compress™ to keep every image in the 80-300 KB sweet spot.
 
@@ -226,7 +226,7 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
 
 1. **Set up Backblaze B2 account + bucket**
    - Sign up at backblaze.com (no credit card required)
-   - Create bucket `albedu-soal-images` (private — served via Cloudflare Worker cache proxy)
+   - Create bucket `albedu-assets-systems` (private — served via Cloudflare Worker cache proxy)
    - Create application key with read+write scope on this bucket only
    - Note: `keyID` + `applicationKey` → store as Supabase Edge Function secrets
 
@@ -615,7 +615,7 @@ With Magic Compress™, every image is 80-300 KB (avg ~150 KB):
 ## Success Metrics
 
 ### Technical KPIs
-| Metric | Current (v0.818.0) | Target (v0.823.0) |
+| Metric | Current (v0.818.1) | Target (v0.823.0) |
 |---|---|---|
 | Avatar upload success rate | 0% (broken) | 100% |
 | Assessment image upload | Not built | <3s per image |
@@ -640,9 +640,9 @@ With Magic Compress™, every image is 80-300 KB (avg ~150 KB):
 
 | Version | Phase | Date | Summary |
 |---|---|---|---|
-| v0.818.0 | (current) | 2026-07-09 | Pre-migration baseline. Asset system broken. |
-| v0.818.0 | Phase 0 | 2026-07-10 | Stabilization: migration, RLS, index, doc fixes, race condition fix |
-| v0.818.0 | Phase 1 | 2026-07-17 | Avatar migration to Supabase Storage |
+| v0.818.1 | (current) | 2026-07-09 | Pre-migration baseline. Asset system broken. |
+| v0.818.1 | Phase 0 | 2026-07-10 | Stabilization: migration, RLS, index, doc fixes, race condition fix |
+| v0.818.1 | Phase 1 | 2026-07-17 | Avatar migration to Supabase Storage |
 | v0.819.0 | Phase 2 | 2026-07-31 | Assessment image upload UI + B2 setup |
 | v0.820.0 | Phase 3 | 2026-08-07 | GC migration to Supabase Edge Function + pg_cron |
 | v0.821.0 | Phase 4 | 2026-08-14 | Worker repurpose: edge cache + config + health |

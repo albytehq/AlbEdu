@@ -1,21 +1,70 @@
 # BackBlaze B2 Setup Guide for AlbEdu
 
-**Version:** v0.818.0+
+**Version:** v0.818.1+
 **Audience:** DevOps / Backend engineers
-**Prerequisites:** BackBlaze account (free, no credit card required), Supabase project, Cloudflare account
+**Prerequisites:** BackBlaze account (free, no credit card required), Supabase project, Cloudflare account, GitHub Pages deployment
 
 ---
 
 ## Overview
 
-This guide walks you through setting up BackBlaze B2 as the object storage backend for AlbEdu assessment images. B2 replaces the legacy GitHub repos (`assets-1` to `assets-20`) with a proper S3-compatible storage that has:
+This guide walks you through setting up BackBlaze B2 as the object storage backend for AlbEdu assets. B2 replaces the legacy GitHub repos (`assets-1` to `assets-20`) with a proper S3-compatible storage that has:
 
 - **10 GB free storage** (forever, no credit card)
 - **2,500 free downloads/day** (Class B transactions)
 - **$0 egress** via Cloudflare Bandwidth Alliance
 - **S3-compatible API** (drop-in for existing code)
 
+**Bucket name:** `albedu-assets-systems` (holds all asset types — soal images, future asset categories)
+
 **Time to complete:** 30-45 minutes
+
+---
+
+## ⚠️ GitHub Pages Hosting Notes
+
+AlbEdu is hosted on **GitHub Pages** at `https://albytehq.github.io/AlbEdu/` (subpath, not root). This affects the asset system in several ways:
+
+### What works fine on GitHub Pages
+- ✅ **Static JS/CSS files** — served from GitHub Pages CDN, no config needed
+- ✅ **Supabase Edge Functions** — called cross-origin via `fetch()`, Supabase handles CORS automatically
+- ✅ **Cloudflare Worker** — called cross-origin, Worker has CORS headers (already configured in `worker-v6.js`)
+- ✅ **B2 S3 API** — called from Supabase Edge Function (server-side), no browser CORS involvement
+- ✅ **createImageBitmap / Canvas** — work on any HTTPS origin (GitHub Pages is HTTPS)
+
+### Edge cases that need attention
+
+1. **Web Worker path resolution** — AlbEdu's Web Worker (`image-compress-worker.js`) must be loaded with the correct subpath. Use `window.Auth.getBasePath()` to resolve:
+   ```javascript
+   // ✅ Correct — resolves to /AlbEdu/src/utils/image-compress-worker.js
+   const basePath = window.Auth?.getBasePath?.() || '/';
+   const worker = new Worker(basePath + 'src/utils/image-compress-worker.js');
+
+   // ❌ Wrong — 404 on GitHub Pages (resolves to domain root)
+   const worker = new Worker('/src/utils/image-compress-worker.js');
+   ```
+   **Or use the built-in helper** which handles this automatically:
+   ```javascript
+   const result = await ImageCompress.compressInWorker(file, { onProgress });
+   ```
+
+2. **MozJPEG WASM from esm.sh** — Magic Compress™ v2 loads MozJPEG via `import('https://esm.sh/@jsquash/jpeg@1.3.0/encode.js')`. This works on GitHub Pages because:
+   - GitHub Pages does NOT set a Content-Security-Policy header by default
+   - esm.sh sends proper `Access-Control-Allow-Origin: *` headers
+   - The WASM binary is fetched internally by jsquash with CORS enabled
+   - If the WASM load fails (network issue, CDN blocked), Magic Compress™ automatically falls back to Canvas encoder
+
+3. **Worker `importScripts` inside the worker** — the worker loads `image-compress.js` via `importScripts`. It uses `self.location.href` to derive its own directory, which is subpath-safe:
+   ```javascript
+   // Inside image-compress-worker.js
+   const workerDir = self.location.href.replace(/\/[^/]+$/, '/');
+   self.importScripts(workerDir + 'image-compress.js');
+   // → https://albytehq.github.io/AlbEdu/src/utils/image-compress.js
+   ```
+
+4. **Cloudflare Worker CORS** — the Cloudflare Worker (`edu.albyte-inc.workers.dev`) already has `albytehq.github.io` in its `ALLOWED_ORIGINS` list (see `worker-v6.js:34`). No change needed.
+
+5. **Supabase Edge Function CORS** — the `_shared/cors.ts` file already allows `https://albytehq.github.io` (see `supabase/functions/_shared/cors.ts:10`). No change needed.
 
 ---
 
@@ -36,7 +85,7 @@ This guide walks you through setting up BackBlaze B2 as the object storage backe
 
 1. In the B2 dashboard, click **"Create a Bucket"**
 2. Configure:
-   - **Name:** `albedu-soal-images` (must be globally unique — if taken, use `albedu-soal-images-{your-org}`)
+   - **Name:** `albedu-assets-systems` (must be globally unique — if taken, use `albedu-assets-systems-{your-org}`)
    - **Files in Bucket are:** **Private** (not public — images served only via Cloudflare Worker cache proxy)
    - **Bucket Info:** `AlbEdu assessment question images`
    - **Encryption:** **None** (Supabase Edge Function handles encryption at rest via B2 server-side encryption — this is automatic)
@@ -54,7 +103,7 @@ The application key is what Supabase Edge Functions use to upload/delete images 
 2. Click **"Add a New Application Key"**
 3. Configure:
    - **Name:** `albedu-supabase-edge` (descriptive — this key is used by Supabase Edge Functions)
-   - **Allow access to Bucket(s):** Select only `albedu-soal-images` (scoped — this key cannot touch other buckets)
+   - **Allow access to Bucket(s):** Select only `albedu-assets-systems` (scoped — this key cannot touch other buckets)
    - **Type of Access:** **Read and Write** (Edge Functions need to upload AND delete)
    - **File Access Only:** ✅ Yes (no bucket admin operations needed)
 4. Click **"Create New Key"**
@@ -83,7 +132,7 @@ Supabase Edge Functions access B2 via environment variables (secrets). These are
 | `B2_KEY_ID` | `0027a4b5e3c84700000000001` (your keyID from Step 3) |
 | `B2_APPLICATION_KEY` | `K001xJ8aB3cD4eF5gH6iJ7kL8mN9oP0qR1sT2uV3wX4y` (your applicationKey from Step 3) |
 | `B2_BUCKET_ID` | `a1b2c3d4e5f6` (from bucket URL in B2 dashboard) |
-| `B2_BUCKET_NAME` | `albedu-soal-images` |
+| `B2_BUCKET_NAME` | `albedu-assets-systems` |
 | `B2_REGION` | `us-west-002` (shown in bucket details — could be `us-west-001`, `eu-central-003`, etc.) |
 
 5. Click **"Save"** for each secret
@@ -95,7 +144,7 @@ supabase secrets set \
   B2_KEY_ID=0027a4b5e3c84700000000001 \
   B2_APPLICATION_KEY=K001xJ8aB3cD4eF5gH6iJ7kL8mN9oP0qR1sT2uV3wX4y \
   B2_BUCKET_ID=a1b2c3d4e5f6 \
-  B2_BUCKET_NAME=albedu-soal-images \
+  B2_BUCKET_NAME=albedu-assets-systems \
   B2_REGION=us-west-002
 ```
 
@@ -109,7 +158,7 @@ This is the **most important step** — it makes all downloads from B2 completel
 
 ### 5.1: Get Your B2 S3 Endpoint URL
 
-1. In B2 dashboard → **Buckets** → click `albedu-soal-images`
+1. In B2 dashboard → **Buckets** → click `albedu-assets-systems`
 2. Look for **"Endpoint"** field — it looks like: `s3.us-west-002.backblazeb2.com`
 3. Note this URL (you'll need it for Cloudflare setup)
 
@@ -120,7 +169,7 @@ This is the **most important step** — it makes all downloads from B2 completel
 3. Go to **Storage** → **R2** → **Bandwidth Alliance** (or Settings → Bandwidth Alliance)
 4. Click **"Connect BackBlaze B2"**
 5. Enter:
-   - **B2 Bucket Name:** `albedu-soal-images`
+   - **B2 Bucket Name:** `albedu-assets-systems`
    - **B2 Application Key ID:** your `B2_KEY_ID`
    - **B2 Application Key:** your `B2_APPLICATION_KEY`
 6. Click **"Connect"**
@@ -154,7 +203,7 @@ In Cloudflare Dashboard → Workers → `edu.albyte-inc` → Settings → Variab
 |---|---|---|
 | `B2_KEY_ID` | (same as Supabase) | Secret |
 | `B2_APPLICATION_KEY` | (same as Supabase) | Secret |
-| `B2_BUCKET_NAME` | `albedu-soal-images` | Text |
+| `B2_BUCKET_NAME` | `albedu-assets-systems` | Text |
 | `B2_ENDPOINT` | `s3.us-west-002.backblazeb2.com` | Text |
 
 ### 6.2: Deploy Worker v7 (Phase 4 deliverable)
@@ -201,7 +250,7 @@ Expected response:
 
 ### 7.3: Verify in B2 dashboard
 
-1. Go to B2 dashboard → Buckets → `albedu-soal-images`
+1. Go to B2 dashboard → Buckets → `albedu-assets-systems`
 2. You should see a file at path `a3/a3f1c9...e4b2.jpg`
 3. File size should be 80-300 KB (Magic Compress™ working)
 
@@ -265,7 +314,7 @@ After Phase 6, the `asset-alert` Edge Function will automatically alert when:
 ### "401 Unauthorized" when Edge Function uploads to B2
 
 - Verify `B2_KEY_ID` and `B2_APPLICATION_KEY` are set correctly in Supabase secrets
-- Verify the application key has **Read and Write** access to the `albedu-soal-images` bucket
+- Verify the application key has **Read and Write** access to the `albedu-assets-systems` bucket
 - Check that the keyID doesn't have leading/trailing whitespace
 
 ### "403 Forbidden" when Worker fetches from B2
@@ -297,7 +346,7 @@ After Phase 6, the `asset-alert` Edge Function will automatically alert when:
 ## Security Checklist
 
 - [ ] B2 bucket is set to **Private** (not Public)
-- [ ] Application key is scoped to only `albedu-soal-images` bucket
+- [ ] Application key is scoped to only `albedu-assets-systems` bucket
 - [ ] `B2_APPLICATION_KEY` is stored as Supabase **Secret** (not Text)
 - [ ] `B2_APPLICATION_KEY` is stored as Cloudflare Worker **Secret** (not Text)
 - [ ] Application key is NOT committed to git
