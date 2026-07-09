@@ -1,11 +1,163 @@
 /* ==========================================================================
-   peserta-floating-profile.css — iOS-feel floating profile button for
-   participant-side pages (assessment/index, take, submitted, blocked).
+   peserta-floating-profile.css — Profile entry point for participant-side
+   pages (assessment/index, take, submitted, blocked).
 
-   v0.742.7: New file. Adds a fixed-position circular avatar button that
-   triggers OptionProfile dropdown. Designed to feel native iOS — spring
-   animation, frosted-glass material, system font, SF-symbol-like icon.
+   Two variants:
+     1. WIDE CARD (.albedu-peserta-profile-card) — used on assessment/index
+        entry page. Full-width card inserted below the "Kembali ke beranda"
+        link inside .token-container. Layout: [avatar] [name + role] [chevron].
+     2. FLOATING FAB (.albedu-profile-fab) — legacy fixed-position circular
+        avatar button (top-right) used on take/submitted/blocked pages.
+
+   v0.742.7: Original FAB file. v0.816.1: Added wide-card variant for the
+   entry page (user reported FAB was hard to click + wanted the profile
+   trigger moved below the back-to-home link as a wide, easy-to-tap card).
    ========================================================================== */
+
+/* ── Wide profile card (.albedu-peserta-profile-card) ────────────────────── */
+
+.albedu-peserta-profile-card {
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Plus Jakarta Sans', system-ui, sans-serif;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 200ms ease,
+    background 200ms ease,
+    border-color 200ms ease;
+}
+
+.albedu-peserta-profile-card:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(37, 99, 235, 0.25);
+  box-shadow:
+    0 2px 4px rgba(15, 23, 42, 0.04),
+    0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.albedu-peserta-profile-card:active {
+  transform: translateY(0) scale(0.99);
+  transition-duration: 80ms;
+}
+
+.albedu-peserta-profile-card:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.35),
+    0 2px 4px rgba(15, 23, 42, 0.04),
+    0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.albedu-peserta-profile-card__avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  position: relative;
+}
+
+.albedu-peserta-profile-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.albedu-peserta-profile-card__avatar .material-symbols-outlined {
+  font-size: 22px;
+  font-variation-settings: 'FILL' 1, 'wght' 500;
+}
+
+.albedu-peserta-profile-card__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.albedu-peserta-profile-card__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.albedu-peserta-profile-card__role {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: 0.01em;
+}
+
+.albedu-peserta-profile-card__chevron {
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 20px;
+  transition: transform 200ms ease, color 200ms ease;
+}
+
+.albedu-peserta-profile-card:hover .albedu-peserta-profile-card__chevron {
+  color: #2563eb;
+  transform: translateY(2px);
+}
+
+/* Presence dot (incomplete profile) — subtler than the FAB variant */
+.albedu-peserta-profile-card__dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+}
+
+/* Loading state — dimmed + non-interactive until auth resolves */
+.albedu-peserta-profile-card[data-state="loading"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .albedu-peserta-profile-card {
+    background: rgba(30, 41, 59, 0.6);
+    border-color: rgba(59, 130, 246, 0.18);
+  }
+  .albedu-peserta-profile-card:hover {
+    background: rgba(30, 41, 59, 0.85);
+    border-color: rgba(59, 130, 246, 0.35);
+  }
+  .albedu-peserta-profile-card__name { color: #f1f5f9; }
+  .albedu-peserta-profile-card__role { color: #94a3b8; }
+  .albedu-peserta-profile-card__chevron { color: #64748b; }
+  .albedu-peserta-profile-card__dot { border-color: rgba(15, 23, 42, 0.95); }
+}
 
 /* ── Floating profile button (position:fixed) ────────────────────────────── */
 

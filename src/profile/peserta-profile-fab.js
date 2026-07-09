@@ -1,10 +1,17 @@
-// peserta-profile-fab.js — Floating Profile Button for participant pages.
+// peserta-profile-fab.js — Profile entry point for participant pages.
 //
 // Peserta pages (assessment/index, take, submitted, blocked) had no logout
 // path: the "Kembali ke Login" buttons were plain hrefs, not real logout.
-// This injects a fixed-position iOS-style avatar button (top-right) that
-// opens OptionProfile (the same dropdown admin pages use), so peserta can
-// reach "Keluar" → authLogout() → landing page.
+// This injects a profile trigger that opens OptionProfile (the same dropdown
+// admin pages use), so peserta can reach "Keluar" → authLogout() → landing.
+//
+// Two render modes (auto-detected):
+//   - WIDE CARD (default on assessment/index entry page, which has
+//     `.token-container` + `.token-back`): a full-width card is inserted
+//     BELOW the "Kembali ke beranda" link. Simple layout — avatar + nama +
+//     peran (Peserta) + chevron. Click opens OptionProfile.
+//   - FLOATING FAB (legacy, used on take/submitted/blocked): a fixed-position
+//     iOS-style circular avatar button (top-right) that opens OptionProfile.
 //
 // On admin pages, navigasi.js bootstraps OptionProfile + ProfileEditorPanel.
 // Peserta pages don't load navigasi.js (no sidebar), so we bootstrap both
@@ -37,6 +44,7 @@
     return '';
   }
 
+  // Build the floating FAB variant (used on take/submitted/blocked pages).
   function _buildFab() {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -54,10 +62,58 @@
     return btn;
   }
 
-  // Populate avatar from Auth.userData
+  // Build the wide card variant (used on assessment/index entry page).
+  // Inserted INSIDE .token-container, right after .token-back ("Kembali ke beranda").
+  // Layout: [avatar] [nama + peran] [chevron] — full-width, click = open OptionProfile.
+  function _buildWideCard() {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'albedu-peserta-profile-card';
+    card.setAttribute('data-state', 'loading');
+    card.setAttribute('aria-label', 'Profil pengguna');
+    card.setAttribute('aria-haspopup', 'menu');
+    card.setAttribute('aria-expanded', 'false');
+    card.innerHTML = `
+      <span class="albedu-peserta-profile-card__avatar">
+        <span data-albedu-icon="person"></span>
+      </span>
+      <span class="albedu-peserta-profile-card__info">
+        <span class="albedu-peserta-profile-card__name">Memuat…</span>
+        <span class="albedu-peserta-profile-card__role">Peserta</span>
+      </span>
+      <span class="albedu-peserta-profile-card__chevron" data-albedu-icon="expand_more" aria-hidden="true"></span>
+    `;
+
+    // Insert after .token-back inside .token-container. If .token-back isn't
+    // found (page structure changed), fall back to appending inside
+    // .token-container, then to body.
+    const tokenBack = document.querySelector('.token-back');
+    if (tokenBack && tokenBack.parentNode) {
+      tokenBack.insertAdjacentElement('afterend', card);
+    } else {
+      const container = document.querySelector('.token-container');
+      if (container) container.appendChild(card);
+      else document.body.appendChild(card);
+    }
+    return card;
+  }
+
+  // Detect entry-page mode: presence of `.token-container` + `.token-back`
+  // means we're on the assessment entry page (assessment/index.html) where the
+  // user wants a wide profile card below "Kembali ke beranda" instead of the
+  // floating FAB.
+  function _useWideCardMode() {
+    return !!document.querySelector('.token-container') &&
+           !!document.querySelector('.token-back');
+  }
+
+  // Populate avatar from Auth.userData. Works for both FAB and wide-card
+  // variants — uses a class-prefix argument to target the right elements.
   function _populateAvatar(btn, user) {
     if (!user) return;
-    const avatarEl = btn.querySelector('.albedu-profile-fab__avatar');
+    const isCard = btn.classList.contains('albedu-peserta-profile-card');
+    const avatarCls = isCard ? '.albedu-peserta-profile-card__avatar' : '.albedu-profile-fab__avatar';
+    const avatarEl = btn.querySelector(avatarCls);
     if (!avatarEl) return;
 
     const fotoUrl = user.foto_profil || user.fotoProfil;
@@ -80,10 +136,19 @@
     btn.setAttribute('aria-label', `Profil ${user.nama || 'pengguna'}`);
     btn.title = user.nama || 'Profil';
 
-    // Presence dot if profile incomplete
+    // Wide-card: also update the visible name + role text.
+    if (isCard) {
+      const nameEl = btn.querySelector('.albedu-peserta-profile-card__name');
+      if (nameEl) nameEl.textContent = user.nama || 'Pengguna';
+      const roleEl = btn.querySelector('.albedu-peserta-profile-card__role');
+      if (roleEl) roleEl.textContent = 'Peserta';
+    }
+
+    // Presence dot if profile incomplete (FAB variant only — wide card uses
+    // a subtler dot style via .albedu-peserta-profile-card__dot).
     if (user.profilLengkap === false) {
       const dot = document.createElement('span');
-      dot.className = 'albedu-profile-fab__dot';
+      dot.className = isCard ? 'albedu-peserta-profile-card__dot' : 'albedu-profile-fab__dot';
       dot.title = 'Profil belum lengkap';
       btn.appendChild(dot);
     }
@@ -196,15 +261,17 @@
 
   // Init
   function init() {
-    // Don't double-init
-    if (document.querySelector('.albedu-profile-fab')) return;
+    // Don't double-init (either variant)
+    if (document.querySelector('.albedu-profile-fab, .albedu-peserta-profile-card')) return;
 
-    const fab = _buildFab();
+    // Pick variant based on page structure.
+    const useWideCard = _useWideCardMode();
+    const trigger = useWideCard ? _buildWideCard() : _buildFab();
 
     // Click handler — OptionProfile will bind to it via triggers,
     // but we add a fallback click that calls toggle() directly in case
     // OptionProfile script load fails.
-    fab.addEventListener('click', function (e) {
+    trigger.addEventListener('click', function (e) {
       if (window.OptionProfile?.isOpen?.()) {
         window.OptionProfile.close();
         return;
@@ -212,32 +279,32 @@
       if (window.OptionProfile?.open) {
         // open() expects positional args: (triggerEl, cursorX, cursorY)
         // NOT an object — passing object causes _activeTrigger.getBoundingClientRect error
-        window.OptionProfile.open(fab, e.clientX, e.clientY);
+        window.OptionProfile.open(trigger, e.clientX, e.clientY);
         return;
       }
       // Fallback: if OptionProfile not loaded, do nothing (script load error logged)
-      console.warn('[peserta-fab] OptionProfile not loaded — cannot open dropdown');
+      console.warn('[peserta-profile] OptionProfile not loaded — cannot open dropdown');
     });
 
     // Bootstrap OptionProfile in the background (non-blocking)
-    _bootstrapOptionProfile(fab);
+    _bootstrapOptionProfile(trigger);
 
     // Populate avatar once auth is ready
     _waitForAuth().then((userData) => {
       if (userData) {
-        _populateAvatar(fab, userData);
+        _populateAvatar(trigger, userData);
       } else {
         // No user — keep loading state (byteward will redirect to login)
-        console.info('[peserta-fab] No user session — waiting for auth redirect');
+        console.info('[peserta-profile] No user session — waiting for auth redirect');
       }
     });
 
     // Sync on pep-saved (profile editor save)
     window.addEventListener('pep-saved', function (e) {
-      _populateAvatar(fab, e.detail);
+      _populateAvatar(trigger, e.detail);
     });
 
-    console.info('[peserta-fab] initialized');
+    console.info('[peserta-profile] initialized (' + (useWideCard ? 'wide-card' : 'fab') + ' mode)');
   }
 
   // Auto-init on DOMContentLoaded

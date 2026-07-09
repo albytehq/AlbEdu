@@ -102,10 +102,19 @@
   z-index: var(--albedu-z-overlay, 8999);
   padding: 16px;
   opacity: 0;
+  pointer-events: none; /* invisible ⇒ click-through until .albedu-modal-visible */
   transition: opacity var(--albedu-transition, 150ms);
+}
+/* Respect the HTML [hidden] attribute — author CSS `display:flex` would
+   otherwise override the UA default `[hidden] { display:none }`, leaving
+   the overlay laid out across the viewport at opacity:0 and blocking all
+   clicks (root cause of the Create Assessment page blank/hang bug). */
+.albedu-modal-overlay[hidden] {
+  display: none;
 }
 .albedu-modal-overlay.albedu-modal-visible {
   opacity: 1;
+  pointer-events: auto; /* only interactive when explicitly shown */
 }
 .albedu-modal {
   background: var(--albedu-surface, #fff);
@@ -831,4 +840,110 @@
 @media (max-width: 768px) {
   .albedu-btn { min-height: 44px; }
   .albedu-btn-sm { min-height: 40px; }
+}
+
+/* =====================================================================
+   11. Info Tip — .albedu-info-tip
+   Small inline info icon (ⓘ) that shows a popover bubble on hover
+   (desktop) or focus/tap (mobile + keyboard). Used to surface helpful
+   context (e.g. "Peserta masuk dengan Google") without the visual
+   weight of a full alert box. Accessible: focusable, role=button,
+   aria-describedby points to the bubble (role=tooltip).
+   ===================================================================== */
+.albedu-info-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  vertical-align: middle;
+  width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: help;
+  color: var(--albedu-text-muted, #64748b);
+  border-radius: 50%;
+  transition: color 150ms ease, background 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.albedu-info-tip:hover,
+.albedu-info-tip:focus-visible {
+  color: var(--albedu-primary, #2563eb);
+  background: var(--albedu-primary-muted, rgba(37, 99, 235, 0.08));
+  outline: none;
+}
+.albedu-info-tip__icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.albedu-info-tip__bubble {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  min-width: 220px;
+  max-width: 280px;
+  padding: 10px 12px;
+  background: var(--albedu-surface, #fff);
+  color: var(--albedu-text, #0f172a);
+  border: 1px solid var(--albedu-border, #e2e8f0);
+  border-radius: 8px;
+  box-shadow:
+    0 4px 12px rgba(15, 23, 42, 0.08),
+    0 12px 28px rgba(15, 23, 42, 0.06);
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-weight: 400;
+  text-align: left;
+  letter-spacing: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: var(--z-tooltip, 70);
+  transition: opacity 180ms ease, transform 180ms ease, visibility 180ms;
+}
+.albedu-info-tip__bubble::before {
+  /* Arrow pointing up at the icon */
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom-color: var(--albedu-surface, #fff);
+  filter: drop-shadow(0 -1px 0 var(--albedu-border, #e2e8f0));
+}
+.albedu-info-tip:hover .albedu-info-tip__bubble,
+.albedu-info-tip:focus-within .albedu-info-tip__bubble,
+.albedu-info-tip.is-open .albedu-info-tip__bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+/* On narrow viewports, anchor the bubble to the left edge of the icon
+   instead of centering, so it doesn't overflow the form container. */
+@media (max-width: 480px) {
+  .albedu-info-tip__bubble {
+    left: 0;
+    transform: translateX(0) translateY(-4px);
+    min-width: 200px;
+    max-width: 240px;
+  }
+  .albedu-info-tip__bubble::before {
+    left: 10px;
+    transform: translateX(0);
+  }
+  .albedu-info-tip:hover .albedu-info-tip__bubble,
+  .albedu-info-tip:focus-within .albedu-info-tip__bubble,
+  .albedu-info-tip.is-open .albedu-info-tip__bubble {
+    transform: translateX(0) translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .albedu-info-tip__bubble {
+    transition: opacity 0.01ms, visibility 0.01ms;
+  }
 }

@@ -489,6 +489,14 @@ document.addEventListener('DOMContentLoaded', function () {
     // window.AlbEdu.ensureProfileScripts() API that any trigger can call.
     (function _bootstrapProfileScriptsLazy() {
 
+        // Module-private load promise. MUST be declared with `let` — reading an
+        // undeclared variable throws ReferenceError in both strict and sloppy
+        // mode, which previously aborted the lazy loader on the very first
+        // click/hover/focus/touchstart of .user-profile-content, surfacing as a
+        // red "Terjadi kesalahan sistem" toast via error-boundary.js and never
+        // opening the OptionProfile dropdown.
+        let _loadPromise;
+
         function ensureProfileScripts(triggerEvent) {
             if (_loadPromise) return _loadPromise;
             // Was this load kicked off by a real click/tap (user wants the

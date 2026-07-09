@@ -930,7 +930,10 @@
 
     /* ── Responsive Nav ────────────────────────────────────────── */
     @media (max-width: 639px) {
-      .nav-btn-login span { display: none; }
+      /* Hide only the TEXT span on mobile — keep the icon span visible so
+         the login button stays identifiable. Previously this rule hid ALL
+         spans (including the icon), making the button an empty ghost. */
+      .nav-btn-login span:not([data-albedu-icon]) { display: none; }
       .nav-btn-login { padding: var(--sp-2) var(--sp-3); }
     }
 

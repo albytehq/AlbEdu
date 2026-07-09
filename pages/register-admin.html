@@ -52,21 +52,20 @@
                         <img src="../public/images/logo.svg" alt="AlbEdu" width="36" height="36">
                         <span class="form-logo-name">AlbEdu</span>
                     </div>
-                    <h1 class="form-title">Buat Akun Admin</h1>
+                    <h1 class="form-title">
+                        Buat Akun Admin
+                        <span class="albedu-info-tip" tabindex="0" role="button" aria-label="Info registrasi khusus admin" aria-describedby="regadmin-info-bubble">
+                            <svg class="albedu-info-tip__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 16v-4"/>
+                                <path d="M12 8h.01"/>
+                            </svg>
+                            <span class="albedu-info-tip__bubble" id="regadmin-info-bubble" role="tooltip">
+                                Halaman ini untuk membuat akun admin (pengelola asesmen). Peserta masuk langsung dengan Google — tidak perlu registrasi.
+                            </span>
+                        </span>
+                    </h1>
                     <p class="form-subtitle">Halaman ini khusus admin — peserta tidak perlu mendaftar</p>
-                </div>
-
-                <!-- Admin-only warning banner -->
-                <div class="albedu-alert albedu-alert--warning">
-                    <svg class="albedu-alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                        <line x1="12" y1="9" x2="12" y2="13"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    <div class="albedu-alert__body">
-                        <div class="albedu-alert__title">Registrasi khusus admin</div>
-                        <p>Halaman ini untuk membuat akun admin (pengelola asesmen). Peserta masuk langsung dengan Google — tidak perlu registrasi.</p>
-                    </div>
                 </div>
 
                 <!-- Registration form — IDs preserved for AdminOnboarding.js -->
