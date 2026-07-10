@@ -704,7 +704,7 @@
         ${itemsHtml}
       </div>
 
-      <div class="op-footer">AlbEdu v0.819.0</div>
+      <div class="op-footer">AlbEdu v0.821.0</div>
     `;
 
     // Attach onerror via event listener (CSP-friendly)
@@ -822,7 +822,7 @@
 
   function _initPEP() {
     if (!window.ProfileEditorPanel || _ppeReady) return;
-    // v0.819.0: workerBase no longer required — ProfileEditorPanel uses Supabase Storage directly.
+    // v0.821.0: workerBase no longer required — ProfileEditorPanel uses Supabase Storage directly.
     // Kept for backward compat (ignored if passed).
     window.ProfileEditorPanel.init({
       trigger: [],
@@ -1202,7 +1202,7 @@
   function init(cfg) {
     _cfg = cfg || {};
 
-    // v0.819.0: workerBase is now optional (ignored). Avatars use Supabase Storage directly.
+    // v0.821.0: workerBase is now optional (ignored). Avatars use Supabase Storage directly.
     // No error if missing — backward compat with older callers that still pass it.
 
     _injectStyles();

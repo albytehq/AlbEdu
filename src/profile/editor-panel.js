@@ -3,7 +3,7 @@
 // All styles are scoped to the `pep-` prefix so it can mount on any page
 // without leaking CSS.
 //
-// v0.819.0: Avatar uploads now go to Supabase Storage (bucket: `avatars`)
+// v0.821.0: Avatar uploads now go to Supabase Storage (bucket: `avatars`)
 // instead of the broken Cloudflare Worker `/upload` endpoint. Magic Compress™
 // v2 is wired in — every avatar is resized to 256×256, JPEG q85, <50 KB.
 //
@@ -610,6 +610,48 @@
       qualityUsed: compressed.qualityUsed,
       url: urlData.publicUrl,
     });
+
+    // ── 4. Cleanup old avatars (async, non-blocking) ──────────────────────
+    // The new avatar is uploaded at a unique timestamped path. The OLD avatars
+    // (from previous uploads by this user) are now orphans — they're not
+    // referenced by users.avatar_url anymore. Delete them to prevent storage
+    // bloat (1 user × 10 avatar changes = 10 files × 50 KB = 500 KB wasted).
+    //
+    // We keep only the JUST-uploaded file (matching `path`). All other files
+    // in the user's folder are deleted. This is safe because:
+    //   • The new avatar URL is already in urlData.publicUrl (returned below)
+    //   • users.avatar_url will be updated by _updateUserProfile() after this
+    //   • Old avatars are never referenced anywhere else (no CDN cache issue
+    //     because each avatar has a unique timestamp URL)
+    //
+    // Fire-and-forget — don't block the save flow on cleanup. If cleanup
+    // fails, the orphan persists but user sees their new avatar immediately.
+    // (Orphan avatars can be GC'd later by a scheduled job if needed.)
+    try {
+      supabase.storage
+        .from('avatars')
+        .list(userId, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } })
+        .then(({ data: oldFiles, error: listErr }) => {
+          if (listErr || !Array.isArray(oldFiles)) return;
+          // Delete all files EXCEPT the one we just uploaded (match by name)
+          const toDelete = oldFiles
+            .filter((f) => f.name !== path.split('/')[1])
+            .map((f) => `${userId}/${f.name}`);
+          if (toDelete.length === 0) return;
+          return supabase.storage.from('avatars').remove(toDelete);
+        })
+        .then((result) => {
+          if (result?.data?.length > 0) {
+            console.info('[ProfileEditorPanel] Old avatars cleaned up:', result.data.length);
+          }
+        })
+        .catch((err) => {
+          console.warn('[ProfileEditorPanel] Old avatar cleanup failed (non-fatal):', err?.message);
+        });
+    } catch (cleanupErr) {
+      // Non-fatal — don't break the upload flow
+      console.warn('[ProfileEditorPanel] Cleanup initiation failed:', cleanupErr?.message);
+    }
 
     return urlData.publicUrl;
   }

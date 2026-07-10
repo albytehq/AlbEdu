@@ -6,6 +6,7 @@
 
   <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://edu.albyte-inc.workers.dev https://esm.sh; worker-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-src https://challenges.cloudflare.com; form-action 'self'">
     <title>Daftar Akun Admin — AlbEdu</title>
     <meta name="description" content="Daftarkan akun administrator AlbEdu.">
     <meta name="theme-color" content="#2563eb">
@@ -70,6 +71,14 @@
 
                 <!-- Registration form — IDs preserved for AdminOnboarding.js -->
                 <form id="adminRegisterForm" novalidate>
+                    <!-- v0.821.0: Registration Code (SEC-A-C3 — prevents unauthorized admin registration) -->
+                    <div class="field">
+                        <label for="registerCode">Kode Registrasi</label>
+                        <input id="registerCode" name="registerCode" type="text" autocomplete="off"
+                            class="albedu-input" placeholder="Masukkan kode dari admin" required>
+                        <span class="albedu-field-hint">Dapatkan dari admin AlbEdu</span>
+                    </div>
+
                     <div class="field">
                         <label for="email">Email</label>
                         <input id="email" name="email" type="email" autocomplete="email"

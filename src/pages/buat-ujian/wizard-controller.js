@@ -72,9 +72,13 @@
 
     _closeWizard() {
       const doClose = () => {
+        // v0.821.0: Release all draft images before closing
+        const state = window.CreateAssessment?.getState?.();
+        if (state?.examData?.sections && window.ImageCleanup?.deleteExamImages) {
+          window.ImageCleanup.deleteExamImages(state.examData).catch(() => {});
+        }
         this._wizardView.hidden = true;
         this._listView.hidden = false;
-        // Refresh list view to show any newly-published exam.
         window.ListView?.refresh?.();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       };

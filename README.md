@@ -3,7 +3,7 @@
 > Platform asesmen production-grade untuk semua kebutuhan evaluasi — SD, SMP, SMA, kuliah, hingga personal use.
 > Vanilla JS + Supabase + Cloudflare — zero framework, zero build runtime.
 
-[![Version](https://img.shields.io/badge/version-v0.819.0-blue)]()
+[![Version](https://img.shields.io/badge/version-v0.821.0-blue)]()
 [![Structure](https://img.shields.io/badge/structure-by--feature-green)]()
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)]()
 
@@ -52,7 +52,7 @@ npm run verify
 
 ---
 
-## 📁 Project Structure (v0.819.0 — By-Feature)
+## 📁 Project Structure (v0.821.0 — By-Feature)
 
 ```
 AlbEdu/
@@ -210,19 +210,22 @@ AlbEdu/
 | [docs/ICON-SYSTEM-ENTERPRISE.md](./docs/ICON-SYSTEM-ENTERPRISE.md) | Icon system v7.0 |
 | [docs/THEME-SYSTEM.md](./docs/THEME-SYSTEM.md) | Theme system |
 | [docs/PAGE-TEMPLATE.html](./docs/PAGE-TEMPLATE.html) | Canonical page template |
-| [docs/asset-system/ROADMAP.md](./docs/asset-system/ROADMAP.md) | 🆕 Asset system migration roadmap (v0.819.0+) |
+| [docs/asset-system/ROADMAP.md](./docs/asset-system/ROADMAP.md) | 🆕 Asset system migration roadmap (v0.821.0+) |
 | [docs/asset-system/ARCHITECTURE-V2.md](./docs/asset-system/ARCHITECTURE-V2.md) | 🆕 New asset system architecture (Supabase + B2 + Magic Compress™ v2) |
 | [docs/asset-system/BACKBLAZE-SETUP.md](./docs/asset-system/BACKBLAZE-SETUP.md) | 🆕 Step-by-step BackBlaze B2 + Cloudflare Bandwidth Alliance setup |
+| [docs/security/SECURITY-ROADMAP.md](./docs/security/SECURITY-ROADMAP.md) | 🚨 Security remediation roadmap (8 CRITICAL, 12 HIGH, 15 MEDIUM findings) |
+| [docs/security/INCIDENT-RESPONSE.md](./docs/security/INCIDENT-RESPONSE.md) | 🚨 Incident response plan + key rotation runbook |
+| [docs/security/MONITORING-SETUP.md](./docs/security/MONITORING-SETUP.md) | 🚨 UptimeRobot + REGISTER_WORKER_SECRET + Supabase CAPTCHA setup |
 
 ---
 
-## 🖼️ Asset System (v0.819.0+)
+## 🖼️ Asset System (v0.821.0+)
 
 AlbEdu's asset system (avatar + assessment images) is being migrated from GitHub repos to **Supabase Storage + Backblaze B2** with **Magic Compress™** technology.
 
 > ⚠️ **Cloudflare R2 is EXCLUDED** — requires credit card even for free tier. AlbEdu uses BackBlaze B2 instead (10 GB free, no CC, free egress via Cloudflare Bandwidth Alliance).
 
-### Current State (v0.819.0 — Phase 1 complete)
+### Current State (v0.821.0 — Phase 1 complete)
 - ✅ `assets_manifest` migration created with RLS, indexes, CHECK constraints
 - ✅ Magic Compress™ v2 implemented (`src/utils/image-compress.js` + `image-compress-worker.js`) — perceptual compression with complexity analysis, MozJPEG WASM, SSIM quality check
 - ✅ BackBlaze B2 setup guide created (`docs/asset-system/BACKBLAZE-SETUP.md`)

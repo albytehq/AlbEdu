@@ -1,120 +1,90 @@
 //  image-cleanup.js — release uploaded images (soal/assessment images).
 //
-//  v0.819.0: Avatar deletion moved to Supabase Storage directly (deleteAvatar).
-//  Soal image deletion (deleteImage/deleteExamImages/deleteImages) is currently
-//  DEPRECATED — the old Worker /release endpoint is decommissioned. Phase 2
-//  will rewire these to call the new asset-release Supabase Edge Function.
+//  v0.821.0: Phase 2 — deleteImage/deleteImages/deleteExamImages now call
+//  the asset-release Supabase Edge Function (ref_count decrement).
+//  deleteAvatar remains on Supabase Storage (Phase 1).
 //
 //  Public API:
-//    ImageCleanup.deleteAvatar(userId, opts)  — ACTIVE (Phase 1, Supabase Storage)
-//    ImageCleanup.deleteImage(entry)          — DEPRECATED (Phase 2 will rewire)
-//    ImageCleanup.deleteExamImages(examData)  — DEPRECATED (Phase 2 will rewire)
-//    ImageCleanup.deleteImages(entries)       — DEPRECATED (Phase 2 will rewire)
+//    ImageCleanup.deleteAvatar(userId, opts)  — Avatar deletion (Supabase Storage)
+//    ImageCleanup.deleteImage(entry)          — Single image release (asset-release EF)
+//    ImageCleanup.deleteExamImages(examData)  — All images in an exam (asset-release EF)
+//    ImageCleanup.deleteImages(entries)       — Batch release (asset-release EF)
 
 const ImageCleanup = (() => {
 
-  // v0.819.0: Worker /release endpoint decommissioned. These helpers are kept
-  // as no-ops with warnings until Phase 2 wires them to the asset-release
-  // Supabase Edge Function. Calling them now is safe (returns false) but logs
-  // a deprecation warning so developers know images aren't actually released.
-
   /**
-   * @deprecated since v0.819.0 — Phase 2 will rewire to asset-release Edge Function.
-   * Currently a no-op (returns false). Worker /release endpoint is decommissioned.
-   *
+   * Release a single image via asset-release Edge Function.
    * @param {string | { url: string, hash: string }} entry
    * @returns {Promise<boolean>}
    */
   async function deleteImage(entry) {
-    console.warn('[ImageCleanup] deleteImage() is deprecated since v0.819.0.',
-      'Worker /release decommissioned. Phase 2 will rewire to asset-release Edge Function.',
-      'Entry:', entry);
-    return false;
+    const hash = typeof entry === 'object' ? entry?.hash : null;
+    if (!hash) { console.warn('[ImageCleanup] deleteImage: no hash', entry); return false; }
+    const r = await deleteImages([entry]);
+    return r.deleted > 0;
   }
 
   /**
-   * @deprecated since v0.819.0 — Phase 2 will rewire.
-   * Walks the full examData object and would release every image entry found.
-   * Currently a no-op (returns {deleted: 0, failed: 0}).
-   *
-   * @param {object} examData  - Full exam record from Supabase
+   * Walks examData and releases every image found.
+   * @param {object} examData
    * @returns {Promise<{ deleted: number, failed: number }>}
    */
   async function deleteExamImages(examData) {
-    console.warn('[ImageCleanup] deleteExamImages() is deprecated since v0.819.0.',
-      'Phase 2 will rewire to asset-release Edge Function.');
-    return { deleted: 0, failed: 0 };
+    const entries = [];
+    try {
+      const sections = examData?.soal || examData?.sections || [];
+      for (const section of sections) {
+        const questions = section?.questions || section?.soal || [];
+        for (const q of questions) {
+          const gambar = q?.media?.gambar || [];
+          for (const g of gambar) entries.push(g);
+        }
+      }
+    } catch (err) { console.error('[ImageCleanup] parse error:', err); }
+    return deleteImages(entries);
   }
 
   /**
-   * @deprecated since v0.819.0 — Phase 2 will rewire.
-   * Currently a no-op.
-   *
-   * @param {Array<string | { url: string, hash: string }>} entries
+   * Batch release via asset-release Edge Function.
+   * @param {Array} entries
    * @returns {Promise<{ deleted: number, failed: number }>}
    */
   async function deleteImages(entries) {
-    console.warn('[ImageCleanup] deleteImages() is deprecated since v0.819.0.',
-      'Phase 2 will rewire to asset-release Edge Function.');
-    return { deleted: 0, failed: 0 };
+    if (!Array.isArray(entries) || entries.length === 0) return { deleted: 0, failed: 0 };
+    const hashes = entries.map((e) => typeof e === 'object' ? e?.hash : null).filter((h) => h && /^[a-f0-9]{64}$/.test(h));
+    if (hashes.length === 0) return { deleted: 0, failed: 0 };
+
+    const supabase = window.AlbEdu?.supabase?.client;
+    if (!supabase) { console.warn('[ImageCleanup] no Supabase client'); return { deleted: 0, failed: hashes.length }; }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('asset-release', { body: { hashes } });
+      if (error) { console.error('[ImageCleanup] EF error:', error.message); return { deleted: 0, failed: hashes.length }; }
+      const released = data?.released || 0;
+      console.info('[ImageCleanup] Released:', { total: hashes.length, released, pending: data?.pending_delete || 0 });
+      return { deleted: released, failed: hashes.length - released };
+    } catch (err) { console.error('[ImageCleanup] error:', err); return { deleted: 0, failed: hashes.length }; }
   }
 
   /**
    * Delete a user's avatar from Supabase Storage `avatars` bucket.
-   * Used by DSR handler (UU PDP right-to-be-forgotten) and profile editor
-   * (when user replaces avatar — old one can be deleted after new one uploaded).
-   *
-   * v0.819.0: Phase 1 — avatars now live in Supabase Storage, not GitHub repos.
-   *
-   * @param {string} userId — Supabase auth.uid() of the avatar owner
-   * @param {object} [opts] — { deleteAll: true (default) — delete ALL files in
-   *                          user's folder; false — delete only the latest }
+   * @param {string} userId
+   * @param {object} [opts] — { deleteAll: true (default) }
    * @returns {Promise<{ deleted: number, failed: number, paths: string[] }>}
    */
   async function deleteAvatar(userId, opts = {}) {
     const { deleteAll = true } = opts;
     const supabase = window.AlbEdu?.supabase?.client;
-    if (!supabase) {
-      console.warn('[ImageCleanup] Supabase client not available — cannot delete avatar');
-      return { deleted: 0, failed: 0, paths: [] };
-    }
-    if (!userId) {
-      console.warn('[ImageCleanup] userId required for deleteAvatar');
-      return { deleted: 0, failed: 0, paths: [] };
-    }
+    if (!supabase || !userId) { return { deleted: 0, failed: 0, paths: [] }; }
 
-    // List all files in the user's avatar folder
-    const { data: fileList, error: listErr } = await supabase.storage
-      .from('avatars')
-      .list(userId, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+    const { data: fileList, error: listErr } = await supabase.storage.from('avatars').list(userId, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+    if (listErr || !fileList?.length) { return { deleted: 0, failed: 0, paths: [] }; }
 
-    if (listErr) {
-      console.error('[ImageCleanup] Failed to list avatar files:', listErr.message);
-      return { deleted: 0, failed: 0, paths: [] };
-    }
+    const toDelete = deleteAll ? fileList.map((f) => `${userId}/${f.name}`) : [`${userId}/${fileList[0].name}`];
+    const { data: delResult, error: delErr } = await supabase.storage.from('avatars').remove(toDelete);
+    if (delErr) { return { deleted: 0, failed: toDelete.length, paths: toDelete }; }
 
-    if (!fileList || fileList.length === 0) {
-      // No avatars to delete — not an error
-      return { deleted: 0, failed: 0, paths: [] };
-    }
-
-    // Filter: delete all, or just the latest
-    const toDelete = deleteAll
-      ? fileList.map((f) => `${userId}/${f.name}`)
-      : [`${userId}/${fileList[0].name}`];
-
-    const { data: delResult, error: delErr } = await supabase.storage
-      .from('avatars')
-      .remove(toDelete);
-
-    if (delErr) {
-      console.error('[ImageCleanup] Failed to delete avatar files:', delErr.message);
-      return { deleted: 0, failed: toDelete.length, paths: toDelete };
-    }
-
-    const deletedCount = delResult?.length || toDelete.length;
-    console.info('[ImageCleanup] Avatars deleted:', { userId, count: deletedCount, paths: toDelete });
-    return { deleted: deletedCount, failed: 0, paths: toDelete };
+    return { deleted: delResult?.length || toDelete.length, failed: 0, paths: toDelete };
   }
 
   return { deleteImage, deleteExamImages, deleteImages, deleteAvatar };

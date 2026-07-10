@@ -947,3 +947,121 @@
     transition: opacity 0.01ms, visibility 0.01ms;
   }
 }
+
+/* =====================================================================
+   12. Image Upload UI — .albedu-image-upload-zone, .albedu-image-preview
+   Phase 2: Drag-and-drop image upload for assessment questions
+   ===================================================================== */
+
+.albedu-image-upload-zone {
+  border: 2px dashed var(--albedu-border, #e2e8f0);
+  border-radius: var(--albedu-radius-md, 8px);
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 200ms ease, background 200ms ease;
+  background: var(--albedu-surface-alt, #f8fafc);
+  margin-bottom: 12px;
+}
+.albedu-image-upload-zone:hover {
+  border-color: var(--albedu-primary, #2563eb);
+  background: var(--albedu-primary-muted, rgba(37, 99, 235, 0.04));
+}
+.albedu-image-upload-zone.albedu-dropzone-active {
+  border-color: var(--albedu-primary, #2563eb);
+  background: var(--albedu-primary-muted, rgba(37, 99, 235, 0.08));
+  transform: scale(1.01);
+}
+.albedu-image-upload-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--albedu-text-muted, #64748b);
+  font-size: 13px;
+}
+.albedu-image-upload-prompt .albedu-icon--24 {
+  color: var(--albedu-primary, #2563eb);
+  opacity: 0.7;
+}
+
+.albedu-image-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.albedu-image-preview {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--albedu-radius-sm, 6px);
+  overflow: hidden;
+  border: 1px solid var(--albedu-border, #e2e8f0);
+  background: var(--albedu-surface, #fff);
+}
+.albedu-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.albedu-image-preview-size {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 9px;
+  padding: 2px 4px;
+  text-align: center;
+}
+.albedu-image-preview-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 150ms ease;
+}
+.albedu-image-preview-remove:hover {
+  background: var(--albedu-danger, #ef4444);
+}
+.albedu-image-preview-remove .albedu-icon,
+.albedu-image-preview-remove svg {
+  width: 12px;
+  height: 12px;
+}
+
+.albedu-image-upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--albedu-primary-muted, rgba(37, 99, 235, 0.08));
+  border-radius: var(--albedu-radius-sm, 6px);
+  font-size: 13px;
+  color: var(--albedu-primary, #2563eb);
+  margin-bottom: 8px;
+}
+.albedu-image-upload-progress::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--albedu-primary, #2563eb);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: albedu-spin 0.7s linear infinite;
+}
+@keyframes albedu-spin {
+  to { transform: rotate(360deg); }
+}

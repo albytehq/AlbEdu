@@ -1,4 +1,4 @@
-# AlbEdu Asset System Roadmap v0.819.0
+# AlbEdu Asset System Roadmap v0.821.0
 
 **Status:** Active — Phase 1 in progress (Phase 0 complete)
 **Last Updated:** 2026-07-10
@@ -82,7 +82,7 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
 
 > ✅ **Phase 0 COMPLETE** — Stabilization done (migration created, race condition fixed, docs corrected, Magic Compress™ v2 implemented). BackBlaze B2 setup complete. Production assets_manifest table now has RLS + indexes + CHECK constraints.
 
-### Phase 1 — Avatar Migration to Supabase Storage (Week 2) — v0.819.0 → v0.819.0
+### Phase 1 — Avatar Migration to Supabase Storage (Week 2) — v0.821.0 → v0.821.0
 
 **Goal:** Move avatar uploads from broken Cloudflare Worker `/upload` to Supabase Storage. Fix the P0 production bug.
 
@@ -154,7 +154,7 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
 
 ---
 
-### Phase 2 — Assessment Image Upload UI + B2 Setup + Magic Compress (Week 3-4) — v0.819.0 → v0.819.0
+### Phase 2 — Assessment Image Upload UI + B2 Setup + Magic Compress (Week 3-4) — v0.821.0 → v0.821.0
 
 **Goal:** Build the missing image-upload UI for assessment questions. Wire to Backblaze B2 via Supabase Edge Function. Implement Magic Compress™ to keep every image in the 80-300 KB sweet spot.
 
@@ -288,7 +288,7 @@ With Magic Compress™, every image is 80-300 KB (avg ~150 KB):
 
 ---
 
-### Phase 3 — GC Migration to Supabase (Week 5) — v0.819.0 → v0.820.0
+### Phase 3 — GC Migration to Supabase (Week 5) — v0.821.0 → v0.821.0
 
 **Goal:** Replace GitHub Actions GC bot with Supabase Edge Function + pg_cron. Eliminate dependency on GitHub Actions for asset cleanup.
 
@@ -355,7 +355,7 @@ With Magic Compress™, every image is 80-300 KB (avg ~150 KB):
 
 ---
 
-### Phase 4 — Cloudflare Worker Repurpose (Week 6) — v0.820.0 → v0.821.0
+### Phase 4 — Cloudflare Worker Repurpose (Week 6) — v0.821.0 → v0.821.0
 
 **Goal:** Strip upload/release from Worker. Add image cache proxy `/img/{hash}`. Worker becomes edge cache + config + health only.
 
@@ -555,7 +555,7 @@ With Magic Compress™, every image is 80-300 KB (avg ~150 KB):
 ## Success Metrics
 
 ### Technical KPIs
-| Metric | Current (v0.819.0) | Target (v0.823.0) |
+| Metric | Current (v0.821.0) | Target (v0.823.0) |
 |---|---|---|
 | Avatar upload success rate | 0% (broken) | 100% |
 | Assessment image upload | Not built | <3s per image |
@@ -580,11 +580,11 @@ With Magic Compress™, every image is 80-300 KB (avg ~150 KB):
 
 | Version | Phase | Date | Summary |
 |---|---|---|---|
-| v0.819.0 | (current) | 2026-07-09 | Pre-migration baseline. Asset system broken. |
-| v0.819.0 | Phase 0 | 2026-07-10 | Stabilization: migration, RLS, index, doc fixes, race condition fix |
-| v0.819.0 | Phase 1 | 2026-07-17 | Avatar migration to Supabase Storage |
-| v0.819.0 | Phase 2 | 2026-07-31 | Assessment image upload UI + B2 setup |
-| v0.820.0 | Phase 3 | 2026-08-07 | GC migration to Supabase Edge Function + pg_cron |
+| v0.821.0 | (current) | 2026-07-09 | Pre-migration baseline. Asset system broken. |
+| v0.821.0 | Phase 0 | 2026-07-10 | Stabilization: migration, RLS, index, doc fixes, race condition fix |
+| v0.821.0 | Phase 1 | 2026-07-17 | Avatar migration to Supabase Storage |
+| v0.821.0 | Phase 2 | 2026-07-31 | Assessment image upload UI + B2 setup |
+| v0.821.0 | Phase 3 | 2026-08-07 | GC migration to Supabase Edge Function + pg_cron |
 | v0.821.0 | Phase 4 | 2026-08-14 | Worker repurpose: edge cache + config + health |
 | v0.822.0 | Phase 5 | 2026-08-21 | GitHub repos decommission |
 | v0.823.0 | Phase 6 | 2026-08-28 | Monitoring, alerting, DR, audit trail |

@@ -170,30 +170,48 @@
     },
 
     _deleteSection(sIdx) {
+      const doDelete = () => {
+        // v0.821.0: Release all images in this section before removing
+        const state = window.CreateAssessment?.getState?.();
+        const sec = state?.examData?.sections?.[sIdx];
+        if (sec && window.ImageCleanup?.deleteExamImages) {
+          window.ImageCleanup.deleteExamImages({ sections: [sec] }).catch(() => {});
+        }
+        window.CreateAssessment.removeSection(sIdx);
+      };
       if (!window.notify?.confirm) {
         if (!confirm(t('wizard.delete_section_confirm', { n: sIdx + 1 }, `Hapus Bagian ${sIdx + 1} beserta semua soal?`))) return;
-        window.CreateAssessment.removeSection(sIdx);
+        doDelete();
         return;
       }
       window.notify.confirm({
         title: t('wizard.delete_section_title', null, 'Hapus Bagian'),
         message: t('wizard.delete_section_msg', { n: sIdx + 1 }, `Yakin hapus Bagian ${sIdx + 1}? Semua soal di dalamnya akan dihapus.`),
         intent: 'danger',
-        onYes: () => window.CreateAssessment.removeSection(sIdx),
+        onYes: doDelete,
       });
     },
 
     _deleteQuestion(sIdx, qIdx) {
+      const doDelete = () => {
+        // v0.821.0: Release images in this question before removing
+        const state = window.CreateAssessment?.getState?.();
+        const q = state?.examData?.sections?.[sIdx]?.questions?.[qIdx];
+        if (q?.media?.gambar?.length && window.ImageCleanup?.deleteImages) {
+          window.ImageCleanup.deleteImages(q.media.gambar).catch(() => {});
+        }
+        window.CreateAssessment.removeQuestion(sIdx, qIdx);
+      };
       if (!window.notify?.confirm) {
         if (!confirm(t('wizard.delete_question_confirm', { n: qIdx + 1 }, `Hapus soal #${qIdx + 1}?`))) return;
-        window.CreateAssessment.removeQuestion(sIdx, qIdx);
+        doDelete();
         return;
       }
       window.notify.confirm({
         title: t('wizard.delete_question_title', null, 'Hapus Soal'),
         message: t('wizard.delete_question_msg', { n: qIdx + 1 }, `Yakin hapus soal #${qIdx + 1}?`),
         intent: 'danger',
-        onYes: () => window.CreateAssessment.removeQuestion(sIdx, qIdx),
+        onYes: doDelete,
       });
     },
 

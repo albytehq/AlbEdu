@@ -9,6 +9,12 @@ export interface Env {
   TURNSTILE_SITE_KEY?: string;
   CF_WORKER_URL?: string;
   AUTH_TOKEN?: string;
+  // Phase 2: BackBlaze B2 for assessment images
+  B2_KEY_ID?: string;
+  B2_APPLICATION_KEY?: string;
+  B2_BUCKET_NAME?: string;
+  B2_ENDPOINT?: string;       // e.g. s3.us-west-002.backblazeb2.com
+  B2_REGION?: string;         // e.g. us-west-002
   // Free Plan tunables. Defaults stay below Supabase limits.
   ALBEDU_MAX_CONCURRENT_PESERTA?: string;  // default 200
   ALBEDU_HEARTBEAT_INTERVAL_MS?: string;   // default 15000

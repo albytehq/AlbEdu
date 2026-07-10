@@ -1,6 +1,6 @@
 # BackBlaze B2 Setup Guide for AlbEdu
 
-**Version:** v0.819.0+
+**Version:** v0.821.0+
 **Audience:** DevOps / Backend engineers
 **Prerequisites:** BackBlaze account (free, no credit card required), Supabase project, Cloudflare account, GitHub Pages deployment
 

@@ -157,9 +157,19 @@ form?.addEventListener('submit', async (event) => {
             ? window.DeviceFingerprint.getFingerprint()
             : { device_id: null, browser_hash: null, device_info: null };
 
-        // Public endpoint — no Authorization header.
+        // v0.821.0: Send registration code as x-register-secret header (SEC-A-C3)
+        const registerCodeInput = document.getElementById('registerCode');
+        const registerCode = registerCodeInput?.value?.trim() || '';
+
+        if (!registerCode) {
+            throw new Error('Kode registrasi wajib diisi. Hubungi admin untuk mendapatkan kode.');
+        }
+
+        // Public endpoint — no Authorization header, but x-register-secret is required.
         let { data: payload, error: fnError } = await window.AlbEdu?.supabase?.client.functions.invoke('register-admin', {
-            headers: {},
+            headers: {
+                'x-register-secret': registerCode,
+            },
             body: {
                 email:          emailInput.value.trim(),
                 password:       passwordInput.value,

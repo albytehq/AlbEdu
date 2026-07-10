@@ -1,8 +1,8 @@
 # AlbEdu Cloudflare Worker — Architecture & Function Reference
 
-**Version:** 7.0.0 (AlbEdu v0.820.0+)
+**Version:** 7.0.0 (AlbEdu v0.821.0+)
 **Status:** Production-ready
-**Replaces:** worker.js (legacy, deleted) (decommissioned in v0.819.0)
+**Replaces:** worker.js (legacy, deleted) (decommissioned in v0.821.0)
 
 ---
 
@@ -157,9 +157,9 @@ Request: GET /img/a3f1c9e4b2...
 ```json
 {
   "error": "Gone",
-  "message": "This endpoint has been decommissioned in v0.819.0...",
+  "message": "This endpoint has been decommissioned in v0.821.0...",
   "docs": "docs/asset-system/ARCHITECTURE-V2.md",
-  "migrated_in": "v0.819.0"
+  "migrated_in": "v0.821.0"
 }
 ```
 

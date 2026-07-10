@@ -6,6 +6,7 @@
 
   <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://edu.albyte-inc.workers.dev https://esm.sh; worker-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-src https://challenges.cloudflare.com; form-action 'self'">
     <title>Login Admin — AlbEdu</title>
     <meta name="description" content="Masuk ke AlbEdu sebagai administrator.">
     <meta name="theme-color" content="#2563eb">
@@ -123,6 +124,9 @@
                             </svg>
                         </button>
                     </div>
+
+                    <!-- v0.821.0: Turnstile widget for brute-force protection (SEC-A-C2) -->
+                    <div class="cf-turnstile" data-sitekey="0x4AAAAAADtSMQt5KNMPWBzW" data-theme="light"></div>
 
                     <button id="emailLoginBtn" class="albedu-btn albedu-btn-primary albedu-btn--block primary-login-btn" type="submit" aria-busy="false">
                         <span class="btn-text">Masuk</span>

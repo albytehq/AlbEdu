@@ -21,7 +21,7 @@
 (function () {
   'use strict';
 
-  // v0.819.0: WORKER_BASE removed — avatars now use Supabase Storage directly.
+  // v0.821.0: WORKER_BASE removed — avatars now use Supabase Storage directly.
   // The Worker URL is only needed for /api/supabase-config (handled by supabase-client.js).
   const PEP_SCRIPT_ID = 'pep-panel-script-peserta';
   const OP_SCRIPT_ID = 'op-script-peserta';

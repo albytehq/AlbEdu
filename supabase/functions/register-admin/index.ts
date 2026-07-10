@@ -176,18 +176,34 @@ serve(async (req) => {
     return json({ success: false, error: "Method not allowed." }, 405, corsHeaders);
   }
 
-  // Worker-secret gate — prevents direct calls to the Edge Function URL that
-  // bypass the hosting-layer proxy (Vercel middleware / Cloudflare Worker).
-  // Opt-in: inactive until REGISTER_WORKER_SECRET is set, so existing
-  // deployments are unaffected during rollout. The proxy must inject
-  // x-worker-secret server-side — never from the browser.
-  const workerSecret = Deno.env.get("REGISTER_WORKER_SECRET");
-  if (workerSecret) {
-    const provided = req.headers.get("x-worker-secret") ?? "";
-    if (provided !== workerSecret) {
-      console.warn("[register-admin] missing or invalid worker secret — request blocked");
-      return genericError(corsHeaders, 401);
-    }
+  // v0.821.0: Registration secret gate — REQUIRED (SEC-A-C3).
+  // Prevents unauthorized admin registration. The admin sets
+  // REGISTER_WORKER_SECRET in Supabase secrets, then shares the secret
+  // with authorized registrants out-of-band. Registrants enter it in the
+  // "Registration Code" field on register-admin.html.
+  //
+  // If REGISTER_WORKER_SECRET is not set, ALL registrations are rejected.
+  // This forces the admin to configure it before anyone can register.
+  const registerSecret = Deno.env.get("REGISTER_WORKER_SECRET");
+  if (!registerSecret) {
+    console.error("[register-admin] REGISTER_WORKER_SECRET not set — registration disabled");
+    return json({
+      success: false,
+      error: "Registrasi admin belum diaktifkan. Admin harus mengatur REGISTER_WORKER_SECRET di Supabase secrets."
+    }, 403, corsHeaders);
+  }
+
+  // Check secret from either:
+  // - x-register-secret header (client-side, user-entered in form)
+  // - x-worker-secret header (proxy-injected, for future Cloudflare Worker proxy)
+  const providedSecret = req.headers.get("x-register-secret") ??
+                         req.headers.get("x-worker-secret") ?? "";
+  if (providedSecret !== registerSecret) {
+    console.warn("[register-admin] invalid registration secret — request blocked");
+    return json({
+      success: false,
+      error: "Kode registrasi tidak valid. Hubungi admin untuk mendapatkan kode yang benar."
+    }, 401, corsHeaders);
   }
 
   try {

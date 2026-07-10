@@ -251,8 +251,9 @@
         return '';
       }).filter(Boolean);
       if (urls.length > 0) {
+        // v0.821.0: onerror fallback shows placeholder if image 404s
         parts.push(urls.map(u =>
-          `<img src="${_internal._escAttr(u)}" data-zoom="${_internal._escAttr(u)}" alt="Gambar soal" loading="lazy" />`
+          `<img src="${_internal._escAttr(u)}" data-zoom="${_internal._escAttr(u)}" alt="Gambar soal" loading="lazy" onerror="this.style.display='none';this.nextElementSibling?.style?.setProperty('display','flex')" /><span class="media-image-error" style="display:none;padding:12px;color:var(--albedu-text-muted,#64748b);font-size:13px;">Gambar tidak tersedia</span>`
         ).join(''));
       }
     }

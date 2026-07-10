@@ -1,15 +1,22 @@
 // soal-editor-modal.js — modal editor for a single question.
 //
-// Schema reminders (these have tripped up past rewrites):
+// v0.821.0: Phase 2 — image upload UI added. Admins can now attach images
+// to questions via drag-and-drop. Magic Compress™ v2 compresses client-side,
+// uploads to BackBlaze B2 via asset-upload Edge Function.
+//
+// Schema reminders:
 //   - `pilihan` is an OBJECT {A,B,C,D}, not an array
 //   - `jawaban_benar` is the letter 'A'/'B'/'C'/'D', not an index
-//   - `media.gambar` is not editable here yet (placeholder until image
-//     upload is wired in)
+//   - `media.gambar` is an array of { url, hash } objects
 
 (function () {
   'use strict';
 
   const t = (key, vars, fallback) => fallback;
+
+  const MAX_IMAGES_PER_QUESTION = 5;
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB pre-compression
+  const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/avif'];
 
   const SoalEditorModal = {
     init() {
@@ -40,6 +47,7 @@
       this._sectionIndex = null;
       this._questionIndex = null;
       this._draft = null;
+      this._uploading = false;
     },
 
     open({ mode, sectionIndex, questionIndex, questionType }) {
@@ -58,7 +66,6 @@
         this._title.textContent = t('wizard.edit_question', { n: questionIndex + 1 }, `Edit Soal #${questionIndex + 1}`);
         this._subtitle.textContent = t('wizard.section_label', { n: sectionIndex + 1 }, `Bagian ${sectionIndex + 1}`);
       } else {
-        // new question
         const media = { video: { enabled: false, src: null }, gambar: [] };
         this._draft = questionType === 'PG'
           ? { idq: 0, pertanyaan: '', pilihan: { A: '', B: '', C: '', D: '' }, jawaban_benar: '', media: JSON.parse(JSON.stringify(media)) }
@@ -66,6 +73,10 @@
         this._title.textContent = t('wizard.add_question_title', null, 'Tambah Soal');
         this._subtitle.textContent = t('wizard.section_with_type', { n: sectionIndex + 1, type: questionType === 'PG' ? t('wizard.type_pg', null, 'Pilihan Ganda') : t('wizard.type_essay', null, 'Esai') }, `Bagian ${sectionIndex + 1} • ${questionType === 'PG' ? 'Pilihan Ganda' : 'Esai'}`);
       }
+
+      // Ensure media.gambar is always an array
+      if (!this._draft.media) this._draft.media = { video: { enabled: false, src: null }, gambar: [] };
+      if (!Array.isArray(this._draft.media.gambar)) this._draft.media.gambar = [];
 
       this._renderForm();
       this._overlay.hidden = false;
@@ -82,12 +93,15 @@
         this._overlay.hidden = true;
         this._body.innerHTML = '';
         this._draft = null;
+        this._uploading = false;
       }, 250);
     },
 
     _renderForm() {
       if (!this._draft) return;
       const isPG = !!this._draft.pilihan;
+      const gambar = this._draft.media?.gambar || [];
+
       this._body.innerHTML = `
         <div class="albedu-soal-editor">
           <div class="albedu-soal-editor-section">
@@ -114,6 +128,32 @@
 
           <div class="albedu-soal-editor-section">
             <label class="albedu-soal-editor-label">${t('create.media_label', null, 'Media (opsional)')}</label>
+
+            <!-- Image upload zone -->
+            <div class="albedu-image-upload-zone" id="q-image-dropzone">
+              <input type="file" id="q-image-input" accept="image/*" multiple hidden>
+              <div class="albedu-image-upload-prompt">
+                <span data-albedu-icon="add_photo_alternate" class="albedu-icon--24"></span>
+                <span>${gambar.length >= MAX_IMAGES_PER_QUESTION
+                  ? t('create.image_max_reached', null, 'Maksimal ' + MAX_IMAGES_PER_QUESTION + ' gambar per soal')
+                  : t('create.image_drop_hint', null, 'Klik atau drag gambar ke sini')}</span>
+                <span class="albedu-field-hint">${t('create.image_formats', null, 'JPG/PNG/WebP/GIF · maks 10 MB · auto-compress')}</span>
+              </div>
+            </div>
+
+            <!-- Image previews -->
+            <div class="albedu-image-previews" id="q-image-previews">
+              ${gambar.map((img, i) => this._renderPreview(img, i)).join('')}
+            </div>
+
+            <!-- Upload progress -->
+            <div class="albedu-image-upload-progress" id="q-upload-progress" hidden>
+              <div class="albedu-image-upload-bar"></div>
+              <span class="albedu-image-upload-text">${t('create.compressing', null, 'Mengompres...')}</span>
+            </div>
+          </div>
+
+          <div class="albedu-soal-editor-section">
             <label class="albedu-toggle albedu-toggle-sm">
               <input type="checkbox" id="q-video-enabled" ${this._draft.media?.video?.enabled ? 'checked' : ''}>
               <span class="albedu-toggle-track"></span>
@@ -136,7 +176,6 @@
         this._body.querySelectorAll('input[name="jawaban-benar"]').forEach((radio) => {
           radio.addEventListener('change', (e) => {
             this._draft.jawaban_benar = e.target.value;
-            // Re-render to update the .albedu-option-correct highlight
             this._renderForm();
           });
         });
@@ -147,6 +186,10 @@
         });
       }
 
+      // Wire image upload
+      this._wireImageUpload();
+
+      // Wire video
       const videoEnabled = document.getElementById('q-video-enabled');
       const videoUrlField = document.getElementById('q-video-url-field');
       const videoUrl = document.getElementById('q-video-url');
@@ -159,10 +202,242 @@
       });
     },
 
+    _renderPreview(img, index) {
+      const url = typeof img === 'object' ? img.url : img;
+      const hash = typeof img === 'object' ? img.hash : '';
+      const sizeLabel = img.compressed_size ? this._formatSize(img.compressed_size) : '';
+      return `
+        <div class="albedu-image-preview" data-index="${index}">
+          <img src="${this._esc(url)}" alt="Gambar ${index + 1}" loading="lazy">
+          ${sizeLabel ? `<span class="albedu-image-preview-size">${sizeLabel}</span>` : ''}
+          <button type="button" class="albedu-image-preview-remove" data-index="${index}" aria-label="Hapus gambar">
+            <span data-albedu-icon="close"></span>
+          </button>
+        </div>
+      `;
+    },
+
+    _wireImageUpload() {
+      const dropzone = document.getElementById('q-image-dropzone');
+      const fileInput = document.getElementById('q-image-input');
+
+      if (!dropzone || !fileInput) return;
+
+      // Click to open file picker
+      dropzone.addEventListener('click', (e) => {
+        if (e.target.closest('.albedu-image-preview-remove')) return;
+        if (this._draft.media.gambar.length >= MAX_IMAGES_PER_QUESTION) return;
+        fileInput.click();
+      });
+
+      // File selected via picker
+      fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        this._handleFiles(files);
+        fileInput.value = ''; // reset so same file can be re-selected
+      });
+
+      // Drag and drop
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('albedu-dropzone-active');
+      });
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('albedu-dropzone-active');
+      });
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('albedu-dropzone-active');
+        const files = Array.from(e.dataTransfer.files);
+        this._handleFiles(files);
+      });
+
+      // Remove image buttons (event delegation)
+      const previewsContainer = document.getElementById('q-image-previews');
+      previewsContainer.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.albedu-image-preview-remove');
+        if (!removeBtn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = parseInt(removeBtn.dataset.index, 10);
+        this._removeImage(idx);
+      });
+    },
+
+    async _handleFiles(files) {
+      if (this._uploading) return;
+
+      const imageFiles = files.filter((f) => f.type.startsWith('image/'));
+      if (imageFiles.length === 0) {
+        window.notify?.warning('Format tidak didukung', 'Pilih file gambar (JPG, PNG, WebP, GIF, BMP, AVIF).');
+        return;
+      }
+
+      const remainingSlots = MAX_IMAGES_PER_QUESTION - this._draft.media.gambar.length;
+      if (remainingSlots <= 0) {
+        window.notify?.warning('Batas tercapai', `Maksimal ${MAX_IMAGES_PER_QUESTION} gambar per soal.`);
+        return;
+      }
+
+      const filesToUpload = imageFiles.slice(0, remainingSlots);
+      if (imageFiles.length > remainingSlots) {
+        window.notify?.info('Beberapa gambar dilewati', `Hanya ${remainingSlots} dari ${imageFiles.length} gambar yang ditambahkan (batas ${MAX_IMAGES_PER_QUESTION}).`);
+      }
+
+      this._uploading = true;
+      this._saveBtn.disabled = true;
+      this._showProgress('Mengompres...');
+
+      for (const file of filesToUpload) {
+        try {
+          await this._compressAndUpload(file);
+        } catch (err) {
+          console.error('[SoalEditorModal] Upload failed:', err);
+          window.notify?.error('Upload gagal', err.message || 'Gagal mengunggah gambar. Coba lagi.');
+        }
+      }
+
+      this._uploading = false;
+      this._saveBtn.disabled = false;
+      this._hideProgress();
+      this._renderForm(); // re-render to show new previews
+    },
+
+    async _compressAndUpload(file) {
+      // Validate size
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`File terlalu besar (${this._formatSize(file.size)}). Maks ${this._formatSize(MAX_FILE_SIZE)}.`);
+      }
+
+      this._showProgress('Mengompres gambar...');
+
+      // ── 1. Magic Compress™ via Web Worker ──
+      if (!window.ImageCompress) {
+        // Lazy-load image-compress.js
+        const basePath = window.Auth?.getBasePath?.() || '/';
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = basePath + 'src/utils/image-compress.js';
+          s.defer = true;
+          s.onload = resolve;
+          s.onerror = () => reject(new Error('Gagal memuat modul kompresi.'));
+          document.head.appendChild(s);
+        });
+      }
+
+      let compressed;
+      try {
+        compressed = await window.ImageCompress.compressInWorker(file, {
+          maxWidth: 1280,
+          maxHeight: 720,
+          targetMaxBytes: 300 * 1024,
+          targetMinBytes: 80 * 1024,
+        });
+      } catch (err) {
+        // Fallback to main thread
+        console.warn('[SoalEditorModal] Worker compress failed, trying main thread:', err.message);
+        compressed = await window.ImageCompress.magicCompress(file, {
+          maxWidth: 1280,
+          maxHeight: 720,
+          targetMaxBytes: 300 * 1024,
+          targetMinBytes: 80 * 1024,
+        });
+      }
+
+      // Defense in depth: reject if >500 KB (EF will also reject)
+      if (compressed.compressedSize > 500 * 1024) {
+        throw new Error('Gambar terlalu besar setelah kompresi. Coba gambar lain.');
+      }
+
+      this._showProgress('Mengunggah...');
+
+      // ── 2. Upload to asset-upload Edge Function ──
+      const supabase = window.AlbEdu?.supabase?.client;
+      if (!supabase) {
+        throw new Error('Koneksi Supabase tidak tersedia. Refresh halaman dan coba lagi.');
+      }
+
+      const formData = new FormData();
+      formData.append('file', compressed.blob, `image-${Date.now()}.jpg`);
+      formData.append('original_size', String(compressed.originalSize));
+      formData.append('quality_used', String(compressed.qualityUsed || ''));
+
+      const { data, error } = await supabase.functions.invoke('asset-upload', {
+        body: formData,
+      });
+
+      if (error) {
+        let msg = error.message || 'Upload gagal';
+        try {
+          const body = await error.context?.json();
+          if (body?.message) msg = body.message;
+        } catch {}
+        throw new Error(msg);
+      }
+
+      if (!data?.hash || !data?.cdn_url) {
+        throw new Error('Response tidak valid dari server (hash/url hilang).');
+      }
+
+      // ── 3. Add to draft ──
+      this._draft.media.gambar.push({
+        url: data.cdn_url,
+        hash: data.hash,
+        original_size: compressed.originalSize,
+        compressed_size: compressed.compressedSize,
+      });
+
+      const ratio = Math.round((1 - compressed.compressedSize / compressed.originalSize) * 100);
+      console.info('[SoalEditorModal] Image uploaded:', {
+        hash: data.hash,
+        originalSize: compressed.originalSize,
+        compressedSize: compressed.compressedSize,
+        ratio: ratio + '% smaller',
+        dedup: data.dedup || false,
+      });
+    },
+
+    _removeImage(index) {
+      if (index < 0 || index >= this._draft.media.gambar.length) return;
+      const removed = this._draft.media.gambar.splice(index, 1)[0];
+
+      // Release the image (decrement ref_count) via ImageCleanup
+      if (removed?.hash && window.ImageCleanup?.deleteImage) {
+        window.ImageCleanup.deleteImage(removed).catch((err) => {
+          console.warn('[SoalEditorModal] Failed to release image:', err?.message);
+        });
+      }
+
+      this._renderForm();
+    },
+
+    _showProgress(text) {
+      const el = document.getElementById('q-upload-progress');
+      if (!el) return;
+      el.hidden = false;
+      const textEl = el.querySelector('.albedu-image-upload-text');
+      if (textEl) textEl.textContent = text;
+    },
+
+    _hideProgress() {
+      const el = document.getElementById('q-upload-progress');
+      if (el) el.hidden = true;
+    },
+
+    _formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    },
+
     _save() {
       if (!this._draft) return;
+      if (this._uploading) {
+        window.notify?.warning('Tunggu', 'Sedang mengunggah gambar. Tunggu sebentar.');
+        return;
+      }
 
-      // Validate pertanyaan (HTML-stripped, min 3 chars)
+      // Validate pertanyaan
       const cleanQ = (this._draft.pertanyaan || '').replace(/<[^>]*>/g, '').trim();
       if (cleanQ.length < 3) {
         window.notify?.error(t('wizard.validation_failed', null, 'Validasi gagal'), t('wizard.question_too_short', null, 'Pertanyaan minimal 3 karakter'));
@@ -191,7 +466,6 @@
       }
 
       if (this._mode === 'new') {
-        // Add the question first to get the correct idq, then overwrite with draft values
         const type = this._draft.pilihan ? 'PG' : 'esai';
         const added = window.CreateAssessment.addQuestion(this._sectionIndex, type);
         if (!added) {
@@ -199,7 +473,6 @@
           return;
         }
         const qIdx = window.CreateAssessment.getState().examData.sections[this._sectionIndex].questions.length - 1;
-        // Preserve the assigned idq; take everything else from the draft.
         const newIdq = added.idq;
         const draftCopy = { ...this._draft, idq: newIdq };
         window.CreateAssessment.updateQuestion(this._sectionIndex, qIdx, draftCopy);

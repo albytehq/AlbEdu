@@ -8,7 +8,7 @@
  *   2. Uploads to Supabase Storage `avatars` bucket at path `{user_id}/avatar-migrated-{timestamp}.jpg`
  *   3. Updates `users.avatar_url` to the public URL
  *
- * WHY: v0.819.0 Phase 1 changed avatar storage from base64-in-DB to Supabase
+ * WHY: v0.821.0 Phase 1 changed avatar storage from base64-in-DB to Supabase
  * Storage. Existing base64 avatars bloat the database (each ~50-200 KB) and
  * can't be CDN-cached. This script migrates them out of the DB.
  *

@@ -2,7 +2,7 @@
 // AlbEdu Cloudflare Worker — Edge Cache + Config + Health
 // ============================================================================
 //
-// ARCHITECTURE (v0.820.0+):
+// ARCHITECTURE (v0.821.0+):
 //
 //   GET  /api/supabase-config  → edge-cached config (1h TTL)
 //   GET  /api/health           → uptime monitor
@@ -401,12 +401,12 @@ function handleUploadGone() {
     {
       error: 'Gone',
       message:
-        'This endpoint has been decommissioned in v0.819.0. ' +
+        'This endpoint has been decommissioned in v0.821.0. ' +
         'Avatar uploads now use Supabase Storage directly (supabase.storage.from(\'avatars\').upload()). ' +
         'Soal image uploads (Phase 2) will use the asset-upload Edge Function. ' +
         'See docs/asset-system/ARCHITECTURE-V2.md for details.',
       docs: 'docs/asset-system/ARCHITECTURE-V2.md',
-      migrated_in: 'v0.819.0',
+      migrated_in: 'v0.821.0',
     },
     410,
     { 'Cache-Control': 'no-store' }
@@ -422,12 +422,12 @@ function handleReleaseGone() {
     {
       error: 'Gone',
       message:
-        'This endpoint has been decommissioned in v0.819.0. ' +
+        'This endpoint has been decommissioned in v0.821.0. ' +
         'Avatar deletion now uses Supabase Storage directly (supabase.storage.from(\'avatars\').remove()). ' +
         'Soal image release (Phase 2) will use the asset-release Edge Function. ' +
         'See docs/asset-system/ARCHITECTURE-V2.md for details.',
       docs: 'docs/asset-system/ARCHITECTURE-V2.md',
-      migrated_in: 'v0.819.0',
+      migrated_in: 'v0.821.0',
     },
     410,
     { 'Cache-Control': 'no-store' }

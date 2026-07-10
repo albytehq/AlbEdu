@@ -298,6 +298,42 @@ form?.addEventListener('submit', async (event) => {
         return;
     }
 
+    // v0.821.0: Per-account rate limiting (SEC-A-C2)
+    // Client-side defense-in-depth. Server-side (Supabase Auth) has its own limits.
+    const email = emailInput.value.trim().toLowerCase();
+    const rateCheck = _checkLoginRateLimit(email);
+    if (rateCheck.locked) {
+        showError(`Terlalu banyak percobaan gagal. Coba lagi dalam ${rateCheck.minutesLeft} menit.`);
+        return;
+    }
+
+    // v0.821.0: Get Turnstile token (SEC-A-C2 — brute-force protection)
+    // The visible Turnstile widget is in the form. Get its token.
+    // If Supabase Auth has CAPTCHA enabled in dashboard, it will verify this server-side.
+    let captchaToken = null;
+    try {
+        // turnstile global is loaded via <script> in login.html
+        if (typeof turnstile !== 'undefined') {
+            // Find the visible Turnstile widget in the form
+            const widget = form.querySelector('.cf-turnstile');
+            if (widget) {
+                // Try getResponse with widget ID (if explicitly rendered)
+                // or without (if auto-rendered via data-sitekey)
+                const widgetId = widget._turnstileWidgetId;
+                captchaToken = widgetId
+                    ? turnstile.getResponse(widgetId)
+                    : turnstile.getResponse();
+            }
+        }
+    } catch (e) {
+        console.warn('[auth] Turnstile token retrieval failed:', e.message);
+    }
+
+    if (!captchaToken) {
+        showError('Verifikasi keamanan belum selesai. Selesaikan CAPTCHA lalu coba lagi.');
+        return;
+    }
+
     setEmailLoading(true);
     window.UI?.showAuthLoading?.(LOADING_LABELS.processing_login);
 
@@ -309,28 +345,121 @@ form?.addEventListener('submit', async (event) => {
         }
 
         const { error } = await client.auth.signInWithPassword({
-            email: emailInput.value.trim(),
+            email: email,
             password: passwordInput.value,
+            options: {
+                captchaToken: captchaToken,
+            },
         });
 
         if (error) throw error;
+
+        // v0.821.0: Reset failed attempt counter on success
+        _clearLoginAttempts(email);
+
         // No manual redirect here. auth/main.js will receive the auth state
         // change and route by role.
     } catch (err) {
         window.UI?.hideAuthLoading?.();
         setEmailLoading(false);
 
+        // v0.821.0: Track failed attempt (SEC-A-C2)
+        const failResult = _recordLoginFailure(email);
+        if (failResult.locked) {
+            showError(`Login gagal. Akun dikunci sementara — coba lagi dalam ${failResult.minutesLeft} menit.`);
+        } else {
+            const attemptsLeft = failResult.attemptsLeft;
+            const errorMsg = getLoginErrorMessage(err.code || err.message || '');
+            if (attemptsLeft > 0 && attemptsLeft <= 2) {
+                showError(`${errorMsg} (${attemptsLeft} percobaan tersisa sebelum dikunci.)`);
+            } else {
+                showError(errorMsg);
+            }
+        }
+
+        // Reset Turnstile widget so user can verify again
+        try {
+            if (typeof turnstile !== 'undefined') {
+                const widget = form.querySelector('.cf-turnstile');
+                const widgetId = widget?._turnstileWidgetId;
+                if (widgetId) turnstile.reset(widgetId);
+                else turnstile.reset();
+            }
+        } catch (_) {}
+
         logAuthError({
             flow: 'admin-login',
             error: err,
             backendCode: err.code || err.message,
         });
-
-        const errorCode = err.code || err.message || '';
-        const friendlyMessage = getLoginErrorMessage(errorCode);
-        showError(friendlyMessage);
     }
 });
+
+// ── v0.821.0: Client-side per-account rate limiting (SEC-A-C2) ──────────────
+// Tracks failed login attempts per email in localStorage.
+// After MAX_FAILED_ATTEMPTS, locks the account for LOCKOUT_MINUTES.
+// This is defense-in-depth — server-side (Supabase Auth) has its own limits.
+// Client-side can be bypassed (clear localStorage), but it stops casual brute-force.
+
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
+const ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // 15 min rolling window
+
+function _loginAttemptKey(email) {
+    // Hash email to avoid storing raw email in localStorage key
+    let hash = 0;
+    for (let i = 0; i < email.length; i++) {
+        hash = ((hash << 5) - hash + email.charCodeAt(i)) | 0;
+    }
+    return `albedu_login_attempts_${Math.abs(hash).toString(36)}`;
+}
+
+function _checkLoginRateLimit(email) {
+    try {
+        const data = JSON.parse(localStorage.getItem(_loginAttemptKey(email)) || '{}');
+        if (data.lockedUntil && Date.now() < data.lockedUntil) {
+            const minutesLeft = Math.ceil((data.lockedUntil - Date.now()) / 60000);
+            return { locked: true, minutesLeft };
+        }
+        return { locked: false };
+    } catch {
+        return { locked: false };
+    }
+}
+
+function _recordLoginFailure(email) {
+    try {
+        const key = _loginAttemptKey(email);
+        const now = Date.now();
+        const data = JSON.parse(localStorage.getItem(key) || '{}');
+
+        // Reset if window expired
+        if (data.firstAttemptAt && now - data.firstAttemptAt > ATTEMPT_WINDOW_MS) {
+            data.count = 0;
+            data.firstAttemptAt = now;
+        }
+        if (!data.firstAttemptAt) data.firstAttemptAt = now;
+
+        data.count = (data.count || 0) + 1;
+
+        if (data.count >= MAX_FAILED_ATTEMPTS) {
+            data.lockedUntil = now + LOCKOUT_MINUTES * 60000;
+            localStorage.setItem(key, JSON.stringify(data));
+            return { locked: true, minutesLeft: LOCKOUT_MINUTES };
+        }
+
+        localStorage.setItem(key, JSON.stringify(data));
+        return { locked: false, attemptsLeft: MAX_FAILED_ATTEMPTS - data.count };
+    } catch {
+        return { locked: false, attemptsLeft: MAX_FAILED_ATTEMPTS };
+    }
+}
+
+function _clearLoginAttempts(email) {
+    try {
+        localStorage.removeItem(_loginAttemptKey(email));
+    } catch {}
+}
 
 btn1?.addEventListener('click', handleGoogleLogin);
 btn2?.addEventListener('click', handleGoogleLogin);
