@@ -118,7 +118,8 @@ export async function b2PutObject(
   env: Env
 ): Promise<boolean> {
   const bucket = env.B2_BUCKET_NAME!;
-  const endpoint = env.B2_ENDPOINT!;
+  const endpoint = getB2Endpoint(env);
+  if (!endpoint) throw new Error('B2 endpoint not configured');
   const url = `https://${endpoint}/${bucket}/${path}`;
 
   const bodyStr = ''; // For PUT, we hash the actual body, not a string
@@ -192,7 +193,8 @@ export async function b2DeleteObject(
   env: Env
 ): Promise<boolean> {
   const bucket = env.B2_BUCKET_NAME!;
-  const endpoint = env.B2_ENDPOINT!;
+  const endpoint = getB2Endpoint(env);
+  if (!endpoint) throw new Error('B2 endpoint not configured');
   const url = `https://${endpoint}/${bucket}/${path}`;
 
   const authHeader = await signS3Request('DELETE', url, null, env);
@@ -212,9 +214,19 @@ export async function b2DeleteObject(
 }
 
 /**
- * Check if B2 is configured (all 5 env vars set).
+ * Get B2 endpoint, deriving from region if B2_ENDPOINT is not set.
+ * Format: s3.{region}.backblazeb2.com
+ */
+export function getB2Endpoint(env: Env): string | null {
+  if (env.B2_ENDPOINT) return env.B2_ENDPOINT;
+  if (env.B2_REGION) return `s3.${env.B2_REGION}.backblazeb2.com`;
+  return null;
+}
+
+/**
+ * Check if B2 is configured (all required env vars set).
+ * B2_ENDPOINT can be derived from B2_REGION, so it's optional.
  */
 export function isB2Configured(env: Env): boolean {
-  return !!(env.B2_KEY_ID && env.B2_APPLICATION_KEY && env.B2_BUCKET_NAME &&
-            env.B2_ENDPOINT && env.B2_REGION);
+  return !!(env.B2_KEY_ID && env.B2_APPLICATION_KEY && env.B2_BUCKET_NAME && env.B2_REGION);
 }

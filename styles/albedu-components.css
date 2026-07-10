@@ -1053,6 +1053,11 @@
   color: var(--albedu-primary, #2563eb);
   margin-bottom: 8px;
 }
+/* CRITICAL: override `display:flex` when hidden attribute is set.
+   Without this, the progress bar shows immediately on render. */
+.albedu-image-upload-progress[hidden] {
+  display: none !important;
+}
 .albedu-image-upload-progress::before {
   content: '';
   width: 14px;
