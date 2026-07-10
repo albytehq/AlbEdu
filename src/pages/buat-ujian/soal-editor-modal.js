@@ -408,10 +408,24 @@
       const efUrl = `${supabaseUrl}/functions/v1/asset-upload`;
       console.log('[Upload DEBUG] Step 4: Sending fetch to', efUrl);
 
+      // CRITICAL: Supabase gateway requires BOTH 'apikey' AND 'Authorization' headers
+      // when verify_jwt=true. Without apikey, the gateway blocks the request before
+      // it reaches the Edge Function — the fetch hangs indefinitely.
+      // The apikey is the Supabase anon key (public, safe to expose).
+      const anonKey = supabase.supabaseKey ||
+                      supabase?._config?.apiKey ||
+                      window.AlbEdu?.supabase?._config?.anonKey ||
+                      '';
+      if (!anonKey) {
+        throw new Error('Supabase anon key tidak ditemukan. Refresh halaman.');
+      }
+      console.log('[Upload DEBUG] Step 3d: anonKey acquired, length:', anonKey.length);
+
       const res = await fetch(efUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
+          'apikey': anonKey,
         },
         body: formData,
       });

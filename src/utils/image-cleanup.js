@@ -66,10 +66,15 @@ const ImageCleanup = (() => {
       const supabaseUrl = supabase.supabaseUrl || supabase?._config?.url || '';
       if (!supabaseUrl) { return { deleted: 0, failed: hashes.length }; }
 
+      // CRITICAL: Supabase gateway requires 'apikey' header for verify_jwt=true EFs
+      const anonKey = supabase.supabaseKey || supabase?._config?.apiKey || '';
+      if (!anonKey) { return { deleted: 0, failed: hashes.length }; }
+
       const res = await fetch(`${supabaseUrl}/functions/v1/asset-release`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
+          'apikey': anonKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ hashes }),
