@@ -156,12 +156,26 @@
     ctx.fillStyle = BACKGROUND_FILL;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.putImageData(imageData, 0, 0);
+
+    // OffscreenCanvas has convertToBlob(), HTMLCanvasElement has toBlob().
+    // Check in the correct order — OffscreenCanvas may exist but toBlob
+    // doesn't exist on it, so we must check convertToBlob FIRST.
     return new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => blob ? resolve(blob) : reject(new Error('Canvas toBlob returned null')),
-        OUTPUT_MIME,
-        quality
-      );
+      if (typeof canvas.convertToBlob === 'function') {
+        // OffscreenCanvas path
+        canvas.convertToBlob({ type: OUTPUT_MIME, quality })
+          .then(resolve)
+          .catch(reject);
+      } else if (typeof canvas.toBlob === 'function') {
+        // HTMLCanvasElement path
+        canvas.toBlob(
+          (blob) => blob ? resolve(blob) : reject(new Error('Canvas toBlob returned null')),
+          OUTPUT_MIME,
+          quality
+        );
+      } else {
+        reject(new Error('Canvas does not support toBlob or convertToBlob'));
+      }
     });
   }
 
@@ -643,7 +657,10 @@
       const warnings = [];
       if (!file) return { valid: false, error: 'File tidak ada.' };
       if (file.size > 10 * 1024 * 1024) errors.push('Ukuran file melebihi 10 MB.');
-      if (file.size < 1024) errors.push('File terlalu kecil (kemungkinan corrupt).');
+      // v0.821.1: Lowered from 1024 to 100 — some small icons/gifs can be <1KB
+      // and are still valid images. The Worker transfer may also affect size
+      // reporting in edge cases.
+      if (file.size < 100) errors.push('File terlalu kecil (kemungkinan corrupt).');
       const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/avif'];
       if (file.type && !allowed.includes(file.type) && !file.type.startsWith('image/')) {
         warnings.push(`Tipe file "${file.type}" tidak umum. Akan dicoba decode.`);
