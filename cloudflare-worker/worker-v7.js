@@ -244,8 +244,8 @@ function handleSupabaseConfig(request, env) {
 
   return json(
     {
-      supabaseUrl: env.SUPABASE_URL,
-      supabaseAnonKey: env.SUPABASE_ANON_KEY,
+      url: env.SUPABASE_URL,
+      anonKey: env.SUPABASE_ANON_KEY,
     },
     200,
     {
