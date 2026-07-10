@@ -352,9 +352,21 @@
       this._showProgress('Mengunggah...');
 
       // ── 2. Upload to asset-upload Edge Function ──
+      // Use raw fetch() instead of supabase.functions.invoke() because
+      // the Supabase SDK wrapper may not handle FormData/multipart correctly
+      // (it tends to set Content-Type: application/json which breaks the
+      // multipart boundary). Raw fetch lets the browser set the correct
+      // Content-Type: multipart/form-data; boundary=... automatically.
       const supabase = window.AlbEdu?.supabase?.client;
       if (!supabase) {
         throw new Error('Koneksi Supabase tidak tersedia. Refresh halaman dan coba lagi.');
+      }
+
+      // Get the user's access token for auth
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) {
+        throw new Error('Sesi login tidak ditemukan. Silakan login ulang.');
       }
 
       const formData = new FormData();
@@ -362,38 +374,58 @@
       formData.append('original_size', String(compressed.originalSize));
       formData.append('quality_used', String(compressed.qualityUsed || ''));
 
-      const { data, error } = await supabase.functions.invoke('asset-upload', {
+      // Build EF URL — uses the Supabase project URL from the client config
+      const supabaseUrl = window.AlbEdu?.supabase?.client?.supabaseUrl ||
+                          window.AlbEdu?.supabase?._config?.url ||
+                          '';
+      if (!supabaseUrl) {
+        throw new Error('URL Supabase tidak ditemukan. Refresh halaman.');
+      }
+
+      const efUrl = `${supabaseUrl}/functions/v1/asset-upload`;
+
+      const res = await fetch(efUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          // Do NOT set Content-Type — browser sets multipart/form-data with boundary
+        },
         body: formData,
       });
 
-      if (error) {
-        let msg = error.message || 'Upload gagal';
+      if (!res.ok) {
+        let msg = `Upload gagal (HTTP ${res.status})`;
         try {
-          const body = await error.context?.json();
-          if (body?.message) msg = body.message;
+          const errBody = await res.json();
+          if (errBody?.message) msg = errBody.message;
+          else if (errBody?.error) msg = errBody.error;
         } catch {}
         throw new Error(msg);
       }
 
-      if (!data?.hash || !data?.cdn_url) {
+      const data = await res.json();
+
+      // Handle Supabase EF response format: { data: {...} } or { ... }
+      const result = data?.data || data;
+      if (!result?.hash || !result?.cdn_url) {
         throw new Error('Response tidak valid dari server (hash/url hilang).');
       }
 
       // ── 3. Add to draft ──
       this._draft.media.gambar.push({
-        url: data.cdn_url,
-        hash: data.hash,
+        url: result.cdn_url,
+        hash: result.hash,
         original_size: compressed.originalSize,
         compressed_size: compressed.compressedSize,
       });
 
       const ratio = Math.round((1 - compressed.compressedSize / compressed.originalSize) * 100);
       console.info('[SoalEditorModal] Image uploaded:', {
-        hash: data.hash,
+        hash: result.hash,
         originalSize: compressed.originalSize,
         compressedSize: compressed.compressedSize,
         ratio: ratio + '% smaller',
-        dedup: data.dedup || false,
+        dedup: result.dedup || false,
       });
     },
 

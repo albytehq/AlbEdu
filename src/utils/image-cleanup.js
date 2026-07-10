@@ -58,8 +58,27 @@ const ImageCleanup = (() => {
     if (!supabase) { console.warn('[ImageCleanup] no Supabase client'); return { deleted: 0, failed: hashes.length }; }
 
     try {
-      const { data, error } = await supabase.functions.invoke('asset-release', { body: { hashes } });
-      if (error) { console.error('[ImageCleanup] EF error:', error.message); return { deleted: 0, failed: hashes.length }; }
+      // Use raw fetch() — same pattern as asset-upload (avoids FormData/JSON issues in SDK wrapper)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) { return { deleted: 0, failed: hashes.length }; }
+
+      const supabaseUrl = supabase.supabaseUrl || supabase?._config?.url || '';
+      if (!supabaseUrl) { return { deleted: 0, failed: hashes.length }; }
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/asset-release`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ hashes }),
+      });
+
+      if (!res.ok) { console.error('[ImageCleanup] EF error:', res.status); return { deleted: 0, failed: hashes.length }; }
+
+      const json = await res.json();
+      const data = json?.data || json;
       const released = data?.released || 0;
       console.info('[ImageCleanup] Released:', { total: hashes.length, released, pending: data?.pending_delete || 0 });
       return { deleted: released, failed: hashes.length - released };
