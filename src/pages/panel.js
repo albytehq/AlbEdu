@@ -3,7 +3,6 @@
 
 class AdminPanel {
     constructor() {
-        this.workerBase = 'https://edu.albyte-inc.workers.dev';
         this._profilePanelReady = false;
 
         if (document.readyState === 'loading') {
@@ -168,7 +167,6 @@ class AdminPanel {
             if (!window.ProfileEditorPanel || this._profilePanelReady) return;
             window.ProfileEditorPanel.init({
                 trigger: [],
-                workerBase: this.workerBase,
                 onSaved: (user) => {
                     if (user && window.Auth) window.Auth.userData = user;
                     this._renderUserInfo();
@@ -206,7 +204,6 @@ class AdminPanel {
             window.OptionProfile.init({
                 triggers:   userInfo ? [userInfo] : [],
                 context:    'standalone',
-                workerBase: this.workerBase,
             });
         };
 

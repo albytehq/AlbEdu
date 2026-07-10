@@ -464,6 +464,50 @@
     }
   }
 
+  // Lazy-load image-compress.js on first use.
+  // Resolves the script URL via window.Auth.getBasePath() (AlbEdu's canonical
+  // pattern for subpath-safe URLs — works on GitHub Pages /AlbEdu/ subpath).
+  // Idempotent — concurrent callers share the same promise.
+  let _imageCompressLoadPromise = null;
+
+  function _ensureImageCompressLoaded() {
+    if (window.ImageCompress) return Promise.resolve();
+    if (_imageCompressLoadPromise) return _imageCompressLoadPromise;
+
+    _imageCompressLoadPromise = new Promise((resolve, reject) => {
+      const basePath = (global.Auth?.getBasePath?.()) || '/';
+      const src = basePath + 'src/utils/image-compress.js';
+
+      // If already loaded by another caller, resolve
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) {
+        if (window.ImageCompress) return resolve();
+        existing.addEventListener('load', () => resolve());
+        existing.addEventListener('error', () => reject(new Error('Failed to load image-compress.js')));
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = src;
+      script.defer = true;
+      script.onload = () => {
+        if (window.ImageCompress) {
+          console.info('[ProfileEditorPanel] image-compress.js loaded (lazy)');
+          resolve();
+        } else {
+          reject(new Error('image-compress.js loaded but window.ImageCompress not defined'));
+        }
+      };
+      script.onerror = () => reject(new Error('Failed to fetch image-compress.js (network error or 404)'));
+      document.head.appendChild(script);
+    });
+
+    // Allow retry on failure
+    _imageCompressLoadPromise.catch(() => { _imageCompressLoadPromise = null; });
+
+    return _imageCompressLoadPromise;
+  }
+
   // Upload via Supabase Storage (Phase 1 — replaces Worker /upload).
   //
   // Flow:
@@ -488,8 +532,13 @@
     }
 
     // ── 1. Magic Compress™ via Web Worker (non-blocking) ──
+    // Lazy-load image-compress.js if not yet loaded. This avoids editing every
+    // HTML page that uses ProfileEditorPanel — the module loads on first use.
     if (!window.ImageCompress) {
-      throw new Error('ImageCompress module belum dimuat. Refresh halaman dan coba lagi.');
+      await _ensureImageCompressLoaded();
+    }
+    if (!window.ImageCompress) {
+      throw new Error('Gagal memuat modul kompresi gambar. Cek koneksi internet dan refresh halaman.');
     }
 
     let compressed;

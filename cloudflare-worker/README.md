@@ -1,14 +1,14 @@
-# AlbEdu Cloudflare Worker v7 — Architecture & Function Reference
+# AlbEdu Cloudflare Worker — Architecture & Function Reference
 
-**Version:** v7.0.0 (AlbEdu v0.820.0+)
+**Version:** 7.0.0 (AlbEdu v0.820.0+)
 **Status:** Production-ready
-**Replaces:** worker-v6.js (decommissioned in v0.819.0)
+**Replaces:** worker.js (legacy, deleted) (decommissioned in v0.819.0)
 
 ---
 
 ## 🎯 Worker Role in AlbEdu Architecture
 
-Worker v7 is **NOT** an upload gateway anymore. It serves 3 distinct functions in the new asset system:
+Worker is **NOT** an upload gateway anymore. It serves 3 distinct functions in the new asset system:
 
 ```
                     ┌─────────────────────────────────────┐
@@ -78,7 +78,7 @@ Worker v7 is **NOT** an upload gateway anymore. It serves 3 distinct functions i
 ```json
 {
   "status": "ok",
-  "service": "albedu-worker-v7",
+  "service": "albedu-worker",
   "timestamp": "2026-07-09T19:30:00.000Z",
   "version": "7.0.0",
   "config": {
@@ -248,7 +248,7 @@ Rate limit is per-Worker-isolate (Cloudflare runs many isolates globally). Not a
 
 ### B2 transaction savings
 
-| Scenario | Without Worker | With Worker v7 | Savings |
+| Scenario | Without Worker | With Worker | Savings |
 |---|---|---|---|
 | 1,000 peserta × 10 images | 10,000 B2 calls | ~10 B2 calls | 99.9% |
 | 10,000 peserta × 20 images | 200,000 B2 calls | ~50 B2 calls | 99.97% |
@@ -290,7 +290,7 @@ npm install -g wrangler
 wrangler login
 
 # In the cloudflare-worker/ directory:
-wrangler dev worker-v7.js
+wrangler dev worker.js
 
 # Local dev server runs at http://localhost:8787
 # Set env vars in .dev.vars file (gitignored):
@@ -336,7 +336,7 @@ Worker logs go to Cloudflare's Workers Logs (Workers → edu.albyte-inc → Logs
 - **Asset system architecture:** `docs/asset-system/ARCHITECTURE-V2.md` §3.6
 - **Migration roadmap:** `docs/asset-system/ROADMAP.md` Phase 4
 - **B2 setup guide:** `docs/asset-system/BACKBLAZE-SETUP.md`
-- **Legacy worker (v6):** `cloudflare-worker/worker-v6.js` (kept for reference only — do not deploy)
+- **Legacy worker (v6):** `cloudflare-worker/worker.js (legacy, deleted)` (kept for reference only — do not deploy)
 
 ---
 
@@ -348,7 +348,7 @@ B2 has two APIs:
 1. **Native B2 API** (`api.backblazeb2.com`) — requires session token, expires after 24h, needs re-auth
 2. **S3-compatible API** (`s3.{region}.backblazeb2.com`) — uses AWS Signature V4, no session, stateless
 
-Worker v7 uses S3 API because:
+Worker uses S3 API because:
 - ✅ Stateless — no session token to refresh
 - ✅ AWS Signature V4 is well-documented, battle-tested
 - ✅ Same code works for B2, AWS S3, R2, Wasabi (future flexibility)
@@ -386,8 +386,8 @@ Future: Phase 6 will add a `/img/{hash}/purge` admin endpoint for manual cache i
 
 ```
 cloudflare-worker/
-├── worker-v7.js       # Production code (630 lines, this is what you deploy)
-├── worker-v6.js       # Legacy (kept for reference, do not deploy)
+├── worker.js       # Production code (630 lines, this is what you deploy)
+├── worker.js (legacy, deleted)       # Legacy (kept for reference, do not deploy)
 ├── README-v7.md       # This file (architecture reference)
 └── README.md          # Legacy v6 README (deprecated)
 ```

@@ -1,119 +1,62 @@
-//  image-cleanup.js — release uploaded images from the Cloudflare Worker
-//  (new { url, hash } entries) or the legacy GitHub CDN (plain URL strings).
+//  image-cleanup.js — release uploaded images (soal/assessment images).
+//
+//  v0.819.0: Avatar deletion moved to Supabase Storage directly (deleteAvatar).
+//  Soal image deletion (deleteImage/deleteExamImages/deleteImages) is currently
+//  DEPRECATED — the old Worker /release endpoint is decommissioned. Phase 2
+//  will rewire these to call the new asset-release Supabase Edge Function.
 //
 //  Public API:
-//    ImageCleanup.deleteImage(urlOrEntry)
-//    ImageCleanup.deleteExamImages(examData)
-//    ImageCleanup.deleteImages(urlsOrEntries)
+//    ImageCleanup.deleteAvatar(userId, opts)  — ACTIVE (Phase 1, Supabase Storage)
+//    ImageCleanup.deleteImage(entry)          — DEPRECATED (Phase 2 will rewire)
+//    ImageCleanup.deleteExamImages(examData)  — DEPRECATED (Phase 2 will rewire)
+//    ImageCleanup.deleteImages(entries)       — DEPRECATED (Phase 2 will rewire)
 
 const ImageCleanup = (() => {
 
-
-  const getWorkerBase = () =>
-    (window.ALBYTE_WORKER_URL || 'https://edu.albyte-inc.workers.dev/upload')
-      .replace(/\/upload$/, '');
-
-  const getLegacyBase = () =>
-    window.ALBYTE_UPLOAD_API_URL?.replace('/api/upload', '')
-    || 'https://albyte-upload-api.vercel.app';
-
-  // Accepts a plain URL string (legacy) or a { url, hash } object (current).
-  // Returns { url, hash } — hash may be null for legacy entries.
-  function _normalize(entry) {
-    if (typeof entry === 'object' && entry !== null) {
-      return { url: entry.url || '', hash: entry.hash || null };
-    }
-    return { url: entry || '', hash: null };
-  }
-
-  async function _workerRelease(hash) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
-    try {
-      const res = await fetch(`${getWorkerBase()}/release`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hash }),
-        signal: controller.signal,
-      });
-      if (!res.ok) throw new Error(`Worker /release error (${res.status})`);
-      return true;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  async function _legacyDelete(url) {
-    if (!url || !url.startsWith('https://raw.githubusercontent.com/')) {
-      console.warn('[ImageCleanup] Not a legacy CDN URL, skipping:', url);
-      return false;
-    }
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
-    try {
-      const res = await fetch(`${getLegacyBase()}/api/delete-image`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-        signal: controller.signal,
-      });
-      const data = await res.json();
-      return data.success === true;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
+  // v0.819.0: Worker /release endpoint decommissioned. These helpers are kept
+  // as no-ops with warnings until Phase 2 wires them to the asset-release
+  // Supabase Edge Function. Calling them now is safe (returns false) but logs
+  // a deprecation warning so developers know images aren't actually released.
 
   /**
+   * @deprecated since v0.819.0 — Phase 2 will rewire to asset-release Edge Function.
+   * Currently a no-op (returns false). Worker /release endpoint is decommissioned.
+   *
    * @param {string | { url: string, hash: string }} entry
    * @returns {Promise<boolean>}
    */
   async function deleteImage(entry) {
-    const { url, hash } = _normalize(entry);
-    try {
-      if (hash) return await _workerRelease(hash);
-      return await _legacyDelete(url);
-    } catch (err) {
-      console.error('[ImageCleanup] deleteImage error:', err);
-      return false;
-    }
+    console.warn('[ImageCleanup] deleteImage() is deprecated since v0.819.0.',
+      'Worker /release decommissioned. Phase 2 will rewire to asset-release Edge Function.',
+      'Entry:', entry);
+    return false;
   }
 
   /**
-   * Walks the full examData object and releases every image entry found.
-   * Compatible with both legacy string arrays and current object arrays.
+   * @deprecated since v0.819.0 — Phase 2 will rewire.
+   * Walks the full examData object and would release every image entry found.
+   * Currently a no-op (returns {deleted: 0, failed: 0}).
    *
    * @param {object} examData  - Full exam record from Supabase
    * @returns {Promise<{ deleted: number, failed: number }>}
    */
   async function deleteExamImages(examData) {
-    const entries = [];
-    try {
-      const sections = examData?.soal || examData?.sections || [];
-      for (const section of sections) {
-        const questions = section?.questions || section?.soal || [];
-        for (const q of questions) {
-          const gambar = q?.media?.gambar || [];
-          for (const g of gambar) entries.push(g);
-        }
-      }
-    } catch (err) {
-      console.error('[ImageCleanup] deleteExamImages parse error:', err);
-    }
-    return deleteImages(entries);
+    console.warn('[ImageCleanup] deleteExamImages() is deprecated since v0.819.0.',
+      'Phase 2 will rewire to asset-release Edge Function.');
+    return { deleted: 0, failed: 0 };
   }
 
   /**
+   * @deprecated since v0.819.0 — Phase 2 will rewire.
+   * Currently a no-op.
+   *
    * @param {Array<string | { url: string, hash: string }>} entries
    * @returns {Promise<{ deleted: number, failed: number }>}
    */
   async function deleteImages(entries) {
-    if (!Array.isArray(entries) || entries.length === 0) return { deleted: 0, failed: 0 };
-    let deleted = 0, failed = 0;
-    // allSettled so one slow Worker doesn't block the rest of the batch.
-    const results = await Promise.allSettled(entries.map((entry) => deleteImage(entry)));
-    results.forEach((r) => { r.status === 'fulfilled' && r.value ? deleted++ : failed++; });
-    return { deleted, failed };
+    console.warn('[ImageCleanup] deleteImages() is deprecated since v0.819.0.',
+      'Phase 2 will rewire to asset-release Edge Function.');
+    return { deleted: 0, failed: 0 };
   }
 
   /**

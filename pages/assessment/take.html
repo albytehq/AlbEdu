@@ -232,10 +232,6 @@
     <span id="pause-text">Asesmen dijeda oleh admin. Mohon tunggu.</span>
   </div>
 
-  <script>
-    // Worker URL (image upload — legacy compat)
-    window.ALBYTE_WORKER_URL = 'https://edu.albyte-inc.workers.dev/upload';
-  </script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('../../public/service-worker.js').catch(() => {}));

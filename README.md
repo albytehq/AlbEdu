@@ -172,7 +172,7 @@ AlbEdu/
 │   ├── config.toml
 │   └── README.md
 ├── cloudflare-worker/          # Cloudflare Worker (v6.0)
-│   ├── worker-v6.js
+│   ├── worker.js (legacy, deleted)
 │   └── README.md
 ├── scripts/                    # Build & dev tooling
 ├── tests/                      # Test suites (TODO)

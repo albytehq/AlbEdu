@@ -401,7 +401,7 @@ Four functions remain `verify_jwt=false` because they are pre-auth or anonymous 
 
 ### Cloudflare Worker CORS lock + AUTH_TOKEN required
 
-The Cloudflare Worker (`cloudflare-worker/worker-v6.js`) `/upload` and `/release` endpoints were accepting requests from any `Origin` header and treating `AUTH_TOKEN` as optional (the env var was read but its absence only logged a warning, did not block). For a worker that can write to GitHub asset repos (`assets-1` to `assets-20`) and the `assets_manifest` table, this is unacceptable — an attacker could POST to `/upload` from any origin and fill the repos with garbage, or call `/release` to delete assets. Now:
+The Cloudflare Worker (`cloudflare-worker/worker.js (legacy, deleted)`) `/upload` and `/release` endpoints were accepting requests from any `Origin` header and treating `AUTH_TOKEN` as optional (the env var was read but its absence only logged a warning, did not block). For a worker that can write to GitHub asset repos (`assets-1` to `assets-20`) and the `assets_manifest` table, this is unacceptable — an attacker could POST to `/upload` from any origin and fill the repos with garbage, or call `/release` to delete assets. Now:
 
 - `Origin` header is checked against `ALLOWED_ORIGINS` (configured via env var, currently `albytehq.github.io`, `albedu-id.github.io`, `http://localhost:8765` for dev). Mismatched Origin → 403.
 - `AUTH_TOKEN` header is required. Missing or mismatched → 401. The token is a 32-char random string stored in Cloudflare Worker env vars (set via `wrangler secret put AUTH_TOKEN`).

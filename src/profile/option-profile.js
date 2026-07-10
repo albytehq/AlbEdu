@@ -3,7 +3,7 @@
 // menu with avatar, role chip, and actions (edit profile, navigate, logout).
 // Zero external deps beyond Auth + ProfileEditorPanel.
 //
-// Public API: init({triggers, context, workerBase}), open(triggerEl, x, y),
+// Public API: init({triggers, context}), open(triggerEl, x, y),
 // close(), toggle(), isOpen(), update(), destroy(), addTrigger(el),
 // getTriggers().
 
@@ -822,14 +822,10 @@
 
   function _initPEP() {
     if (!window.ProfileEditorPanel || _ppeReady) return;
-    const workerBase = _cfg?.workerBase;
-    if (!workerBase) {
-      console.error('[OptionProfile] _initPEP: workerBase is required but not set.');
-      return;
-    }
+    // v0.819.0: workerBase no longer required — ProfileEditorPanel uses Supabase Storage directly.
+    // Kept for backward compat (ignored if passed).
     window.ProfileEditorPanel.init({
       trigger: [],
-      workerBase: workerBase,
       onSaved: (user) => {
         if (window.Auth) window.Auth.userData = user;
         window.dispatchEvent(new CustomEvent('op-profile-updated', { detail: user }));
@@ -1206,9 +1202,8 @@
   function init(cfg) {
     _cfg = cfg || {};
 
-    if (!_cfg.workerBase) {
-      console.error('[OptionProfile] init: workerBase is required.');
-    }
+    // v0.819.0: workerBase is now optional (ignored). Avatars use Supabase Storage directly.
+    // No error if missing — backward compat with older callers that still pass it.
 
     _injectStyles();
 

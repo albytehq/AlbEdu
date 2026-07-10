@@ -517,7 +517,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!window.ProfileEditorPanel) { resolveEditor(); return; }
                 window.ProfileEditorPanel.init({
                     trigger:    [],
-                    workerBase: 'https://edu.albyte-inc.workers.dev',
                     onSaved: function (user) {
                         const nameEl   = document.getElementById('sidebar-user-name');
                         const avatarEl = document.getElementById('sidebar-avatar');
@@ -572,7 +571,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.OptionProfile.init({
                     triggers:   userContent ? [userContent] : [],
                     context:    'sidebar',
-                    workerBase: 'https://edu.albyte-inc.workers.dev',
                 });
                 if (wantsOpenNow && userContent) {
                     window.OptionProfile.open(userContent);

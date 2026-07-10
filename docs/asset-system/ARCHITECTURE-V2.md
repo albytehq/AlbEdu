@@ -897,7 +897,7 @@ This is subpath-safe: the worker derives its own directory from its URL, so `imp
 
 | Component | CORS Allow-Origin | File |
 |---|---|---|
-| Cloudflare Worker | `albytehq.github.io` | `cloudflare-worker/worker-v6.js:34` |
+| Cloudflare Worker | `albytehq.github.io` | `cloudflare-worker/worker.js (legacy, deleted):34` |
 | Supabase Edge Functions | `albytehq.github.io` | `supabase/functions/_shared/cors.ts:10` |
 | esm.sh (MozJPEG WASM) | `*` (public) | N/A — public CDN |
 | BackBlaze B2 | N/A — server-side only | Edge Function uses service role |

@@ -376,7 +376,7 @@ Solusi:
 
 Penyebab: Cloudflare Worker CORS tidak include origin yang dipakai.
 Solusi:
-1. Update `ALLOWED_ORIGINS` di Worker code (`cloudflare-worker/worker-v6.js`)
+1. Update `ALLOWED_ORIGINS` di Worker code (`cloudflare-worker/worker.js (legacy, deleted)`)
 2. Atau tambahkan pattern match untuk localhost
 
 ### "new row violates row-level security policy"

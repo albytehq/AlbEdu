@@ -1,5 +1,5 @@
 // ============================================================================
-// AlbEdu Cloudflare Worker v7 — Edge Cache + Config + Health
+// AlbEdu Cloudflare Worker — Edge Cache + Config + Health
 // ============================================================================
 //
 // ARCHITECTURE (v0.820.0+):
@@ -264,7 +264,7 @@ function handleHealth(env) {
   return json(
     {
       status: 'ok',
-      service: 'albedu-worker-v7',
+      service: 'albedu-worker',
       timestamp: new Date().toISOString(),
       version: '7.0.0',
       // Don't expose env vars — just whether they're set

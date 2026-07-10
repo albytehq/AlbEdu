@@ -128,7 +128,7 @@ Added: Backblaze B2 + Supabase Edge Functions + Supabase Storage
    - Estimated runtime: <5 minutes for ~50 users
 
 5. **Decommission Worker `/upload` endpoint**
-   - Comment out the route in `worker-v6.js` (don't delete yet — Phase 4 cleanup)
+   - Comment out the route in `worker.js (legacy, deleted)` (don't delete yet — Phase 4 cleanup)
    - Return 410 Gone with helpful message: "Use Supabase Storage directly. See docs/asset-system/ARCHITECTURE-V2.md"
 
 6. **Update `src/utils/image-cleanup.js`**
@@ -366,7 +366,7 @@ With Magic Compress™, every image is 80-300 KB (avg ~150 KB):
 #### Tasks
 
 1. **Build `/img/{hash}` cache proxy endpoint**
-   - Path: `cloudflare-worker/worker-v6.js` (or new `worker-v7.js`)
+   - Path: `cloudflare-worker/worker.js (legacy, deleted)` (or new `worker.js`)
    - Flow:
      1. Receive `GET /img/{hash}`
      2. Query `assets_manifest` for the hash → get `repo`, `path`, `storage_backend`
@@ -395,7 +395,7 @@ With Magic Compress™, every image is 80-300 KB (avg ~150 KB):
    - For legacy GitHub assets: same `/img/{hash}` endpoint handles them transparently
 
 #### Deliverables
-- Updated `cloudflare-worker/worker-v6.js` (or new `worker-v7.js`)
+- Updated `cloudflare-worker/worker.js (legacy, deleted)` (or new `worker.js`)
 - Updated `cloudflare-worker/README.md`
 - Updated `src/pages/take-assessment/exam.js` (image URLs via Worker)
 

@@ -28,7 +28,7 @@ AlbEdu is hosted on **GitHub Pages** at `https://albytehq.github.io/AlbEdu/` (su
 ### What works fine on GitHub Pages
 - ✅ **Static JS/CSS files** — served from GitHub Pages CDN, no config needed
 - ✅ **Supabase Edge Functions** — called cross-origin via `fetch()`, Supabase handles CORS automatically
-- ✅ **Cloudflare Worker** — called cross-origin, Worker has CORS headers (already configured in `worker-v6.js`)
+- ✅ **Cloudflare Worker** — called cross-origin, Worker has CORS headers (already configured in `worker.js (legacy, deleted)`)
 - ✅ **B2 S3 API** — called from Supabase Edge Function (server-side), no browser CORS involvement
 - ✅ **createImageBitmap / Canvas** — work on any HTTPS origin (GitHub Pages is HTTPS)
 
@@ -62,7 +62,7 @@ AlbEdu is hosted on **GitHub Pages** at `https://albytehq.github.io/AlbEdu/` (su
    // → https://albytehq.github.io/AlbEdu/src/utils/image-compress.js
    ```
 
-4. **Cloudflare Worker CORS** — the Cloudflare Worker (`edu.albyte-inc.workers.dev`) already has `albytehq.github.io` in its `ALLOWED_ORIGINS` list (see `worker-v6.js:34`). No change needed.
+4. **Cloudflare Worker CORS** — the Cloudflare Worker (`edu.albyte-inc.workers.dev`) already has `albytehq.github.io` in its `ALLOWED_ORIGINS` list (see `worker.js (legacy, deleted):34`). No change needed.
 
 5. **Supabase Edge Function CORS** — the `_shared/cors.ts` file already allows `https://albytehq.github.io` (see `supabase/functions/_shared/cors.ts:10`). No change needed.
 
@@ -220,7 +220,7 @@ In Cloudflare Dashboard → Workers → `edu.albyte-inc` → Settings → Variab
 | `B2_BUCKET_NAME` | `albedu-assets-systems` | Text |
 | `B2_ENDPOINT` | `s3.us-west-002.backblazeb2.com` | Text |
 
-### 6.2: Deploy Worker v7 (Phase 4 deliverable)
+### 6.2: Deploy Worker (Phase 4 deliverable)
 
 The Worker code will be updated in Phase 4 to include the `/img/{hash}` cache proxy endpoint. See `docs/asset-system/ROADMAP.md` Phase 4 for implementation details.
 

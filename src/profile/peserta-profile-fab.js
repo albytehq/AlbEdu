@@ -21,7 +21,8 @@
 (function () {
   'use strict';
 
-  const WORKER_BASE = 'https://edu.albyte-inc.workers.dev';
+  // v0.819.0: WORKER_BASE removed — avatars now use Supabase Storage directly.
+  // The Worker URL is only needed for /api/supabase-config (handled by supabase-client.js).
   const PEP_SCRIPT_ID = 'pep-panel-script-peserta';
   const OP_SCRIPT_ID = 'op-script-peserta';
 
@@ -196,7 +197,6 @@
       if (window.ProfileEditorPanel) {
         window.ProfileEditorPanel.init({
           trigger: [],
-          workerBase: WORKER_BASE,
           onSaved: function (user) {
             // Refresh FAB avatar after profile save
             _populateAvatar(fab, user);
@@ -215,7 +215,6 @@
       window.OptionProfile.init({
         triggers: [fab],
         context: 'peserta',
-        workerBase: WORKER_BASE,
       });
 
       // Listen for option-profile-ready (defensive — navigasi.js pattern)
