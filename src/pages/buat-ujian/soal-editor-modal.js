@@ -304,6 +304,12 @@
     },
 
     async _compressAndUpload(file) {
+      console.log('[Upload DEBUG] Step 0: _compressAndUpload started', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+      });
+
       // Validate size
       if (file.size > MAX_FILE_SIZE) {
         throw new Error(`File terlalu besar (${this._formatSize(file.size)}). Maks ${this._formatSize(MAX_FILE_SIZE)}.`);
@@ -312,19 +318,22 @@
       this._showProgress('Mengompres gambar...');
 
       // ── 1. Magic Compress™ via Web Worker ──
+      console.log('[Upload DEBUG] Step 1: Loading ImageCompress module...');
       if (!window.ImageCompress) {
-        // Lazy-load image-compress.js
         const basePath = window.Auth?.getBasePath?.() || '/';
+        console.log('[Upload DEBUG] Step 1a: Lazy-loading from', basePath + 'src/utils/image-compress.js');
         await new Promise((resolve, reject) => {
           const s = document.createElement('script');
           s.src = basePath + 'src/utils/image-compress.js';
           s.defer = true;
-          s.onload = resolve;
+          s.onload = () => { console.log('[Upload DEBUG] Step 1b: image-compress.js loaded'); resolve(); };
           s.onerror = () => reject(new Error('Gagal memuat modul kompresi.'));
           document.head.appendChild(s);
         });
       }
+      console.log('[Upload DEBUG] Step 1c: ImageCompress ready:', !!window.ImageCompress);
 
+      console.log('[Upload DEBUG] Step 2: Starting compression (Web Worker)...');
       let compressed;
       try {
         compressed = await window.ImageCompress.compressInWorker(file, {
@@ -333,49 +342,63 @@
           targetMaxBytes: 300 * 1024,
           targetMinBytes: 80 * 1024,
         });
+        console.log('[Upload DEBUG] Step 2a: Worker compression SUCCESS', {
+          originalSize: compressed.originalSize,
+          compressedSize: compressed.compressedSize,
+          qualityUsed: compressed.qualityUsed,
+          blobSize: compressed.blob?.size,
+          blobType: compressed.blob?.type,
+        });
       } catch (err) {
-        // Fallback to main thread
-        console.warn('[SoalEditorModal] Worker compress failed, trying main thread:', err.message);
+        console.warn('[Upload DEBUG] Step 2b: Worker compress failed, trying main thread:', err.message);
         compressed = await window.ImageCompress.magicCompress(file, {
           maxWidth: 1280,
           maxHeight: 720,
           targetMaxBytes: 300 * 1024,
           targetMinBytes: 80 * 1024,
         });
+        console.log('[Upload DEBUG] Step 2c: Main thread compression SUCCESS', {
+          originalSize: compressed.originalSize,
+          compressedSize: compressed.compressedSize,
+          blobSize: compressed.blob?.size,
+        });
       }
 
-      // Defense in depth: reject if >500 KB (EF will also reject)
+      // Defense in depth
       if (compressed.compressedSize > 500 * 1024) {
         throw new Error('Gambar terlalu besar setelah kompresi. Coba gambar lain.');
       }
 
       this._showProgress('Mengunggah...');
+      console.log('[Upload DEBUG] Step 3: Preparing upload to Edge Function...');
 
       // ── 2. Upload to asset-upload Edge Function ──
-      // Use raw fetch() instead of supabase.functions.invoke() because
-      // the Supabase SDK wrapper may not handle FormData/multipart correctly
-      // (it tends to set Content-Type: application/json which breaks the
-      // multipart boundary). Raw fetch lets the browser set the correct
-      // Content-Type: multipart/form-data; boundary=... automatically.
       const supabase = window.AlbEdu?.supabase?.client;
       if (!supabase) {
         throw new Error('Koneksi Supabase tidak tersedia. Refresh halaman dan coba lagi.');
       }
 
       // Get the user's access token for auth
+      console.log('[Upload DEBUG] Step 3a: Getting session token...');
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
       if (!accessToken) {
         throw new Error('Sesi login tidak ditemukan. Silakan login ulang.');
       }
+      console.log('[Upload DEBUG] Step 3b: Token acquired, length:', accessToken.length);
 
       const formData = new FormData();
       formData.append('file', compressed.blob, `image-${Date.now()}.jpg`);
       formData.append('original_size', String(compressed.originalSize));
       formData.append('quality_used', String(compressed.qualityUsed || ''));
+      console.log('[Upload DEBUG] Step 3c: FormData built, entries:', {
+        file: compressed.blob?.size + ' bytes',
+        original_size: compressed.originalSize,
+        quality_used: compressed.qualityUsed,
+      });
 
-      // Build EF URL — uses the Supabase project URL from the client config
-      const supabaseUrl = window.AlbEdu?.supabase?.client?.supabaseUrl ||
+      // Build EF URL
+      const supabaseUrl = supabase.supabaseUrl ||
                           window.AlbEdu?.supabase?._config?.url ||
                           '';
       if (!supabaseUrl) {
@@ -383,33 +406,48 @@
       }
 
       const efUrl = `${supabaseUrl}/functions/v1/asset-upload`;
+      console.log('[Upload DEBUG] Step 4: Sending fetch to', efUrl);
 
       const res = await fetch(efUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
-          // Do NOT set Content-Type — browser sets multipart/form-data with boundary
         },
         body: formData,
+      });
+
+      console.log('[Upload DEBUG] Step 4a: fetch() returned', {
+        status: res.status,
+        statusText: res.statusText,
+        ok: res.ok,
+        headers: {
+          'content-type': res.headers.get('content-type'),
+          'access-control-allow-origin': res.headers.get('access-control-allow-origin'),
+        },
       });
 
       if (!res.ok) {
         let msg = `Upload gagal (HTTP ${res.status})`;
         try {
           const errBody = await res.json();
+          console.error('[Upload DEBUG] Step 4b: Error response body:', errBody);
           if (errBody?.message) msg = errBody.message;
           else if (errBody?.error) msg = errBody.error;
         } catch {}
         throw new Error(msg);
       }
 
+      console.log('[Upload DEBUG] Step 5: Parsing response JSON...');
       const data = await res.json();
+      console.log('[Upload DEBUG] Step 5a: Raw response:', data);
 
       // Handle Supabase EF response format: { data: {...} } or { ... }
       const result = data?.data || data;
+      console.log('[Upload DEBUG] Step 5b: Extracted result:', result);
       if (!result?.hash || !result?.cdn_url) {
         throw new Error('Response tidak valid dari server (hash/url hilang).');
       }
+      console.log('[Upload DEBUG] Step 6: SUCCESS — hash:', result.hash.slice(0, 16) + '...', 'url:', result.cdn_url);
 
       // ── 3. Add to draft ──
       this._draft.media.gambar.push({
