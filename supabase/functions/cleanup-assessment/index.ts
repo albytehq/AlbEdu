@@ -2,9 +2,14 @@
 // POST /functions/v1/cleanup-assessment
 // Headers: Authorization: Bearer <admin_token>
 // Body: { assessment_id: string, force?: boolean }
+// v0.821.2: Converted from `export default handler(...)` to `serve()` pattern
+// because the handler() wrapper causes the deployed EF to hang on POST
+// (regression in current Supabase Deno runtime). Same fix as asset-upload v0.821.1.
 
-import { handler } from '../_shared/cors.ts';
-import { HTTPError, successResponse } from '../_shared/error.ts';
+
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { handleOptions, withCors } from '../_shared/cors.ts';
+import { HTTPError, handleError, successResponse } from '../_shared/error.ts';
 import { requireAdmin, verifyAssessmentOwnership } from '../_shared/auth.ts';
 import { SupabaseDB } from '../_shared/db.ts';
 import { logAudit, getClientIP, getUserAgent } from '../_shared/audit.ts';
@@ -15,7 +20,21 @@ interface CleanupBody {
   force?: boolean;
 }
 
-export default handler(async (req: Request, env: Env, _ctx: any) => {
+serve(async (req: Request) => {
+  const origin = req.headers.get('Origin');
+  const env = Deno.env.toObject() as unknown as Env;
+
+  if (req.method === 'OPTIONS') return handleOptions(req);
+
+  try {
+    const res = await logic(req, env);
+    return withCors(res, origin);
+  } catch (err) {
+    return withCors(handleError(err), origin);
+  }
+});
+
+async function logic(req: Request, env: Env): Promise<Response> {
   const admin = await requireAdmin(req, env);
 
   let body: CleanupBody;
@@ -92,4 +111,4 @@ export default handler(async (req: Request, env: Env, _ctx: any) => {
     archived_at: new Date().toISOString(),
     archived_by: admin.email,
   });
-});
+}

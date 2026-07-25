@@ -1,6 +1,13 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// v0.821.2: Moved `_DEBUG` to module scope. It was previously declared
+// INSIDE the serve() callback (line 292), but `evaluateRegistrationRisk`
+// (defined at line 105) references it via closure — causing a Temporal
+// Dead Zone ReferenceError whenever deviceId or browserHash is set
+// (i.e., every real registration). See audit ALB-SEC-003.
+const _DEBUG = !!Deno.env.get("DEBUG");
+
 type RiskResult = {
   allowed: boolean;
   reason?: string;
@@ -289,7 +296,7 @@ serve(async (req) => {
     // DEBUG console.log lines below are gated behind the DEBUG env var to
     // prevent log spam and internal-state leakage in production. Set
     // DEBUG=1 in Supabase secrets to re-enable.
-    const _DEBUG = !!Deno.env.get("DEBUG");
+    // (v0.821.2: _DEBUG moved to module scope — see top of file.)
     if (deviceId) {
       if (_DEBUG) console.log("[register-admin] DEBUG: Checking device limit for device_id:", deviceId);
 

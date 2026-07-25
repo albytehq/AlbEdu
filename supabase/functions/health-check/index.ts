@@ -1,10 +1,17 @@
 // health-check — used by external uptime monitors (UptimeRobot etc.) to
 // keep the Free Plan database warm. Must actually query the DB so a
 // paused database is detectable.
+//
+// v0.821.2: Converted from bare `export default async` to `serve()` pattern.
+// The bare pattern causes the deployed EF to hang on the current Supabase
+// Deno runtime (same regression as the `handler()` wrapper — see audit
+// ALB-SEC-001). Wrapping in `serve()` is the documented-working pattern.
 
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-export default async (_req: Request, env: any, _ctx: any) => {
+serve(async (_req: Request) => {
+  const env = Deno.env.toObject() as any;
   const started = Date.now();
   const body: Record<string, unknown> = {
     ok: true,
@@ -53,4 +60,4 @@ export default async (_req: Request, env: any, _ctx: any) => {
     status: body.ok ? 200 : 503,
     headers: { "Content-Type": "application/json" },
   });
-};
+});
