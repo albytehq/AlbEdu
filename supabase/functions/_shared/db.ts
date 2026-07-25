@@ -80,9 +80,19 @@ export class SupabaseDB {
     return null;
   }
 
+  // Normalize PostgREST filter — callers historically passed " AND " between
+  // conditions, but PostgREST uses "&" as the separator. Without this fix,
+  // filters like "id=eq.X AND status=eq.active" get interpreted as a single
+  // filter column with an invalid value (HTTP 400 "invalid input syntax").
+  // Bug discovered during Phase 1 smoke test — was latent because EFs hung
+  // before serve() conversion.
+  private normalizeFilter(filter: string): string {
+    return filter.replace(/\s+AND\s+/g, '&');
+  }
+
   async update<T = any>(
     table: string,
-    filter: string,  // PostgREST filter: "id=eq.abc-123"
+    filter: string,  // PostgREST filter: "id=eq.abc-123" or "id=eq.X AND status=eq.Y"
     data: any,
     options: { returnRepresentation?: boolean } = {}
   ): Promise<T | null> {
@@ -94,7 +104,7 @@ export class SupabaseDB {
     }
 
     const res = await fetch(
-      `${this.env.SUPABASE_URL}/rest/v1/${table}?${filter}`,
+      `${this.env.SUPABASE_URL}/rest/v1/${table}?${this.normalizeFilter(filter)}`,
       {
         method: 'PATCH',
         headers,
@@ -123,7 +133,7 @@ export class SupabaseDB {
     data: any,
   ): Promise<{ updated: number; row: T | null }> {
     const res = await fetch(
-      `${this.env.SUPABASE_URL}/rest/v1/${table}?${filter}`,
+      `${this.env.SUPABASE_URL}/rest/v1/${table}?${this.normalizeFilter(filter)}`,
       {
         method: 'PATCH',
         headers: {
@@ -147,7 +157,7 @@ export class SupabaseDB {
 
   async delete(table: string, filter: string): Promise<void> {
     const res = await fetch(
-      `${this.env.SUPABASE_URL}/rest/v1/${table}?${filter}`,
+      `${this.env.SUPABASE_URL}/rest/v1/${table}?${this.normalizeFilter(filter)}`,
       {
         method: 'DELETE',
         headers: this.headers,
