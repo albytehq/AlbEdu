@@ -66,6 +66,18 @@ async function logic(req: Request, env: Env): Promise<Response> {
     throw new HTTPError(400, 'VALIDATION_ERROR', 'answers object is required');
   }
 
+  // ALB-SEC-018 fix: validate section keys format BEFORE storing answers.
+  // Allowed: "section_0", "section_1", ... "section_N" (where N is a number).
+  // Anything else could confuse grading audit / cross-device resume.
+  // Detailed validation against actual section count happens after fetch below.
+  const sectionKeys = Object.keys(body.answers);
+  for (const key of sectionKeys) {
+    if (!/^section_\d+$/.test(key)) {
+      throw new HTTPError(400, 'VALIDATION_ERROR',
+        `Invalid answer section key: "${key}". Expected format: section_<number>`);
+    }
+  }
+
   const answersStr = JSON.stringify(body.answers);
   if (answersStr.length > MAX_ANSWERS_SIZE) {
     throw new HTTPError(413, 'PAYLOAD_TOO_LARGE', `Answers payload exceeds ${MAX_ANSWERS_SIZE} bytes`);

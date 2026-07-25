@@ -63,9 +63,15 @@ async function logic(req: Request, env: Env): Promise<Response> {
 
   const db = new SupabaseDB(env);
 
+  // ALB-SEC-011 fix: URL-encode IP + timestamps to prevent PostgREST filter
+  // injection via unusual characters in CF-Connecting-IP / X-Forwarded-For.
+  // In practice CF-Connecting-IP is always a clean IP, but defense-in-depth.
+  const ipEncoded = encodeURIComponent(`exam_ip:${ip}`);
+  const sinceIso = encodeURIComponent(new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString());
+
   // Count IP attempts in the last hour.
   const ipCountRes = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/registration_attempts?ip_address=eq.exam_ip:${ip}&fingerprint=eq.exam_token_attempt&created_at=gte.${new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString()}&select=id,created_at&limit=${RATE_LIMIT_MAX + 1}&order=created_at.desc`,
+    `${env.SUPABASE_URL}/rest/v1/registration_attempts?ip_address=eq.${ipEncoded}&fingerprint=eq.exam_token_attempt&created_at=gte.${sinceIso}&select=id,created_at&limit=${RATE_LIMIT_MAX + 1}&order=created_at.desc`,
     {
       headers: {
         apikey: env.SUPABASE_SERVICE_ROLE_KEY,
@@ -105,7 +111,7 @@ async function logic(req: Request, env: Env): Promise<Response> {
   // Count device attempts in the last hour.
   if (deviceId !== 'unknown') {
     const deviceCountRes = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/registration_attempts?device_id=eq.${encodeURIComponent(deviceId)}&fingerprint=eq.exam_token_attempt&created_at=gte.${new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString()}&select=id&limit=${RATE_LIMIT_MAX + 1}`,
+      `${env.SUPABASE_URL}/rest/v1/registration_attempts?device_id=eq.${encodeURIComponent(deviceId)}&fingerprint=eq.exam_token_attempt&created_at=gte.${sinceIso}&select=id&limit=${RATE_LIMIT_MAX + 1}`,
       {
         headers: {
           apikey: env.SUPABASE_SERVICE_ROLE_KEY,

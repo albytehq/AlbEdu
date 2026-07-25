@@ -30,7 +30,28 @@
 (function () {
   'use strict';
 
-  const WORKER_BASE = 'https://edu.albyte-inc.workers.dev';
+  // v0.821.3: WORKER_BASE is now overridable via <meta name="albedu-worker-base">
+  // in HTML head. Falls back to hardcoded production URL. Enables local dev
+  // (e.g. <meta name="albedu-worker-base" content="http://localhost:8787"> for
+  // `wrangler dev`) and staging environments without forking the file.
+  // See AUDIT.md §4 ALB-SEC-006.
+  const WORKER_BASE = (() => {
+    const meta = document.querySelector('meta[name="albedu-worker-base"]');
+    if (meta && meta.content) {
+      try {
+        // Sanity check: must be a valid http(s) URL
+        const u = new URL(meta.content);
+        if (u.protocol === 'http:' || u.protocol === 'https:') return meta.content;
+        console.warn('[platform] meta albedu-worker-base invalid protocol:', u.protocol, '— falling back');
+      } catch (_) {
+        console.warn('[platform] meta albedu-worker-base invalid URL:', meta.content, '— falling back');
+      }
+    }
+    if (typeof window !== 'undefined' && window.__ALBEDU_WORKER_BASE__) {
+      return window.__ALBEDU_WORKER_BASE__;
+    }
+    return 'https://edu.albyte-inc.workers.dev';
+  })();
   const CONFIG_ENDPOINT = `${WORKER_BASE}/api/supabase-config`;
   const CONFIG_CACHE_KEY = 'albedu_sb_config';
   const CONFIG_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
