@@ -75,12 +75,22 @@ export async function createTestUser(peran = 'peserta') {
 
 /**
  * Cleanup: delete test user (auth + public.users row).
+ * Must delete dependent rows first (audit_logs FK prevents direct delete).
  */
 export async function cleanupTestUser(userId) {
   if (!userId) return;
   const admin = serviceClient();
-  await admin.from('users').delete().eq('id', userId);
-  await admin.auth.admin.deleteUser(userId);
+
+  // Delete dependent rows first (FK constraints prevent direct user delete)
+  try { await admin.from('audit_logs').delete().eq('actor_id', userId); } catch (_) {}
+  try { await admin.from('submissions').delete().eq('user_id', userId); } catch (_) {}
+  try { await admin.from('assessment_sessions').delete().eq('user_id', userId); } catch (_) {}
+  try { await admin.from('user_devices').delete().eq('user_id', userId); } catch (_) {}
+  try { await admin.from('data_subject_requests').delete().eq('user_id', userId); } catch (_) {}
+  try { await admin.from('violation_events').delete().eq('user_id', userId); } catch (_) {}
+
+  // Now safe to delete auth user (cascades to public.users via FK)
+  try { await admin.auth.admin.deleteUser(userId); } catch (_) {}
 }
 
 /**

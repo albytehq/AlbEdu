@@ -7,21 +7,48 @@ import {
   cleanupTestUser,
   invokeEF,
   serviceClient,
-  TEST_ASSESSMENT_ID,
 } from './_helpers.js';
 
 describe('heartbeat EF', () => {
   let peserta;
   let sessionId;
+  let assessmentId;
 
   beforeAll(async () => {
     peserta = await createTestUser('peserta');
+
+    // Create assessment owned by admin (any admin) — heartbeat doesn't check
+    // ownership but needs valid assessment_id for FK
+    const svc = serviceClient();
+    const { data: assessment, error } = await svc.from('assessments')
+      .insert({
+        access_code: String(Math.floor(Math.random() * 1000000)).padStart(6, '0'),
+        created_by: peserta.id,  // peserta is the "creator" for test purposes
+        created_by_email: peserta.email,
+        title: 'HB Test Assessment',
+        subject: 'Test',
+        duration_minutes: 30,
+        access_mode: 'manual',
+        sections: [{
+          id: 1,
+          name: 'S1',
+          type_question: 'PG',
+          questions: [{ idq: 1, pertanyaan: 'q?', pilihan: { A: 'a', B: 'b', C: 'c', D: 'd' }, jawaban_benar: 'A', skor: 100 }],
+        }],
+        status: 'active',
+        ac_manual_status: 'open',
+      })
+      .select('id')
+      .single();
+    expect(error).toBeNull();
+    assessmentId = assessment.id;
   });
 
   afterAll(async () => {
-    const admin = serviceClient();
-    if (sessionId) {
-      await admin.from('assessment_sessions').delete().eq('id', sessionId);
+    const svc = serviceClient();
+    if (assessmentId) {
+      // Deleting assessment cascades to sessions
+      await svc.from('assessments').delete().eq('id', assessmentId);
     }
     await cleanupTestUser(peserta.id);
   });
@@ -43,11 +70,10 @@ describe('heartbeat EF', () => {
   });
 
   it('returns ok=true on active session + updates last_heartbeat_at', async () => {
-    // Create session via PostgREST (RLS allows peserta to insert own)
-    const admin = serviceClient();
-    const { data: sessionData, error } = await admin.from('assessment_sessions')
+    const svc = serviceClient();
+    const { data: sessionData, error } = await svc.from('assessment_sessions')
       .insert({
-        assessment_id: TEST_ASSESSMENT_ID,
+        assessment_id: assessmentId,
         user_id: peserta.id,
         status: 'active',
         identity_snapshot: { nama: 'HB Tester' },
@@ -60,14 +86,12 @@ describe('heartbeat EF', () => {
     expect(error).toBeNull();
     sessionId = sessionData.id;
 
-    // Get initial heartbeat_at
-    const before = await admin.from('assessment_sessions')
+    const before = await svc.from('assessment_sessions')
       .select('last_heartbeat_at,current_question,progress_pct')
       .eq('id', sessionId)
       .maybeSingle();
     const initialHb = before.data.last_heartbeat_at;
 
-    // Wait 1.1s to ensure timestamp differs
     await new Promise(r => setTimeout(r, 1100));
 
     const res = await invokeEF('heartbeat', peserta.jwt, {
@@ -84,15 +108,13 @@ describe('heartbeat EF', () => {
     expect(res.data.data.ok).toBe(true);
     expect(res.data.data.blocked).toBe(false);
 
-    // Verify session was updated
-    const after = await admin.from('assessment_sessions')
+    const after = await svc.from('assessment_sessions')
       .select('last_heartbeat_at,current_question,progress_pct,draft_answers')
       .eq('id', sessionId)
       .maybeSingle();
 
     expect(after.data.last_heartbeat_at).not.toBe(initialHb);
     expect(after.data.current_question).toBe(2);
-    // progress_pct is numeric(5,2) — PostgREST may return as number or string
     expect(Number(after.data.progress_pct)).toBe(67);
     expect(after.data.draft_answers.section_0['1']).toBe('D');
   });
