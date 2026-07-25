@@ -1,0 +1,65 @@
+# AlbEdu CI — runs on every PR + push to main
+# Lints, verifies structure, runs integration tests against live Supabase staging
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel in-progress runs for the same PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-verify:
+    name: Lint + Structure Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci || npm install
+
+      - name: Verify structure
+        run: npm run verify
+
+      - name: Lint (non-blocking)
+        run: npm run lint
+        continue-on-error: true  # ESLint not fully configured yet
+
+  integration-tests:
+    name: Integration Tests (live Supabase)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: lint-and-verify
+    # Skip on PRs from forks (no secrets)
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci || npm install
+
+      - name: Install Vitest
+        run: npm install --no-save vitest @supabase/supabase-js
+
+      - name: Run integration tests
+        env:
+          SUPABASE_URL: https://kzsrerxhhrtsxnpnmqgl.supabase.co
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx vitest run --reporter=github-actions

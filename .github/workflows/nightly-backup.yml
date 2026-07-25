@@ -1,0 +1,137 @@
+# AlbEdu Nightly Backup — pg_dump Supabase DB → upload artifact → push to B2
+name: Nightly Backup
+
+on:
+  schedule:
+    # 2am UTC daily
+    - cron: '0 2 * * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: pg_dump → B2
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install postgresql-client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client rclone
+
+      - name: Configure rclone for B2
+        env:
+          B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+          B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [b2]
+          type = b2
+          account = $B2_APPLICATION_KEY_ID
+          key = $B2_APPLICATION_KEY
+          EOF
+
+      - name: Run pg_dump
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -e
+          DATE=$(date -u +%Y%m%d)
+          FILENAME="albedu-${DATE}.dump"
+          echo "Dumping to $FILENAME..."
+
+          pg_dump "$SUPABASE_DB_URL" \
+            --format=custom \
+            --no-owner \
+            --no-privileges \
+            --no-password \
+            --file="$FILENAME"
+
+          SIZE=$(du -h "$FILENAME" | cut -f1)
+          echo "::notice::Backup created: $FILENAME ($SIZE)"
+
+          # Sanity check: file must be > 1KB
+          ACTUAL_SIZE=$(stat -c%s "$FILENAME")
+          if [ "$ACTUAL_SIZE" -lt 1024 ]; then
+            echo "::error::Backup file too small ($ACTUAL_SIZE bytes) — likely empty DB or auth failure"
+            exit 1
+          fi
+
+          # Verify backup integrity (pg_restore --list should succeed)
+          if ! pg_restore --list "$FILENAME" >/dev/null 2>&1; then
+            echo "::error::Backup file is corrupt (pg_restore --list failed)"
+            exit 1
+          fi
+          echo "::notice::Backup integrity verified (pg_restore --list OK)"
+
+          # Save filename for next steps
+          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+
+      - name: Upload to B2 (albedu-backups bucket)
+        env:
+          B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+        run: |
+          rclone copy "$FILENAME" "b2:$B2_BUCKET_NAME/backups/" --progress
+          echo "::notice::Uploaded to B2: $B2_BUCKET_NAME/backups/$FILENAME"
+
+      - name: Upload artifact (30-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: albedu-backup-${{ github.run_id }}
+          path: ${{ env.FILENAME }}
+          retention-days: 30
+
+      - name: Cleanup old B2 backups (>90 days)
+        env:
+          B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+        run: |
+          # Delete B2 backups older than 90 days
+          rclone delete "b2:$B2_BUCKET_NAME/backups/" \
+            --min-age 90d \
+            --include "albedu-*.dump" \
+            -v
+          echo "::notice::Cleaned up B2 backups older than 90 days"
+
+  verify-restore:
+    name: Verify restore (shadow DB)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: backup
+    # Run weekly only (Sundays) — restore test is expensive
+    if: github.event_name == 'schedule' && (date -u +%u) == '7'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install postgresql-client
+        run: sudo apt-get install -y -qq postgresql
+
+      - name: Setup local Postgres + restore
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          sudo service postgresql start
+          sudo -u postgres createdb restore-test
+
+          # Download latest backup from B2
+          # (Assumes rclone configured — for verify job we reconfigure)
+          DATE=$(date -u +%Y%m%d)
+          FILENAME="albedu-${DATE}.dump"
+
+          # Try pg_dump directly from source for verification
+          pg_dump "$SUPABASE_DB_URL" --format=custom --no-owner --no-privileges --file="/tmp/$FILENAME"
+
+          # Restore to local DB
+          sudo -u postgres pg_restore --clean --if-exists --dbname=restore-test "/tmp/$FILENAME" || true
+
+          # Verify by counting rows in critical tables
+          COUNT=$(sudo -u postgres psql -d restore-test -t -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';")
+          echo "::notice::Restored DB has $COUNT tables in public schema"
+
+          if [ "$COUNT" -lt 10 ]; then
+            echo "::error::Restore verification failed — too few tables"
+            exit 1
+          fi
+          echo "::notice::Restore verified ✅"

@@ -326,6 +326,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'results-analytics.html': 'results',
         'data-hasil.html':       'results',            // legacy stub → canonical
         'daftar-nama.html':      'daftar-nama',
+        'dsr-queue.html':        'dsr-queue',
     };
     const currentPage = window.location.pathname.split('/').pop();
     const activeTab   = pageMapping[currentPage] || null;

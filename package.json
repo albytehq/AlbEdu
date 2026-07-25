@@ -10,12 +10,16 @@
     "start": "node scripts/serve.mjs",
     "verify": "node scripts/verify-structure.mjs",
     "lint": "eslint src/ --ext .js 2>/dev/null || echo 'ESLint not configured — skipping'",
-    "test": "echo 'Tests in tests/ directory — run manually' && exit 0"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run tests/integration/"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.110.8",
     "esbuild": "^0.23.0",
     "jsdom": "^29.1.1",
-    "lightningcss": "^1.25.0"
+    "lightningcss": "^1.25.0",
+    "vitest": "^4.1.10"
   },
   "keywords": [
     "education",

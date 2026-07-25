@@ -37,6 +37,9 @@ verify_jwt = true
 [functions.dsr-handler]
 verify_jwt = true
 
+[functions.dsr-process]
+verify_jwt = true
+
 [functions.health-check]
 verify_jwt = false
 

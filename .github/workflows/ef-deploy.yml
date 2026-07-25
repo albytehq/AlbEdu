@@ -1,0 +1,144 @@
+# AlbEdu EF Deploy — deploy Edge Functions on tag push
+name: Deploy Edge Functions
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      ef-name:
+        description: 'Specific EF to deploy (leave empty for all)'
+        required: false
+        default: ''
+
+jobs:
+  deploy:
+    name: Deploy to Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Supabase CLI
+        run: npm install -g supabase
+
+      - name: Deploy Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -e
+          PROJECT="$SUPABASE_PROJECT_REF"
+          SPECIFIC_EF="${{ github.event.inputs.ef-name }}"
+
+          # All EFs in the project
+          ALL_EFS=(
+            register-admin
+            user-auth-preflight
+            user-auth-complete
+            access-code-attempt
+            submit-assessment
+            heartbeat
+            block-participant
+            assessment-lifecycle
+            cleanup-assessment
+            data-export
+            dsr-handler
+            health-check
+            asset-upload
+            asset-release
+          )
+
+          if [ -n "$SPECIFIC_EF" ]; then
+            echo "::notice::Deploying single EF: $SPECIFIC_EF"
+            EFS_TO_DEPLOY=("$SPECIFIC_EF")
+          else
+            EFS_TO_DEPLOY=("${ALL_EFS[@]}")
+          fi
+
+          SUCCESS=0
+          FAILED=()
+
+          for ef in "${EFS_TO_DEPLOY[@]}"; do
+            echo ""
+            echo "::group::Deploy $ef"
+            if supabase functions deploy "$ef" --project-ref "$PROJECT" --no-verify-jwt 2>&1 | tail -3; then
+              echo "::notice::$ef deployed ✅"
+              SUCCESS=$((SUCCESS+1))
+            else
+              echo "::error::$ef FAILED ❌"
+              FAILED+=("$ef")
+            fi
+            echo "::endgroup::"
+          done
+
+          echo ""
+          echo "::notice::Deploy summary: $SUCCESS/${#EFS_TO_DEPLOY[@]} succeeded"
+          if [ ${#FAILED[@]} -gt 0 ]; then
+            echo "::error::Failed EFs: ${FAILED[*]}"
+            exit 1
+          fi
+
+  verify:
+    name: Verify all EFs respond
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: deploy
+    steps:
+      - name: Probe all EFs
+        env:
+          SUPABASE_URL: https://kzsrerxhhrtsxnpnmqgl.supabase.co
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -e
+          EFS=(
+            register-admin
+            user-auth-preflight
+            user-auth-complete
+            access-code-attempt
+            submit-assessment
+            heartbeat
+            block-participant
+            assessment-lifecycle
+            cleanup-assessment
+            data-export
+            dsr-handler
+            health-check
+            asset-upload
+            asset-release
+          )
+
+          FAILED=()
+          for ef in "${EFS[@]}"; do
+            echo "Probing: $ef"
+            HTTP_CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 8 \
+              -X POST \
+              -H "apikey: $SUPABASE_ANON_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{}' \
+              "$SUPABASE_URL/functions/v1/$ef" || echo "TIMEOUT")
+
+            if [ "$HTTP_CODE" = "000" ] || [ "$HTTP_CODE" = "" ]; then
+              echo "::error::$ef TIMEOUT (curl 28)"
+              FAILED+=("$ef")
+            elif [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "400" ] || [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "403" ]; then
+              echo "::notice::$ef OK (HTTP $HTTP_CODE)"
+            else
+              echo "::warning::$ef unexpected HTTP $HTTP_CODE (acceptable if intentional)"
+            fi
+          done
+
+          if [ ${#FAILED[@]} -gt 0 ]; then
+            echo "::error::EFs that timed out: ${FAILED[*]}"
+            exit 1
+          fi
+          echo "::notice::All EFs responding ✅"

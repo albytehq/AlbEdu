@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="albedu-worker-base" content="https://edu.albyte-inc.workers.dev">
+  <title>DSR Queue — AlbEdu Admin</title>
+  <link rel="stylesheet" href="/styles/albedu-v1.css">
+  <link rel="stylesheet" href="/styles/admin-panel.css">
+  <style>
+    .dsr-card {
+      background: var(--card-bg, #fff);
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .dsr-card .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .dsr-card .user-info {
+      flex: 1;
+    }
+    .dsr-card .user-email {
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: var(--text, #1e293b);
+    }
+    .dsr-card .meta {
+      font-size: 0.85rem;
+      color: var(--text-muted, #64748b);
+      margin-top: 4px;
+    }
+    .dsr-card .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-type-access { background: #dbeafe; color: #1e40af; }
+    .badge-type-correct { background: #fef3c7; color: #92400e; }
+    .badge-type-delete { background: #fee2e2; color: #991b1b; }
+    .badge-type-portability { background: #d1fae5; color: #065f46; }
+    .badge-deadline-urgent { background: #fef3c7; color: #92400e; padding: 2px 8px; font-size: 0.7rem; }
+    .badge-deadline-critical { background: #fee2e2; color: #991b1b; padding: 2px 8px; font-size: 0.7rem; }
+    .dsr-card .details {
+      background: var(--bg-subtle, #f8fafc);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin: 12px 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .dsr-card .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .btn-approve {
+      background: #16a34a;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-approve:hover { background: #15803d; }
+    .btn-reject {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-reject:hover { background: #b91c1c; }
+    .notes-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted, #64748b);
+    }
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 16px;
+      background: var(--card-bg, #fff);
+      border-radius: 12px;
+      border: 1px solid var(--border, #e2e8f0);
+    }
+    .stat {
+      flex: 1;
+    }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text, #1e293b);
+    }
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted, #64748b);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #16a34a; }
+    .toast.error { background: #dc2626; }
+  </style>
+</head>
+<body>
+  <main class="admin-container">
+    <header class="admin-header">
+      <h1>DSR Queue — UU PDP Compliance</h1>
+      <button id="refresh-btn" class="btn-secondary">↻ Refresh</button>
+    </header>
+
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-value" id="stat-pending">—</div>
+        <div class="stat-label">Pending</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-urgent">—</div>
+        <div class="stat-label">Urgent (≤7d)</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-critical">—</div>
+        <div class="stat-label">Critical (≤3d)</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-resolved-30d">—</div>
+        <div class="stat-label">Resolved (30d)</div>
+      </div>
+    </div>
+
+    <div id="dsr-list">
+      <div class="empty-state">Loading...</div>
+    </div>
+  </main>
+
+  <script type="module" src="/src/pages/dsr-queue.js"></script>
+</body>
+</html>

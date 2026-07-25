@@ -18,9 +18,13 @@ export class SupabaseDB {
   async select<T = any>(
     table: string,
     query: string,  // PostgREST query: "id,access_code,title&status=eq.active&limit=10"
+                     // (also accepts "id,access_code,title&status=eq.active AND foo=eq.bar"
+                     //  via normalizeFilter)
   ): Promise<T[]> {
+    // normalizeFilter applied — same fix as update/updateIf/delete
+    const normalized = this.normalizeFilter(query);
     const res = await fetch(
-      `${this.env.SUPABASE_URL}/rest/v1/${table}?select=${query}`,
+      `${this.env.SUPABASE_URL}/rest/v1/${table}?select=${normalized}`,
       { headers: this.headers }
     );
     if (!res.ok) {
