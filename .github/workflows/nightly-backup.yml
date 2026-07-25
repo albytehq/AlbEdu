@@ -1,10 +1,19 @@
 # AlbEdu Nightly Backup — pg_dump Supabase DB → upload artifact → push to B2
+#
+# Two schedules:
+#   - Daily 2am UTC: pg_dump + upload to B2 (backup job)
+#   - Weekly Sunday 3am UTC: restore test on shadow DB (verify-restore job)
+#
+# Manual trigger (workflow_dispatch) runs both jobs.
 name: Nightly Backup
 
 on:
   schedule:
-    # 2am UTC daily
+    # Daily backup at 2am UTC
     - cron: '0 2 * * *'
+    # Weekly restore verification at 3am UTC every Sunday
+    # (Sunday = day 0 in cron, NOT 7)
+    - cron: '0 3 * * 0'
 
   # Allow manual trigger
   workflow_dispatch:
@@ -14,17 +23,18 @@ jobs:
     name: pg_dump → B2
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Run on daily schedule OR manual trigger (skip on weekly schedule)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 2 * * *'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install postgresql-client
+      - name: Install postgresql-client + rclone
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client rclone
 
       - name: Configure rclone for B2
         env:
           B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
           B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
-          B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
         run: |
           mkdir -p ~/.config/rclone
           cat > ~/.config/rclone/rclone.conf << EOF
@@ -47,7 +57,6 @@ jobs:
             --format=custom \
             --no-owner \
             --no-privileges \
-            --no-password \
             --file="$FILENAME"
 
           SIZE=$(du -h "$FILENAME" | cut -f1)
@@ -100,12 +109,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: backup
-    # Run weekly only (Sundays) — restore test is expensive
-    if: github.event_name == 'schedule' && (date -u +%u) == '7'
+    # Run only on weekly schedule OR manual trigger
+    # (skipped on daily schedule to save runner minutes)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3 * * 0'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install postgresql-client
+      - name: Install postgresql
         run: sudo apt-get install -y -qq postgresql
 
       - name: Setup local Postgres + restore
@@ -115,18 +125,15 @@ jobs:
           sudo service postgresql start
           sudo -u postgres createdb restore-test
 
-          # Download latest backup from B2
-          # (Assumes rclone configured — for verify job we reconfigure)
+          # Dump fresh from source for verification
           DATE=$(date -u +%Y%m%d)
           FILENAME="albedu-${DATE}.dump"
-
-          # Try pg_dump directly from source for verification
           pg_dump "$SUPABASE_DB_URL" --format=custom --no-owner --no-privileges --file="/tmp/$FILENAME"
 
-          # Restore to local DB
+          # Restore to local DB (--clean --if-exists handles existing objects)
           sudo -u postgres pg_restore --clean --if-exists --dbname=restore-test "/tmp/$FILENAME" || true
 
-          # Verify by counting rows in critical tables
+          # Verify by counting tables in public schema
           COUNT=$(sudo -u postgres psql -d restore-test -t -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';")
           echo "::notice::Restored DB has $COUNT tables in public schema"
 
