@@ -1,45 +1,83 @@
-// shared/resilience.js — actly 1.3.0 wrapper for AlbEdu fetch sites
+// shared/resilience.js — fetch resilience wrapper for AlbEdu (browser-side)
 //
-// Wraps fetch() calls with retry + timeout + circuit breaker + dedupe.
-// Phase 3 wave architecture: peserta client only sends answer-change events,
-// not heartbeat timer. Each answer-change PATCH is wrapped with this module
-// for resilience (retry on network blip, circuit breaker if Supabase down).
+// Phase 3: wraps fetch() calls with retry + timeout. NO actly dependency
+// in browser (actly is for Deno/EF side). Simple IIFE + manual retry.
 //
-// Usage:
-//   import { callEF, patchSession, selectSession } from '../shared/resilience.js';
-//
-//   const res = await callEF('submit-assessment', { session_id, answers });
-//   if (res.ok) { ... } else { ... }
+// Exposed as window.AlbEduResilience with:
+//   .callEF(name, body, opts) → { ok, status, data, error }
+//   .patchSession(sessionId, patch) → { ok, rowsUpdated, data, error }
+//   .selectSession(sessionId) → { ok, data, error }
 
-import { act, InMemoryStore } from 'actly';
+(function () {
+  'use strict';
 
-// Scoped store for AlbEdu (request isolation + LRU bounded)
-const store = new InMemoryStore({ maxSize: 1000, autoCleanup: true });
+  const MAX_RETRIES = 3;
+  const RETRY_BASE_MS = 500;
+  const RETRY_MAX_MS = 5_000;
+  const EF_TIMEOUT_MS = 10_000;
+  const PATCH_TIMEOUT_MS = 5_000;
+  const SELECT_TIMEOUT_MS = 3_000;
 
-/**
- * Call a Supabase Edge Function with resilience.
- * Retry 3x, timeout 10s, circuit breaker (5 consecutive failures → 30s open).
- *
- * @param {string} name - EF name (e.g. 'submit-assessment')
- * @param {object} body - JSON body
- * @param {object} [opts] - { noAuth, signal }
- * @returns {Promise<{ok, status, data, error}>}
- */
-export async function callEF(name, body, opts = {}) {
-  const result = await act(
-    `ef:${name}`,
-    async ({ signal }) => {
-      const token = opts.noAuth ? null : await getAccessToken();
-      const headers = {
-        'Content-Type': 'application/json',
-      };
+  // Simple sleep with jitter
+  function _sleep(ms) {
+    return new Promise(r => setTimeout(r, ms));
+  }
+
+  function _shouldRetry(err, attempt) {
+    if (attempt >= MAX_RETRIES) return false;
+    if (err?.name === 'AbortError') return false;
+    // Don't retry 4xx (client error) — only 5xx + network
+    if (err?.status >= 400 && err?.status < 500) return false;
+    // Don't retry rate-limit trigger
+    if (err?.message?.includes('heartbeat_rate_limited')) return false;
+    if (err?.code === '42901') return false;
+    return true;
+  }
+
+  async function _retryWithTimeout(fn, timeoutMs) {
+    let lastErr;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const result = await fn(controller.signal);
+        clearTimeout(timer);
+        return { ok: true, value: result };
+      } catch (err) {
+        clearTimeout(timer);
+        lastErr = err;
+        if (!_shouldRetry(err, attempt)) break;
+        const delay = Math.min(RETRY_BASE_MS * Math.pow(2, attempt - 1), RETRY_MAX_MS);
+        const jitter = delay * Math.random();
+        console.warn(`[resilience] Attempt ${attempt} failed, retrying in ${Math.round(jitter)}ms:`, err?.message);
+        await _sleep(jitter);
+      }
+    }
+    return { ok: false, error: lastErr };
+  }
+
+  async function _getAccessToken() {
+    const supabase = window.AlbEdu?.supabase?.client;
+    if (!supabase) return null;
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token || null;
+  }
+
+  /**
+   * Call a Supabase Edge Function with retry + timeout.
+   */
+  async function callEF(name, body, opts = {}) {
+    const supabase = window.AlbEdu?.supabase?.client;
+    if (!supabase) return { ok: false, error: 'Supabase not ready' };
+
+    const result = await _retryWithTimeout(async (signal) => {
+      const token = opts.noAuth ? null : await _getAccessToken();
+      const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      // apikey is needed for EF calls (even with auth)
-      const supabase = window.AlbEdu?.supabase?.client;
-      if (supabase?.supabaseKey) headers['apikey'] = supabase.supabaseKey;
+      if (supabase.supabaseKey) headers['apikey'] = supabase.supabaseKey;
 
       const res = await fetch(
-        `${supabase?.supabaseUrl}/functions/v1/${name}`,
+        `${supabase.supabaseUrl}/functions/v1/${name}`,
         {
           method: 'POST',
           headers,
@@ -59,53 +97,23 @@ export async function callEF(name, body, opts = {}) {
         throw err;
       }
       return { status: res.status, data };
-    },
-    {
-      retry: {
-        attempts: 3,
-        delayMs: 500,
-        backoff: 'exponential',
-        maxDelay: 5_000,
-        jitter: 'full',
-        shouldRetry: (err) => {
-          // Don't retry 4xx (client error) — only 5xx + network
-          if (err?.status >= 400 && err?.status < 500) return false;
-          // Don't retry abort
-          if (err?.name === 'AbortError') return false;
-          return true;
-        },
-      },
-      timeout: { ms: 10_000 },
-      circuitBreaker: {
-        threshold: 5,
-        cooldownMs: 30_000,
-        strategy: 'consecutive',
-      },
-      store,
+    }, EF_TIMEOUT_MS);
+
+    if (result.ok) {
+      return { ok: true, status: result.value.status, data: result.value.data };
     }
-  );
-
-  if (result.ok) {
-    return { ok: true, status: result.value.status, data: result.value.data };
+    return { ok: false, status: result.error?.status || 0, error: result.error?.message || 'Unknown error' };
   }
-  return { ok: false, status: result.error?.status || 0, error: result.error?.message || 'Unknown error' };
-}
 
-/**
- * Direct PostgREST PATCH on assessment_sessions.
- * Used for answer-change sync (Phase 3 wave — replaces heartbeat timer).
- *
- * @param {string} sessionId
- * @param {object} patch - fields to update (draft_answers, current_section, etc.)
- * @returns {Promise<{ok, rowsUpdated, error}>}
- */
-export async function patchSession(sessionId, patch) {
-  const supabase = window.AlbEdu?.supabase?.client;
-  if (!supabase) return { ok: false, error: 'Supabase not ready' };
+  /**
+   * Direct PostgREST PATCH on assessment_sessions.
+   * Used for answer-change sync (Phase 3 wave — replaces heartbeat timer).
+   */
+  async function patchSession(sessionId, patch) {
+    const supabase = window.AlbEdu?.supabase?.client;
+    if (!supabase) return { ok: false, error: 'Supabase not ready' };
 
-  const result = await act(
-    `patch-session:${sessionId}`,
-    async ({ signal }) => {
+    const result = await _retryWithTimeout(async (signal) => {
       const { data, error } = await supabase
         .from('assessment_sessions')
         .update(patch)
@@ -115,44 +123,23 @@ export async function patchSession(sessionId, patch) {
 
       if (error) throw error;
       return data || [];
-    },
-    {
-      retry: {
-        attempts: 2,
-        delayMs: 1_000,
-        backoff: 'exponential',
-        shouldRetry: (err) => {
-          // Don't retry rate-limit trigger error
-          if (err?.message?.includes('heartbeat_rate_limited')) return false;
-          if (err?.code === '42901') return false;
-          return true;
-        },
-      },
-      timeout: { ms: 5_000 },
-      store,
+    }, PATCH_TIMEOUT_MS);
+
+    if (result.ok) {
+      return { ok: true, rowsUpdated: result.value.length, data: result.value };
     }
-  );
-
-  if (result.ok) {
-    return { ok: true, rowsUpdated: result.value.length, data: result.value };
+    return { ok: false, error: result.error?.message || 'Unknown error' };
   }
-  return { ok: false, error: result.error?.message || 'Unknown error' };
-}
 
-/**
- * Direct PostgREST SELECT on assessment_sessions.
- * Used by block-checker (10s poll). Pure read, no trigger fires.
- *
- * @param {string} sessionId
- * @returns {Promise<{ok, data, error}>}
- */
-export async function selectSession(sessionId) {
-  const supabase = window.AlbEdu?.supabase?.client;
-  if (!supabase) return { ok: false, error: 'Supabase not ready' };
+  /**
+   * Direct PostgREST SELECT on assessment_sessions.
+   * Used by block-checker (10s poll). Pure read, no trigger fires.
+   */
+  async function selectSession(sessionId) {
+    const supabase = window.AlbEdu?.supabase?.client;
+    if (!supabase) return { ok: false, error: 'Supabase not ready' };
 
-  const result = await act(
-    `select-session:${sessionId}`,
-    async ({ signal }) => {
+    const result = await _retryWithTimeout(async (signal) => {
       const { data, error } = await supabase
         .from('assessment_sessions')
         .select('id, status, blocked_reason')
@@ -161,28 +148,13 @@ export async function selectSession(sessionId) {
 
       if (error) throw error;
       return data;
-    },
-    {
-      retry: { attempts: 2, delayMs: 500, backoff: 'exponential' },
-      timeout: { ms: 3_000 },
-      // No circuit breaker for SELECT — too many false positives on network blip
-      store,
+    }, SELECT_TIMEOUT_MS);
+
+    if (result.ok) {
+      return { ok: true, data: result.value };
     }
-  );
-
-  if (result.ok) {
-    return { ok: true, data: result.value };
+    return { ok: false, error: result.error?.message || 'Unknown error' };
   }
-  return { ok: false, error: result.error?.message || 'Unknown error' };
-}
 
-// Helper: get peserta access token
-async function getAccessToken() {
-  const supabase = window.AlbEdu?.supabase?.client;
-  if (!supabase) return null;
-  const { data } = await supabase.auth.getSession();
-  return data?.session?.access_token || null;
-}
-
-// Expose for debugging
-window.AlbEduResilience = { callEF, patchSession, selectSession };
+  window.AlbEduResilience = { callEF, patchSession, selectSession };
+})();

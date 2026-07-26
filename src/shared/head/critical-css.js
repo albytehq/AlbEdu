@@ -131,10 +131,8 @@ html[data-theme="dark"]{--albedu-slate-50:#0f172a;--albedu-slate-100:#1e293b;--a
   _injectHint('dns-prefetch', 'https://cdn.jsdelivr.net');
   _injectHint('dns-prefetch', 'https://challenges.cloudflare.com');
 
-  // Modulepreload resilience.js — it's loaded on 19/27 pages and pulls in
-  // Actly transitively (15 ESM files). Without this the browser only starts
-  // fetching after the parser reaches the <script type="module"> tag.
-  _injectHint('modulepreload', BASE_PATH + 'src/shared/resilience.js');
+  // Phase 3: resilience.js is now an IIFE (not ES module), loaded via
+  // <script defer> like all other AlbEdu modules. No modulepreload needed.
 
   // Inject view-transitions.js (deferred). Cross-fades internal-link clicks
   // via document.startViewTransition(). No-op in browsers without the API.
