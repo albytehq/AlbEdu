@@ -122,68 +122,79 @@
         : 0;
       const violationCount = state.violations || 0;
 
-      const body = {
-        session_id: this._sessionId,
-        current_section: currentSection,
-        current_question: currentQuestion,
-        progress_pct: progressPct,
-        violation_count: violationCount,
-        draft_answers: draftAnswers,
-      };
-
       try {
-        const user = window.AlbEdu?.supabase?.auth?.currentUser;
-        if (!user) {
-          console.warn('[heartbeat] No auth user, skipping');
+        const supabase = window.AlbEdu?.supabase?.client;
+        if (!supabase) {
+          console.warn('[heartbeat] Supabase client not ready, skipping');
           return;
         }
 
-        let data;
-        const resilience = window.AlbEdu?.resilience;
+        // Phase 3: direct PostgREST PATCH (bypasses heartbeat EF entirely).
+        // RLS policy sessions_peserta_update_own_safe_fields (migration 016)
+        // allows peserta to update: last_heartbeat_at, draft_answers,
+        // current_section, current_question, progress_pct, violation_count.
+        //
+        // Conditional update: only fires if status is still active/paused/disconnected.
+        // If status changed (blocked/submitted/expired), 0 rows returned →
+        // BlockChecker (10s poll) will catch the change within 15s.
+        //
+        // PostgREST rate limit trigger (migration 034) fires on UPDATE of
+        // last_heartbeat_at — limits to 4 full heartbeats/min per session.
+        const { data, error } = await supabase
+          .from('assessment_sessions')
+          .update({
+            last_heartbeat_at: new Date().toISOString(),
+            current_section: currentSection,
+            current_question: currentQuestion,
+            progress_pct: progressPct,
+            violation_count: violationCount,
+            draft_answers: draftAnswers,
+          })
+          .eq('id', this._sessionId)
+          .in('status', ['active', 'paused', 'disconnected'])
+          .select('id, status, blocked_reason');
 
-        if (resilience) {
-          const result = await resilience.heartbeat(
-            `heartbeat:${this._sessionId}`,
-            async () => {
-              const { data, error } = await window.AlbEdu.supabase.rpc.invoke('heartbeat', body);
-              if (error) throw error;
-              return data;
-            }
-          );
-          if (!result.ok) {
-            throw result.error || new Error('Heartbeat failed after retries');
+        if (error) {
+          // Check if it's the rate-limit trigger error
+          if (error.message?.includes('heartbeat_rate_limited')) {
+            console.warn('[heartbeat] Rate limited by DB trigger, skipping this beat');
+            return;
           }
-          data = result.value;
-        } else {
-          const { data: rawData, error } = await window.AlbEdu.supabase.rpc.invoke('heartbeat', body);
-          if (error) throw error;
-          data = rawData;
+          throw error;
         }
-
-        const d = data?.data || data;
 
         this._retryCount = 0;
         this._lastSyncAt = Date.now();
 
-        if (d) {
-          if (d.blocked) {
-            console.warn('[heartbeat] Server says BLOCKED:', d.blocked_reason);
+        // If 0 rows returned, status changed mid-heartbeat (blocked/submitted/expired).
+        // BlockChecker (10s poll) will catch it within 15s — no need to handle here.
+        // But as a fast fallback, re-fetch and check:
+        if (!data || data.length === 0) {
+          console.info('[heartbeat] 0 rows updated — status changed, checking...');
+          const { data: fresh } = await supabase
+            .from('assessment_sessions')
+            .select('status, blocked_reason')
+            .eq('id', this._sessionId)
+            .maybeSingle();
+
+          if (fresh?.status === 'blocked') {
             this.stop();
-            this._onBlocked?.(d.blocked_reason);
+            this._onBlocked?.(fresh.blocked_reason);
             return;
           }
-          if (d.submitted) {
-            console.warn('[heartbeat] Server says SUBMITTED');
+          if (fresh?.status === 'submitted') {
             this.stop();
             this._onSubmitted?.();
             return;
           }
-          if (d.expired) {
-            console.warn('[heartbeat] Server says EXPIRED');
+          if (fresh?.status === 'expired') {
             this.stop();
             this._onExpired?.();
             return;
           }
+          // If fresh status is still active/paused/disconnected but 0 rows updated,
+          // it might be a race condition — just skip this beat.
+          console.debug('[heartbeat] Status still active but 0 rows updated, skipping');
         }
       } catch (err) {
         const status = err?.status || err?.context?.status;
