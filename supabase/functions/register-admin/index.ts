@@ -183,35 +183,28 @@ serve(async (req) => {
     return json({ success: false, error: "Method not allowed." }, 405, corsHeaders);
   }
 
-  // v0.821.0: Registration secret gate — REQUIRED (SEC-A-C3).
-  // Prevents unauthorized admin registration. The admin sets
-  // REGISTER_WORKER_SECRET in Supabase secrets, then shares the secret
-  // with authorized registrants out-of-band. Registrants enter it in the
-  // "Registration Code" field on register-admin.html.
+  // v0.822.1: Open registration — anyone can register as admin.
+  // The REGISTER_WORKER_SECRET gate (v0.821.0 SEC-A-C3) has been REMOVED.
+  // Rationale: AlbEdu is an open assessment platform — admin registration
+  // should be as simple as peserta registration. Server-side rate limiting
+  // (IP + device + email) still prevents abuse. Turnstile still prevents bots.
   //
-  // If REGISTER_WORKER_SECRET is not set, ALL registrations are rejected.
-  // This forces the admin to configure it before anyone can register.
+  // If controlled registration is needed in the future, set
+  // REGISTER_WORKER_SECRET in Supabase secrets — the gate re-activates.
   const registerSecret = Deno.env.get("REGISTER_WORKER_SECRET");
-  if (!registerSecret) {
-    console.error("[register-admin] REGISTER_WORKER_SECRET not set — registration disabled");
-    return json({
-      success: false,
-      error: "Registrasi admin belum diaktifkan. Admin harus mengatur REGISTER_WORKER_SECRET di Supabase secrets."
-    }, 403, corsHeaders);
+  if (registerSecret) {
+    // Secret is set — enforce it (backward compatible for users who want gate)
+    const providedSecret = req.headers.get("x-register-secret") ??
+                           req.headers.get("x-worker-secret") ?? "";
+    if (providedSecret !== registerSecret) {
+      console.warn("[register-admin] invalid registration secret — request blocked");
+      return json({
+        success: false,
+        error: "Kode registrasi tidak valid. Hubungi admin untuk mendapatkan kode yang benar."
+      }, 401, corsHeaders);
+    }
   }
-
-  // Check secret from either:
-  // - x-register-secret header (client-side, user-entered in form)
-  // - x-worker-secret header (proxy-injected, for future Cloudflare Worker proxy)
-  const providedSecret = req.headers.get("x-register-secret") ??
-                         req.headers.get("x-worker-secret") ?? "";
-  if (providedSecret !== registerSecret) {
-    console.warn("[register-admin] invalid registration secret — request blocked");
-    return json({
-      success: false,
-      error: "Kode registrasi tidak valid. Hubungi admin untuk mendapatkan kode yang benar."
-    }, 401, corsHeaders);
-  }
+  // If REGISTER_WORKER_SECRET is NOT set → open registration (no gate)
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");

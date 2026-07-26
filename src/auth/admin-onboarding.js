@@ -157,19 +157,13 @@ form?.addEventListener('submit', async (event) => {
             ? window.DeviceFingerprint.getFingerprint()
             : { device_id: null, browser_hash: null, device_info: null };
 
-        // v0.821.0: Send registration code as x-register-secret header (SEC-A-C3)
-        const registerCodeInput = document.getElementById('registerCode');
-        const registerCode = registerCodeInput?.value?.trim() || '';
+        // v0.822.1: Open registration — no registration code needed.
+        // REGISTER_WORKER_SECRET gate removed. If secret is set in Supabase
+        // EF secrets, the server-side check still works (backward compatible).
+        // But client no longer sends x-register-secret header.
 
-        if (!registerCode) {
-            throw new Error('Kode registrasi wajib diisi. Hubungi admin untuk mendapatkan kode.');
-        }
-
-        // Public endpoint — no Authorization header, but x-register-secret is required.
+        // Public endpoint — no Authorization header needed.
         let { data: payload, error: fnError } = await window.AlbEdu?.supabase?.client.functions.invoke('register-admin', {
-            headers: {
-                'x-register-secret': registerCode,
-            },
             body: {
                 email:          emailInput.value.trim(),
                 password:       passwordInput.value,
