@@ -1,22 +1,35 @@
-// heartbeat.js — Peserta exam heartbeat with block/submitted/expired signals
+// heartbeat.js — Phase 3 wave architecture: event-driven answer sync
+//
+// CHANGED in Phase 3: NO more heartbeat timer. pg_cron `heartbeat-wave` job
+// (migration 038) bulk-updates last_heartbeat_at for all active sessions
+// every 60s on the server side. Peserta client no longer sends heartbeat
+// PATCH every 60s — saves 72,000 HTTP requests per exam session.
+//
+// This module now ONLY syncs draft_answers + current_section + current_question
+// + violation_count when they CHANGE (event-driven, debounced 2s).
+//
+// Block detection: handled by block-check.js (10s SELECT poll, <15s budget).
+//
+// Architecture:
+//   pg_cron (60s) → UPDATE last_heartbeat_at WHERE status='active' (server-side)
+//   peserta client → PATCH draft_answers (debounced 2s on answer change)
+//   block-checker → SELECT status (10s poll, unchanged)
 
 (function () {
   'use strict';
 
-  const DEFAULT_INTERVAL_MS = 15000;
+  const ANSWER_SYNC_DEBOUNCE_MS = 2_000; // 2s debounce on answer changes
+  const SECTION_SYNC_IMMEDIATE = true;   // section change = immediate PATCH
   const MAX_RETRIES = 3;
-  const BACKOFF_MS = 30000;
+  const RETRY_BACKOFF_MS = 5_000;
 
   const Heartbeat = {
-    _timer: null,
-    _backoffRecoveryTimer: null,
-    _initialBeatTimer: null,
     _sessionId: null,
-    _intervalMs: DEFAULT_INTERVAL_MS,
     _running: false,
-    _isBeating: false,
-    _retryCount: 0,
+    _debounceTimer: null,
     _lastSyncAt: null,
+    _pendingPatch: null,
+    _retryCount: 0,
     _onBlocked: null,
     _onSubmitted: null,
     _onExpired: null,
@@ -25,9 +38,13 @@
     _onOffline: null,
     _onBeforeUnload: null,
 
+    /**
+     * Start event-driven answer sync. NO timer — pg_cron handles heartbeat.
+     * @param {string} sessionId
+     * @param {Object} options - { onBlocked, onSubmitted, onExpired }
+     */
     start(sessionId, options = {}) {
       this._sessionId = sessionId;
-      this._intervalMs = options.intervalMs || DEFAULT_INTERVAL_MS;
       this._onBlocked = options.onBlocked;
       this._onSubmitted = options.onSubmitted;
       this._onExpired = options.onExpired;
@@ -38,145 +55,129 @@
 
       this._running = true;
       this._retryCount = 0;
-      this._isBeating = false;
+      this._pendingPatch = null;
 
-      this._initialBeatTimer = setTimeout(() => this._beat(), 2000);
-      this._timer = setInterval(() => this._beat(), this._intervalMs);
+      // No setInterval — pg_cron handles last_heartbeat_at server-side.
+      // We only sync when answers/section/violations change (event-driven).
 
       this._bindLifecycleListeners();
 
-      console.info(`[heartbeat] Started (session=${sessionId}, interval=${this._intervalMs}ms)`);
+      console.info(`[heartbeat] Started (session=${sessionId}, event-driven, pg_cron handles last_heartbeat_at)`);
     },
 
     stop() {
-      if (this._timer) { clearInterval(this._timer); this._timer = null; }
-      if (this._backoffRecoveryTimer) { clearTimeout(this._backoffRecoveryTimer); this._backoffRecoveryTimer = null; }
-      if (this._initialBeatTimer) { clearTimeout(this._initialBeatTimer); this._initialBeatTimer = null; }
-      this._unbindLifecycleListeners();
       this._running = false;
-      this._isBeating = false;
+      if (this._debounceTimer) {
+        clearTimeout(this._debounceTimer);
+        this._debounceTimer = null;
+      }
+      this._unbindLifecycleListeners();
+      this._sessionId = null;
       this._onBlocked = null;
       this._onSubmitted = null;
       this._onExpired = null;
+      this._pendingPatch = null;
       console.info('[heartbeat] Stopped');
     },
 
-    _bindLifecycleListeners() {
-      if (this._listenersBound) return;
-      this._onOnline = () => {
-        if (!this._running) return;
-        console.info('[heartbeat] Back online, resuming');
-        this._retryCount = 0;
-        this._beat();
-      };
-      this._onOffline = () => {
-        console.info('[heartbeat] Offline, queuing');
-      };
-      this._onBeforeUnload = () => this.stop();
-      window.addEventListener('online', this._onOnline);
-      window.addEventListener('offline', this._onOffline);
-      window.addEventListener('beforeunload', this._onBeforeUnload);
-      this._listenersBound = true;
+    /**
+     * Called when peserta answers a question (or changes answer).
+     * Debounced 2s — if peserta answers 5 questions in 2s, only 1 PATCH fires.
+     */
+    onAnswerChange() {
+      if (!this._running) return;
+      this._scheduleSync();
     },
 
-    _unbindLifecycleListeners() {
-      if (!this._listenersBound) return;
-      if (this._onOnline) window.removeEventListener('online', this._onOnline);
-      if (this._onOffline) window.removeEventListener('offline', this._onOffline);
-      if (this._onBeforeUnload) window.removeEventListener('beforeunload', this._onBeforeUnload);
-      this._onOnline = null;
-      this._onOffline = null;
-      this._onBeforeUnload = null;
-      this._listenersBound = false;
+    /**
+     * Called when peserta navigates to a different section/question.
+     * Immediate PATCH (no debounce) — section change is important state.
+     */
+    onSectionChange() {
+      if (!this._running) return;
+      this._syncNow(); // immediate
     },
 
-    async _beat() {
+    /**
+     * Called when violation count changes (DevTools detected, etc.).
+     * Immediate PATCH — violation_count needs to be synced for auto-block.
+     */
+    onViolationChange() {
+      if (!this._running) return;
+      this._syncNow();
+    },
+
+    /**
+     * Force sync now (e.g. before page unload, or on reconnect).
+     */
+    async syncNow() {
+      await this._syncNow();
+    },
+
+    getLastSyncAt() {
+      return this._lastSyncAt;
+    },
+
+    _scheduleSync() {
+      if (this._debounceTimer) {
+        clearTimeout(this._debounceTimer);
+      }
+      this._debounceTimer = setTimeout(() => {
+        this._debounceTimer = null;
+        this._syncNow();
+      }, ANSWER_SYNC_DEBOUNCE_MS);
+    },
+
+    async _syncNow() {
       if (!this._running || !this._sessionId) return;
-      if (this._isBeating) {
-        // Skip overlapping beat; the in-flight one will reschedule.
-        return;
-      }
-      if (!navigator.onLine) {
-        console.debug('[heartbeat] Offline, skipping');
-        return;
-      }
 
-      this._isBeating = true;
-      try {
-        await this._doBeat();
-      } catch (err) {
-        console.error('[heartbeat] Unexpected error:', err);
-      } finally {
-        this._isBeating = false;
-      }
-    },
-
-    async _doBeat() {
       const state = window.ExamLogic?.getState?.() || {};
       const draftAnswers = state.jawaban || {};
       const currentSection = state.activePageIdx || 0;
       const currentQuestion = state.soalPages?.[currentSection]?.questions?.length || 0;
-      const totalQuestions = state.soalPages?.reduce((sum, p) => sum + (p.questions?.length || 0), 0) || 0;
-      const progressPct = totalQuestions > 0
-        ? Math.round((Object.keys(draftAnswers).length / totalQuestions) * 100)
-        : 0;
       const violationCount = state.violations || 0;
 
+      const patch = {
+        current_section: currentSection,
+        current_question: currentQuestion,
+        violation_count: violationCount,
+        draft_answers: draftAnswers,
+        // NOTE: last_heartbeat_at is NOT set here — pg_cron handles it.
+        // If we set it, the rate-limit trigger (migration 034) fires.
+      };
+
       try {
-        const supabase = window.AlbEdu?.supabase?.client;
-        if (!supabase) {
-          console.warn('[heartbeat] Supabase client not ready, skipping');
-          return;
-        }
+        const resilience = window.AlbEduResilience;
+        let result;
 
-        // Phase 3: direct PostgREST PATCH (bypasses heartbeat EF entirely).
-        // RLS policy sessions_peserta_update_own_safe_fields (migration 016)
-        // allows peserta to update: last_heartbeat_at, draft_answers,
-        // current_section, current_question, progress_pct, violation_count.
-        //
-        // Conditional update: only fires if status is still active/paused/disconnected.
-        // If status changed (blocked/submitted/expired), 0 rows returned →
-        // BlockChecker (10s poll) will catch the change within 15s.
-        //
-        // PostgREST rate limit trigger (migration 034) fires on UPDATE of
-        // last_heartbeat_at — limits to 4 full heartbeats/min per session.
-        const { data, error } = await supabase
-          .from('assessment_sessions')
-          .update({
-            last_heartbeat_at: new Date().toISOString(),
-            current_section: currentSection,
-            current_question: currentQuestion,
-            progress_pct: progressPct,
-            violation_count: violationCount,
-            draft_answers: draftAnswers,
-          })
-          .eq('id', this._sessionId)
-          .in('status', ['active', 'paused', 'disconnected'])
-          .select('id, status, blocked_reason');
-
-        if (error) {
-          // Check if it's the rate-limit trigger error
-          if (error.message?.includes('heartbeat_rate_limited')) {
-            console.warn('[heartbeat] Rate limited by DB trigger, skipping this beat');
-            return;
-          }
-          throw error;
+        if (resilience?.patchSession) {
+          result = await resilience.patchSession(this._sessionId, patch);
+        } else {
+          // Fallback: direct PostgREST without actly
+          const supabase = window.AlbEdu?.supabase?.client;
+          if (!supabase) return;
+          const { data, error } = await supabase
+            .from('assessment_sessions')
+            .update(patch)
+            .eq('id', this._sessionId)
+            .in('status', ['active', 'paused', 'disconnected'])
+            .select('id, status, blocked_reason');
+          if (error) throw error;
+          result = { ok: true, rowsUpdated: data?.length || 0, data: data || [] };
         }
 
         this._retryCount = 0;
         this._lastSyncAt = Date.now();
 
-        // If 0 rows returned, status changed mid-heartbeat (blocked/submitted/expired).
-        // BlockChecker (10s poll) will catch it within 15s — no need to handle here.
-        // But as a fast fallback, re-fetch and check:
-        if (!data || data.length === 0) {
+        // If 0 rows updated, status changed (blocked/submitted/expired).
+        // BlockChecker (10s poll) will catch it — but as fast fallback, check now.
+        if (!result.ok || result.rowsUpdated === 0) {
           console.info('[heartbeat] 0 rows updated — status changed, checking...');
-          const { data: fresh } = await supabase
-            .from('assessment_sessions')
-            .select('status, blocked_reason')
-            .eq('id', this._sessionId)
-            .maybeSingle();
+          const selectResult = resilience?.selectSession
+            ? await resilience.selectSession(this._sessionId)
+            : await this._fallbackSelect();
 
+          const fresh = selectResult?.data || selectResult;
           if (fresh?.status === 'blocked') {
             this.stop();
             this._onBlocked?.(fresh.blocked_reason);
@@ -192,53 +193,65 @@
             this._onExpired?.();
             return;
           }
-          // If fresh status is still active/paused/disconnected but 0 rows updated,
-          // it might be a race condition — just skip this beat.
-          console.debug('[heartbeat] Status still active but 0 rows updated, skipping');
         }
       } catch (err) {
-        const status = err?.status || err?.context?.status;
-        if (status === 429) {
-          console.warn('[heartbeat] Rate limited, backing off');
-          this._backoff();
+        if (err?.message?.includes('heartbeat_rate_limited')) {
+          console.warn('[heartbeat] Rate limited (should not happen — we do not set last_heartbeat_at)');
           return;
         }
-        if (status === 401) {
-          console.error('[heartbeat] Unauthorized, stopping');
-          this.stop();
-          return;
-        }
-        console.error('[heartbeat] Error:', err);
+        console.error('[heartbeat] Sync error:', err);
         this._retryCount++;
-
         if (this._retryCount >= MAX_RETRIES) {
-          console.error('[heartbeat] Max retries reached, backing off');
-          this._backoff();
+          console.error('[heartbeat] Max retries, will retry on next event');
+          this._retryCount = 0; // reset, let next answer-change trigger fresh retry
         }
       }
     },
 
-    _backoff() {
-      if (this._timer) clearInterval(this._timer);
-      this._timer = setInterval(() => this._beat(), BACKOFF_MS);
-      if (this._backoffRecoveryTimer) clearTimeout(this._backoffRecoveryTimer);
-      console.info(`[heartbeat] Backed off to ${BACKOFF_MS}ms`);
+    async _fallbackSelect() {
+      const supabase = window.AlbEdu?.supabase?.client;
+      if (!supabase) return { ok: false };
+      const { data, error } = await supabase
+        .from('assessment_sessions')
+        .select('status, blocked_reason')
+        .eq('id', this._sessionId)
+        .maybeSingle();
+      if (error) return { ok: false, error };
+      return { ok: true, data };
+    },
 
-      this._backoffRecoveryTimer = setTimeout(() => {
-        if (this._running && this._retryCount === 0) {
-          if (this._timer) clearInterval(this._timer);
-          this._timer = setInterval(() => this._beat(), this._intervalMs);
-          console.info('[heartbeat] Resumed normal interval');
+    _bindLifecycleListeners() {
+      if (this._listenersBound) return;
+      this._onOnline = () => {
+        if (!this._running) return;
+        console.info('[heartbeat] Back online, syncing pending changes');
+        this._retryCount = 0;
+        this._syncNow();
+      };
+      this._onOffline = () => {
+        console.info('[heartbeat] Offline, queuing changes');
+      };
+      this._onBeforeUnload = () => {
+        // Sync immediately before unload (best-effort, no await)
+        if (this._running && this._pendingPatch) {
+          this._syncNow();
         }
-      }, BACKOFF_MS * 3);
+      };
+      window.addEventListener('online', this._onOnline);
+      window.addEventListener('offline', this._onOffline);
+      window.addEventListener('beforeunload', this._onBeforeUnload);
+      this._listenersBound = true;
     },
 
-    async syncNow() {
-      await this._beat();
-    },
-
-    getLastSyncAt() {
-      return this._lastSyncAt;
+    _unbindLifecycleListeners() {
+      if (!this._listenersBound) return;
+      if (this._onOnline) window.removeEventListener('online', this._onOnline);
+      if (this._onOffline) window.removeEventListener('offline', this._onOffline);
+      if (this._onBeforeUnload) window.removeEventListener('beforeunload', this._onBeforeUnload);
+      this._onOnline = null;
+      this._onOffline = null;
+      this._onBeforeUnload = null;
+      this._listenersBound = false;
     },
   };
 

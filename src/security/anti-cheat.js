@@ -64,16 +64,15 @@
       }
 
       if (window.Heartbeat) {
-        // Phase 3: heartbeat interval increased 15s → 60s.
-        // Block detection moved to BlockChecker (10s poll).
-        // Heartbeat's job now: sync draft_answers + violation_count + progress.
+        // Phase 3 wave architecture: NO heartbeat timer. pg_cron handles
+        // last_heartbeat_at server-side. Heartbeat module is now event-driven
+        // — only syncs draft_answers when peserta answers (debounced 2s).
         window.Heartbeat.start(sessionId, {
-          intervalMs: 60_000,
           onBlocked: (reason) => this._handleBlocked(reason),  // fallback
           onSubmitted: () => this._handleSubmitted(),
           onExpired: () => this._handleExpired(),
         });
-        console.info('[anti-cheat] Heartbeat started (60s interval)');
+        console.info('[anti-cheat] Heartbeat started (event-driven, pg_cron wave)');
       }
 
       if (window.BlockChecker) {

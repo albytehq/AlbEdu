@@ -30,6 +30,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "actly": "^1.2.0"
+    "actly": "~1.3.0"
   }
 }
