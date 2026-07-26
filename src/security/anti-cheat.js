@@ -64,21 +64,31 @@
       }
 
       if (window.Heartbeat) {
+        // Phase 3: heartbeat interval increased 15s → 60s.
+        // Block detection moved to BlockChecker (10s poll).
+        // Heartbeat's job now: sync draft_answers + violation_count + progress.
         window.Heartbeat.start(sessionId, {
-          intervalMs: 15000,
-          onBlocked: (reason) => this._handleBlocked(reason),
+          intervalMs: 60_000,
+          onBlocked: (reason) => this._handleBlocked(reason),  // fallback
           onSubmitted: () => this._handleSubmitted(),
           onExpired: () => this._handleExpired(),
         });
-        console.info('[anti-cheat] Heartbeat started');
+        console.info('[anti-cheat] Heartbeat started (60s interval)');
       }
 
-      if (window.BlockListener) {
-        window.BlockListener.start(sessionId, {
+      if (window.BlockChecker) {
+        // Phase 3: replaces BlockListener (Realtime subscription).
+        // 10s SELECT poll, pure read, no DB trigger fires.
+        // Block delivery: <15s (budget confirmed in ZERO-COST.md §3.1).
+        this._stopBlockChecker = window.BlockChecker.start(sessionId, {
           onBlocked: (reason) => this._handleBlocked(reason),
           onSubmitted: () => this._handleSubmitted(),
+          onExpired: () => this._handleExpired(),
+          onError: (err) => console.warn('[anti-cheat] BlockChecker transient error:', err?.message),
         });
-        console.info('[anti-cheat] BlockListener started');
+        console.info('[anti-cheat] BlockChecker started (10s poll)');
+      } else {
+        console.warn('[anti-cheat] BlockChecker not available — block delivery will fall back to heartbeat (60s)');
       }
 
       // Named handler so we can actually remove it on stop() — anonymous
@@ -109,8 +119,9 @@
       if (window.Heartbeat) {
         window.Heartbeat.stop();
       }
-      if (window.BlockListener) {
-        window.BlockListener.stop();
+      if (this._stopBlockChecker) {
+        this._stopBlockChecker();
+        this._stopBlockChecker = null;
       }
 
       console.info('[anti-cheat] All modules stopped');

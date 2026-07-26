@@ -99,7 +99,7 @@
             <li class="menu-item sidebar-item active" data-tab="monitoring">
                         <a href="monitoring.html" class="menu-item-content" aria-current="page">
                             <span class="sidebar-icon" data-albedu-icon="monitor_heart"><svg class="albedu-icon" aria-hidden="true"><use href="#i-monitor_heart"/></svg></span>
-                            <span class="sidebar-text">Monitoring</span>
+                            <span class="sidebar-text">Sesi Aktif</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="results">
@@ -140,7 +140,7 @@
                     <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka menu">
                         <span data-albedu-icon="menu"><svg class="albedu-icon" aria-hidden="true"><use href="#i-menu"/></svg></span>
                     </button>
-                    <h1 id="page-title">Monitoring Real-time</h1>
+                    <h1 id="page-title">Sesi Aktif</h1>
                 </div>
                 <div class="header-right">
                     <!-- Language Switcher -->                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
@@ -152,34 +152,26 @@
 
             <!-- Content Area -->
             <div class="content-area">
-                <!-- Controls: Assessment picker + batch actions + refresh indicator -->
+                <!-- Controls: refresh + auto-refresh toggle -->
                 <div class="mon-controls">
                     <div>
-                        <label for="mon-assessment-select">Pilih Asesmen</label>
-                        <div class="albedu-select-wrap">
-                            <select id="mon-assessment-select" class="albedu-select mon-select-assessment" aria-label="Pilih asesmen untuk monitoring">
-                                <option value="">— Pilih asesmen —</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div>
                         <label>&nbsp;</label>
-                        <div class="mon-batch-actions" role="group" aria-label="Tindakan batch">
-                            <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-mon-pause-all" type="button" disabled>
-                                <span data-albedu-icon="pause"></span>
-                                <span>Jeda Semua</span>
+                        <div class="mon-batch-actions" role="group" aria-label="Tindakan">
+                            <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-refresh" type="button">
+                                <span data-albedu-icon="sync"><svg class="albedu-icon" aria-hidden="true"><use href="#i-sync"/></svg></span>
+                                <span>Refresh</span>
                             </button>
-                            <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-mon-stop-all" type="button" disabled>
-                                <span data-albedu-icon="stop_circle"></span>
-                                <span>Hentikan Semua</span>
+                            <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-auto-refresh" type="button" aria-pressed="false">
+                                <span data-albedu-icon="timer"><svg class="albedu-icon" aria-hidden="true"><use href="#i-timer"/></svg></span>
+                                <span>Auto 30s</span>
                             </button>
                         </div>
                     </div>
                     <div>
                         <label>&nbsp;</label>
-                        <div class="mon-refresh-indicator" id="mon-refresh" aria-live="off">
+                        <div class="mon-refresh-indicator" id="auto-refresh-indicator" aria-live="off">
                             <span data-albedu-icon="sync"></span>
-                            <span>Auto-refresh 5s</span>
+                            <span id="last-refresh">Memuat...</span>
                         </div>
                     </div>
                 </div>
@@ -191,7 +183,7 @@
                             <span data-albedu-icon="groups"></span>
                         </div>
                         <div>
-                            <div class="mon-stat-value" id="mon-stat-active">0/0</div>
+                            <div class="mon-stat-value" id="stat-active">0</div>
                             <div class="mon-stat-label">Peserta Aktif</div>
                         </div>
                     </div>
@@ -200,8 +192,8 @@
                             <span data-albedu-icon="warning"></span>
                         </div>
                         <div>
-                            <div class="mon-stat-value" id="mon-stat-violations">0</div>
-                            <div class="mon-stat-label">Pelanggaran</div>
+                            <div class="mon-stat-value" id="stat-violations">0</div>
+                            <div class="mon-stat-label">Total Pelanggaran</div>
                         </div>
                     </div>
                     <div class="mon-stat-card">
@@ -209,36 +201,18 @@
                             <span data-albedu-icon="block"></span>
                         </div>
                         <div>
-                            <div class="mon-stat-value" id="mon-stat-blocked">0</div>
-                            <div class="mon-stat-label">Diblokir</div>
-                        </div>
-                    </div>
-                    <div class="mon-stat-card">
-                        <div class="mon-stat-icon">
-                            <span data-albedu-icon="timer"></span>
-                        </div>
-                        <div>
-                            <div class="mon-stat-value" id="mon-stat-finished">0</div>
-                            <div class="mon-stat-label">Selesai</div>
+                            <div class="mon-stat-value" id="stat-blocked">0</div>
+                            <div class="mon-stat-label">Diblokir (total)</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ═══ Participant Cards Grid ═══ -->
-                <div class="mon-grid" id="mon-grid" aria-live="polite" aria-busy="true"></div>
-
-                <!-- Empty state: no assessment selected -->
-                <div class="albedu-empty-state" id="mon-empty-select" hidden>
-                    <span data-albedu-icon="monitor_heart"><svg class="albedu-icon" aria-hidden="true"><use href="#i-monitor_heart"/></svg></span>
-                    <h3>Pilih Asesmen</h3>
-                    <p>Pilih asesmen dari dropdown di atas untuk melihat peserta.</p>
-                </div>
-
-                <!-- Empty state: no active participants -->
-                <div class="albedu-empty-state" id="mon-empty" hidden>
-                    <span data-albedu-icon="person_off"></span>
-                    <h3>Tidak Ada Peserta Aktif</h3>
-                    <p>Belum ada peserta yang sedang mengerjakan asesmen ini.</p>
+                <!-- ═══ Session List (replaces Realtime grid) ═══ -->
+                <div class="mon-grid" id="sessions-list" aria-live="polite" aria-busy="true">
+                    <div class="albedu-empty-state">
+                        <span class="albedu-spinner"></span>
+                        <p>Memuat sesi aktif...</p>
+                    </div>
                 </div>
             </div>
 
@@ -251,7 +225,7 @@
 
     <script type="module" src="../../src/theme-system/index.js"></script>
 <!-- Monitoring page controller -->
-    <script src="../../src/pages/monitoring.js" defer></script>
+    <script src="../../src/pages/active-sessions.js" defer></script>
 
     <!-- Notification Center -->
     <script src="../../src/utils/admin-notification-center.js" defer></script>

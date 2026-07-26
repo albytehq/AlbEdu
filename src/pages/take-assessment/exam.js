@@ -487,15 +487,18 @@
       console.warn('[take-assessment] AntiCheat not available, using individual modules');
       if (window.Heartbeat?.start) {
         window.Heartbeat.start(state.session.id, {
+          intervalMs: 60_000,  // Phase 3: 60s (was 15s)
           onBlocked:  (reason) => _handleBlocked(reason),
           onSubmitted: () => _handleSubmitted(),
           onExpired:  () => _handleExpired(),
         });
       }
-      if (window.BlockListener?.start) {
-        window.BlockListener.start(state.session.id, {
+      if (window.BlockChecker?.start) {
+        // Phase 3: BlockChecker replaces BlockListener (10s poll, no Realtime)
+        window.BlockChecker.start(state.session.id, {
           onBlocked:  (reason) => _handleBlocked(reason),
           onSubmitted: () => _handleSubmitted(),
+          onExpired:  () => _handleExpired(),
         });
       }
       if (window.ExamGuardian?.activate) {
@@ -514,7 +517,7 @@
       window.AntiCheat.stop();
     } else {
       window.Heartbeat?.stop?.();
-      window.BlockListener?.stop?.();
+      window.BlockChecker?.stop?.();
       window.ExamGuardian?.deactivate?.();
     }
   }
