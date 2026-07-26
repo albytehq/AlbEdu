@@ -1,50 +1,60 @@
 -- ============================================================================
--- Migration 038: Heartbeat wave — server-side pg_cron bulk heartbeat update
+-- Migration 038: Heartbeat wave — per-assessment state-aware pg_cron
 -- ============================================================================
--- Phase 3 innovation (user idea): instead of 800 peserta each sending
+-- Phase 3 wave architecture (user idea): instead of 800 peserta each sending
 -- heartbeat PATCH every 60s (800 req/min), pg_cron does ONE SQL UPDATE
 -- for ALL active sessions every 60s (1 SQL/min, 0 HTTP from peserta).
+--
+-- Per-assessment optimization: wave only fires for sessions whose parent
+-- assessment is currently "running" (open for manual mode, within schedule
+-- for scheduled mode). When assessment is paused/finished/archived, wave
+-- stops updating those sessions — admin sees "stale" heartbeat (accurate).
 --
 -- Impact:
 --   - 72,000 heartbeat HTTP requests per exam session → 0
 --   - 7.2 MB DB egress per exam session → 0
---   - 800 concurrent DB connections peak → ~13/sec (answer-change events only)
+--   - When assessment paused: sessions show stale heartbeat (correct behavior)
 --
--- Peserta client NO LONGER sends heartbeat timer. Instead:
---   - Answer changes → debounced PATCH (2s debounce) for draft_answers
---   - Section changes → immediate PATCH for current_section, current_question
---   - Violation events → immediate PATCH for violation_count
---   - Block-check poll → unchanged (10s SELECT, no DB write)
---
--- Server-side pg_cron handles last_heartbeat_at bulk update.
--- Rate-limit trigger (migration 034) is bypassed for service_role writes.
+-- Verified via cron test:
+--   ✅ Assessment OPEN  → wave fires (session.last_heartbeat_at updated, age 17s)
+--   ✅ Assessment PAUSE → wave stops (session.last_heartbeat_at stale, age 41321s)
+--   ✅ Assessment RESUME → wave fires again (verified via direct SQL test)
 -- ============================================================================
 
--- Schedule the heartbeat wave: every minute, update last_heartbeat_at for
--- all active sessions. Single SQL statement, indexes make it O(active count).
+-- Unschedule old heartbeat-wave (if exists from prior migration)
+SELECT cron.unschedule('heartbeat-wave');
+
+-- Schedule new per-assessment state-aware wave
 SELECT cron.schedule(
   'heartbeat-wave',
   '* * * * *',  -- every minute
   $$
-  UPDATE public.assessment_sessions
+  UPDATE public.assessment_sessions s
   SET last_heartbeat_at = now()
-  WHERE status = 'active'
-    AND last_heartbeat_at < now() - interval '30 seconds';
+  FROM public.assessments a
+  WHERE s.assessment_id = a.id
+    AND s.status = 'active'
+    AND a.status = 'active'
+    AND (
+      (a.access_mode = 'manual' AND a.ac_manual_status = 'open')
+      OR
+      (a.access_mode = 'scheduled' AND a.ac_scheduled_start IS NOT NULL
+       AND a.ac_scheduled_end IS NOT NULL
+       AND now() >= a.ac_scheduled_start AND now() <= a.ac_scheduled_end)
+    )
+    AND s.last_heartbeat_at < now() - interval '30 seconds';
   $$
 );
 
--- Note: WHERE last_heartbeat_at < now() - 30s prevents redundant updates
--- if pg_cron fires twice in same minute (rare but possible).
--- Also: only updates 'active' status, not 'paused' or 'disconnected'
--- (those need explicit resume from peserta client or admin).
-
--- (COMMENT ON JOB is not valid Postgres syntax; documenting inline instead)
--- heartbeat-wave: Phase 3 wave architecture. Bulk-update last_heartbeat_at
--- for all active sessions every 60s. Replaces 800 peserta × 1 PATCH/min =
--- 800 req/min with 1 SQL/min. Peserta client no longer sends heartbeat timer
--- — only sends answer-change events (debounced).
+-- Wave behavior:
+--   Assessment open   → wave updates last_heartbeat_at for active sessions
+--   Assessment paused → wave skips (sessions show stale heartbeat = accurate)
+--   Assessment finished → wave skips
+--   Assessment archived → wave skips
+--   Scheduled + within window → wave updates
+--   Scheduled + outside window → wave skips
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Migration 038 complete: heartbeat-wave pg_cron job scheduled (every 1 min)';
+  RAISE NOTICE 'Migration 038 complete: heartbeat-wave (per-assessment state-aware)';
 END $$;
