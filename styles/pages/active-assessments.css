@@ -57,118 +57,6 @@
   .aa-hero-actions .albedu-btn { flex: 1; justify-content: center; }
 }
 
-/* ═══ KPI STRIP ════════════════════════════════════════════════ */
-.aa-kpi-strip {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 24px;
-}
-@media (max-width: 1100px) { .aa-kpi-strip { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 640px)  { .aa-kpi-strip { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 420px)  { .aa-kpi-strip { grid-template-columns: 1fr; } }
-
-.aa-kpi-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all 180ms cubic-bezier(.4, 0, .2, 1);
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  position: relative;
-  overflow: hidden;
-}
-.aa-kpi-card::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: var(--color-primary);
-  transform: scaleY(0);
-  transform-origin: top;
-  transition: transform 200ms ease;
-}
-.aa-kpi-card:hover {
-  border-color: var(--color-primary);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-}
-.aa-kpi-card.is-active {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
-}
-.aa-kpi-card.is-active::before { transform: scaleY(1); }
-.aa-kpi-card.is-active .aa-kpi-value { color: var(--color-primary); }
-
-.aa-kpi-icon-wrap {
-  width: 40px; height: 40px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  position: relative;
-  transition: all 180ms ease;
-}
-.aa-kpi-icon-wrap .albedu-icon { width: 22px; height: 22px; }
-
-.aa-kpi-icon-total    { background: var(--color-primary-light); color: var(--color-primary); }
-.aa-kpi-icon-running  { background: var(--color-success-bg);    color: var(--color-success); }
-.aa-kpi-icon-paused   { background: var(--color-warning-bg);    color: var(--color-warning); }
-.aa-kpi-icon-finished { background: var(--color-surface-3);     color: var(--color-text-2); }
-.aa-kpi-icon-archived { background: var(--color-destructive-bg); color: var(--color-destructive); }
-
-.aa-kpi-card:hover .aa-kpi-icon-total    { background: var(--color-primary); color: #fff; }
-.aa-kpi-card:hover .aa-kpi-icon-running  { background: var(--color-success); color: #fff; }
-.aa-kpi-card:hover .aa-kpi-icon-paused   { background: var(--color-warning); color: #fff; }
-.aa-kpi-card:hover .aa-kpi-icon-finished { background: var(--color-text-2); color: #fff; }
-.aa-kpi-card:hover .aa-kpi-icon-archived { background: var(--color-destructive); color: #fff; }
-
-/* Pulse dot for "running" KPI */
-.aa-kpi-pulse {
-  position: absolute;
-  top: -2px; right: -2px;
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  background: var(--color-success);
-  box-shadow: 0 0 0 0 var(--color-success);
-  animation: aa-pulse 1.8s ease-out infinite;
-  z-index: 1;
-}
-@keyframes aa-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(21, 128, 61, 0.55); }
-  70%  { box-shadow: 0 0 0 8px rgba(21, 128, 61, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(21, 128, 61, 0); }
-}
-
-.aa-kpi-body {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.aa-kpi-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--color-text);
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-  transition: color 180ms ease;
-}
-.aa-kpi-label {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* ═══ TOOLBAR ══════════════════════════════════════════════════ */
 .aa-toolbar {
   display: flex;
@@ -1015,9 +903,6 @@
 /* ═══ DARK MODE TWEAKS ════════════════════════════════════════ */
 [data-theme="dark"] .aa-card:hover {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
-}
-[data-theme="dark"] .aa-kpi-pulse {
-  background: #34d399;
 }
 [data-theme="dark"] .aa-ctx-menu {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);

@@ -137,7 +137,6 @@
       this._searchClear  = document.getElementById('aa-search-clear');
       this._sortSelect   = document.getElementById('aa-sort');
       this._viewBtns     = document.querySelectorAll('.aa-view-btn');
-      this._kpiCards     = document.querySelectorAll('.aa-kpi-card');
       this._chips        = document.querySelectorAll('.aa-chip');
       this._btnRefresh   = document.getElementById('aa-btn-refresh');
       this._btnRetry     = document.getElementById('aa-btn-retry');
@@ -145,14 +144,7 @@
       this._ctxMenu      = document.getElementById('aa-ctx-menu');
       this._ctxToggleLabel = document.getElementById('aa-ctx-toggle-label');
 
-      // KPI value refs
-      this._kpi = {
-        total:    document.getElementById('kpi-total'),
-        running:  document.getElementById('kpi-running'),
-        paused:   document.getElementById('kpi-paused'),
-        finished: document.getElementById('kpi-finished'),
-        archived: document.getElementById('kpi-archived'),
-      };
+      // Chip count refs (filter chips provide status counts since KPI strip was removed)
       this._chipCounts = {
         all:       document.getElementById('chip-all'),
         running:   document.getElementById('chip-running'),
@@ -219,10 +211,6 @@
           if (view === this._view) return;
           this._setView(view);
         });
-      });
-
-      this._kpiCards?.forEach((card) => {
-        card.addEventListener('click', () => this._setFilter(card.dataset.filter));
       });
 
       this._chips?.forEach((chip) => {
@@ -332,18 +320,12 @@
 
     refresh() { return this.load(); },
 
-    // ── KPI update ─────────────────────────────────────────────
+    // ── Chip counts update ─────────────────────────────────────
     _updateKPIs() {
       try {
         const counts = { running: 0, paused: 0, finished: 0, archived: 0 };
         this._allData.forEach((a) => { counts[_statusOf(a)]++; });
         const total = this._allData.length;
-
-        if (this._kpi.total)    this._kpi.total.textContent    = total;
-        if (this._kpi.running)  this._kpi.running.textContent  = counts.running;
-        if (this._kpi.paused)   this._kpi.paused.textContent   = counts.paused;
-        if (this._kpi.finished) this._kpi.finished.textContent = counts.finished;
-        if (this._kpi.archived) this._kpi.archived.textContent = counts.archived;
 
         if (this._chipCounts.all)       this._chipCounts.all.textContent       = total;
         if (this._chipCounts.running)   this._chipCounts.running.textContent   = counts.running;
@@ -878,9 +860,6 @@
       this._filter = filter;
       this._chips?.forEach((chip) => {
         chip.classList.toggle('is-active', chip.dataset.filter === filter);
-      });
-      this._kpiCards?.forEach((card) => {
-        card.classList.toggle('is-active', card.dataset.filter === filter);
       });
       this._applyFilters();
     },
