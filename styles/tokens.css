@@ -98,32 +98,51 @@
   --red-600: #DC2626;
   --red-700: #B91C1C;
 
-  /* ═══ Semantic Colors — LIGHT MODE ═══ */
-  --color-bg:          var(--slate-50);
-  --color-surface:     #FFFFFF;
-  --color-surface-2:   var(--slate-100);
-  --color-surface-3:   var(--slate-200);
+  /* ═══ Semantic Colors — LIGHT MODE (warm off-white + cobalt + teal) ═══ */
+  --color-bg:          #F7F6F2;
+  --color-surface:     #FCFBF7;
+  --color-surface-2:   #EFEEE8;
+  --color-surface-3:   #E4E2D9;
 
-  --color-text:        var(--slate-900);
-  --color-text-2:      var(--slate-700);
-  --color-text-muted:  var(--slate-500);
-  --color-text-faint:  var(--slate-400);
+  --color-text:        #1F2937;
+  --color-text-2:      #334155;
+  --color-text-muted:  #64748B;
+  --color-text-faint:  #94A3B8;
 
-  --color-primary:       var(--blue-600);
-  --color-primary-hover: var(--blue-700);
-  --color-primary-light: var(--blue-50);
-  --color-primary-ring:  rgba(37, 99, 235, 0.15);
+  --color-primary:       #1D4ED8;
+  --color-primary-hover: #1E3A8A;
+  --color-primary-light: #DBEAFE;
+  --color-primary-ring:  rgba(29, 78, 216, 0.15);
 
-  --color-border:       var(--slate-200);
-  --color-border-2:     var(--slate-300);
-  --color-divider:      var(--slate-200);
+  --color-learning:       #0D9488;
+  --color-learning-light: #CCFBF1;
 
-  --color-success:       var(--emerald-600);
-  --color-success-bg:    var(--emerald-50);
-  --color-warning:       var(--amber-600);
-  --color-warning-bg:    var(--amber-50);
-  --color-destructive:   var(--red-600);
-  --color-destructive-bg: var(--red-50);
+  --color-border:       #D6D3C8;
+  --color-border-2:     #CBD5E1;
+  --color-divider:      #E2E8F0;
+
+  --color-success:       #15803D;
+  --color-success-bg:    #DCFCE7;
+  --color-warning:       #B45309;
+  --color-warning-bg:    #FEF3C7;
+  --color-destructive:   #DC2626;
+  --color-destructive-bg: #FEF2F2;
+
+  /* Legacy token bridge — maps old --albedu-* to new --color-* */
+  --albedu-primary:       var(--color-primary);
+  --albedu-primary-hover: var(--color-primary-hover);
+  --albedu-primary-muted: var(--color-primary-light);
+  --albedu-primary-ring:  var(--color-primary-ring);
+  --albedu-surface:       var(--color-surface);
+  --albedu-surface-alt:   var(--color-surface-2);
+  --albedu-bg:            var(--color-bg);
+  --albedu-border:        var(--color-border);
+  --albedu-heading:       var(--color-text);
+  --albedu-body:          var(--color-text-2);
+  --albedu-muted:         var(--color-text-muted);
+  --albedu-radius:         12px;
+  --albedu-radius-sm:      8px;
+  --albedu-transition:     150ms ease;
 
   /* ═══ Spacing (8px base) ═══ */
   --sp-0:   0;

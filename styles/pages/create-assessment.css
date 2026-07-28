@@ -1,0 +1,477 @@
+/* ═══════════════════════════════════════════════════════════════
+   create-assessment.css — Scoped styles for Buat Asesmen page
+   Warm off-white + cobalt + teal. Enterprise-grade. Minimalist.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Wizard Steps ─────────────────────────────────────────────── */
+.albedu-steps { display: flex; align-items: center; gap: 0; margin-bottom: 32px; }
+.albedu-step { display: flex; align-items: center; gap: 8px; cursor: default; }
+.albedu-step-num {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; flex-shrink: 0;
+  background: var(--color-surface-3); color: var(--color-text-muted);
+  border: 2px solid var(--color-border);
+  transition: all 200ms ease;
+}
+.albedu-step-active .albedu-step-num {
+  background: var(--color-primary); color: #fff; border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-ring);
+}
+.albedu-step-complete .albedu-step-num {
+  background: var(--color-success); color: #fff; border-color: var(--color-success);
+}
+.albedu-step-complete .albedu-step-num-text { display: none; }
+.albedu-step-complete .albedu-step-num::after { content: '✓'; font-size: 16px; }
+.albedu-step-label { font-size: 13px; font-weight: 600; color: var(--color-text-muted); }
+.albedu-step-active .albedu-step-label { color: var(--color-primary); }
+.albedu-step-complete .albedu-step-label { color: var(--color-success); }
+.albedu-step-line {
+  flex: 1; height: 2px; background: var(--color-border); margin: 0 12px;
+  border-radius: 1px; transition: background 200ms ease;
+}
+.albedu-step-complete + .albedu-step-line { background: var(--color-success); }
+
+/* ── Step Content ─────────────────────────────────────────────── */
+.albedu-step-title { font-size: 20px; font-weight: 700; color: var(--color-text); margin: 0 0 4px; }
+.albedu-step-desc { font-size: 14px; color: var(--color-text-muted); margin: 0 0 24px; }
+
+/* ── Form Sections ────────────────────────────────────────────── */
+.albedu-theme-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.albedu-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.albedu-field { display: flex; flex-direction: column; gap: 6px; }
+.albedu-field-full { grid-column: 1 / -1; }
+.albedu-field label, .albedu-field > label {
+  font-size: 13px; font-weight: 600; color: var(--color-text-2);
+}
+.albedu-field-hint { font-size: 12px; color: var(--color-text-faint); }
+
+/* ── Inputs ────────────────────────────────────────────────────── */
+.albedu-input, .albedu-textarea {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  padding: 10px 14px !important;
+  font-size: 14px !important;
+  font-family: inherit !important;
+  color: var(--color-text) !important;
+  min-height: 44px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+.albedu-input::placeholder, .albedu-textarea::placeholder { color: var(--color-text-faint) !important; }
+.albedu-input:focus, .albedu-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px var(--color-primary-ring) !important;
+}
+
+/* ── Styled Native Select ──────────────────────────────────────── */
+.albedu-select-wrap { position: relative; display: block; width: 100%; }
+.albedu-select, .albedu-select-wrap select {
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  width: 100%; padding: 10px 36px 10px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 14px; font-family: inherit;
+  color: var(--color-text); min-height: 44px;
+  cursor: pointer; box-sizing: border-box;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.albedu-select:hover:not(:disabled), .albedu-select-wrap select:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+.albedu-select:focus, .albedu-select-wrap select:focus {
+  outline: none; border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-ring);
+}
+.albedu-select:disabled, .albedu-select-wrap select:disabled {
+  background: var(--color-surface-2); color: var(--color-text-muted); opacity: 0.7; cursor: not-allowed;
+}
+.albedu-select-wrap::after {
+  content: ''; position: absolute; right: 14px; top: 50%;
+  width: 8px; height: 8px;
+  border-right: 2px solid var(--color-text-muted);
+  border-bottom: 2px solid var(--color-text-muted);
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none; transition: border-color 150ms ease;
+}
+.albedu-select-wrap:has(select:focus)::after { border-color: var(--color-primary); }
+.albedu-select-wrap:has(select:disabled)::after { opacity: 0.4; }
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+.albedu-btn-primary {
+  background: var(--color-primary) !important; color: #fff !important;
+  border: 1px solid var(--color-primary) !important;
+  border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 150ms ease;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.albedu-btn-primary:hover { background: var(--color-primary-hover) !important; }
+.albedu-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.albedu-btn-secondary {
+  background: var(--color-surface-2) !important; color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 150ms ease;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.albedu-btn-secondary:hover { background: var(--color-surface-3) !important; }
+.albedu-btn-ghost {
+  background: transparent !important; color: var(--color-text-muted) !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all 150ms ease;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.albedu-btn-ghost:hover { background: var(--color-surface-2) !important; color: var(--color-text) !important; }
+
+/* ── Toggle Switch ─────────────────────────────────────────────── */
+.albedu-toggle { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; }
+.albedu-toggle input { display: none; }
+.albedu-toggle-track {
+  width: 44px; height: 24px; border-radius: 12px;
+  background: var(--color-border); position: relative;
+  transition: background 200ms ease;
+}
+.albedu-toggle-track::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; transition: transform 200ms ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.albedu-toggle input:checked + .albedu-toggle-track { background: var(--color-primary); }
+.albedu-toggle input:checked + .albedu-toggle-track::after { transform: translateX(20px); }
+.albedu-toggle-label { font-size: 13px; color: var(--color-text-muted); }
+
+/* ── Cards ─────────────────────────────────────────────────────── */
+.albedu-card {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.albedu-card-header { padding: 20px 24px; border-bottom: 1px solid var(--color-divider); }
+.albedu-card-body { padding: 24px; }
+
+/* ── Exam Cards (list view + active assessments) ──────────────── */
+.albedu-exam-card, .albedu-assessments-grid .albedu-exam-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px; padding: 20px;
+  cursor: pointer; transition: all 200ms ease;
+}
+.albedu-exam-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 16px rgba(29, 78, 216, 0.08);
+  transform: translateY(-2px);
+}
+.albedu-exam-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.albedu-exam-card-title { font-size: 16px; font-weight: 600; color: var(--color-text); margin: 0; }
+.albedu-exam-card-token {
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600;
+  color: var(--color-primary); background: var(--color-primary-light);
+  padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+}
+.albedu-exam-card-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--color-text-muted); margin-bottom: 8px; }
+.albedu-exam-card-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.albedu-exam-card-date { font-size: 12px; color: var(--color-text-faint); }
+
+/* ── Status Badges ─────────────────────────────────────────────── */
+.albedu-status-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.albedu-status-running { background: var(--color-success-bg); color: var(--color-success); }
+.albedu-status-paused { background: var(--color-warning-bg); color: var(--color-warning); }
+.albedu-status-finished { background: var(--color-surface-3); color: var(--color-text-muted); }
+.albedu-status-archived { background: var(--color-destructive-bg); color: var(--color-destructive); }
+
+/* ── Soal Toolbar ──────────────────────────────────────────────── */
+.albedu-soal-toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; padding: 16px 20px;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.albedu-soal-toolbar-info { font-size: 13px; color: var(--color-text-muted); }
+.albedu-soal-toolbar-info strong { color: var(--color-primary); font-weight: 700; }
+.albedu-section-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── Section Block ─────────────────────────────────────────────── */
+.albedu-section-block {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px; overflow: hidden; margin-bottom: 16px;
+}
+.albedu-section-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; border-bottom: 1px solid var(--color-divider);
+}
+.albedu-section-name { font-size: 15px; font-weight: 600; color: var(--color-text); margin: 0; }
+.albedu-section-meta { font-size: 13px; color: var(--color-text-muted); }
+.albedu-section-questions { padding: 16px 20px; }
+
+/* ── Question Row ──────────────────────────────────────────────── */
+.albedu-question-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; background: var(--color-surface-2);
+  border-radius: 8px; margin-bottom: 8px; cursor: pointer;
+  transition: background 150ms ease;
+}
+.albedu-question-row:hover { background: var(--color-surface-3); }
+.albedu-question-num {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--color-primary-light); color: var(--color-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px; flex-shrink: 0;
+}
+.albedu-question-type {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+  background: var(--color-surface-3); color: var(--color-text-muted); flex-shrink: 0;
+}
+.albedu-q-type-PG { background: var(--color-primary-light); color: var(--color-primary); }
+.albedu-q-type-esai { background: var(--color-learning-light); color: var(--color-learning); }
+.albedu-question-text { flex: 1; font-size: 13px; color: var(--color-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.albedu-question-score { font-size: 12px; color: var(--color-text-muted); font-weight: 600; flex-shrink: 0; }
+.albedu-question-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* ── Empty State ───────────────────────────────────────────────── */
+.albedu-empty-state {
+  text-align: center; padding: 48px 24px; color: var(--color-text-muted);
+}
+.albedu-empty-state h3 { font-size: 18px; color: var(--color-text-2); margin: 12px 0 4px; }
+.albedu-empty-state p { font-size: 14px; color: var(--color-text-faint); }
+
+/* ── Preset Chips ──────────────────────────────────────────────── */
+.albedu-preset-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.albedu-preset-chip {
+  padding: 6px 14px; border: 1px solid var(--color-border); border-radius: 8px;
+  background: var(--color-surface); color: var(--color-text-muted);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all 150ms ease;
+}
+.albedu-preset-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.albedu-preset-chip.albedu-active {
+  background: var(--color-primary); border-color: var(--color-primary); color: #fff;
+}
+
+/* ── Theme Preview ─────────────────────────────────────────────── */
+.albedu-theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .albedu-theme-grid { grid-template-columns: 1fr; } }
+.albedu-theme-controls { display: flex; flex-direction: column; gap: 16px; }
+.albedu-theme-control-group { display: flex; flex-direction: column; gap: 8px; }
+.albedu-theme-control-group > label { font-size: 13px; font-weight: 600; color: var(--color-text-2); }
+.albedu-theme-preview {
+  background: var(--color-surface-2); border: 1px solid var(--color-border);
+  border-radius: 12px; padding: 20px;
+}
+.albedu-theme-preview-title {
+  font-size: 12px; font-weight: 700; color: var(--color-text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;
+}
+.albedu-preview-card {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: 8px; padding: 20px;
+}
+.albedu-preview-heading { font-size: 16px; font-weight: 700; margin: 0 0 12px; color: var(--color-text); }
+.albedu-preview-question { font-size: 14px; color: var(--color-text-2); margin: 0 0 16px; }
+.albedu-preview-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.albedu-preview-option { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--color-text-2); }
+.albedu-preview-radio { width: 16px; height: 16px; border: 2px solid var(--color-border); border-radius: 50%; flex-shrink: 0; }
+
+/* ── Color Picker ──────────────────────────────────────────────── */
+.albedu-color-quickpicks { display: flex; flex-wrap: wrap; gap: 8px; }
+.albedu-color-picker-wrap { display: flex; align-items: center; gap: 10px; }
+.albedu-color-hex { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--color-text-muted); }
+
+/* ── Radio Cards ───────────────────────────────────────────────── */
+.albedu-radio-cards { display: flex; gap: 12px; flex-wrap: wrap; }
+.albedu-radio-card {
+  flex: 1; min-width: 200px; cursor: pointer;
+  border: 2px solid var(--color-border); border-radius: 10px;
+  padding: 16px; transition: all 150ms ease;
+}
+.albedu-radio-card:hover { border-color: var(--color-primary); }
+.albedu-radio-card input { display: none; }
+.albedu-radio-card input:checked ~ .albedu-radio-card-content {
+  color: var(--color-primary);
+}
+.albedu-radio-card:has(input:checked) { border-color: var(--color-primary); background: var(--color-primary-light); }
+.albedu-radio-card-content { display: flex; align-items: center; gap: 12px; }
+.albedu-radio-card-title { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.albedu-radio-card-desc { font-size: 12px; color: var(--color-text-muted); }
+
+/* ── Identity Fields (Form Builder) ────────────────────────────── */
+.albedu-identity-field {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; background: var(--color-surface-2);
+  border: 1px solid var(--color-border); border-radius: 8px;
+  transition: border-color 150ms ease;
+}
+.albedu-identity-field:hover { border-color: var(--color-primary); }
+.albedu-identity-field .albedu-input,
+.albedu-identity-field .albedu-select { min-height: 38px; font-size: 13px; }
+.albedu-identity-field .albedu-field-input { flex: 1; }
+.albedu-field-delete { flex-shrink: 0; }
+
+/* ── Token Display ─────────────────────────────────────────────── */
+.albedu-token-display {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--color-primary-light); border: 1px solid var(--color-primary);
+  border-radius: 10px; padding: 16px 20px; margin: 20px 0;
+}
+.albedu-token-label { font-size: 13px; font-weight: 600; color: var(--color-primary); }
+.albedu-token-value {
+  font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 800;
+  color: var(--color-primary); letter-spacing: 0.1em;
+}
+
+/* ── Summary Grid ──────────────────────────────────────────────── */
+.albedu-summary-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px;
+}
+@media (max-width: 640px) { .albedu-summary-grid { grid-template-columns: repeat(2, 1fr); } }
+.albedu-summary-item {
+  background: var(--color-surface-2); border: 1px solid var(--color-border);
+  border-radius: 10px; padding: 16px; text-align: center;
+}
+.albedu-summary-label { font-size: 12px; color: var(--color-text-muted); margin-bottom: 4px; }
+.albedu-summary-value { font-size: 24px; font-weight: 700; color: var(--color-text); }
+
+/* ── Wizard Footer ─────────────────────────────────────────────── */
+.albedu-wizard-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px 0; border-top: 1px solid var(--color-divider);
+  margin-top: 32px;
+}
+.albedu-wizard-footer-right { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 480px) {
+  .albedu-wizard-footer { flex-direction: column-reverse; align-items: stretch; gap: 8px; }
+  .albedu-wizard-footer-right { width: 100%; }
+  .albedu-wizard-footer-right .albedu-btn { flex: 1; justify-content: center; }
+}
+
+/* ── Modal ─────────────────────────────────────────────────────── */
+.albedu-modal-overlay {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 9999;
+  opacity: 0; pointer-events: none; transition: opacity 250ms ease;
+}
+.albedu-modal-overlay[hidden] { display: none; }
+.albedu-modal-overlay.albedu-modal-visible { opacity: 1; pointer-events: auto; }
+.albedu-modal {
+  background: var(--color-surface); border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.16);
+  max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
+  transform: translateY(20px); transition: transform 250ms ease;
+  width: 90%;
+}
+.albedu-modal-overlay.albedu-modal-visible .albedu-modal { transform: translateY(0); }
+.albedu-modal--sm { max-width: 400px; }
+.albedu-modal--md { max-width: 560px; }
+.albedu-modal--lg { max-width: 720px; }
+.albedu-modal-header { padding: 20px 24px; border-bottom: 1px solid var(--color-divider); display: flex; justify-content: space-between; align-items: flex-start; }
+.albedu-modal-title { font-size: 18px; font-weight: 700; color: var(--color-text); margin: 0; }
+.albedu-modal-subtitle { font-size: 13px; color: var(--color-text-muted); margin: 2px 0 0; }
+.albedu-modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+.albedu-modal-footer { padding: 16px 24px; border-top: 1px solid var(--color-divider); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ── Soal Editor (inside modal) ────────────────────────────────── */
+.albedu-soal-editor { display: flex; flex-direction: column; gap: 24px; }
+.albedu-soal-editor-section { display: flex; flex-direction: column; gap: 8px; }
+.albedu-soal-editor-label { font-size: 13px; font-weight: 600; color: var(--color-text-2); }
+.albedu-soal-textarea { min-height: 100px; line-height: 1.6; }
+.albedu-required { color: var(--color-destructive); }
+.albedu-soal-options { display: flex; flex-direction: column; gap: 10px; }
+.albedu-soal-option {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: var(--color-surface-2);
+  border: 1px solid var(--color-border); border-radius: 8px;
+  transition: all 150ms ease;
+}
+.albedu-soal-option:hover { border-color: var(--color-primary); }
+.albedu-option-correct { border-color: var(--color-success) !important; background: var(--color-success-bg) !important; }
+.albedu-soal-option input[type="radio"] { width: 18px; height: 18px; accent-color: var(--color-primary); flex-shrink: 0; }
+.albedu-soal-option-letter {
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; font-family: 'JetBrains Mono', monospace;
+  background: var(--color-surface-3); color: var(--color-text-muted);
+  transition: all 150ms ease;
+}
+.albedu-option-correct .albedu-soal-option-letter { background: var(--color-success); color: #fff; }
+.albedu-soal-option-input { flex: 1; min-height: 38px; font-size: 13px; }
+.albedu-image-upload-zone {
+  border: 2px dashed var(--color-border); border-radius: 10px; padding: 24px;
+  text-align: center; cursor: pointer; transition: border-color 150ms ease;
+}
+.albedu-image-upload-zone:hover { border-color: var(--color-primary); }
+.albedu-image-upload-prompt { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--color-text-muted); font-size: 13px; }
+.albedu-image-previews { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.albedu-image-preview { position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); }
+.albedu-image-preview img { width: 100%; height: 100%; object-fit: cover; }
+.albedu-image-preview-remove { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.albedu-image-upload-progress { margin-top: 12px; }
+.albedu-image-upload-bar { height: 4px; background: var(--color-primary-light); border-radius: 2px; overflow: hidden; }
+.albedu-image-upload-text { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; }
+
+/* ── Template Picker ───────────────────────────────────────────── */
+.albedu-template-grid { display: flex; flex-direction: column; gap: 10px; }
+.albedu-template-card {
+  display: flex; align-items: center; gap: 14px; padding: 16px;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: 10px; cursor: pointer; transition: all 150ms ease; text-align: left; width: 100%;
+}
+.albedu-template-card:hover {
+  border-color: var(--color-primary); transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.albedu-template-icon {
+  width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+  background: var(--color-primary-light); display: flex; align-items: center; justify-content: center;
+}
+.albedu-template-card:hover .albedu-template-icon { background: var(--color-primary); }
+.albedu-template-icon .albedu-icon { width: 22px; height: 22px; color: var(--color-primary); }
+.albedu-template-card:hover .albedu-template-icon .albedu-icon { color: #fff; }
+.albedu-template-info { flex: 1; }
+.albedu-template-name { font-weight: 600; font-size: 15px; color: var(--color-text); margin-bottom: 2px; }
+.albedu-template-desc { font-size: 13px; color: var(--color-text-muted); }
+.albedu-template-arrow { color: var(--color-text-faint); transition: transform 150ms ease; }
+.albedu-template-card:hover .albedu-template-arrow { transform: translateX(4px); color: var(--color-primary); }
+.albedu-template-hint { font-size: 13px; color: var(--color-text-muted); margin-top: 16px; padding: 12px; background: var(--color-surface-2); border-radius: 8px; }
+
+/* ── WCAG Status ───────────────────────────────────────────────── */
+.albedu-wcag-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-muted); margin-top: 12px; }
+.albedu-wcag-pass { color: var(--color-success); }
+
+/* ── Publish Warning ───────────────────────────────────────────── */
+.albedu-publish-warning {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning); border-radius: 8px;
+  color: var(--color-warning); font-size: 13px; font-weight: 500;
+}
+
+/* ── Color Quickpick ───────────────────────────────────────────── */
+.albedu-color-quickpick {
+  width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+  border: 2px solid var(--color-border); transition: transform 100ms ease;
+}
+.albedu-color-quickpick:hover { transform: scale(1.1); }
+.albedu-color-quickpick.albedu-active { border-color: var(--color-text); box-shadow: 0 0 0 2px var(--color-surface); }
+
+/* ── Assessment Grid ───────────────────────────────────────────── */
+.albedu-assessments-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
+}
+.active-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
+}

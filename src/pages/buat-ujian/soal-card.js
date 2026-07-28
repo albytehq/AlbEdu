@@ -51,17 +51,18 @@
       this._sectionCount.textContent = sections.length;
       this._questionCount.textContent = sections.reduce((sum, s) => sum + s.questions.length, 0);
 
-      // Disable "Tambah Bagian" button if at max
       this._btnAddSection.disabled = sections.length >= 2;
 
       if (sections.length === 0) {
         this._empty.hidden = false;
         this._list.hidden = true;
+        this._btnAddSection.style.display = 'none';
         return;
       }
 
       this._empty.hidden = true;
       this._list.hidden = false;
+      this._btnAddSection.style.display = '';
 
       this._list.innerHTML = sections.map((sec, sIdx) => `
         <div class="albedu-section-block" data-section-index="${sIdx}">

@@ -95,10 +95,10 @@
       // Add identity field
       this._btnAddField.addEventListener('click', () => this._addField());
 
-      // Catatan (note_enabled boolean + note_text; UI is an On/Off select)
+      // Catatan (note_enabled boolean + note_text; UI is a toggle checkbox)
       this._catatan.addEventListener('change', (e) => {
         const state = window.CreateAssessment.getState();
-        const enabled = e.target.value === 'On';
+        const enabled = e.target.checked;
         state.examData.note_enabled = enabled;
         if (!enabled) state.examData.note_text = null;
         this._catatanTextField.hidden = !enabled;
@@ -250,9 +250,8 @@
       const schedVal = state.scheduled_start || '';
       if (this._scheduledStart.value !== schedVal) this._scheduledStart.value = schedVal;
 
-      // Catatan: UI shows 'On'/'Off', state stores boolean note_enabled
-      const catatanVal = u.note_enabled ? 'On' : 'Off';
-      if (this._catatan.value !== catatanVal) this._catatan.value = catatanVal;
+      // Catatan: toggle checkbox, state stores boolean note_enabled
+      if (this._catatan.checked !== !!u.note_enabled) this._catatan.checked = !!u.note_enabled;
       this._catatanTextField.hidden = !u.note_enabled;
       if (this._isCatatan.value !== (u.note_text || '')) {
         this._isCatatan.value = u.note_text || '';

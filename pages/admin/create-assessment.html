@@ -45,7 +45,8 @@
     
     <link rel="stylesheet" href="../../styles/albedu-v1.css">
     <link rel="stylesheet" href="../../styles/albedu-components.css">
-    <link rel="stylesheet" href="../../styles/identity-form.css"><!-- Fonts --><!-- Supabase SDK --><!-- Auth baseline -->
+    <link rel="stylesheet" href="../../styles/identity-form.css">
+    <link rel="stylesheet" href="../../styles/pages/create-assessment.css"><!-- Fonts --><!-- Supabase SDK --><!-- Auth baseline -->
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
     <script src="../../src/auth/errors.js" defer></script>
@@ -298,18 +299,19 @@
 
                         <!-- Catatan -->
                         <div class="albedu-theme-section">
-                            <div class="albedu-form-grid">
-                                <div class="albedu-field">
-                                    <label for="note-toggle">Catatan</label>
-                                    <select id="note-toggle" class="albedu-select">
-                                        <option value="Off">Off</option>
-                                        <option value="On">On</option>
-                                    </select>
-                                </div>
-                                <div class="albedu-field" id="note-text-field" hidden>
-                                    <label for="note-text">Isi Catatan</label>
-                                    <textarea id="note-text" class="albedu-textarea" maxlength="500" placeholder="Catatan untuk peserta..." rows="2"></textarea>
-                                </div>
+                            <h3 class="albedu-card-title" style="font-size: 15px; margin-bottom: 4px;">Catatan untuk Peserta</h3>
+                            <p class="albedu-card-desc" style="margin-bottom: 16px;">Tampilkan catatan khusus di awal asesmen</p>
+                            <label class="albedu-toggle">
+                                <input type="checkbox" id="note-toggle">
+                                <span class="albedu-toggle-track"></span>
+                                <span class="albedu-toggle-label">
+                                    <span>Off</span>
+                                    / <span>On</span>
+                                </span>
+                            </label>
+                            <div class="albedu-field" id="note-text-field" hidden style="margin-top: 16px;">
+                                <label for="note-text">Isi Catatan</label>
+                                <textarea id="note-text" class="albedu-textarea" maxlength="500" placeholder="Catatan untuk peserta..." rows="2"></textarea>
                             </div>
                         </div>
 
@@ -533,6 +535,22 @@
             <span>Simpan Soal</span>
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Modal: Template Picker -->
+    <div class="albedu-modal-overlay" id="question-template-overlay" hidden>
+      <div class="albedu-modal albedu-modal--md" role="dialog" aria-modal="true" aria-labelledby="question-template-title">
+        <div class="albedu-modal-header">
+          <div>
+            <h3 class="albedu-modal-title" id="question-template-title">Pilih Template Soal</h3>
+            <p class="albedu-modal-subtitle">Template akan menambah soal otomatis ke bagian yang sesuai</p>
+          </div>
+          <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="question-template-close" type="button" aria-label="Tutup">
+            <span data-albedu-icon="close"><svg class="albedu-icon" aria-hidden="true"><use href="#i-close"/></svg></span>
+          </button>
+        </div>
+        <div class="albedu-modal-body" id="question-template-body"></div>
       </div>
     </div>
 

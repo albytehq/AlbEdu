@@ -199,7 +199,11 @@
     },
 
     // Access code
-    generateToken() { return generateAccessCode(); },
+    generateToken() {
+      const code = generateAccessCode();
+      this.setState({});
+      return code;
+    },
     getToken() { return _state.examData.access_code; },
 
     // Export for Supabase
