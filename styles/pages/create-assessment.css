@@ -315,12 +315,49 @@
   padding: 12px; background: var(--color-surface-2);
   border: 1px solid var(--color-border); border-radius: 8px;
   transition: border-color 150ms ease;
+  flex-wrap: wrap;
 }
 .albedu-identity-field:hover { border-color: var(--color-primary); }
 .albedu-identity-field .albedu-input,
-.albedu-identity-field .albedu-select { min-height: 38px; font-size: 13px; }
-.albedu-identity-field .albedu-field-input { flex: 1; }
+.albedu-identity-field .albedu-select { min-height: 38px; font-size: 13px !important; }
+
+/* CRITICAL: Override .albedu-select-wrap { width: 100% } from global CSS.
+   Without this, the type dropdown (Text/Select — only 2 short options)
+   hogs the entire row, starving the label input to ~30px width and
+   making typed text invisible. */
+.albedu-identity-field .albedu-select-wrap {
+  flex: 0 0 130px;
+  width: auto;
+  min-width: 0;
+}
+
+/* Label input — takes the most space (flex-grow prioritized) */
+.albedu-identity-field .albedu-field-input[data-field="label"] {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* Options input — medium share, only shown when type=select */
+.albedu-identity-field .albedu-field-input[data-field="options"] {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+/* Fallback for any .albedu-field-input not matching above selectors */
+.albedu-identity-field .albedu-field-input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .albedu-field-delete { flex-shrink: 0; }
+
+/* On very small screens, wrap each input to its own row */
+@media (max-width: 540px) {
+  .albedu-identity-field { flex-direction: column; align-items: stretch; }
+  .albedu-identity-field .albedu-select-wrap,
+  .albedu-identity-field .albedu-field-input { flex: 1 1 auto; width: 100%; }
+  .albedu-field-delete { align-self: flex-end; }
+}
 
 /* ── Token Display ─────────────────────────────────────────────── */
 .albedu-token-display {
