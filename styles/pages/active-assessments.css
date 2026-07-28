@@ -402,7 +402,46 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ═══ LOADING SKELETON ═════════════════════════════════════════ */
+/* ═══ LOADING — production-grade (status + spinner + skeleton) ══ */
+.aa-loading-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.aa-loading-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary);
+}
+.aa-loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-primary-light);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: aa-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes aa-spin {
+  to { transform: rotate(360deg); }
+}
+.aa-loading-status.is-timeout {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+.aa-loading-status.is-timeout .aa-loading-spinner {
+  border-color: var(--color-warning-bg);
+  border-top-color: var(--color-warning);
+}
+
 .aa-skeleton-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -624,6 +663,93 @@
   border-color: var(--color-destructive);
 }
 .aa-card-quick-btn .albedu-icon { width: 13px; height: 13px; }
+
+/* ═══ MULAI / TUTUP BUTTON — primary action for manual-mode cards ══ */
+.aa-card-primary-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 180ms ease;
+  text-align: center;
+  margin-top: 4px;
+}
+.aa-card-primary-action .albedu-icon { width: 16px; height: 16px; }
+
+.aa-action-start {
+  background: var(--color-success);
+  color: #fff;
+  border-color: var(--color-success);
+}
+.aa-action-start:hover {
+  background: var(--color-success-hover, #047857);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.25);
+}
+
+.aa-action-stop {
+  background: var(--color-warning);
+  color: #fff;
+  border-color: var(--color-warning);
+}
+.aa-action-stop:hover {
+  background: var(--color-warning-hover, #92400e);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(180, 83, 9, 0.25);
+}
+
+.aa-action-scheduled {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  cursor: default;
+}
+.aa-action-scheduled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.aa-action-finished {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  cursor: default;
+}
+.aa-action-finished:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.aa-action-archived {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  cursor: pointer;
+}
+.aa-action-archived:hover {
+  background: var(--color-success);
+  color: #fff;
+  border-color: var(--color-success);
+}
+
+.aa-action-loading {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  cursor: wait;
+  opacity: 0.7;
+}
+.aa-action-loading .albedu-icon {
+  animation: aa-spin 0.8s linear infinite;
+}
 
 @media (max-width: 480px) {
   .aa-card { padding: 16px; }

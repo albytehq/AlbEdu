@@ -161,11 +161,11 @@
                     </div>
                     <div class="aa-hero-actions">
                         <button class="albedu-btn albedu-btn-ghost" id="aa-btn-refresh" type="button" aria-label="Muat ulang">
-                            <span data-albedu-icon="refresh"><svg class="albedu-icon" aria-hidden="true"><use href="#i-refresh"/></svg></span>
+                            <span data-albedu-icon="refresh"></span>
                             <span>Refresh</span>
                         </button>
                         <a class="albedu-btn albedu-btn-primary" href="create-assessment.html">
-                            <span data-albedu-icon="add_circle"></span>
+                            <span data-albedu-icon="add"></span>
                             <span>Buat Asesmen</span>
                         </a>
                     </div>
@@ -228,9 +228,7 @@
                      ════════════════════════════════════════════════════════════ -->
                 <div class="aa-toolbar" id="aa-toolbar">
                     <div class="aa-search" role="search">
-                        <span class="aa-search-icon" aria-hidden="true" data-albedu-icon="search">
-                            <svg class="albedu-icon" aria-hidden="true"><use href="#i-search"/></svg>
-                        </span>
+                        <span class="aa-search-icon" aria-hidden="true" data-albedu-icon="search"></span>
                         <input
                             type="search"
                             id="active-search-input"
@@ -239,7 +237,7 @@
                             aria-label="Cari asesmen aktif"
                             autocomplete="off">
                         <button class="aa-search-clear" id="aa-search-clear" type="button" aria-label="Hapus pencarian" hidden>
-                            <span data-albedu-icon="close"><svg class="albedu-icon" aria-hidden="true"><use href="#i-close"/></svg></span>
+                            <span data-albedu-icon="close"></span>
                         </button>
                     </div>
 
@@ -258,10 +256,10 @@
 
                         <div class="aa-view-toggle" role="group" aria-label="Mode tampilan">
                             <button class="aa-view-btn is-active" data-view="grid" type="button" aria-pressed="true" aria-label="Tampilan kartu">
-                                <span data-albedu-icon="menu_book"><svg class="albedu-icon" aria-hidden="true"><use href="#i-menu_book"/></svg></span>
+                                <span data-albedu-icon="menu_book"></span>
                             </button>
                             <button class="aa-view-btn" data-view="table" type="button" aria-pressed="false" aria-label="Tampilan tabel">
-                                <span data-albedu-icon="table_view"><svg class="albedu-icon" aria-hidden="true"><use href="#i-table_view"/></svg></span>
+                                <span data-albedu-icon="table_view"></span>
                             </button>
                         </div>
                     </div>
@@ -300,15 +298,21 @@
                 </div>
 
                 <!-- ════════════════════════════════════════════════════════════
-                     LOADING SKELETON
+                     LOADING — production-grade skeleton + progress bar + status text
                      ════════════════════════════════════════════════════════════ -->
-                <div class="aa-skeleton-grid" id="active-loading" hidden>
-                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
-                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
-                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
-                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
-                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
-                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                <div class="aa-loading-wrap" id="active-loading" hidden>
+                    <div class="aa-loading-status" id="aa-loading-status" role="status" aria-live="polite">
+                        <div class="aa-loading-spinner" aria-hidden="true"></div>
+                        <span id="aa-loading-text">Memuat data asesmen...</span>
+                    </div>
+                    <div class="aa-skeleton-grid">
+                        <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                        <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                        <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                        <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                        <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                        <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                    </div>
                 </div>
 
                 <!-- ════════════════════════════════════════════════════════════
@@ -342,7 +346,7 @@
                      ════════════════════════════════════════════════════════════ -->
                 <div class="aa-empty" id="active-empty" hidden>
                     <div class="aa-empty-illustration" aria-hidden="true">
-                        <span data-albedu-icon="menu_book"><svg class="albedu-icon" aria-hidden="true"><use href="#i-menu_book"/></svg></span>
+                        <span data-albedu-icon="menu_book"></span>
                     </div>
                     <h3 class="aa-empty-title">Belum Ada Asesmen</h3>
                     <p class="aa-empty-text">
@@ -350,7 +354,7 @@
                         Anda dan publish agar peserta dapat mulai mengerjakan.
                     </p>
                     <a class="albedu-btn albedu-btn-primary" href="create-assessment.html">
-                        <span data-albedu-icon="add_circle"></span>
+                        <span data-albedu-icon="add"></span>
                         <span>Buat Asesmen Pertama</span>
                     </a>
                 </div>
@@ -360,7 +364,7 @@
                      ════════════════════════════════════════════════════════════ -->
                 <div class="aa-empty aa-empty-noresults" id="active-no-results" hidden>
                     <div class="aa-empty-illustration" aria-hidden="true">
-                        <span data-albedu-icon="search_off"><svg class="albedu-icon" aria-hidden="true"><use href="#i-search_off"/></svg></span>
+                        <span data-albedu-icon="search_off"></span>
                     </div>
                     <h3 class="aa-empty-title">Tidak Ditemukan</h3>
                     <p class="aa-empty-text">
@@ -368,7 +372,7 @@
                         Coba kata kunci lain atau reset filter.
                     </p>
                     <button class="albedu-btn albedu-btn-secondary" id="aa-btn-reset-filter" type="button">
-                        <span data-albedu-icon="restart_alt"><svg class="albedu-icon" aria-hidden="true"><use href="#i-restart_alt"/></svg></span>
+                        <span data-albedu-icon="restart_alt"></span>
                         <span>Reset Filter</span>
                     </button>
                 </div>
@@ -378,7 +382,7 @@
                      ════════════════════════════════════════════════════════════ -->
                 <div class="aa-empty aa-empty-error" id="active-error" hidden>
                     <div class="aa-empty-illustration aa-empty-illustration-error" aria-hidden="true">
-                        <span data-albedu-icon="warning"><svg class="albedu-icon" aria-hidden="true"><use href="#i-warning"/></svg></span>
+                        <span data-albedu-icon="warning"></span>
                     </div>
                     <h3 class="aa-empty-title">Gagal Memuat</h3>
                     <p class="aa-empty-text" id="active-error-text">
@@ -386,7 +390,7 @@
                         internet Anda lalu coba lagi.
                     </p>
                     <button class="albedu-btn albedu-btn-primary" id="aa-btn-retry" type="button">
-                        <span data-albedu-icon="refresh"><svg class="albedu-icon" aria-hidden="true"><use href="#i-refresh"/></svg></span>
+                        <span data-albedu-icon="refresh"></span>
                         <span>Coba Lagi</span>
                     </button>
                 </div>
@@ -405,7 +409,7 @@
          ════════════════════════════════════════════════════════════ -->
     <div class="aa-ctx-menu" id="aa-ctx-menu" hidden role="menu" aria-label="Aksi asesmen">
         <button class="aa-ctx-item" data-action="detail" type="button" role="menuitem">
-            <span data-albedu-icon="info"></span>
+            <span data-albedu-icon="assignment"></span>
             <span>Lihat Detail</span>
         </button>
         <button class="aa-ctx-item" data-action="copy-code" type="button" role="menuitem">

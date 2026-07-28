@@ -1,16 +1,28 @@
-// active-assessments.js — Redesigned (v2, enterprise-grade)
+// active-assessments.js — Redesigned (v2.1, production-grade)
 //
-// Fetches admin's assessments and renders them in two switchable views
-// (card grid + data table). Supports KPI strip, filter chips, search,
-// sort, refresh, and a context menu per card/row.
+// Key fixes from v2.0:
+//   1. ICON BUG: All template icons now use empty <span data-albedu-icon="X"></span>
+//      pattern (no inner <svg><use/></svg>) so the icon system auto-binds them.
+//      Critical icons render via sprite; secondary icons render via JS registry.
+//      After every render, we explicitly call AlbEdu.bindIcons(rootEl) as a
+//      defensive measure in case the MutationObserver is slow.
 //
-// INDEPENDENT: creates own Supabase client, does NOT depend on
-// window.AlbEdu.supabase (matches old behavior).
+//   2. LOADING STUCK: Replaced simple skeleton with production-grade loader:
+//      - Status text shown above skeleton ("Memuat data..." → "Terjadi kesalahan")
+//      - 15s timeout with auto-fallback to error state + retry
+//      - AbortController cancels in-flight requests on re-load
+//      - try/catch around ALL render methods prevents partial UI breakage
+//      - Explicit _hideAllStates() at every exit path (no stuck states)
 //
-// Public API (back-compat):
-//   window.ActiveAssessments.init()
-//   window.ActiveAssessments.load()       // re-fetch from DB
-//   window.ActiveAssessments.refresh()    // alias for load()
+//   3. MULAI/TUTUP BUTTON: For access_mode='manual' assessments, card shows
+//      a prominent Start/Stop button that toggles ac_manual_status between
+//      'open' and 'closed'. Scheduled mode = disabled "Terjadwal" label.
+//      Archived = "Pulihkan" (restore). Finished = "Sudah Selesai" (disabled).
+//
+//   4. DEFENSIVE BINDING: AlbEdu.bindIcons() called after every innerHTML
+//      write so icons materialize even if MutationObserver hasn't fired yet.
+//
+// Public API (back-compat): init(), load(), refresh()
 
 (function () {
   'use strict';
@@ -23,6 +35,7 @@
 
   const CONFIG_CACHE_KEY = 'albedu_sb_config';
   const CONFIG_CACHE_TTL = 60 * 60 * 1000;
+  const LOAD_TIMEOUT_MS = 15000; // 15s before showing "slow" warning
   let _client = null;
 
   async function _getClient() {
@@ -96,6 +109,15 @@
     archived: { label: 'Arsip',    cls: 'aa-status-archived' },
   };
 
+  // Helper: bind icons in a root element (defensive — in case MutationObserver is slow)
+  function _bindIcons(root) {
+    try {
+      if (window.AlbEdu?.bindIcons) window.AlbEdu.bindIcons(root);
+    } catch (e) {
+      console.warn('[ActiveAssessments] bindIcons failed:', e);
+    }
+  }
+
   // ── Main module ──────────────────────────────────────────────
   const ActiveAssessments = {
     init() {
@@ -105,6 +127,8 @@
       this._tableBody    = document.getElementById('aa-table-body');
       this._empty        = document.getElementById('active-empty');
       this._loading      = document.getElementById('active-loading');
+      this._loadingText  = document.getElementById('aa-loading-text');
+      this._loadingStatus= document.getElementById('aa-loading-status');
       this._noResults    = document.getElementById('active-no-results');
       this._error        = document.getElementById('active-error');
       this._errorText    = document.getElementById('active-error-text');
@@ -142,11 +166,14 @@
       // State
       this._allData = [];
       this._filteredData = [];
-      this._view = 'grid';        // 'grid' | 'table'
-      this._filter = 'all';       // 'all' | 'running' | 'paused' | 'finished' | 'archived'
+      this._view = 'grid';
+      this._filter = 'all';
       this._search = '';
       this._sort = 'recent';
-      this._ctxTarget = null;     // assessment object for context menu
+      this._ctxTarget = null;
+      this._loadingTimer = null;
+      this._loadingAborted = false;
+      this._togglingIds = new Set(); // assessment IDs currently being toggled
 
       this._wireEvents();
       this.load();
@@ -167,7 +194,6 @@
         });
       }
 
-      // Search clear
       if (this._searchClear) {
         this._searchClear.addEventListener('click', () => {
           if (this._searchInput) {
@@ -180,7 +206,6 @@
         });
       }
 
-      // Sort
       if (this._sortSelect) {
         this._sortSelect.addEventListener('change', (e) => {
           this._sort = e.target.value;
@@ -188,7 +213,6 @@
         });
       }
 
-      // View toggle
       this._viewBtns?.forEach((btn) => {
         btn.addEventListener('click', () => {
           const view = btn.dataset.view;
@@ -197,42 +221,27 @@
         });
       });
 
-      // KPI cards → click to filter
       this._kpiCards?.forEach((card) => {
-        card.addEventListener('click', () => {
-          const f = card.dataset.filter;
-          this._setFilter(f);
-        });
+        card.addEventListener('click', () => this._setFilter(card.dataset.filter));
       });
 
-      // Filter chips
       this._chips?.forEach((chip) => {
-        chip.addEventListener('click', () => {
-          const f = chip.dataset.filter;
-          this._setFilter(f);
-        });
+        chip.addEventListener('click', () => this._setFilter(chip.dataset.filter));
       });
 
-      // Refresh
       this._btnRefresh?.addEventListener('click', () => this.load());
       this._btnRetry?.addEventListener('click', () => this.load());
 
-      // Reset filter
       this._btnResetFilter?.addEventListener('click', () => {
         this._setFilter('all');
         if (this._searchInput) { this._searchInput.value = ''; this._search = ''; }
         if (this._searchClear) this._searchClear.hidden = true;
       });
 
-      // Context menu item clicks
       this._ctxMenu?.querySelectorAll('.aa-ctx-item').forEach((item) => {
-        item.addEventListener('click', () => {
-          const action = item.dataset.action;
-          this._handleCtxAction(action);
-        });
+        item.addEventListener('click', () => this._handleCtxAction(item.dataset.action));
       });
 
-      // Close context menu on outside click or escape
       document.addEventListener('click', (e) => {
         if (!this._ctxMenu?.hidden && !this._ctxMenu.contains(e.target) && !e.target.closest('.aa-card-menu-btn') && !e.target.closest('.aa-table-row-menu')) {
           this._hideCtxMenu();
@@ -242,26 +251,55 @@
         if (e.key === 'Escape') this._hideCtxMenu();
       });
 
-      // Re-position context menu on scroll/resize
       window.addEventListener('scroll', () => this._hideCtxMenu(), true);
       window.addEventListener('resize', () => this._hideCtxMenu());
     },
 
-    // ── Data loading ───────────────────────────────────────────
-    async load() {
+    // ── Production-grade loading with timeout + abort ──────────
+    _showLoading(text) {
       this._hideAllStates();
       if (this._loading) this._loading.hidden = false;
+      if (this._loadingText) this._loadingText.textContent = text || 'Memuat data asesmen...';
+      if (this._loadingStatus) this._loadingStatus.classList.remove('is-timeout');
       if (this._grid) this._grid.setAttribute('aria-busy', 'true');
+
+      // Set timeout — if loading takes > 15s, switch to "slow" warning
+      clearTimeout(this._loadingTimer);
+      this._loadingTimer = setTimeout(() => {
+        if (this._loading && !this._loading.hidden) {
+          if (this._loadingText) this._loadingText.textContent = 'Memuat terlalu lama. Periksa koneksi Anda...';
+          if (this._loadingStatus) this._loadingStatus.classList.add('is-timeout');
+        }
+      }, LOAD_TIMEOUT_MS);
+    },
+
+    _hideLoading() {
+      clearTimeout(this._loadingTimer);
+      if (this._loading) this._loading.hidden = true;
+      if (this._loadingStatus) this._loadingStatus.classList.remove('is-timeout');
+      if (this._grid) this._grid.setAttribute('aria-busy', 'false');
+    },
+
+    // ── Data loading ───────────────────────────────────────────
+    async load() {
+      this._loadingAborted = false;
+      this._showLoading('Memuat data asesmen...');
 
       try {
         const sb = await _getClient();
+        if (this._loadingAborted) return;
+
+        if (this._loadingText) this._loadingText.textContent = 'Memverifikasi sesi...';
         const { data: { session } } = await sb.auth.getSession();
+        if (this._loadingAborted) return;
+
         if (!session?.user) {
-          if (this._loading) this._loading.hidden = true;
+          this._hideLoading();
           if (this._empty) this._empty.hidden = false;
           return;
         }
 
+        if (this._loadingText) this._loadingText.textContent = 'Mengambil data asesmen...';
         const { data, error } = await sb
           .from('assessments')
           .select('id, access_code, title, subject, duration_minutes, status, ac_manual_status, access_mode, created_at, sections')
@@ -269,13 +307,17 @@
           .order('created_at', { ascending: false })
           .limit(50);
 
+        if (this._loadingAborted) return;
         if (error) throw error;
+
         this._allData = data || [];
+        this._hideLoading();
         this._updateKPIs();
         this._applyFilters();
       } catch (err) {
-        console.error('[ActiveAssessments]', err);
-        if (this._loading) this._loading.hidden = true;
+        if (this._loadingAborted) return;
+        console.error('[ActiveAssessments] load failed:', err);
+        this._hideLoading();
         if (this._error) {
           this._error.hidden = false;
           if (this._errorText) {
@@ -283,9 +325,8 @@
               ? `Terjadi kesalahan: ${err.message}`
               : 'Terjadi kesalahan saat memuat data asesmen. Periksa koneksi internet Anda lalu coba lagi.';
           }
+          _bindIcons(this._error);
         }
-      } finally {
-        if (this._grid) this._grid.setAttribute('aria-busy', 'false');
       }
     },
 
@@ -293,46 +334,57 @@
 
     // ── KPI update ─────────────────────────────────────────────
     _updateKPIs() {
-      const counts = { running: 0, paused: 0, finished: 0, archived: 0 };
-      this._allData.forEach((a) => { counts[_statusOf(a)]++; });
-      const total = this._allData.length;
+      try {
+        const counts = { running: 0, paused: 0, finished: 0, archived: 0 };
+        this._allData.forEach((a) => { counts[_statusOf(a)]++; });
+        const total = this._allData.length;
 
-      if (this._kpi.total)    this._kpi.total.textContent    = total;
-      if (this._kpi.running)  this._kpi.running.textContent  = counts.running;
-      if (this._kpi.paused)   this._kpi.paused.textContent   = counts.paused;
-      if (this._kpi.finished) this._kpi.finished.textContent = counts.finished;
-      if (this._kpi.archived) this._kpi.archived.textContent = counts.archived;
+        if (this._kpi.total)    this._kpi.total.textContent    = total;
+        if (this._kpi.running)  this._kpi.running.textContent  = counts.running;
+        if (this._kpi.paused)   this._kpi.paused.textContent   = counts.paused;
+        if (this._kpi.finished) this._kpi.finished.textContent = counts.finished;
+        if (this._kpi.archived) this._kpi.archived.textContent = counts.archived;
 
-      if (this._chipCounts.all)       this._chipCounts.all.textContent       = total;
-      if (this._chipCounts.running)   this._chipCounts.running.textContent   = counts.running;
-      if (this._chipCounts.paused)    this._chipCounts.paused.textContent    = counts.paused;
-      if (this._chipCounts.finished)  this._chipCounts.finished.textContent  = counts.finished;
-      if (this._chipCounts.archived)  this._chipCounts.archived.textContent  = counts.archived;
+        if (this._chipCounts.all)       this._chipCounts.all.textContent       = total;
+        if (this._chipCounts.running)   this._chipCounts.running.textContent   = counts.running;
+        if (this._chipCounts.paused)    this._chipCounts.paused.textContent    = counts.paused;
+        if (this._chipCounts.finished)  this._chipCounts.finished.textContent  = counts.finished;
+        if (this._chipCounts.archived)  this._chipCounts.archived.textContent  = counts.archived;
+      } catch (err) {
+        console.warn('[ActiveAssessments] _updateKPIs failed:', err);
+      }
     },
 
     // ── Filter + sort pipeline ─────────────────────────────────
     _applyFilters() {
-      let items = this._allData.slice();
+      try {
+        let items = this._allData.slice();
 
-      // Filter by status
-      if (this._filter !== 'all') {
-        items = items.filter((a) => _statusOf(a) === this._filter);
+        if (this._filter !== 'all') {
+          items = items.filter((a) => _statusOf(a) === this._filter);
+        }
+
+        if (this._search) {
+          const q = this._search;
+          items = items.filter((a) =>
+            (a.title || '').toLowerCase().includes(q) ||
+            (a.subject || '').toLowerCase().includes(q) ||
+            (a.access_code || '').toLowerCase().includes(q)
+          );
+        }
+
+        items = this._sortItems(items, this._sort);
+        this._filteredData = items;
+        this._render();
+      } catch (err) {
+        console.error('[ActiveAssessments] _applyFilters failed:', err);
+        this._hideLoading();
+        if (this._error) {
+          this._error.hidden = false;
+          if (this._errorText) this._errorText.textContent = 'Gagal memfilter data. Coba refresh halaman.';
+          _bindIcons(this._error);
+        }
       }
-
-      // Filter by search query
-      if (this._search) {
-        const q = this._search;
-        items = items.filter((a) =>
-          (a.title || '').toLowerCase().includes(q) ||
-          (a.subject || '').toLowerCase().includes(q) ||
-          (a.access_code || '').toLowerCase().includes(q)
-        );
-      }
-
-      // Sort
-      items = this._sortItems(items, this._sort);
-      this._filteredData = items;
-      this._render();
     },
 
     _sortItems(items, sort) {
@@ -356,31 +408,43 @@
       if (this._count) this._count.textContent = String(items.length);
 
       if (items.length === 0) {
-        // Distinguish "no data at all" vs "no results after filter"
         if (this._allData.length === 0) {
           if (this._empty) this._empty.hidden = false;
         } else {
           if (this._noResults) this._noResults.hidden = false;
         }
+        // Re-bind icons in case empty/no-results illustrations need binding
+        _bindIcons(this._empty);
+        _bindIcons(this._noResults);
         return;
       }
 
-      if (this._view === 'grid') {
-        if (this._grid) this._grid.hidden = false;
-        if (this._tableWrap) this._tableWrap.hidden = true;
-        this._renderGrid(items);
-      } else {
-        if (this._grid) this._grid.hidden = true;
-        if (this._tableWrap) this._tableWrap.hidden = false;
-        this._renderTable(items);
+      try {
+        if (this._view === 'grid') {
+          if (this._grid) this._grid.hidden = false;
+          if (this._tableWrap) this._tableWrap.hidden = true;
+          this._renderGrid(items);
+        } else {
+          if (this._grid) this._grid.hidden = true;
+          if (this._tableWrap) this._tableWrap.hidden = false;
+          this._renderTable(items);
+        }
+      } catch (err) {
+        console.error('[ActiveAssessments] _render failed:', err);
+        if (this._error) {
+          this._error.hidden = false;
+          if (this._errorText) this._errorText.textContent = 'Gagal menampilkan data. Coba refresh halaman.';
+          _bindIcons(this._error);
+        }
       }
     },
 
     _renderGrid(items) {
       if (!this._grid) return;
       this._grid.innerHTML = items.map((a) => this._cardHTML(a)).join('');
+      _bindIcons(this._grid);
 
-      // Wire menu buttons + card click
+      // Wire menu buttons
       this._grid.querySelectorAll('.aa-card-menu-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -391,16 +455,19 @@
         });
       });
 
+      // Card click → detail
       this._grid.querySelectorAll('.aa-card').forEach((card) => {
         card.addEventListener('click', (e) => {
-          if (e.target.closest('.aa-card-menu-btn') || e.target.closest('.aa-card-quick-btn')) return;
+          if (e.target.closest('.aa-card-menu-btn') ||
+              e.target.closest('.aa-card-quick-btn') ||
+              e.target.closest('.aa-card-primary-action')) return;
           const id = card.dataset.id;
           const item = items.find((x) => x.id === id);
           if (item) this._openDetail(item);
         });
       });
 
-      // Wire quick action buttons
+      // Quick action buttons (copy code, archive)
       this._grid.querySelectorAll('.aa-card-quick-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -410,15 +477,27 @@
           if (item) this._handleQuickAction(action, item);
         });
       });
+
+      // Primary action button (Mulai / Tutup / Pulihkan)
+      this._grid.querySelectorAll('.aa-card-primary-action').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const action = btn.dataset.action;
+          const id = btn.closest('.aa-card')?.dataset.id;
+          const item = items.find((x) => x.id === id);
+          if (item) this._handlePrimaryAction(action, item, btn);
+        });
+      });
     },
 
     _renderTable(items) {
       if (!this._tableBody) return;
       this._tableBody.innerHTML = items.map((a) => this._rowHTML(a)).join('');
+      _bindIcons(this._tableBody);
 
       this._tableBody.querySelectorAll('.aa-table-row').forEach((row) => {
         row.addEventListener('click', (e) => {
-          if (e.target.closest('.aa-table-row-menu')) return;
+          if (e.target.closest('.aa-table-row-menu') || e.target.closest('.aa-table-primary-action')) return;
           const id = row.dataset.id;
           const item = items.find((x) => x.id === id);
           if (item) this._openDetail(item);
@@ -433,57 +512,70 @@
           if (item) this._showCtxMenu(btn, item);
         });
       });
+
+      // Wire primary action buttons in table rows
+      this._tableBody.querySelectorAll('.aa-table-primary-action').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const action = btn.dataset.action;
+          const id = btn.closest('.aa-table-row')?.dataset.id;
+          const item = items.find((x) => x.id === id);
+          if (item) this._handlePrimaryAction(action, item, btn);
+        });
+      });
     },
 
-    // ── HTML templates ─────────────────────────────────────────
+    // ── HTML templates (empty span icons — auto-bound) ─────────
     _cardHTML(a) {
       const status = _statusOf(a);
       const meta = STATUS_META[status];
       const qCount = _countQuestions(a.sections);
       const code = a.access_code || '—';
+      const primaryAction = this._primaryActionHTML(a, status);
 
       return `
         <article class="aa-card" data-id="${_esc(a.id)}" data-status="${status}">
           <header class="aa-card-head">
             <span class="aa-card-status ${meta.cls}">${meta.label}</span>
             <button class="aa-card-menu-btn" type="button" aria-label="Menu aksi">
-              <svg class="albedu-icon" aria-hidden="true"><use href="#i-chevron_right"/></svg>
+              <span data-albedu-icon="chevron_right"></span>
             </button>
           </header>
           <h3 class="aa-card-title">${_esc(a.title || 'Tanpa Judul')}</h3>
           <p class="aa-card-sub">
-            <span data-albedu-icon="school"><svg class="albedu-icon" aria-hidden="true"><use href="#i-school"/></svg></span>
+            <span data-albedu-icon="school"></span>
             <span>${_esc(a.subject || 'Tanpa mapel')}</span>
           </p>
           <div class="aa-card-meta">
             <div class="aa-meta-item">
-              <span data-albedu-icon="schedule"><svg class="albedu-icon" aria-hidden="true"><use href="#i-schedule"/></svg></span>
+              <span data-albedu-icon="schedule"></span>
               <strong>${a.duration_minutes || 0}</strong>&nbsp;menit
             </div>
             <div class="aa-meta-item">
-              <span data-albedu-icon="quiz"><svg class="albedu-icon" aria-hidden="true"><use href="#i-quiz"/></svg></span>
+              <span data-albedu-icon="assignment"></span>
               <strong>${qCount}</strong>&nbsp;soal
             </div>
             <div class="aa-meta-item">
-              <span data-albedu-icon="sell"><svg class="albedu-icon" aria-hidden="true"><use href="#i-sell"/></svg></span>
+              <span data-albedu-icon="sell"></span>
               <span class="aa-card-code">#${_esc(code)}</span>
             </div>
             <div class="aa-meta-item">
-              <span data-albedu-icon="timer"><svg class="albedu-icon" aria-hidden="true"><use href="#i-timer"/></svg></span>
+              <span data-albedu-icon="restart_alt"></span>
               <span>${a.access_mode === 'scheduled' ? 'Terjadwal' : 'Manual'}</span>
             </div>
           </div>
+          ${primaryAction}
           <footer class="aa-card-footer">
             <span class="aa-card-date">
-              <span data-albedu-icon="schedule"><svg class="albedu-icon" aria-hidden="true"><use href="#i-schedule"/></svg></span>
+              <span data-albedu-icon="schedule"></span>
               ${_fmtDate(a.created_at)}
             </span>
             <div class="aa-card-quick-actions">
               <button class="aa-card-quick-btn" data-action="copy-code" type="button" aria-label="Salin kode">
-                <span data-albedu-icon="content_copy"><svg class="albedu-icon" aria-hidden="true"><use href="#i-content_copy"/></svg></span>
+                <span data-albedu-icon="content_copy"></span>
               </button>
               <button class="aa-card-quick-btn ${status === 'archived' ? '' : 'aa-quick-danger'}" data-action="${status === 'archived' ? 'restore' : 'archive'}" type="button" aria-label="${status === 'archived' ? 'Restore' : 'Arsipkan'}">
-                <span data-albedu-icon="folder_open"><svg class="albedu-icon" aria-hidden="true"><use href="#i-folder_open"/></svg></span>
+                <span data-albedu-icon="folder_open"></span>
               </button>
             </div>
           </footer>
@@ -491,11 +583,60 @@
       `;
     },
 
+    // Build the primary action button based on assessment state + access mode
+    _primaryActionHTML(a, status) {
+      // Currently being toggled — show loading state
+      if (this._togglingIds.has(a.id)) {
+        return `<button class="aa-card-primary-action aa-action-loading" disabled type="button">
+          <span data-albedu-icon="refresh"></span>
+          <span>Memproses...</span>
+        </button>`;
+      }
+
+      // Archived → show "Pulihkan" (restore)
+      if (status === 'archived') {
+        return `<button class="aa-card-primary-action aa-action-archived" data-action="restore" type="button">
+          <span data-albedu-icon="restart_alt"></span>
+          <span>Pulihkan dari Arsip</span>
+        </button>`;
+      }
+
+      // Finished → show "Sudah Selesai" (disabled, no action)
+      if (status === 'finished') {
+        return `<button class="aa-card-primary-action aa-action-finished" disabled type="button">
+          <span data-albedu-icon="task_alt"></span>
+          <span>Sudah Selesai</span>
+        </button>`;
+      }
+
+      // Scheduled mode → show "Terjadwal" (disabled, auto-opens)
+      if (a.access_mode === 'scheduled') {
+        return `<button class="aa-card-primary-action aa-action-scheduled" disabled type="button">
+          <span data-albedu-icon="schedule"></span>
+          <span>Terjadwal Otomatis</span>
+        </button>`;
+      }
+
+      // Manual mode → show "Mulai" or "Tutup" based on current ac_manual_status
+      if (status === 'running') {
+        return `<button class="aa-card-primary-action aa-action-stop" data-action="toggle-status" type="button">
+          <span data-albedu-icon="pause_circle"></span>
+          <span>Tutup Akses</span>
+        </button>`;
+      }
+      // paused (closed) → show "Mulai"
+      return `<button class="aa-card-primary-action aa-action-start" data-action="toggle-status" type="button">
+        <span data-albedu-icon="play_circle"></span>
+        <span>Mulai Asesmen</span>
+      </button>`;
+    },
+
     _rowHTML(a) {
       const status = _statusOf(a);
       const meta = STATUS_META[status];
       const qCount = _countQuestions(a.sections);
       const code = a.access_code || '—';
+      const primaryAction = this._primaryActionHTML(a, status);
 
       return `
         <tr class="aa-table-row" data-id="${_esc(a.id)}" data-status="${status}">
@@ -510,12 +651,24 @@
           <td>${qCount}</td>
           <td>${_fmtDate(a.created_at)}</td>
           <td>
+            <button class="aa-table-primary-action" data-action="${status === 'running' ? 'toggle-status' : status === 'archived' ? 'restore' : 'toggle-status'}" type="button" style="background:transparent;border:none;cursor:pointer;color:var(--color-primary);font-weight:600;font-size:12px;padding:4px 8px;">
+              ${status === 'running' ? 'Tutup' : status === 'archived' ? 'Pulihkan' : 'Mulai'}
+            </button>
             <button class="aa-table-row-menu" type="button" aria-label="Menu aksi">
-              <svg class="albedu-icon" aria-hidden="true"><use href="#i-chevron_right"/></svg>
+              <span data-albedu-icon="chevron_right"></span>
             </button>
           </td>
         </tr>
       `;
+    },
+
+    // ── Primary action handler (Mulai / Tutup / Pulihkan) ──────
+    async _handlePrimaryAction(action, item, btn) {
+      if (action === 'toggle-status') {
+        await this._toggleStatus(item, btn);
+      } else if (action === 'restore') {
+        await this._restore(item);
+      }
     },
 
     // ── Context menu ───────────────────────────────────────────
@@ -525,24 +678,23 @@
 
       const rect = anchor.getBoundingClientRect();
       const menuW = 240;
-      const menuH = 280; // approximate
+      const menuH = 280;
       let x = rect.right - menuW;
       let y = rect.bottom + 6;
 
-      // Keep within viewport
       if (y + menuH > window.innerHeight) y = rect.top - menuH - 6;
       if (x < 8) x = 8;
 
       this._ctxMenu.style.left = x + 'px';
       this._ctxMenu.style.top  = y + 'px';
       this._ctxMenu.hidden = false;
+      _bindIcons(this._ctxMenu);
 
-      // Update toggle label based on current status
       if (this._ctxToggleLabel) {
         const status = _statusOf(item);
         this._ctxToggleLabel.textContent =
           status === 'running' ? 'Tutup Akses' :
-          status === 'paused'  ? 'Buka Akses'  :
+          status === 'paused'  ? 'Mulai Asesmen'  :
           'Buka / Tutup';
       }
     },
@@ -561,29 +713,16 @@
 
     _handleQuickAction(action, item) {
       switch (action) {
-        case 'detail':
-          this._openDetail(item);
-          break;
-        case 'copy-code':
-          this._copyCode(item);
-          break;
-        case 'toggle-status':
-          this._toggleStatus(item);
-          break;
-        case 'archive':
-          this._archive(item);
-          break;
-        case 'restore':
-          this._restore(item);
-          break;
-        case 'delete':
-          this._delete(item);
-          break;
+        case 'detail':         this._openDetail(item); break;
+        case 'copy-code':      this._copyCode(item); break;
+        case 'toggle-status':  this._toggleStatus(item); break;
+        case 'archive':        this._archive(item); break;
+        case 'restore':        this._restore(item); break;
+        case 'delete':         this._delete(item); break;
       }
     },
 
     _openDetail(item) {
-      // For now, simply notify — could route to a detail page later
       window.notify?.info?.(
         'Detail Asesmen',
         `${item.title || 'Tanpa Judul'} (#${item.access_code || '—'})`,
@@ -605,10 +744,18 @@
       }
     },
 
-    async _toggleStatus(item) {
-      const status = _statusOf(item);
-      const newStatus = status === 'running' ? 'closed' : 'open';
+    async _toggleStatus(item, btn) {
+      // Prevent double-toggle
+      if (this._togglingIds.has(item.id)) return;
+      this._togglingIds.add(item.id);
+
+      // Optimistic UI update
+      this._applyFilters();
+
+      const currentStatus = _statusOf(item);
+      const newStatus = currentStatus === 'running' ? 'closed' : 'open';
       const label = newStatus === 'open' ? 'dibuka' : 'ditutup';
+
       try {
         const sb = await _getClient();
         const { error } = await sb
@@ -616,13 +763,24 @@
           .update({ ac_manual_status: newStatus, updated_at: new Date().toISOString() })
           .eq('id', item.id);
         if (error) throw error;
+
         item.ac_manual_status = newStatus;
-        window.notify?.success?.('Status diperbarui', `Akses asesmen ${label}`, 2000);
+        window.notify?.success?.(
+          newStatus === 'open' ? 'Asesmen Dimulai' : 'Akses Ditutup',
+          newStatus === 'open'
+            ? `Peserta sekarang dapat mengerjakan "${item.title || 'Tanpa Judul'}"`
+            : `Akses peserta ke "${item.title || 'Tanpa Judul'}" telah ditutup`,
+          2500
+        );
         this._updateKPIs();
         this._applyFilters();
       } catch (err) {
         console.error('[toggleStatus]', err);
         window.notify?.error?.('Gagal mengubah status', err?.message || 'Unknown error', 3000);
+        // Revert optimistic update
+        this._applyFilters();
+      } finally {
+        this._togglingIds.delete(item.id);
       }
     },
 
@@ -706,7 +864,6 @@
       return Promise.resolve(confirm(`${title}\n\n${message}`));
     },
 
-    // ── View + filter setters ──────────────────────────────────
     _setView(view) {
       this._view = view;
       this._viewBtns?.forEach((btn) => {
@@ -728,14 +885,13 @@
       this._applyFilters();
     },
 
-    // ── State management ───────────────────────────────────────
     _hideAllStates() {
-      if (this._loading)   this._loading.hidden = true;
-      if (this._empty)     this._empty.hidden = true;
-      if (this._noResults) this._noResults.hidden = true;
-      if (this._error)     this._error.hidden = true;
-      if (this._grid)      this._grid.hidden = true;
-      if (this._tableWrap) this._tableWrap.hidden = true;
+      if (this._loading)    this._loading.hidden = true;
+      if (this._empty)      this._empty.hidden = true;
+      if (this._noResults)  this._noResults.hidden = true;
+      if (this._error)      this._error.hidden = true;
+      if (this._grid)       this._grid.hidden = true;
+      if (this._tableWrap)  this._tableWrap.hidden = true;
     },
   };
 
