@@ -10,6 +10,7 @@
     <title>Asesmen Aktif — AlbEdu</title>
     <meta name="description" content="AlbEdu - Kelola asesmen yang sedang aktif">
     <meta name="theme-color" content="#2563eb">
+    <meta name="robots" content="noindex, follow">
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="../../public/images/favicon/favicon.ico">
@@ -18,16 +19,12 @@
     <link rel="apple-touch-icon" sizes="180x180" href="../../public/images/favicon/apple-touch-icon.png">
 
     <!-- Design System -->
-        <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
     <script src="../../src/shared/head/critical-css.js"></script>
-
-    <!-- ═══ Design tokens ═══ -->
     <link rel="stylesheet" href="../../styles/tokens.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/notify.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/dialog.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/label.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/Readnote.css">
-    <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
     <script defer src="../../src/shared/head/fonts.js"></script>
     <script defer src="../../src/shared/icons/icons.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -42,10 +39,9 @@
     <link rel="stylesheet" href="../../styles/skeleton-loading.css">
     <link rel="stylesheet" href="../../styles/navigasi.css">
     <link rel="stylesheet" href="../../styles/notification-panel.css">
-    
-    <link rel="stylesheet" href="../../styles/albedu-v1.css"><!-- Fonts --><!-- Supabase SDK --><!-- Auth baseline -->
+    <link rel="stylesheet" href="../../styles/albedu-v1.css">
     <link rel="stylesheet" href="../../styles/albedu-components.css">
-    <link rel="stylesheet" href="../../styles/pages/create-assessment.css">
+    <link rel="stylesheet" href="../../styles/pages/active-assessments.css">
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
     <script src="../../src/auth/errors.js" defer></script>
@@ -53,13 +49,13 @@
     <script src="../../src/auth/main.js" defer></script>
     <script src="../../src/auth/byteward.js" defer></script>
     <script src="../../src/utils/navigasi.js" defer></script>
-    <script src="../../src/utils/self-storage.js" defer></script><link rel="stylesheet" href="../../styles/pages/active-assessments.css">
+    <script src="../../src/utils/self-storage.js" defer></script>
 </head>
 <body>
     <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
 
     <div class="container">
-        <!-- Sidebar (consistent with other admin pages) -->
+        <!-- Sidebar -->
         <aside class="sidebar" data-icon-eager>
             <div class="logo">
                 <a class="logo-icon-link" href="index.html" data-nav="logo"
@@ -97,7 +93,7 @@
                             <span class="sidebar-text">Asesmen Aktif</span>
                         </a>
                     </li>
-            <li class="menu-item sidebar-item" data-tab="monitoring">
+                    <li class="menu-item sidebar-item" data-tab="monitoring">
                         <a href="monitoring.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="monitor_heart"><svg class="albedu-icon" aria-hidden="true"><use href="#i-monitor_heart"/></svg></span>
                             <span class="sidebar-text">Sesi Aktif</span>
@@ -106,7 +102,7 @@
                     <li class="menu-item sidebar-item" data-tab="results">
                         <a href="results-analytics.html" class="menu-item-content">
                             <span class="sidebar-icon" data-albedu-icon="bar_chart"><svg class="albedu-icon" aria-hidden="true"><use href="#i-bar_chart"/></svg></span>
-                            <span class="sidebar-text">Hasil & Analitik</span>
+                            <span class="sidebar-text">Hasil &amp; Analitik</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="daftar-nama">
@@ -135,7 +131,6 @@
 
         <!-- Main Content -->
         <main class="main-content" id="main-content">
-            <!-- Standard Header (consistent with other admin pages) -->
             <header class="header">
                 <div class="header-left">
                     <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka menu">
@@ -144,59 +139,258 @@
                     <h1 id="page-title">Asesmen Aktif</h1>
                 </div>
                 <div class="header-right">
-                    <!-- Language Switcher -->                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
+                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
                         <span data-albedu-icon="notifications"><svg class="albedu-icon" aria-hidden="true"><use href="#i-notifications"/></svg></span>
                         <span class="badge">0</span>
                     </button>
                 </div>
             </header>
 
-            <!-- Content Area -->
             <div class="content-area">
-                <!-- Toolbar: Search + Stats -->
-                <div class="active-toolbar" role="search">
-                    <div class="active-search">
-                        <span aria-hidden="true" data-albedu-icon="search"><svg class="albedu-icon" aria-hidden="true"><use href="#i-search"/></svg></span>
+
+                <!-- ════════════════════════════════════════════════════════════
+                     PAGE HERO — title + description + CTA
+                     ════════════════════════════════════════════════════════════ -->
+                <section class="aa-hero" aria-labelledby="aa-hero-title">
+                    <div class="aa-hero-text">
+                        <h2 class="aa-hero-title" id="aa-hero-title">Asesmen Aktif</h2>
+                        <p class="aa-hero-sub">
+                            Pantau, kelola, dan kontrol seluruh asesmen yang telah Anda publish.
+                            Klik kartu untuk detail, atau gunakan filter untuk mempersempit daftar.
+                        </p>
+                    </div>
+                    <div class="aa-hero-actions">
+                        <button class="albedu-btn albedu-btn-ghost" id="aa-btn-refresh" type="button" aria-label="Muat ulang">
+                            <span data-albedu-icon="refresh"><svg class="albedu-icon" aria-hidden="true"><use href="#i-refresh"/></svg></span>
+                            <span>Refresh</span>
+                        </button>
+                        <a class="albedu-btn albedu-btn-primary" href="create-assessment.html">
+                            <span data-albedu-icon="add_circle"></span>
+                            <span>Buat Asesmen</span>
+                        </a>
+                    </div>
+                </section>
+
+                <!-- ════════════════════════════════════════════════════════════
+                     KPI STRIP — 4 clickable stat cards
+                     ════════════════════════════════════════════════════════════ -->
+                <section class="aa-kpi-strip" aria-label="Ringkasan status asesmen">
+                    <button class="aa-kpi-card aa-kpi-total is-active" data-filter="all" type="button">
+                        <span class="aa-kpi-icon-wrap aa-kpi-icon-total">
+                            <span data-albedu-icon="assignment"></span>
+                        </span>
+                        <span class="aa-kpi-body">
+                            <span class="aa-kpi-value" id="kpi-total">0</span>
+                            <span class="aa-kpi-label">Total Asesmen</span>
+                        </span>
+                    </button>
+                    <button class="aa-kpi-card aa-kpi-running" data-filter="running" type="button">
+                        <span class="aa-kpi-icon-wrap aa-kpi-icon-running">
+                            <span class="aa-kpi-pulse" aria-hidden="true"></span>
+                            <span data-albedu-icon="check_circle"></span>
+                        </span>
+                        <span class="aa-kpi-body">
+                            <span class="aa-kpi-value" id="kpi-running">0</span>
+                            <span class="aa-kpi-label">Sedang Berjalan</span>
+                        </span>
+                    </button>
+                    <button class="aa-kpi-card aa-kpi-paused" data-filter="paused" type="button">
+                        <span class="aa-kpi-icon-wrap aa-kpi-icon-paused">
+                            <span data-albedu-icon="pause_circle"></span>
+                        </span>
+                        <span class="aa-kpi-body">
+                            <span class="aa-kpi-value" id="kpi-paused">0</span>
+                            <span class="aa-kpi-label">Dijeda / Menunggu</span>
+                        </span>
+                    </button>
+                    <button class="aa-kpi-card aa-kpi-finished" data-filter="finished" type="button">
+                        <span class="aa-kpi-icon-wrap aa-kpi-icon-finished">
+                            <span data-albedu-icon="task_alt"></span>
+                        </span>
+                        <span class="aa-kpi-body">
+                            <span class="aa-kpi-value" id="kpi-finished">0</span>
+                            <span class="aa-kpi-label">Selesai</span>
+                        </span>
+                    </button>
+                    <button class="aa-kpi-card aa-kpi-archived" data-filter="archived" type="button">
+                        <span class="aa-kpi-icon-wrap aa-kpi-icon-archived">
+                            <span data-albedu-icon="folder_open"></span>
+                        </span>
+                        <span class="aa-kpi-body">
+                            <span class="aa-kpi-value" id="kpi-archived">0</span>
+                            <span class="aa-kpi-label">Diarsipkan</span>
+                        </span>
+                    </button>
+                </section>
+
+                <!-- ════════════════════════════════════════════════════════════
+                     TOOLBAR — sticky search + sort + view toggle
+                     ════════════════════════════════════════════════════════════ -->
+                <div class="aa-toolbar" id="aa-toolbar">
+                    <div class="aa-search" role="search">
+                        <span class="aa-search-icon" aria-hidden="true" data-albedu-icon="search">
+                            <svg class="albedu-icon" aria-hidden="true"><use href="#i-search"/></svg>
+                        </span>
                         <input
                             type="search"
                             id="active-search-input"
-                            class="albedu-input"
-                            placeholder="Cari asesmen berdasarkan judul, mata pelajaran, atau kode akses..."
-                            placeholder="Cari asesmen..."
+                            class="aa-search-input"
+                            placeholder="Cari berdasarkan judul, mata pelajaran, atau kode akses..."
                             aria-label="Cari asesmen aktif"
                             autocomplete="off">
+                        <button class="aa-search-clear" id="aa-search-clear" type="button" aria-label="Hapus pencarian" hidden>
+                            <span data-albedu-icon="close"><svg class="albedu-icon" aria-hidden="true"><use href="#i-close"/></svg></span>
+                        </button>
                     </div>
-                    <div class="active-stats" aria-live="polite">
-                        <span><strong id="active-count">0</strong> asesmen</span>
+
+                    <div class="aa-toolbar-right">
+                        <div class="aa-select-wrap">
+                            <label for="aa-sort" class="aa-select-label">Urutkan</label>
+                            <select id="aa-sort" class="aa-select" aria-label="Urutkan asesmen">
+                                <option value="recent">Terbaru</option>
+                                <option value="oldest">Terlama</option>
+                                <option value="title-asc">Judul (A-Z)</option>
+                                <option value="title-desc">Judul (Z-A)</option>
+                                <option value="subject">Mata Pelajaran</option>
+                                <option value="duration">Durasi</option>
+                            </select>
+                        </div>
+
+                        <div class="aa-view-toggle" role="group" aria-label="Mode tampilan">
+                            <button class="aa-view-btn is-active" data-view="grid" type="button" aria-pressed="true" aria-label="Tampilan kartu">
+                                <span data-albedu-icon="menu_book"><svg class="albedu-icon" aria-hidden="true"><use href="#i-menu_book"/></svg></span>
+                            </button>
+                            <button class="aa-view-btn" data-view="table" type="button" aria-pressed="false" aria-label="Tampilan tabel">
+                                <span data-albedu-icon="table_view"><svg class="albedu-icon" aria-hidden="true"><use href="#i-table_view"/></svg></span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Loading skeleton (shown while data loads) -->
-                <div class="albedu-empty-state" id="active-loading" hidden>
-                    <div class="albedu-spinner" role="status" aria-label="Memuat"></div>
-                    <h3>Memuat asesmen...</h3>
+                <!-- ════════════════════════════════════════════════════════════
+                     FILTER CHIPS — quick filter by status
+                     ════════════════════════════════════════════════════════════ -->
+                <div class="aa-filter-chips" id="aa-filter-chips" role="group" aria-label="Filter status">
+                    <button class="aa-chip is-active" data-filter="all" type="button">
+                        Semua <span class="aa-chip-count" id="chip-all">0</span>
+                    </button>
+                    <button class="aa-chip aa-chip-running" data-filter="running" type="button">
+                        <span class="aa-chip-dot" aria-hidden="true"></span>
+                        Berjalan <span class="aa-chip-count" id="chip-running">0</span>
+                    </button>
+                    <button class="aa-chip aa-chip-paused" data-filter="paused" type="button">
+                        <span class="aa-chip-dot" aria-hidden="true"></span>
+                        Dijeda <span class="aa-chip-count" id="chip-paused">0</span>
+                    </button>
+                    <button class="aa-chip aa-chip-finished" data-filter="finished" type="button">
+                        <span class="aa-chip-dot" aria-hidden="true"></span>
+                        Selesai <span class="aa-chip-count" id="chip-finished">0</span>
+                    </button>
+                    <button class="aa-chip aa-chip-archived" data-filter="archived" type="button">
+                        <span class="aa-chip-dot" aria-hidden="true"></span>
+                        Arsip <span class="aa-chip-count" id="chip-archived">0</span>
+                    </button>
                 </div>
 
-                <!-- ═══ Assessments Grid ═══ -->
-                <div class="active-grid" id="active-grid" aria-live="polite" aria-busy="true"></div>
+                <!-- ════════════════════════════════════════════════════════════
+                     RESULT COUNT
+                     ════════════════════════════════════════════════════════════ -->
+                <div class="aa-result-info" aria-live="polite">
+                    <span id="active-count">0</span> asesmen ditampilkan
+                </div>
 
-                <!-- Empty state -->
-                <div class="albedu-empty-state" id="active-empty" hidden>
-                    <span data-albedu-icon="menu_book"><svg class="albedu-icon" aria-hidden="true"><use href="#i-menu_book"/></svg></span>
-                    <h3>Belum Ada Asesmen Aktif</h3>
-                    <p>Buat asesmen baru atau mulai asesmen yang sudah ada.</p>
-                    <a href="create-assessment.html" class="albedu-btn albedu-btn-primary albedu-btn-sm">
+                <!-- ════════════════════════════════════════════════════════════
+                     LOADING SKELETON
+                     ════════════════════════════════════════════════════════════ -->
+                <div class="aa-skeleton-grid" id="active-loading" hidden>
+                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                    <div class="aa-skeleton-card"><div class="aa-skel-line aa-skel-title"></div><div class="aa-skel-line aa-skel-sub"></div><div class="aa-skel-line aa-skel-meta"></div><div class="aa-skel-line aa-skel-actions"></div></div>
+                </div>
+
+                <!-- ════════════════════════════════════════════════════════════
+                     CONTENT — Grid view (default)
+                     ════════════════════════════════════════════════════════════ -->
+                <div class="active-grid aa-grid-view" id="active-grid" aria-live="polite" aria-busy="true"></div>
+
+                <!-- ════════════════════════════════════════════════════════════
+                     CONTENT — Table view (hidden by default)
+                     ════════════════════════════════════════════════════════════ -->
+                <div class="aa-table-wrap" id="aa-table-wrap" hidden>
+                    <table class="aa-table" id="aa-table">
+                        <thead>
+                            <tr>
+                                <th class="aa-col-status">Status</th>
+                                <th class="aa-col-title">Judul</th>
+                                <th class="aa-col-subject">Mata Pelajaran</th>
+                                <th class="aa-col-code">Kode</th>
+                                <th class="aa-col-duration">Durasi</th>
+                                <th class="aa-col-questions">Soal</th>
+                                <th class="aa-col-created">Dibuat</th>
+                                <th class="aa-col-actions"><span class="sr-only">Aksi</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="aa-table-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- ════════════════════════════════════════════════════════════
+                     EMPTY STATE — no assessments yet
+                     ════════════════════════════════════════════════════════════ -->
+                <div class="aa-empty" id="active-empty" hidden>
+                    <div class="aa-empty-illustration" aria-hidden="true">
+                        <span data-albedu-icon="menu_book"><svg class="albedu-icon" aria-hidden="true"><use href="#i-menu_book"/></svg></span>
+                    </div>
+                    <h3 class="aa-empty-title">Belum Ada Asesmen</h3>
+                    <p class="aa-empty-text">
+                        Anda belum membuat asesmen apa pun. Mulai buat asesmen pertama
+                        Anda dan publish agar peserta dapat mulai mengerjakan.
+                    </p>
+                    <a class="albedu-btn albedu-btn-primary" href="create-assessment.html">
                         <span data-albedu-icon="add_circle"></span>
-                        <span>Buat Asesmen</span>
+                        <span>Buat Asesmen Pertama</span>
                     </a>
                 </div>
 
-                <!-- No results (after search) -->
-                <div class="albedu-empty-state" id="active-no-results" hidden>
-                    <span data-albedu-icon="search_off"></span>
-                    <h3>Tidak Ditemukan</h3>
-                    <p>Coba kata kunci lain.</p>
+                <!-- ════════════════════════════════════════════════════════════
+                     NO RESULTS — after search/filter returns nothing
+                     ════════════════════════════════════════════════════════════ -->
+                <div class="aa-empty aa-empty-noresults" id="active-no-results" hidden>
+                    <div class="aa-empty-illustration" aria-hidden="true">
+                        <span data-albedu-icon="search_off"><svg class="albedu-icon" aria-hidden="true"><use href="#i-search_off"/></svg></span>
+                    </div>
+                    <h3 class="aa-empty-title">Tidak Ditemukan</h3>
+                    <p class="aa-empty-text">
+                        Tidak ada asesmen yang cocok dengan filter atau pencarian Anda.
+                        Coba kata kunci lain atau reset filter.
+                    </p>
+                    <button class="albedu-btn albedu-btn-secondary" id="aa-btn-reset-filter" type="button">
+                        <span data-albedu-icon="restart_alt"><svg class="albedu-icon" aria-hidden="true"><use href="#i-restart_alt"/></svg></span>
+                        <span>Reset Filter</span>
+                    </button>
                 </div>
+
+                <!-- ════════════════════════════════════════════════════════════
+                     ERROR STATE
+                     ════════════════════════════════════════════════════════════ -->
+                <div class="aa-empty aa-empty-error" id="active-error" hidden>
+                    <div class="aa-empty-illustration aa-empty-illustration-error" aria-hidden="true">
+                        <span data-albedu-icon="warning"><svg class="albedu-icon" aria-hidden="true"><use href="#i-warning"/></svg></span>
+                    </div>
+                    <h3 class="aa-empty-title">Gagal Memuat</h3>
+                    <p class="aa-empty-text" id="active-error-text">
+                        Terjadi kesalahan saat memuat data asesmen. Periksa koneksi
+                        internet Anda lalu coba lagi.
+                    </p>
+                    <button class="albedu-btn albedu-btn-primary" id="aa-btn-retry" type="button">
+                        <span data-albedu-icon="refresh"><svg class="albedu-icon" aria-hidden="true"><use href="#i-refresh"/></svg></span>
+                        <span>Coba Lagi</span>
+                    </button>
+                </div>
+
             </div>
 
             <footer class="footer">
@@ -206,15 +400,37 @@
         </main>
     </div>
 
+    <!-- ════════════════════════════════════════════════════════════
+         CONTEXT MENU (right-click or "⋯" button on each card/row)
+         ════════════════════════════════════════════════════════════ -->
+    <div class="aa-ctx-menu" id="aa-ctx-menu" hidden role="menu" aria-label="Aksi asesmen">
+        <button class="aa-ctx-item" data-action="detail" type="button" role="menuitem">
+            <span data-albedu-icon="info"></span>
+            <span>Lihat Detail</span>
+        </button>
+        <button class="aa-ctx-item" data-action="copy-code" type="button" role="menuitem">
+            <span data-albedu-icon="content_copy"></span>
+            <span>Salin Kode Akses</span>
+        </button>
+        <button class="aa-ctx-item" data-action="toggle-status" type="button" role="menuitem">
+            <span data-albedu-icon="sync"></span>
+            <span id="aa-ctx-toggle-label">Buka / Tutup</span>
+        </button>
+        <div class="aa-ctx-divider"></div>
+        <button class="aa-ctx-item aa-ctx-danger" data-action="archive" type="button" role="menuitem">
+            <span data-albedu-icon="folder_open"></span>
+            <span>Arsipkan</span>
+        </button>
+        <button class="aa-ctx-item aa-ctx-danger" data-action="delete" type="button" role="menuitem">
+            <span data-albedu-icon="delete"></span>
+            <span>Hapus Permanen</span>
+        </button>
+    </div>
+
     <script type="module" src="../../src/theme-system/index.js"></script>
-<!-- Active Assessments page controller -->
     <script src="../../src/pages/active-assessments.js" defer></script>
-
-    <!-- Notification Center -->
     <script src="../../src/utils/admin-notification-center.js" defer></script>
-
     <script>
-      // Apply default theme on load (prevents FOUC)
       (function () {
         try {
           var saved = localStorage.getItem('albedu-theme') || 'default';
