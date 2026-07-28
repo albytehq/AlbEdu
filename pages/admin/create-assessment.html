@@ -178,11 +178,50 @@
                             </button>
                         </div>
                         <div class="albedu-card-body">
+                            <!-- Loading state (production-grade) -->
+                            <div class="albedu-list-loading" id="list-loading" hidden>
+                                <div class="albedu-list-loading-status">
+                                    <div class="albedu-list-spinner" aria-hidden="true"></div>
+                                    <span id="list-loading-text">Menyiapkan aplikasi...</span>
+                                </div>
+                                <div class="albedu-list-skeleton-grid">
+                                    <div class="albedu-list-skeleton-card"></div>
+                                    <div class="albedu-list-skeleton-card"></div>
+                                    <div class="albedu-list-skeleton-card"></div>
+                                    <div class="albedu-list-skeleton-card"></div>
+                                </div>
+                            </div>
+
+                            <!-- Grid (loaded state) -->
                             <div class="albedu-assessments-grid" id="assessments-grid" hidden></div>
-                            <div class="albedu-empty-state" id="empty-state">
+
+                            <!-- Empty state (only when ALL conditions met: client ready + session valid + request success + 0 rows) -->
+                            <div class="albedu-empty-state" id="empty-state" hidden>
                                 <span data-albedu-icon="assignment"></span>
                                 <h3>Belum Ada Asesmen</h3>
                                 <p>Klik tombol di atas untuk membuat asesmen pertama Anda.</p>
+                            </div>
+
+                            <!-- Error state -->
+                            <div class="albedu-empty-state albedu-list-error" id="list-error" hidden>
+                                <span data-albedu-icon="warning"></span>
+                                <h3>Gagal Memuat</h3>
+                                <p id="list-error-text">Terjadi kesalahan saat memuat data asesmen.</p>
+                                <button class="albedu-btn albedu-btn-primary albedu-btn-sm" id="list-btn-retry" type="button">
+                                    <span data-albedu-icon="refresh"></span>
+                                    <span>Coba Lagi</span>
+                                </button>
+                            </div>
+
+                            <!-- Unauthorized state -->
+                            <div class="albedu-empty-state albedu-list-unauthorized" id="list-unauthorized" hidden>
+                                <span data-albedu-icon="lock"></span>
+                                <h3>Sesi Berakhir</h3>
+                                <p>Sesi login tidak ditemukan. Silakan login terlebih dahulu.</p>
+                                <a class="albedu-btn albedu-btn-primary albedu-btn-sm" href="../login.html">
+                                    <span data-albedu-icon="login"></span>
+                                    <span>Ke Halaman Login</span>
+                                </a>
                             </div>
                         </div>
                     </div>

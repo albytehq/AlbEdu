@@ -3,6 +3,21 @@
    Warm off-white + cobalt + teal. Enterprise-grade. Minimalist.
    ═══════════════════════════════════════════════════════════════ */
 
+/* CRITICAL: [hidden] attribute override.
+   Elements with display:flex/grid/block (any non-none display) ignore
+   the UA default `[hidden] { display: none }` rule. Without this !important
+   override, hidden state containers (loading, error, unauthorized, grid)
+   still render visually. */
+[hidden],
+#list-loading[hidden],
+#list-error[hidden],
+#list-unauthorized[hidden],
+#empty-state[hidden],
+#assessments-grid[hidden],
+.albedu-modal-overlay[hidden] {
+  display: none !important;
+}
+
 /* ── Wizard Steps ─────────────────────────────────────────────── */
 .albedu-steps { display: flex; align-items: center; gap: 0; margin-bottom: 32px; }
 .albedu-step { display: flex; align-items: center; gap: 8px; cursor: default; }
@@ -512,3 +527,70 @@
 .active-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
 }
+
+/* ═══ LIST VIEW STATES — production-grade loading/empty/error/unauthorized ═ */
+.albedu-list-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.albedu-list-loading-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--color-primary-light, #DBEAFE);
+  border: 1px solid var(--color-primary, #2563EB);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary, #2563EB);
+}
+.albedu-list-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-primary-light, #DBEAFE);
+  border-top-color: var(--color-primary, #2563EB);
+  border-radius: 50%;
+  animation: albedu-list-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes albedu-list-spin {
+  to { transform: rotate(360deg); }
+}
+.albedu-list-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.albedu-list-skeleton-card {
+  background: var(--color-surface, #FCFBF7);
+  border: 1px solid var(--color-border, #D6D3C8);
+  border-radius: 12px;
+  padding: 20px;
+  height: 140px;
+  background: linear-gradient(90deg,
+    var(--color-surface-2, #EFEEE8) 0%,
+    var(--color-surface-3, #E4E2D9) 50%,
+    var(--color-surface-2, #EFEEE8) 100%);
+  background-size: 200% 100%;
+  animation: albedu-list-shimmer 1.6s ease-in-out infinite;
+  border-radius: 12px;
+}
+@keyframes albedu-list-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.albedu-list-error,
+.albedu-list-unauthorized {
+  text-align: center;
+}
+.albedu-list-error span[data-albedu-icon],
+.albedu-list-unauthorized span[data-albedu-icon] {
+  color: var(--color-warning, #B45309);
+}
+.albedu-list-unauthorized span[data-albedu-icon] {
+  color: var(--color-text-muted, #64748B);
+}
+

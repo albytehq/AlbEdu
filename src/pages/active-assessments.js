@@ -164,11 +164,35 @@
       this._sort = 'recent';
       this._ctxTarget = null;
       this._loadingTimer = null;
-      this._loadingAborted = false;
+      this._requestId = 0;          // monotonic counter for race-condition guard
+      this._state = 'booting';      // current state-machine state
       this._togglingIds = new Set(); // assessment IDs currently being toggled
+      this._unsubAuth = null;       // onAuthStateChange unsubscribe fn
 
       this._wireEvents();
+      this._subscribeAuthChanges();
       this.load();
+    },
+
+    // ── Auto-refetch on auth state change ──────────────────────
+    // Fires on SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, USER_UPDATED, INITIALIZE.
+    // Initial fire (INITIALIZE) is a no-op since load() already started above.
+    _subscribeAuthChanges() {
+      if (!window.AlbEdu?.supabase?.auth?.onAuthStateChange) return;
+      this._unsubAuth = window.AlbEdu.supabase.auth.onAuthStateChange((user, event) => {
+        // Ignore INITIALIZE — load() is already running from init()
+        if (event === 'INITIALIZE') return;
+        // SIGNED_IN / TOKEN_REFRESHED / USER_UPDATED → refetch data
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          this.load();
+        }
+        // SIGNED_OUT → clear data and show unauthorized state
+        if (event === 'SIGNED_OUT') {
+          this._allData = [];
+          this._filteredData = [];
+          this._setState('unauthorized', { requestId: ++this._requestId });
+        }
+      });
     },
 
     _wireEvents() {
@@ -243,51 +267,133 @@
       window.addEventListener('resize', () => this._hideCtxMenu());
     },
 
-    // ── Production-grade loading with timeout + abort ──────────
-    _showLoading(text) {
+    // ── Production-grade state machine ─────────────────────────
+    // States: booting → auth-checking → loading-data → loaded | empty | error | unauthorized
+    // Empty state ONLY fires when all 4 conditions are met:
+    //   1. Supabase client ready
+    //   2. Session valid
+    //   3. Request succeeded
+    //   4. Result has 0 rows
+    // Never use _render([]) to mean "session not ready" — that's the bug
+    // that caused fake empty state.
+
+    _setState(state, payload) {
+      // Race-condition guard: if payload carries a requestId that's older than
+      // the current _requestId, this state change belongs to a stale request —
+      // discard it so a slow old response can't overwrite a fresh one.
+      if (payload?.requestId !== undefined && payload.requestId !== this._requestId) {
+        return; // Stale response — discard
+      }
+
+      this._state = state;
       this._hideAllStates();
-      if (this._loading) this._loading.hidden = false;
-      if (this._loadingText) this._loadingText.textContent = text || 'Memuat data asesmen...';
-      if (this._loadingStatus) this._loadingStatus.classList.remove('is-timeout');
-      if (this._grid) this._grid.setAttribute('aria-busy', 'true');
 
-      // Set timeout — if loading takes > 15s, switch to "slow" warning
-      clearTimeout(this._loadingTimer);
-      this._loadingTimer = setTimeout(() => {
-        if (this._loading && !this._loading.hidden) {
-          if (this._loadingText) this._loadingText.textContent = 'Memuat terlalu lama. Periksa koneksi Anda...';
-          if (this._loadingStatus) this._loadingStatus.classList.add('is-timeout');
+      // Update loading status text per state
+      const statusText = {
+        booting: 'Menyiapkan aplikasi...',
+        'auth-checking': 'Memverifikasi sesi...',
+        'loading-data': 'Mengambil data asesmen...',
+        loaded: '',
+        empty: '',
+        error: '',
+        unauthorized: '',
+      }[state] || '';
+
+      if (state === 'booting' || state === 'auth-checking' || state === 'loading-data') {
+        if (this._loading) this._loading.hidden = false;
+        if (this._loadingText) this._loadingText.textContent = statusText;
+        if (this._loadingStatus) this._loadingStatus.classList.remove('is-timeout');
+        if (this._grid) this._grid.setAttribute('aria-busy', 'true');
+
+        // 15s timeout → switch to "slow" warning
+        clearTimeout(this._loadingTimer);
+        this._loadingTimer = setTimeout(() => {
+          if (this._loading && !this._loading.hidden) {
+            if (this._loadingText) this._loadingText.textContent = 'Memuat terlalu lama. Periksa koneksi Anda...';
+            if (this._loadingStatus) this._loadingStatus.classList.add('is-timeout');
+          }
+        }, LOAD_TIMEOUT_MS);
+      } else {
+        clearTimeout(this._loadingTimer);
+        if (this._loading) this._loading.hidden = true;
+        if (this._grid) this._grid.setAttribute('aria-busy', 'false');
+
+        if (state === 'empty') {
+          if (this._empty) { this._empty.hidden = false; _bindIcons(this._empty); }
+        } else if (state === 'error') {
+          if (this._error) {
+            this._error.hidden = false;
+            if (this._errorText) {
+              this._errorText.textContent = payload?.message ||
+                'Terjadi kesalahan saat memuat data asesmen. Periksa koneksi internet Anda lalu coba lagi.';
+            }
+            _bindIcons(this._error);
+          }
+        } else if (state === 'unauthorized') {
+          // Reuse error state with custom message — unauthorized is essentially
+          // an error from the user's perspective (they need to login).
+          if (this._error) {
+            this._error.hidden = false;
+            if (this._errorText) {
+              this._errorText.textContent = 'Sesi login tidak ditemukan. Silakan login terlebih dahulu.';
+            }
+            _bindIcons(this._error);
+          }
         }
-      }, LOAD_TIMEOUT_MS);
+        // 'loaded' state is handled by _render() — caller manages grid/table visibility
+      }
     },
 
-    _hideLoading() {
-      clearTimeout(this._loadingTimer);
-      if (this._loading) this._loading.hidden = true;
-      if (this._loadingStatus) this._loadingStatus.classList.remove('is-timeout');
-      if (this._grid) this._grid.setAttribute('aria-busy', 'false');
-    },
-
-    // ── Data loading ───────────────────────────────────────────
+    // ── Data loading with state machine + requestId guard ──────
     async load() {
-      this._loadingAborted = false;
-      this._showLoading('Memuat data asesmen...');
+      // Bump request id — any in-flight requests with older ids will be discarded
+      const requestId = ++this._requestId;
 
+      // Phase 1: booting — wait for platform layer (supabase client) to be ready
+      this._setState('booting', { requestId });
       try {
-        const sb = await _getClient();
-        if (this._loadingAborted) return;
-
-        if (this._loadingText) this._loadingText.textContent = 'Memverifikasi sesi...';
-        const { data: { session } } = await sb.auth.getSession();
-        if (this._loadingAborted) return;
-
-        if (!session?.user) {
-          this._hideLoading();
-          if (this._empty) this._empty.hidden = false;
-          return;
+        if (window.AlbEdu?.supabase?.ready) {
+          await window.AlbEdu.supabase.ready;
+        } else {
+          // Fallback: poll for client availability (max 10s)
+          const start = Date.now();
+          while (!window.AlbEdu?.supabase?.client && Date.now() - start < 10000) {
+            await new Promise((r) => setTimeout(r, 100));
+          }
         }
+        if (requestId !== this._requestId) return; // stale
+        if (!window.AlbEdu?.supabase?.client) {
+          throw new Error('Platform layer gagal dimuat. Coba refresh halaman.');
+        }
+      } catch (err) {
+        if (requestId !== this._requestId) return;
+        this._setState('error', { requestId, message: err?.message || 'Gagal memuat platform layer.' });
+        return;
+      }
 
-        if (this._loadingText) this._loadingText.textContent = 'Mengambil data asesmen...';
+      // Phase 2: auth-checking — verify session is hydrated
+      this._setState('auth-checking', { requestId });
+      let session;
+      try {
+        const sb = window.AlbEdu.supabase.client;
+        ({ data: { session } } = await sb.auth.getSession());
+        if (requestId !== this._requestId) return; // stale
+      } catch (err) {
+        if (requestId !== this._requestId) return;
+        this._setState('error', { requestId, message: 'Gagal memverifikasi sesi: ' + (err?.message || 'unknown') });
+        return;
+      }
+
+      if (!session?.user) {
+        if (requestId !== this._requestId) return;
+        this._setState('unauthorized', { requestId });
+        return;
+      }
+
+      // Phase 3: loading-data — fetch assessments
+      this._setState('loading-data', { requestId });
+      try {
+        const sb = window.AlbEdu.supabase.client;
         const { data, error } = await sb
           .from('assessments')
           .select('id, access_code, title, subject, duration_minutes, status, ac_manual_status, access_mode, created_at, sections')
@@ -295,26 +401,22 @@
           .order('created_at', { ascending: false })
           .limit(50);
 
-        if (this._loadingAborted) return;
+        if (requestId !== this._requestId) return; // stale — newer request in flight
         if (error) throw error;
 
         this._allData = data || [];
-        this._hideLoading();
-        this._updateKPIs();
-        this._applyFilters();
-      } catch (err) {
-        if (this._loadingAborted) return;
-        console.error('[ActiveAssessments] load failed:', err);
-        this._hideLoading();
-        if (this._error) {
-          this._error.hidden = false;
-          if (this._errorText) {
-            this._errorText.textContent = err?.message
-              ? `Terjadi kesalahan: ${err.message}`
-              : 'Terjadi kesalahan saat memuat data asesmen. Periksa koneksi internet Anda lalu coba lagi.';
-          }
-          _bindIcons(this._error);
+        // Phase 4a: loaded (with data) or 4b: empty (0 rows — final decision)
+        if (this._allData.length === 0) {
+          this._setState('empty', { requestId });
+        } else {
+          this._setState('loaded', { requestId });
+          this._updateKPIs();
+          this._applyFilters();
         }
+      } catch (err) {
+        if (requestId !== this._requestId) return;
+        console.error('[ActiveAssessments] load failed:', err);
+        this._setState('error', { requestId, message: err?.message || 'Gagal mengambil data asesmen.' });
       }
     },
 
@@ -360,12 +462,7 @@
         this._render();
       } catch (err) {
         console.error('[ActiveAssessments] _applyFilters failed:', err);
-        this._hideLoading();
-        if (this._error) {
-          this._error.hidden = false;
-          if (this._errorText) this._errorText.textContent = 'Gagal memfilter data. Coba refresh halaman.';
-          _bindIcons(this._error);
-        }
+        this._setState('error', { message: 'Gagal memfilter data. Coba refresh halaman.' });
       }
     },
 
@@ -413,11 +510,7 @@
         }
       } catch (err) {
         console.error('[ActiveAssessments] _render failed:', err);
-        if (this._error) {
-          this._error.hidden = false;
-          if (this._errorText) this._errorText.textContent = 'Gagal menampilkan data. Coba refresh halaman.';
-          _bindIcons(this._error);
-        }
+        this._setState('error', { message: 'Gagal menampilkan data. Coba refresh halaman.' });
       }
     },
 
