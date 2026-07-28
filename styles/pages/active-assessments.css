@@ -403,6 +403,24 @@
 }
 
 /* ═══ LOADING — production-grade (status + spinner + skeleton) ══ */
+
+/* CRITICAL: [hidden] attribute override.
+   Elements with display:flex (or any display value other than none)
+   ignore the UA default `[hidden] { display: none }` rule. Without
+   this !important override, .aa-loading-wrap[hidden] still renders
+   visually because display:flex wins the cascade. Same applies to
+   .aa-table-wrap and any state container that has a non-none display. */
+.aa-loading-wrap[hidden],
+.aa-empty[hidden],
+.aa-table-wrap[hidden],
+#active-grid[hidden],
+#active-error[hidden],
+#active-no-results[hidden],
+#active-empty[hidden],
+#aa-table-wrap[hidden] {
+  display: none !important;
+}
+
 .aa-loading-wrap {
   display: flex;
   flex-direction: column;
