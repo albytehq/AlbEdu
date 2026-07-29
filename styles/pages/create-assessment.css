@@ -285,7 +285,21 @@
 .albedu-theme-controls { display: flex; flex-direction: column; gap: 16px; }
 .albedu-theme-control-group { display: flex; flex-direction: column; gap: 8px; }
 .albedu-theme-control-group > label,
-.albedu-theme-control-label { font-size: 13px; font-weight: 600; color: var(--color-text-2); }
+.albedu-theme-control-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-2);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.albedu-theme-control-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-faint);
+  font-style: italic;
+}
 .albedu-theme-preview {
   background: var(--color-surface-2); border: 1px solid var(--color-border);
   border-radius: 12px; padding: 20px;
@@ -618,6 +632,7 @@
   --albedu-primary-hover: #1d4ed8;
   --albedu-primary-muted: #eff6ff;
   --albedu-primary-ring: rgba(37, 99, 235, 0.12);
+  --albedu-text-accent: #2563eb;  /* defaults to primary; admin can override */
   --albedu-heading: #0f172a;
   --albedu-body: #64748b;
   --albedu-surface: #ffffff;
@@ -692,12 +707,13 @@
 .preview-take-shell .exam-header__title {
   font-size: 15px;
   font-weight: 700;
-  color: var(--albedu-heading);
+  color: var(--albedu-text-accent, var(--albedu-heading));
   margin: 0;
   letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 220ms ease;
 }
 .preview-take-shell .exam-header__user {
   font-size: 12px;
@@ -746,18 +762,11 @@
   50%      { transform: scale(1.04); box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
 }
 
-/* Progress strip */
-.preview-take-shell .exam-progress-strip {
-  height: 4px;
-  background: var(--albedu-surface-alt);
-  position: relative;
-  overflow: hidden;
-}
-.preview-take-shell .exam-progress-fill {
-  height: 100%;
-  background: var(--albedu-primary);
-  transition: width 350ms ease;
-}
+/* Progress strip removed (v0.821+) — take.html + preview both no longer
+   render this element. CSS kept for back-compat in case any cached copy
+   still has the markup. */
+.preview-take-shell .exam-progress-strip { display: none; }
+.preview-take-shell .exam-progress-fill { display: none; }
 
 /* Main content area */
 .preview-take-shell .exam-main {
@@ -814,9 +823,10 @@
 .preview-take-shell .exam-page-title {
   font-size: 18px;
   font-weight: 700;
-  color: var(--albedu-heading);
+  color: var(--albedu-text-accent, var(--albedu-heading));
   margin: 0;
   letter-spacing: -0.01em;
+  transition: color 220ms ease;
 }
 .preview-take-shell .exam-page-count {
   font-size: 13px;

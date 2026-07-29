@@ -376,8 +376,7 @@
     const state = I.state;
     const total = state.soalPages.reduce((s, p) => s + (p.questions?.length || 0), 0);
     const answered = Object.values(state.jawaban).filter(Boolean).length;
-    const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
-    I.dom.progressFill.style.width = `${pct}%`;
+    // Progress bar removed from UI (v0.821+) — only update nav counter now.
     if (I.dom.navProgress) I.dom.navProgress.textContent = `${answered}/${total}`;
   }
 

@@ -39,13 +39,22 @@ function withOpacity(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export function deriveColors(primary) {
+export function deriveColors(primary, textAccent) {
+  // text_accent defaults to primary if not provided — admin can override
+  // via the theme overlay's "Warna Teks Aksen" picker. Falls back
+  // gracefully so legacy callers who don't pass textAccent still work.
+  const accent = textAccent || primary;
   return {
     // Derived from primary
     primary: primary,
     primary_hover: darken(primary, 0.10),
     primary_muted: lighten(primary, 0.90),
     primary_ring: withOpacity(primary, 0.20),
+
+    // Text accent (defaults to primary) — used for headings/titles
+    // to give the assessment page a "branded" feel without needing
+    // a separate color pick on every title element.
+    text_accent: accent,
 
     // Fixed professional palette
     heading: '#0f172a',

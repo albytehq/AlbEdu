@@ -409,6 +409,9 @@
     const colorHex = document.getElementById('overlay-color-hex');
     const colorReset = document.getElementById('overlay-color-reset');
     const colorQuickpicks = document.getElementById('overlay-color-quickpicks');
+    const textAccentPicker = document.getElementById('overlay-text-accent-picker');
+    const textAccentHex = document.getElementById('overlay-text-accent-hex');
+    const textAccentReset = document.getElementById('overlay-text-accent-reset');
     const fontSelect = document.getElementById('overlay-theme-font');
     const modeSelect = document.getElementById('overlay-theme-mode');
     const resetBtn = document.getElementById('theme-overlay-reset');
@@ -446,11 +449,15 @@
     // identically to the actual peserta experience.
     function injectScopedTheme(theme) {
       if (!previewRoot) return;
-      const derived = window.ThemeSystem.derive(theme.primary || '#2563eb');
+      const derived = window.ThemeSystem.derive(
+        theme.primary || '#2563eb',
+        theme.text_accent || null  // null → deriveColors falls back to primary
+      );
       previewRoot.style.setProperty('--albedu-primary', derived.primary);
       previewRoot.style.setProperty('--albedu-primary-hover', derived.primary_hover);
       previewRoot.style.setProperty('--albedu-primary-muted', derived.primary_muted);
       previewRoot.style.setProperty('--albedu-primary-ring', derived.primary_ring);
+      previewRoot.style.setProperty('--albedu-text-accent', derived.text_accent);
       previewRoot.style.setProperty('--albedu-heading', derived.heading);
       previewRoot.style.setProperty('--albedu-body', derived.body);
       previewRoot.style.setProperty('--albedu-surface', derived.surface);
@@ -470,6 +477,8 @@
         previewRoot.style.setProperty('--albedu-body', '#cbd5e1');
         previewRoot.style.setProperty('--albedu-border', '#334155');
         previewRoot.style.setProperty('--albedu-primary-muted', 'rgba(59, 130, 246, 0.18)');
+        // text_accent is left as derived (either primary or custom) — in dark
+        // mode, light accents look better but we respect admin's choice.
       } else {
         previewRoot.setAttribute('data-mode', 'light');
       }
@@ -482,16 +491,21 @@
         chip.classList.toggle('albedu-active', chip.dataset.preset === draftTheme.preset);
       });
 
-      // Color picker + hex
+      // Primary color picker + hex
       if (colorPicker) colorPicker.value = draftTheme.primary;
       if (colorHex) colorHex.textContent = draftTheme.primary;
       updateActiveColor(draftTheme.primary);
+
+      // Text accent picker — defaults to primary if not set
+      const accent = draftTheme.text_accent || draftTheme.primary;
+      if (textAccentPicker) textAccentPicker.value = accent;
+      if (textAccentHex) textAccentHex.textContent = accent;
 
       // Font + mode selects
       if (fontSelect) fontSelect.value = draftTheme.font;
       if (modeSelect) modeSelect.value = draftTheme.mode;
 
-      // WCAG validation
+      // WCAG validation (against primary, since that's the dominant color)
       if (wcagStatus) {
         const validation = window.ThemeSystem.validate(draftTheme.primary);
         if (validation.allPass) {
@@ -798,6 +812,7 @@
         version: '1.0',
         preset: 'default',
         primary: '#2563eb',
+        text_accent: null,  // null = follow primary (default behavior)
         font: 'Plus Jakarta Sans',
         mode: 'auto',
       };
@@ -833,7 +848,7 @@
       syncOverlayFromDraft();
     });
 
-    // ── Color reset ──
+    // ── Color reset (primary only — keeps text_accent if set) ──
     colorReset?.addEventListener('click', () => {
       draftTheme = {
         ...draftTheme,
@@ -842,6 +857,20 @@
         font: 'Plus Jakarta Sans',
         mode: 'auto',
       };
+      syncOverlayFromDraft();
+    });
+
+    // ── Text accent picker (custom accent for titles/headings) ──
+    textAccentPicker?.addEventListener('input', (e) => {
+      draftTheme = { ...draftTheme, text_accent: e.target.value };
+      syncOverlayFromDraft();
+    });
+
+    // ── Text accent reset (back to "follow primary" — null means derive falls back) ──
+    textAccentReset?.addEventListener('click', () => {
+      // Setting text_accent to null makes deriveColors fall back to primary.
+      // Also reset the picker UI to show primary value (visual hint).
+      draftTheme = { ...draftTheme, text_accent: null };
       syncOverlayFromDraft();
     });
 

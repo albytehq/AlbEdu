@@ -597,8 +597,24 @@
               <div class="albedu-color-picker-wrap">
                 <input type="color" id="overlay-color-picker" value="#2563eb">
                 <span class="albedu-color-hex" id="overlay-color-hex">#2563eb</span>
-                <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="overlay-color-reset" type="button" aria-label="Reset warna">
+                <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="overlay-color-reset" type="button" aria-label="Reset warna utama">
                   <span data-albedu-icon="restart_alt"></span>
+                </button>
+              </div>
+            </section>
+
+            <!-- Custom text accent color (defaults to primary) -->
+            <section class="albedu-theme-control-group">
+              <label class="albedu-theme-control-label">
+                Warna Teks Aksen
+                <span class="albedu-theme-control-hint">opsional · default = warna utama</span>
+              </label>
+              <div class="albedu-color-picker-wrap">
+                <input type="color" id="overlay-text-accent-picker" value="#2563eb">
+                <span class="albedu-color-hex" id="overlay-text-accent-hex">#2563eb</span>
+                <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="overlay-text-accent-reset" type="button" aria-label="Reset ke warna utama">
+                  <span data-albedu-icon="restart_alt"></span>
+                  <span>Ikut Warna Utama</span>
                 </button>
               </div>
             </section>
@@ -670,10 +686,7 @@
                   </div>
                 </header>
 
-                <!-- Progress strip -->
-                <div class="exam-progress-strip" aria-hidden="true">
-                  <div class="exam-progress-fill" style="width: 15%"></div>
-                </div>
+                <!-- Progress strip removed (v0.821+) — cleaner student UI -->
 
                 <!-- Main content area -->
                 <div class="exam-main">

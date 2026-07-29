@@ -53,8 +53,8 @@ const ThemeSystem = {
   },
 
   // Derive colors without applying
-  derive(primary) {
-    return deriveColors(primary);
+  derive(primary, textAccent) {
+    return deriveColors(primary, textAccent);
   },
 
   // Reset to default

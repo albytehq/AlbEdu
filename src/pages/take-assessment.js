@@ -78,7 +78,7 @@
     dom.examUserText  = document.getElementById('exam-user-text');
     dom.examTimer     = document.getElementById('exam-timer');
     dom.timerDisplay  = document.getElementById('timer-display');
-    dom.progressFill  = document.getElementById('progress-fill');
+    dom.progressFill  = document.getElementById('progress-fill'); // null after v0.821 (bar removed) — kept for back-compat with _updateProgress()
     dom.pageTabs      = document.getElementById('page-tabs');
     dom.pageTitle     = document.getElementById('page-title');
     dom.pageCount     = document.getElementById('page-count');

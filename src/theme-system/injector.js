@@ -1,7 +1,7 @@
 // theme-system/injector.js — inject CSS custom properties into :root.
 
 export function injectTheme(theme) {
-  const colors = deriveColors(theme.primary);
+  const colors = deriveColors(theme.primary, theme.text_accent);
   const root = document.documentElement;
 
   // CSS Custom Properties
@@ -9,6 +9,7 @@ export function injectTheme(theme) {
   root.style.setProperty('--albedu-primary-hover', colors.primary_hover);
   root.style.setProperty('--albedu-primary-muted', colors.primary_muted);
   root.style.setProperty('--albedu-primary-ring', colors.primary_ring);
+  root.style.setProperty('--albedu-text-accent', colors.text_accent);
   root.style.setProperty('--albedu-heading', colors.heading);
   root.style.setProperty('--albedu-body', colors.body);
   root.style.setProperty('--albedu-surface', colors.surface);
