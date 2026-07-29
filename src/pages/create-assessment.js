@@ -577,6 +577,7 @@
       document.body.style.overflow = 'hidden'; // lock scroll
 
       syncOverlayFromDraft();
+      _startPreviewInteractions();
     });
 
     // ── Close overlay (with animation) ──
@@ -584,10 +585,180 @@
       overlay.classList.remove('is-visible');
       overlay.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
+      _stopPreviewInteractions();
       // Wait for transition before hiding
       setTimeout(() => {
         overlay.hidden = true;
       }, 220);
+    }
+
+    // ── Preview interactions (live timer + clickable options/tabs/nav) ──
+    // The preview is decorative (for theme visualization), but making it
+    // interactive sells the "this is what your students will see" feeling.
+    // All interactions are scoped to the preview root — never affect wizard form.
+    let previewTimerId = null;
+    let previewSecondsRemaining = 60 * 60; // 60 minutes
+    let previewActiveIdx = 0;              // active question index (0 or 1)
+    const PREVIEW_TOTAL_QUESTIONS = 20;     // shown in nav progress + progress fill
+
+    function _formatTimer(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function _updateProgressFill() {
+      const fill = previewRoot?.querySelector('.exam-progress-fill');
+      if (!fill) return;
+      // 3 questions answered out of 20 = 15% (matches initial static state)
+      const answeredCount = previewRoot?.querySelectorAll('.option-item.selected').length || 0;
+      const pct = (answeredCount / PREVIEW_TOTAL_QUESTIONS) * 100;
+      fill.style.width = pct + '%';
+    }
+
+    function _updateNavProgress() {
+      const progress = previewRoot?.querySelector('.exam-nav__progress');
+      if (progress) {
+        const answeredCount = previewRoot?.querySelectorAll('.option-item.selected').length || 0;
+        progress.textContent = `${answeredCount}/${PREVIEW_TOTAL_QUESTIONS}`;
+      }
+    }
+
+    function _updateTimerDisplay() {
+      const timerText = previewRoot?.querySelector('.exam-timer span:last-child');
+      if (timerText) timerText.textContent = _formatTimer(previewSecondsRemaining);
+      // Visual states: warning < 5 min, critical < 1 min
+      const timerEl = previewRoot?.querySelector('.exam-timer');
+      if (timerEl) {
+        timerEl.classList.toggle('warning', previewSecondsRemaining <= 300 && previewSecondsRemaining > 60);
+        timerEl.classList.toggle('critical', previewSecondsRemaining <= 60);
+      }
+    }
+
+    function _startPreviewInteractions() {
+      _stopPreviewInteractions(); // idempotent — kill any prior timer
+
+      // Reset state on each open
+      previewSecondsRemaining = 60 * 60;
+      previewActiveIdx = 0;
+      _updateTimerDisplay();
+      _updateProgressFill();
+      _updateNavProgress();
+
+      // Live timer countdown — updates every 1s, only while overlay visible
+      previewTimerId = setInterval(() => {
+        if (!overlay.classList.contains('is-visible')) {
+          _stopPreviewInteractions();
+          return;
+        }
+        if (previewSecondsRemaining > 0) {
+          previewSecondsRemaining--;
+          _updateTimerDisplay();
+        }
+      }, 1000);
+
+      // ── Wire option selection (click option → toggle selected) ──
+      previewRoot?.querySelectorAll('.option-item').forEach((opt) => {
+        opt.addEventListener('click', () => {
+          const list = opt.closest('.option-list');
+          if (!list) return;
+          // Single-select within a question: clear siblings, then toggle self
+          const wasSelected = opt.classList.contains('selected');
+          list.querySelectorAll('.option-item').forEach((o) => {
+            o.classList.remove('selected');
+            o.setAttribute('aria-checked', 'false');
+          });
+          if (!wasSelected) {
+            opt.classList.add('selected');
+            opt.setAttribute('aria-checked', 'true');
+          }
+          // Update parent question card .answered state
+          const card = opt.closest('.exam-question-card');
+          if (card) {
+            const hasSelected = !!list.querySelector('.option-item.selected');
+            card.classList.toggle('answered', hasSelected);
+          }
+          _updateProgressFill();
+          _updateNavProgress();
+        });
+      });
+
+      // ── Wire page tabs (Bagian 1 / Bagian 2 click → switch active) ──
+      previewRoot?.querySelectorAll('.page-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          previewRoot?.querySelectorAll('.page-tab').forEach((t) => {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          tab.classList.add('active');
+          tab.setAttribute('aria-selected', 'true');
+          // Update page title to match tab
+          const pageTitle = previewRoot?.querySelector('.exam-page-title');
+          if (pageTitle) pageTitle.textContent = tab.textContent;
+          // Update page count (visual flair: Bagian 1 = 10 Soal, Bagian 2 = 5 Soal)
+          const pageCount = previewRoot?.querySelector('.exam-page-count');
+          if (pageCount) {
+            pageCount.textContent = tab.textContent.includes('1') ? '10 Soal' : '5 Soal';
+          }
+        });
+      });
+
+      // ── Wire Prev/Next buttons (cycle through 2 mock questions) ──
+      const navBtns = previewRoot?.querySelectorAll('.nav-btn');
+      const prevBtn = navBtns?.[0]; // first nav-btn = Sebelumnya
+      const nextBtn = navBtns?.[1]; // second = Selanjutnya
+
+      const updateActiveQuestion = () => {
+        const cards = previewRoot?.querySelectorAll('.exam-question-card');
+        if (!cards?.length) return;
+        cards.forEach((c, i) => {
+          c.style.display = (i === previewActiveIdx) ? '' : 'none';
+        });
+        // Update question number badges to reflect "active" position
+        cards.forEach((c, i) => {
+          const num = c.querySelector('.question-num');
+          if (num) num.textContent = String(previewActiveIdx + 1 + i);
+        });
+        // Sync nav progress (base = 2 already-answered, +current position)
+        const progress = previewRoot?.querySelector('.exam-nav__progress');
+        if (progress) {
+          // Show "Soal X dari 20" style progress (1-indexed)
+          progress.textContent = `${previewActiveIdx + 1}/${PREVIEW_TOTAL_QUESTIONS}`;
+        }
+        // Update progress fill (visualize progress through 20 questions)
+        const fill = previewRoot?.querySelector('.exam-progress-fill');
+        if (fill) {
+          const pct = ((previewActiveIdx + 1) / PREVIEW_TOTAL_QUESTIONS) * 100;
+          fill.style.width = pct + '%';
+        }
+      };
+
+      prevBtn?.addEventListener('click', () => {
+        if (previewActiveIdx > 0) {
+          previewActiveIdx--;
+          updateActiveQuestion();
+        }
+      });
+      nextBtn?.addEventListener('click', () => {
+        const cards = previewRoot?.querySelectorAll('.exam-question-card');
+        if (previewActiveIdx < (cards?.length || 1) - 1) {
+          previewActiveIdx++;
+          updateActiveQuestion();
+        }
+      });
+
+      // Initialize active question state
+      updateActiveQuestion();
+    }
+
+    function _stopPreviewInteractions() {
+      if (previewTimerId) {
+        clearInterval(previewTimerId);
+        previewTimerId = null;
+      }
+      // Note: option/tab/nav click listeners stay attached but are inert
+      // when overlay is hidden — no need to remove them (preview root is
+      // always in DOM, just hidden). They'll work again when overlay reopens.
     }
 
     cancelBtn?.addEventListener('click', () => {

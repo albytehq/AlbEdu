@@ -721,8 +721,24 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 15px;
   font-weight: 600;
+  transition: all 200ms ease;
 }
 .preview-take-shell .exam-timer .albedu-icon { width: 18px; height: 18px; }
+/* Timer warning state (< 5 min remaining) */
+.preview-take-shell .exam-timer.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+/* Timer critical state (< 1 min remaining) — pulses */
+.preview-take-shell .exam-timer.critical {
+  background: #fee2e2;
+  color: #b91c1c;
+  animation: preview-take-pulse 1s ease-in-out infinite;
+}
+@keyframes preview-take-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.35); }
+  50%      { transform: scale(1.04); box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+}
 
 /* Progress strip */
 .preview-take-shell .exam-progress-strip {
