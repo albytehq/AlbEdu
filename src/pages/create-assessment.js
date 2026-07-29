@@ -592,14 +592,19 @@
       }, 220);
     }
 
-    // ── Preview interactions (live timer + clickable options/tabs/nav) ──
+    // ── Preview interactions (clickable options/tabs/nav — NO live timer) ──
     // The preview is decorative (for theme visualization), but making it
     // interactive sells the "this is what your students will see" feeling.
     // All interactions are scoped to the preview root — never affect wizard form.
-    let previewTimerId = null;
-    let previewSecondsRemaining = 60 * 60; // 60 minutes
-    let previewActiveIdx = 0;              // active question index (0 or 1)
-    const PREVIEW_TOTAL_QUESTIONS = 20;     // shown in nav progress + progress fill
+    //
+    // NOTE: Timer stays STATIC at "60:00" — countdown disabled per user
+    // request. The timer pill still shows the duration but doesn't tick.
+    // Warning/critical states can still be triggered via _updateTimerDisplay
+    // if a developer later wants to test them.
+    let previewTimerId = null;            // kept for back-compat — always null now
+    let previewSecondsRemaining = 60 * 60; // 60 minutes (static, never decremented)
+    let previewActiveIdx = 0;
+    const PREVIEW_TOTAL_QUESTIONS = 20;
 
     function _formatTimer(seconds) {
       const m = Math.floor(seconds / 60);
@@ -625,14 +630,10 @@
     }
 
     function _updateTimerDisplay() {
+      // Display the static value (60:00). Warning/critical classes
+      // never toggle here since the timer doesn't decrement.
       const timerText = previewRoot?.querySelector('.exam-timer span:last-child');
       if (timerText) timerText.textContent = _formatTimer(previewSecondsRemaining);
-      // Visual states: warning < 5 min, critical < 1 min
-      const timerEl = previewRoot?.querySelector('.exam-timer');
-      if (timerEl) {
-        timerEl.classList.toggle('warning', previewSecondsRemaining <= 300 && previewSecondsRemaining > 60);
-        timerEl.classList.toggle('critical', previewSecondsRemaining <= 60);
-      }
     }
 
     function _startPreviewInteractions() {
@@ -645,17 +646,8 @@
       _updateProgressFill();
       _updateNavProgress();
 
-      // Live timer countdown — updates every 1s, only while overlay visible
-      previewTimerId = setInterval(() => {
-        if (!overlay.classList.contains('is-visible')) {
-          _stopPreviewInteractions();
-          return;
-        }
-        if (previewSecondsRemaining > 0) {
-          previewSecondsRemaining--;
-          _updateTimerDisplay();
-        }
-      }, 1000);
+      // NO live timer countdown — timer stays static at "60:00".
+      // User-identified: timer shouldn't tick in this preview.
 
       // ── Wire option selection (click option → toggle selected) ──
       previewRoot?.querySelectorAll('.option-item').forEach((opt) => {

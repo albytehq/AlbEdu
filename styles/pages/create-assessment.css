@@ -602,14 +602,18 @@
 
 /* Preview root — scoped CSS variables live here.
    Defaults mirror take-assessment.css fallback values so preview
-   looks identical to actual peserta page before any change. */
+   looks identical to actual peserta page before any change.
+   Scroll: overflow-y auto + align-items flex-start (NOT stretch)
+   so the .preview-take-shell content can exceed viewport and scroll. */
 .albedu-theme-overlay-preview {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 24px;
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: center;
+  /* Scoped theme variables (defaults match take-assessment.css) */
   --albedu-primary: #2563eb;
   --albedu-primary-hover: #1d4ed8;
   --albedu-primary-muted: #eff6ff;
@@ -634,11 +638,13 @@
 }
 
 /* Preview shell — pixel-accurate replica of take.html exam phase.
-   All class names match take-assessment.css so the scoped --albedu-* vars
-   resolve identically to the actual peserta experience. */
+   Shell grows naturally with content (no forced height), so when
+   content exceeds viewport the parent .albedu-theme-overlay-preview
+   scrolls. */
 .preview-take-shell {
   width: 100%;
   max-width: 720px;
+  min-height: 100%;
   background: var(--albedu-surface);
   border: 1px solid var(--albedu-border);
   border-radius: 12px;
@@ -647,7 +653,7 @@
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
   display: flex;
   flex-direction: column;
-  align-self: stretch;
+  margin: 0 auto;
 }
 
 /* Exam header — sticky inside shell */
