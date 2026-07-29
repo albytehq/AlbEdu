@@ -368,99 +368,48 @@
                             </label>
                         </div>
 
-                        <!-- ═══ THEME EDITOR (Google Form-like) ═══ -->
+                        <!-- ═══ THEME EDITOR (Default/Custom toggle + Overlay) ═══ -->
                         <div class="albedu-theme-section">
                             <h3 class="albedu-card-title" style="font-size: 15px; margin-bottom: 4px;">Tema Visual</h3>
-                            <p class="albedu-card-desc" style="margin-bottom: 16px;">Kustomisasi warna asesmen untuk peserta. Biarkan default untuk tema AlbEdu standar.</p>
+                            <p class="albedu-card-desc" style="margin-bottom: 16px;">Pilih "Default" untuk tema AlbEdu standar, atau "Custom" untuk kustomisasi warna, font, dan mode.</p>
 
-                            <div class="albedu-theme-grid">
-                                <!-- Controls (left) -->
-                                <div class="albedu-theme-controls">
-                                    <!-- Preset chips -->
-                                    <div class="albedu-theme-control-group">
-                                        <label>Template</label>
-                                        <div class="albedu-preset-chips" id="preset-chips">
-                                            <button class="albedu-preset-chip albedu-active" data-preset="default" type="button">Default</button>
-                                            <button class="albedu-preset-chip" data-preset="modern" type="button">Modern</button>
-                                            <button class="albedu-preset-chip" data-preset="dark" type="button">Dark</button>
-                                            <button class="albedu-preset-chip" data-preset="focus" type="button">Focus</button>
-                                            <button class="albedu-preset-chip" data-preset="school" type="button">School</button>
-                                        </div>
-                                    </div>
+                            <!-- Default / Custom toggle -->
+                            <div class="albedu-theme-mode-toggle" role="radiogroup" aria-label="Mode tema">
+                                <label class="albedu-theme-mode-option">
+                                    <input type="radio" name="theme_mode_toggle" value="default" checked>
+                                    <span class="albedu-theme-mode-card">
+                                        <span class="albedu-theme-mode-icon" data-albedu-icon="auto_fix_high"></span>
+                                        <span class="albedu-theme-mode-text">
+                                            <span class="albedu-theme-mode-title">Default</span>
+                                            <span class="albedu-theme-mode-desc">Tema AlbEdu standar</span>
+                                        </span>
+                                    </span>
+                                </label>
+                                <label class="albedu-theme-mode-option">
+                                    <input type="radio" name="theme_mode_toggle" value="custom">
+                                    <span class="albedu-theme-mode-card">
+                                        <span class="albedu-theme-mode-icon" data-albedu-icon="palette"></span>
+                                        <span class="albedu-theme-mode-text">
+                                            <span class="albedu-theme-mode-title">Custom</span>
+                                            <span class="albedu-theme-mode-desc">Atur warna, font &amp; mode</span>
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
 
-                                    <!-- Quick-pick colors -->
-                                    <div class="albedu-theme-control-group">
-                                        <label>Warna Utama</label>
-                                        <div class="albedu-color-quickpicks" id="color-quickpicks"></div>
-                                        <div class="albedu-color-picker-wrap">
-                                            <input type="color" id="color-picker" value="#2563eb">
-                                            <span class="albedu-color-hex" id="color-hex">#2563eb</span>
-                                            <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="color-reset" type="button" aria-label="Reset warna">
-                                                <span data-albedu-icon="restart_alt"></span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Font -->
-                                    <div class="albedu-theme-control-group">
-                                        <label>Font</label>
-                                        <select id="theme-font" class="albedu-select">
-                                            <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
-                                            <option value="Inter">Inter</option>
-                                            <option value="DM Sans">DM Sans</option>
-                                            <option value="system-ui">System UI</option>
-                                        </select>
-                                    </div>
-
-                                    <!-- Mode -->
-                                    <div class="albedu-theme-control-group">
-                                        <label>Mode</label>
-                                        <select id="theme-mode" class="albedu-select">
-                                            <option value="auto">Otomatis (sistem)</option>
-                                            <option value="light">Terang</option>
-                                            <option value="dark">Gelap</option>
-                                        </select>
-                                    </div>
-
-                                    <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="theme-reset-all" type="button">
-                                        <span data-albedu-icon="restart_alt"></span>
-                                        <span>Reset ke Default</span>
-                                    </button>
+                            <!-- Custom mode: show "Pengaturan Tema" button -->
+                            <div class="albedu-theme-custom-actions" id="theme-custom-actions" hidden>
+                                <div class="albedu-theme-current-info" id="theme-current-info">
+                                    <span class="albedu-theme-swatch" id="theme-current-swatch"></span>
+                                    <span class="albedu-theme-current-text">
+                                        <strong id="theme-current-name">Default</strong>
+                                        <span id="theme-current-detail">Plus Jakarta Sans · Otomatis</span>
+                                    </span>
                                 </div>
-
-                                <!-- Live Preview (right) -->
-                                <div>
-                                    <div class="albedu-theme-preview">
-                                        <div class="albedu-theme-preview-title">Preview Langsung</div>
-                                        <div class="albedu-preview-card">
-                                            <h4 class="albedu-preview-heading">Judul Asesmen</h4>
-                                            <p class="albedu-preview-question">Berapakah hasil dari 7 × 8?</p>
-                                            <div class="albedu-preview-options">
-                                                <div class="albedu-preview-option">
-                                                    <span class="albedu-preview-radio"></span>
-                                                    <span>A. 54</span>
-                                                </div>
-                                                <div class="albedu-preview-option">
-                                                    <span class="albedu-preview-radio"></span>
-                                                    <span>B. 56</span>
-                                                </div>
-                                                <div class="albedu-preview-option">
-                                                    <span class="albedu-preview-radio"></span>
-                                                    <span>C. 58</span>
-                                                </div>
-                                                <div class="albedu-preview-option">
-                                                    <span class="albedu-preview-radio"></span>
-                                                    <span>D. 64</span>
-                                                </div>
-                                            </div>
-                                            <button class="albedu-btn albedu-btn-primary" type="button">Publish Asesmen</button>
-                                        </div>
-                                        <div class="albedu-wcag-status albedu-wcag-pass" id="wcag-status">
-                                            <span style="font-size: 14px;" data-albedu-icon="check_circle"></span>
-                                            <span>Contrast OK (Pass)</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                <button class="albedu-btn albedu-btn-secondary" id="btn-open-theme-overlay" type="button">
+                                    <span data-albedu-icon="tune"></span>
+                                    <span>Pengaturan Tema</span>
+                                </button>
                             </div>
                         </div>
                     </section>
@@ -590,6 +539,161 @@
           </button>
         </div>
         <div class="albedu-modal-body" id="question-template-body"></div>
+      </div>
+    </div>
+
+    <!-- ═══ THEME OVERLAY (full-screen, production-grade) ════════════
+         Big preview (page-size) + scoped theme controls.
+         Changes affect ONLY the preview inside this overlay — never the
+         wizard form or page shell. On Save → commit draft theme to state.
+         On Cancel → discard draft, restore previous theme_config. -->
+    <div class="albedu-theme-overlay" id="theme-overlay" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="theme-overlay-title">
+      <div class="albedu-theme-overlay-shell">
+        <!-- Top bar -->
+        <header class="albedu-theme-overlay-topbar">
+          <div class="albedu-theme-overlay-title-row">
+            <h2 class="albedu-theme-overlay-title" id="theme-overlay-title">
+              <span data-albedu-icon="palette"></span>
+              <span>Pengaturan Tema Visual</span>
+            </h2>
+            <p class="albedu-theme-overlay-subtitle">Perubahan hanya mempengaruhi preview di sebelah kanan. Klik "Terapkan" untuk menyimpan.</p>
+          </div>
+          <div class="albedu-theme-overlay-actions">
+            <button class="albedu-btn albedu-btn-ghost" id="theme-overlay-cancel" type="button">
+              <span data-albedu-icon="close"></span>
+              <span>Batal</span>
+            </button>
+            <button class="albedu-btn albedu-btn-secondary" id="theme-overlay-reset" type="button">
+              <span data-albedu-icon="restart_alt"></span>
+              <span>Reset</span>
+            </button>
+            <button class="albedu-btn albedu-btn-primary" id="theme-overlay-save" type="button">
+              <span data-albedu-icon="check"></span>
+              <span>Terapkan Tema</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- 2-column body: controls (left, scrollable) + preview (right, big) -->
+        <div class="albedu-theme-overlay-body">
+          <!-- ── LEFT: Controls ── -->
+          <aside class="albedu-theme-overlay-controls" aria-label="Pengaturan tema">
+            <!-- Preset chips -->
+            <section class="albedu-theme-control-group">
+              <label class="albedu-theme-control-label">Template</label>
+              <div class="albedu-preset-chips" id="overlay-preset-chips">
+                <button class="albedu-preset-chip albedu-active" data-preset="default" type="button">Default</button>
+                <button class="albedu-preset-chip" data-preset="modern" type="button">Modern</button>
+                <button class="albedu-preset-chip" data-preset="dark" type="button">Dark</button>
+                <button class="albedu-preset-chip" data-preset="focus" type="button">Focus</button>
+                <button class="albedu-preset-chip" data-preset="school" type="button">School</button>
+              </div>
+            </section>
+
+            <!-- Quick-pick colors -->
+            <section class="albedu-theme-control-group">
+              <label class="albedu-theme-control-label">Warna Utama</label>
+              <div class="albedu-color-quickpicks" id="overlay-color-quickpicks"></div>
+              <div class="albedu-color-picker-wrap">
+                <input type="color" id="overlay-color-picker" value="#2563eb">
+                <span class="albedu-color-hex" id="overlay-color-hex">#2563eb</span>
+                <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="overlay-color-reset" type="button" aria-label="Reset warna">
+                  <span data-albedu-icon="restart_alt"></span>
+                </button>
+              </div>
+            </section>
+
+            <!-- Font -->
+            <section class="albedu-theme-control-group">
+              <label class="albedu-theme-control-label">Font</label>
+              <select id="overlay-theme-font" class="albedu-select">
+                <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+                <option value="Inter">Inter</option>
+                <option value="DM Sans">DM Sans</option>
+                <option value="system-ui">System UI</option>
+              </select>
+            </section>
+
+            <!-- Mode -->
+            <section class="albedu-theme-control-group">
+              <label class="albedu-theme-control-label">Mode</label>
+              <select id="overlay-theme-mode" class="albedu-select">
+                <option value="auto">Otomatis (sistem)</option>
+                <option value="light">Terang</option>
+                <option value="dark">Gelap</option>
+              </select>
+            </section>
+
+            <!-- WCAG status -->
+            <div class="albedu-wcag-status albedu-wcag-pass" id="overlay-wcag-status">
+              <span style="font-size: 14px;" data-albedu-icon="check_circle"></span>
+              <span>Contrast OK (Pass)</span>
+            </div>
+
+            <!-- Hint -->
+            <div class="albedu-theme-overlay-hint">
+              <span data-albedu-icon="info"></span>
+              <span>Preview di kanan menggunakan tema yang sedang kamu atur. Halaman wizard di luar overlay tidak terpengaruh.</span>
+            </div>
+          </aside>
+
+          <!-- ── RIGHT: Big Preview (scoped theme) ── -->
+          <main class="albedu-theme-overlay-preview-wrap" aria-label="Preview tema">
+            <div class="albedu-theme-overlay-preview-toolbar">
+              <span class="albedu-theme-overlay-preview-label">Preview Asesmen</span>
+              <span class="albedu-theme-overlay-preview-meta" id="overlay-preview-meta">Plus Jakarta Sans · Otomatis</span>
+            </div>
+            <!-- The preview root — scoped CSS variables live here, not on documentElement -->
+            <div class="albedu-theme-overlay-preview" id="overlay-preview-root">
+              <div class="albedu-preview-shell">
+                <header class="albedu-preview-shell-header">
+                  <span class="albedu-preview-shell-logo">AlbEdu</span>
+                  <span class="albedu-preview-shell-timer">
+                    <span data-albedu-icon="schedule"></span>
+                    <span>60:00</span>
+                  </span>
+                </header>
+                <main class="albedu-preview-shell-main">
+                  <div class="albedu-preview-shell-progress">
+                    <span class="albedu-preview-shell-progress-label">Soal 3 dari 20</span>
+                    <div class="albedu-preview-shell-progress-bar">
+                      <div class="albedu-preview-shell-progress-fill"></div>
+                    </div>
+                  </div>
+                  <h1 class="albedu-preview-shell-title">Asesmen Tengah Semester Matematika</h1>
+                  <div class="albedu-preview-shell-section">Bagian 1 · Pilihan Ganda</div>
+                  <div class="albedu-preview-shell-question">Berapakah hasil dari 7 × 8?</div>
+                  <div class="albedu-preview-shell-options">
+                    <div class="albedu-preview-shell-option">
+                      <span class="albedu-preview-shell-radio"></span>
+                      <span>A. 54</span>
+                    </div>
+                    <div class="albedu-preview-shell-option is-selected">
+                      <span class="albedu-preview-shell-radio"></span>
+                      <span>B. 56</span>
+                    </div>
+                    <div class="albedu-preview-shell-option">
+                      <span class="albedu-preview-shell-radio"></span>
+                      <span>C. 58</span>
+                    </div>
+                    <div class="albedu-preview-shell-option">
+                      <span class="albedu-preview-shell-radio"></span>
+                      <span>D. 64</span>
+                    </div>
+                  </div>
+                  <div class="albedu-preview-shell-actions">
+                    <button class="albedu-preview-shell-btn-secondary" type="button">Sebelumnya</button>
+                    <button class="albedu-preview-shell-btn-primary" type="button">Selanjutnya</button>
+                  </div>
+                </main>
+                <footer class="albedu-preview-shell-footer">
+                  <span>© 2026 AlbEdu</span>
+                  <span>v0.821.0</span>
+                </footer>
+              </div>
+            </div>
+          </main>
+        </div>
       </div>
     </div>
 

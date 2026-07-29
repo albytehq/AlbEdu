@@ -389,23 +389,45 @@
     console.info('[CreateAssessment] initialized');
   });
 
-  // Theme Editor (Google Form-like)
+  // Theme Editor (production-grade with Default/Custom toggle + scoped overlay)
   function initThemeEditor() {
-    const presetChips = document.querySelectorAll('.albedu-preset-chip');
-    const colorPicker = document.getElementById('color-picker');
-    const colorHex = document.getElementById('color-hex');
-    const colorReset = document.getElementById('color-reset');
-    const colorQuickpicks = document.getElementById('color-quickpicks');
-    const fontSelect = document.getElementById('theme-font');
-    const modeSelect = document.getElementById('theme-mode');
-    const resetAllBtn = document.getElementById('theme-reset-all');
-    const wcagStatus = document.getElementById('wcag-status');
+    // ── Toggle refs (Default / Custom) ──
+    const toggleInputs = document.querySelectorAll('input[name="theme_mode_toggle"]');
+    const customActions = document.getElementById('theme-custom-actions');
+    const btnOpenOverlay = document.getElementById('btn-open-theme-overlay');
 
-    if (!colorPicker || !window.ThemeSystem) {
-      console.warn('[theme] ThemeSystem not loaded or color picker missing');
+    // ── Current theme info refs (shown when Custom selected) ──
+    const currentSwatch = document.getElementById('theme-current-swatch');
+    const currentName = document.getElementById('theme-current-name');
+    const currentDetail = document.getElementById('theme-current-detail');
+
+    // ── Overlay refs ──
+    const overlay = document.getElementById('theme-overlay');
+    const overlayShell = overlay?.querySelector('.albedu-theme-overlay-shell');
+    const presetChips = overlay?.querySelectorAll('#overlay-preset-chips .albedu-preset-chip');
+    const colorPicker = document.getElementById('overlay-color-picker');
+    const colorHex = document.getElementById('overlay-color-hex');
+    const colorReset = document.getElementById('overlay-color-reset');
+    const colorQuickpicks = document.getElementById('overlay-color-quickpicks');
+    const fontSelect = document.getElementById('overlay-theme-font');
+    const modeSelect = document.getElementById('overlay-theme-mode');
+    const resetBtn = document.getElementById('theme-overlay-reset');
+    const cancelBtn = document.getElementById('theme-overlay-cancel');
+    const saveBtn = document.getElementById('theme-overlay-save');
+    const wcagStatus = document.getElementById('overlay-wcag-status');
+    const previewRoot = document.getElementById('overlay-preview-root');
+    const previewMeta = document.getElementById('overlay-preview-meta');
+
+    if (!toggleInputs.length || !overlay || !window.ThemeSystem) {
+      console.warn('[theme] ThemeSystem not loaded or theme elements missing');
       return;
     }
 
+    // ── Draft theme (working copy inside overlay; committed to _state on Save) ──
+    let draftTheme = { ..._state.examData.theme_config };
+    let savedThemeSnapshot = null; // captured on overlay open, restored on Cancel
+
+    // Build quick-pick color buttons
     const quickColors = window.ThemeSystem.getQuickColors();
     colorQuickpicks.innerHTML = quickColors.map((c) =>
       `<button class="albedu-color-swatch-btn" data-color="${c.hex}" style="background: ${c.hex};" title="${c.name}" type="button"></button>`
@@ -417,75 +439,249 @@
       });
     }
 
-    function applyThemeChange(primary, font, mode, preset) {
-      const theme = {
-        version: '1.0',
-        preset: preset || _state.examData.theme_config.preset,
-        primary: primary || _state.examData.theme_config.primary,
-        font: font || _state.examData.theme_config.font,
-        mode: mode || _state.examData.theme_config.mode,
-      };
-      window.ThemeSystem.apply(theme);
-      _state.examData.theme_config = theme;
+    // ── SCOPED theme injector ──
+    // Injects CSS variables ONLY into the overlay preview root element.
+    // Never touches documentElement — the wizard form stays unaffected.
+    function injectScopedTheme(theme) {
+      if (!previewRoot) return;
+      const derived = window.ThemeSystem.derive(theme.primary || '#1D4ED8');
+      previewRoot.style.setProperty('--albedu-primary', derived.primary);
+      previewRoot.style.setProperty('--albedu-primary-hover', derived.primary_hover);
+      previewRoot.style.setProperty('--albedu-primary-light', derived.primary_muted);
+      previewRoot.style.setProperty('--albedu-primary-ring', derived.primary_ring);
+      previewRoot.style.setProperty('--albedu-heading', derived.heading);
+      previewRoot.style.setProperty('--albedu-body', derived.body);
+      previewRoot.style.setProperty('--albedu-surface', derived.surface);
+      previewRoot.style.setProperty('--albedu-surface-alt', derived.surface_alt);
+      previewRoot.style.setProperty('--albedu-border', derived.border);
+      previewRoot.style.setProperty('--albedu-font', `'${theme.font || 'Plus Jakarta Sans'}', system-ui, sans-serif`);
 
-      colorPicker.value = theme.primary;
-      colorHex.textContent = theme.primary;
-      updateActiveColor(theme.primary);
-
-      const validation = window.ThemeSystem.validate(theme.primary);
-      if (validation.allPass) {
-        wcagStatus.className = 'albedu-wcag-status albedu-wcag-pass';
-        wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="check_circle"></span><span>' + t('create.wcag_pass', null, 'Contrast OK (Pass)') + '</span>';
+      // Dark mode (scoped to preview root only)
+      const mode = theme.mode || 'auto';
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (mode === 'dark' || (mode === 'auto' && prefersDark)) {
+        previewRoot.setAttribute('data-mode', 'dark');
+        previewRoot.style.setProperty('--albedu-surface', '#1E293B');
+        previewRoot.style.setProperty('--albedu-surface-alt', '#0F172A');
+        previewRoot.style.setProperty('--albedu-heading', '#F1F5F9');
+        previewRoot.style.setProperty('--albedu-body', '#CBD5E1');
+        previewRoot.style.setProperty('--albedu-border', '#334155');
       } else {
-        wcagStatus.className = 'albedu-wcag-status albedu-wcag-fail';
-        wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="warning"></span><span>' + t('create.wcag_fail', null, 'Warna ini mungkin sulit dibaca. Coba warna lebih gelap.') + '</span>';
+        previewRoot.setAttribute('data-mode', 'light');
       }
     }
 
-    presetChips.forEach((chip) => {
-      chip.addEventListener('click', () => {
-        presetChips.forEach((c) => c.classList.remove('albedu-active'));
-        chip.classList.add('albedu-active');
-        const preset = window.ThemeSystem.getPreset(chip.dataset.preset);
-        applyThemeChange(preset.primary, preset.font, preset.mode, preset.id);
+    // Update overlay control values + preview to reflect draftTheme
+    function syncOverlayFromDraft() {
+      // Preset chips
+      presetChips?.forEach((chip) => {
+        chip.classList.toggle('albedu-active', chip.dataset.preset === draftTheme.preset);
+      });
+
+      // Color picker + hex
+      if (colorPicker) colorPicker.value = draftTheme.primary;
+      if (colorHex) colorHex.textContent = draftTheme.primary;
+      updateActiveColor(draftTheme.primary);
+
+      // Font + mode selects
+      if (fontSelect) fontSelect.value = draftTheme.font;
+      if (modeSelect) modeSelect.value = draftTheme.mode;
+
+      // WCAG validation
+      if (wcagStatus) {
+        const validation = window.ThemeSystem.validate(draftTheme.primary);
+        if (validation.allPass) {
+          wcagStatus.className = 'albedu-wcag-status albedu-wcag-pass';
+          wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="check_circle"></span><span>Contrast OK (Pass)</span>';
+        } else {
+          wcagStatus.className = 'albedu-wcag-status albedu-wcag-fail';
+          wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="warning"></span><span>Warna ini mungkin sulit dibaca. Coba warna lebih gelap.</span>';
+        }
+      }
+
+      // Preview meta (top-right small label)
+      if (previewMeta) {
+        const modeLabel = { auto: 'Otomatis', light: 'Terang', dark: 'Gelap' }[draftTheme.mode] || 'Otomatis';
+        previewMeta.textContent = `${draftTheme.font} · ${modeLabel}`;
+      }
+
+      // Inject scoped theme into preview root
+      injectScopedTheme(draftTheme);
+    }
+
+    // Update the small theme info card shown in the wizard form (Custom mode)
+    function syncWizardThemeInfo() {
+      if (currentSwatch) currentSwatch.style.background = _state.examData.theme_config.primary;
+      if (currentName) {
+        currentName.textContent = _state.examData.theme_config.preset === 'default'
+          ? 'Default'
+          : (_state.examData.theme_config.preset === 'custom' ? 'Custom' : _state.examData.theme_config.preset);
+      }
+      if (currentDetail) {
+        const modeLabel = { auto: 'Otomatis', light: 'Terang', dark: 'Gelap' }[_state.examData.theme_config.mode] || 'Otomatis';
+        currentDetail.textContent = `${_state.examData.theme_config.font} · ${modeLabel} · ${_state.examData.theme_config.primary}`;
+      }
+    }
+
+    // ── Toggle: Default / Custom ──
+    toggleInputs.forEach((input) => {
+      input.addEventListener('change', (e) => {
+        const isCustom = e.target.value === 'custom';
+        if (customActions) customActions.hidden = !isCustom;
+
+        if (isCustom) {
+          // User switching to Custom — keep current theme_config as draft
+          draftTheme = { ..._state.examData.theme_config };
+          syncWizardThemeInfo();
+        } else {
+          // User switching to Default — reset theme_config to defaults
+          _state.examData.theme_config = {
+            version: '1.0',
+            preset: 'default',
+            primary: '#2563eb',
+            font: 'Plus Jakarta Sans',
+            mode: 'auto',
+          };
+          window.CreateAssessment.setState({ examData: _state.examData });
+        }
       });
     });
 
-    colorQuickpicks.addEventListener('click', (e) => {
+    // Initialize toggle state from saved theme_config
+    const initialIsCustom = _state.examData.theme_config.preset !== 'default';
+    if (initialIsCustom) {
+      toggleInputs.forEach((input) => {
+        input.checked = input.value === 'custom';
+      });
+      if (customActions) customActions.hidden = false;
+      syncWizardThemeInfo();
+    }
+
+    // ── Open overlay ──
+    btnOpenOverlay?.addEventListener('click', () => {
+      // Snapshot current theme_config so Cancel can restore
+      savedThemeSnapshot = { ..._state.examData.theme_config };
+      draftTheme = { ..._state.examData.theme_config };
+
+      // Show overlay with animation
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
+      // Trigger animation on next frame
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => overlay.classList.add('is-visible'));
+      });
+      document.body.style.overflow = 'hidden'; // lock scroll
+
+      syncOverlayFromDraft();
+    });
+
+    // ── Close overlay (with animation) ──
+    function closeOverlay() {
+      overlay.classList.remove('is-visible');
+      overlay.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      // Wait for transition before hiding
+      setTimeout(() => {
+        overlay.hidden = true;
+      }, 220);
+    }
+
+    cancelBtn?.addEventListener('click', () => {
+      // Discard draft, restore snapshot
+      if (savedThemeSnapshot) {
+        _state.examData.theme_config = savedThemeSnapshot;
+        window.CreateAssessment.setState({ examData: _state.examData });
+        syncWizardThemeInfo();
+      }
+      closeOverlay();
+    });
+
+    saveBtn?.addEventListener('click', () => {
+      // Commit draft to state
+      _state.examData.theme_config = { ...draftTheme };
+      window.CreateAssessment.setState({ examData: _state.examData });
+      syncWizardThemeInfo();
+      window.notify?.success?.(
+        'Tema Disimpan',
+        'Tema visual berhasil diterapkan ke asesmen.',
+        2000
+      );
+      closeOverlay();
+    });
+
+    resetBtn?.addEventListener('click', () => {
+      // Reset draft to defaults (does NOT save — user still needs to click Terapkan)
+      draftTheme = {
+        version: '1.0',
+        preset: 'default',
+        primary: '#2563eb',
+        font: 'Plus Jakarta Sans',
+        mode: 'auto',
+      };
+      syncOverlayFromDraft();
+    });
+
+    // ── Preset chips ──
+    presetChips?.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const preset = window.ThemeSystem.getPreset(chip.dataset.preset);
+        draftTheme = {
+          ...draftTheme,
+          preset: preset.id,
+          primary: preset.primary,
+          font: preset.font,
+          mode: preset.mode,
+        };
+        syncOverlayFromDraft();
+      });
+    });
+
+    // ── Color quickpicks ──
+    colorQuickpicks?.addEventListener('click', (e) => {
       const btn = e.target.closest('.albedu-color-swatch-btn');
       if (!btn) return;
-      applyThemeChange(btn.dataset.color, null, null, 'custom');
+      draftTheme = { ...draftTheme, preset: 'custom', primary: btn.dataset.color };
+      syncOverlayFromDraft();
     });
 
-    colorPicker.addEventListener('input', (e) => {
-      applyThemeChange(e.target.value, null, null, 'custom');
+    // ── Color picker ──
+    colorPicker?.addEventListener('input', (e) => {
+      draftTheme = { ...draftTheme, preset: 'custom', primary: e.target.value };
+      syncOverlayFromDraft();
     });
 
-    colorReset.addEventListener('click', () => {
-      applyThemeChange('#2563eb', 'Plus Jakarta Sans', 'auto', 'default');
-      presetChips.forEach((c) => c.classList.toggle('albedu-active', c.dataset.preset === 'default'));
+    // ── Color reset ──
+    colorReset?.addEventListener('click', () => {
+      draftTheme = {
+        ...draftTheme,
+        preset: 'default',
+        primary: '#2563eb',
+        font: 'Plus Jakarta Sans',
+        mode: 'auto',
+      };
+      syncOverlayFromDraft();
     });
 
-    fontSelect.addEventListener('change', (e) => {
-      applyThemeChange(null, e.target.value, null, _state.examData.theme_config.preset);
+    // ── Font select ──
+    fontSelect?.addEventListener('change', (e) => {
+      draftTheme = { ...draftTheme, font: e.target.value };
+      syncOverlayFromDraft();
     });
 
-    modeSelect.addEventListener('change', (e) => {
-      applyThemeChange(null, null, e.target.value, _state.examData.theme_config.preset);
+    // ── Mode select ──
+    modeSelect?.addEventListener('change', (e) => {
+      draftTheme = { ...draftTheme, mode: e.target.value };
+      syncOverlayFromDraft();
     });
 
-    resetAllBtn.addEventListener('click', () => {
-      applyThemeChange('#2563eb', 'Plus Jakarta Sans', 'auto', 'default');
-      fontSelect.value = 'Plus Jakarta Sans';
-      modeSelect.value = 'auto';
-      presetChips.forEach((c) => c.classList.toggle('albedu-active', c.dataset.preset === 'default'));
+    // ── Close on Escape ──
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !overlay.hidden && overlay.classList.contains('is-visible')) {
+        cancelBtn?.click();
+      }
     });
 
-    applyThemeChange(
-      _state.examData.theme_config.primary,
-      _state.examData.theme_config.font,
-      _state.examData.theme_config.mode,
-      _state.examData.theme_config.preset
-    );
+    // Initial sync of wizard theme info
+    syncWizardThemeInfo();
   }
 })();
