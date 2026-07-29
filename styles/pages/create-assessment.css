@@ -1107,7 +1107,11 @@
   box-shadow: 0 0 0 3px var(--albedu-primary-ring);
 }
 .preview-take-shell .ifr-field__label {
-  color: var(--albedu-heading);
+  /* Override the global identity-form.css rule to use the scoped
+     --albedu-text-accent var, so labels adapt to admin's text_accent
+     color picker in the theme overlay. */
+  color: var(--albedu-text-accent, var(--albedu-heading));
+  transition: color 220ms ease;
 }
 .preview-take-shell .ifr-required {
   color: var(--albedu-primary);

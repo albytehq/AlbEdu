@@ -135,6 +135,7 @@
       try {
         const cfg = {
           primary: themeConfig.primary || (themeConfig.TW && themeConfig.TW !== 'default' ? themeConfig.TW : undefined),
+          text_accent: themeConfig.text_accent || null,  // null = follow primary (deriveColors fallback)
           font: themeConfig.font || 'Plus Jakarta Sans',
           mode: themeConfig.mode || 'auto',
           preset: themeConfig.preset || 'default',

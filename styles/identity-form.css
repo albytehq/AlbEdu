@@ -385,7 +385,9 @@ textarea.ifr-field__input {
 .ifr-field__label {
   font-size: var(--text-sm);
   font-weight: var(--fw-medium);
-  color: var(--color-text);
+  /* Use theme text-accent if set (assessment theme), else fall back to default text color. */
+  color: var(--albedu-text-accent, var(--color-text));
+  transition: color 220ms ease;
 }
 .ifr-field--error .ifr-field__input {
   border-color: var(--color-destructive);
@@ -476,7 +478,9 @@ textarea.ifr-field__input {
 .ip-field__label {
   font-size: var(--text-sm);
   font-weight: var(--fw-medium);
-  color: var(--color-text);
+  /* Use theme text-accent if set (assessment theme), else fall back to default text color. */
+  color: var(--albedu-text-accent, var(--color-text));
+  transition: color 220ms ease;
 }
 
 .ip-daftar-form {
