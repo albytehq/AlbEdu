@@ -678,73 +678,132 @@
                 <!-- Main content area -->
                 <div class="exam-main">
                   <div class="exam-content">
-                    <!-- Page tabs (Bagian 1 / Bagian 2) -->
-                    <div class="page-tabs" role="tablist" aria-label="Bagian Soal">
-                      <button class="page-tab active" type="button" role="tab" aria-selected="true">Bagian 1</button>
-                      <button class="page-tab" type="button" role="tab" aria-selected="false">Bagian 2</button>
+                    <!-- Page tabs — Identitas first (peserta isi identitas dulu),
+                         then Bagian 1 & 2 (question sections) -->
+                    <div class="page-tabs" role="tablist" aria-label="Bagian Asesmen">
+                      <button class="page-tab active" type="button" role="tab" aria-selected="true" data-tab="identitas">Identitas</button>
+                      <button class="page-tab" type="button" role="tab" aria-selected="false" data-tab="bagian-1">Bagian 1</button>
+                      <button class="page-tab" type="button" role="tab" aria-selected="false" data-tab="bagian-2">Bagian 2</button>
                     </div>
 
-                    <!-- Page header -->
-                    <div class="exam-page-header">
-                      <h2 class="exam-page-title">Bagian 1</h2>
-                      <div class="exam-page-count">10 Soal</div>
-                    </div>
-
-                    <!-- Question card (with .answered state) -->
-                    <article class="exam-question-card answered">
-                      <div class="question-num" aria-label="Soal nomor 3">3</div>
-                      <div class="question-text">Berapakah hasil dari 7 × 8?</div>
-                      <div class="option-list" role="radiogroup" aria-label="Pilihan jawaban soal 3">
-                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
-                          <div class="option-radio" aria-hidden="true"></div>
-                          <div class="option-key">A</div>
-                          <div class="option-label">54</div>
+                    <!-- ── IDENTITAS PHASE (active by default) ──
+                         Mirror take.html #identity-phase structure:
+                         .identity-card > .identity-banner + .identity-card__note + .identity-card__body -->
+                    <section class="preview-identity-section" data-section="identitas">
+                      <div class="identity-card">
+                        <header class="identity-banner">
+                          <div class="identity-banner__meta">Matematika</div>
+                          <h1 class="identity-banner__title">Asesmen Tengah Semester Matematika</h1>
+                          <div class="identity-banner__chips">
+                            <span class="identity-banner__chip">
+                              <span data-albedu-icon="schedule"></span>
+                              <span>60 menit</span>
+                            </span>
+                            <span class="identity-banner__chip">
+                              <span data-albedu-icon="quiz"></span>
+                              <span>20 soal</span>
+                            </span>
+                          </div>
+                        </header>
+                        <div class="identity-card__note">
+                          <strong>Catatan:</strong> Kerjakan dengan jujur. Tidak boleh mencontek atau bekerja sama dengan peserta lain. Selamat mengerjakan!
                         </div>
-                        <div class="option-item selected" role="radio" aria-checked="true" tabindex="0">
-                          <div class="option-radio" aria-hidden="true"></div>
-                          <div class="option-key">B</div>
-                          <div class="option-label">56</div>
-                        </div>
-                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
-                          <div class="option-radio" aria-hidden="true"></div>
-                          <div class="option-key">C</div>
-                          <div class="option-label">58</div>
-                        </div>
-                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
-                          <div class="option-radio" aria-hidden="true"></div>
-                          <div class="option-key">D</div>
-                          <div class="option-label">64</div>
-                        </div>
-                      </div>
-                    </article>
-
-                    <!-- Unanswered question card for contrast -->
-                    <article class="exam-question-card">
-                      <div class="question-num" aria-label="Soal nomor 4">4</div>
-                      <div class="question-text">Sebuah segitiga memiliki alas 12 cm dan tinggi 8 cm. Berapakah luasnya?</div>
-                      <div class="option-list" role="radiogroup" aria-label="Pilihan jawaban soal 4">
-                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
-                          <div class="option-radio" aria-hidden="true"></div>
-                          <div class="option-key">A</div>
-                          <div class="option-label">48 cm²</div>
-                        </div>
-                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
-                          <div class="option-radio" aria-hidden="true"></div>
-                          <div class="option-key">B</div>
-                          <div class="option-label">96 cm²</div>
-                        </div>
-                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
-                          <div class="option-radio" aria-hidden="true"></div>
-                          <div class="option-key">C</div>
-                          <div class="option-label">24 cm²</div>
-                        </div>
-                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
-                          <div class="option-radio" aria-hidden="true"></div>
-                          <div class="option-key">D</div>
-                          <div class="option-label">72 cm²</div>
+                        <div class="identity-card__body">
+                          <!-- Identity form mockup (mirrors form-renderer.js output) -->
+                          <form class="ifr-form" autocomplete="off" onsubmit="event.preventDefault()">
+                            <div class="ifr-field">
+                              <label class="ifr-field__label">Nama Lengkap <span class="ifr-required">*</span></label>
+                              <input class="ifr-field__input" type="text" placeholder="Masukkan nama lengkap" value="Ahmad Pratama" />
+                            </div>
+                            <div class="ifr-field">
+                              <label class="ifr-field__label">Kelas <span class="ifr-required">*</span></label>
+                              <select class="ifr-field__input">
+                                <option value="7A" selected>7A</option>
+                                <option value="7B">7B</option>
+                                <option value="7C">7C</option>
+                                <option value="7D">7D</option>
+                              </select>
+                            </div>
+                            <div class="ifr-field">
+                              <label class="ifr-field__label">NIS (Nomor Induk Siswa)</label>
+                              <input class="ifr-field__input" type="text" placeholder="Opsional" value="2024-07123" />
+                            </div>
+                          </form>
+                          <button class="albedu-btn albedu-btn-primary preview-identity-submit" type="button">
+                            <span data-albedu-icon="play_circle"></span>
+                            <span>Mulai Asesmen</span>
+                          </button>
                         </div>
                       </div>
-                    </article>
+                    </section>
+
+                    <!-- ── BAGIAN 1 (question section) ── -->
+                    <section class="preview-bagian-section" data-section="bagian-1" hidden>
+                      <div class="exam-page-header">
+                        <h2 class="exam-page-title">Bagian 1</h2>
+                        <div class="exam-page-count">10 Soal</div>
+                      </div>
+                      <article class="exam-question-card answered">
+                        <div class="question-num" aria-label="Soal nomor 3">3</div>
+                        <div class="question-text">Berapakah hasil dari 7 × 8?</div>
+                        <div class="option-list" role="radiogroup" aria-label="Pilihan jawaban soal 3">
+                          <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                            <div class="option-radio" aria-hidden="true"></div>
+                            <div class="option-key">A</div>
+                            <div class="option-label">54</div>
+                          </div>
+                          <div class="option-item selected" role="radio" aria-checked="true" tabindex="0">
+                            <div class="option-radio" aria-hidden="true"></div>
+                            <div class="option-key">B</div>
+                            <div class="option-label">56</div>
+                          </div>
+                          <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                            <div class="option-radio" aria-hidden="true"></div>
+                            <div class="option-key">C</div>
+                            <div class="option-label">58</div>
+                          </div>
+                          <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                            <div class="option-radio" aria-hidden="true"></div>
+                            <div class="option-key">D</div>
+                            <div class="option-label">64</div>
+                          </div>
+                        </div>
+                      </article>
+                    </section>
+
+                    <!-- ── BAGIAN 2 (question section) ── -->
+                    <section class="preview-bagian-section" data-section="bagian-2" hidden>
+                      <div class="exam-page-header">
+                        <h2 class="exam-page-title">Bagian 2</h2>
+                        <div class="exam-page-count">5 Soal</div>
+                      </div>
+                      <article class="exam-question-card">
+                        <div class="question-num" aria-label="Soal nomor 4">4</div>
+                        <div class="question-text">Sebuah segitiga memiliki alas 12 cm dan tinggi 8 cm. Berapakah luasnya?</div>
+                        <div class="option-list" role="radiogroup" aria-label="Pilihan jawaban soal 4">
+                          <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                            <div class="option-radio" aria-hidden="true"></div>
+                            <div class="option-key">A</div>
+                            <div class="option-label">48 cm²</div>
+                          </div>
+                          <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                            <div class="option-radio" aria-hidden="true"></div>
+                            <div class="option-key">B</div>
+                            <div class="option-label">96 cm²</div>
+                          </div>
+                          <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                            <div class="option-radio" aria-hidden="true"></div>
+                            <div class="option-key">C</div>
+                            <div class="option-label">24 cm²</div>
+                          </div>
+                          <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                            <div class="option-radio" aria-hidden="true"></div>
+                            <div class="option-key">D</div>
+                            <div class="option-label">72 cm²</div>
+                          </div>
+                        </div>
+                      </article>
+                    </section>
                   </div>
                 </div>
 

@@ -675,72 +675,88 @@
         });
       });
 
-      // ── Wire page tabs (Bagian 1 / Bagian 2 click → switch active) ──
+      // ── Wire page tabs (Identitas / Bagian 1 / Bagian 2 click → switch section) ──
+      // Three tabs represent the full peserta journey:
+      //   1. Identitas — fill identity form (Phase 2 in take.html)
+      //   2. Bagian 1 — question section 1 (Phase 3, section 1)
+      //   3. Bagian 2 — question section 2 (Phase 3, section 2)
+      // Each tab shows/hides its corresponding <section data-section="...">
+      const TAB_ORDER = ['identitas', 'bagian-1', 'bagian-2'];
+
+      function _activateTab(tabName) {
+        if (!TAB_ORDER.includes(tabName)) return;
+        // Update tab buttons
+        previewRoot?.querySelectorAll('.page-tab').forEach((t) => {
+          const isActive = t.dataset.tab === tabName;
+          t.classList.toggle('active', isActive);
+          t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        // Show/hide section panels
+        previewRoot?.querySelectorAll('[data-section]').forEach((sec) => {
+          sec.hidden = sec.dataset.section !== tabName;
+        });
+        // Update progress based on which tab
+        const fill = previewRoot?.querySelector('.exam-progress-fill');
+        if (fill) {
+          if (tabName === 'identitas') {
+            fill.style.width = '0%'; // not started yet
+          } else {
+            // Bagian 1 = ~50%, Bagian 2 = ~100% (mock progress)
+            fill.style.width = tabName === 'bagian-1' ? '50%' : '100%';
+          }
+        }
+        // Update nav progress text
+        const progress = previewRoot?.querySelector('.exam-nav__progress');
+        if (progress) {
+          if (tabName === 'identitas') {
+            progress.textContent = 'Identitas';
+          } else {
+            // Count selected answers in the visible section
+            const visibleSection = previewRoot?.querySelector(`[data-section="${tabName}"]`);
+            const answeredInSec = visibleSection?.querySelectorAll('.option-item.selected').length || 0;
+            const totalInSec = tabName === 'bagian-1' ? 10 : 5;
+            progress.textContent = `${answeredInSec}/${totalInSec}`;
+          }
+        }
+      }
+
       previewRoot?.querySelectorAll('.page-tab').forEach((tab) => {
         tab.addEventListener('click', () => {
-          previewRoot?.querySelectorAll('.page-tab').forEach((t) => {
-            t.classList.remove('active');
-            t.setAttribute('aria-selected', 'false');
-          });
-          tab.classList.add('active');
-          tab.setAttribute('aria-selected', 'true');
-          // Update page title to match tab
-          const pageTitle = previewRoot?.querySelector('.exam-page-title');
-          if (pageTitle) pageTitle.textContent = tab.textContent;
-          // Update page count (visual flair: Bagian 1 = 10 Soal, Bagian 2 = 5 Soal)
-          const pageCount = previewRoot?.querySelector('.exam-page-count');
-          if (pageCount) {
-            pageCount.textContent = tab.textContent.includes('1') ? '10 Soal' : '5 Soal';
-          }
+          _activateTab(tab.dataset.tab);
         });
       });
 
-      // ── Wire Prev/Next buttons (cycle through 2 mock questions) ──
+      // ── Wire Prev/Next buttons ──
+      // Prev/Next cycle through the 3 tabs in order: Identitas ↔ Bagian 1 ↔ Bagian 2.
+      // When on Identitas, Next → Bagian 1 (simulates "Mulai Asesmen").
+      // When on Bagian 2, Next disabled (at end).
       const navBtns = previewRoot?.querySelectorAll('.nav-btn');
       const prevBtn = navBtns?.[0]; // first nav-btn = Sebelumnya
       const nextBtn = navBtns?.[1]; // second = Selanjutnya
 
-      const updateActiveQuestion = () => {
-        const cards = previewRoot?.querySelectorAll('.exam-question-card');
-        if (!cards?.length) return;
-        cards.forEach((c, i) => {
-          c.style.display = (i === previewActiveIdx) ? '' : 'none';
-        });
-        // Update question number badges to reflect "active" position
-        cards.forEach((c, i) => {
-          const num = c.querySelector('.question-num');
-          if (num) num.textContent = String(previewActiveIdx + 1 + i);
-        });
-        // Sync nav progress (base = 2 already-answered, +current position)
-        const progress = previewRoot?.querySelector('.exam-nav__progress');
-        if (progress) {
-          // Show "Soal X dari 20" style progress (1-indexed)
-          progress.textContent = `${previewActiveIdx + 1}/${PREVIEW_TOTAL_QUESTIONS}`;
-        }
-        // Update progress fill (visualize progress through 20 questions)
-        const fill = previewRoot?.querySelector('.exam-progress-fill');
-        if (fill) {
-          const pct = ((previewActiveIdx + 1) / PREVIEW_TOTAL_QUESTIONS) * 100;
-          fill.style.width = pct + '%';
-        }
-      };
+      function _currentTabIdx() {
+        const activeTab = previewRoot?.querySelector('.page-tab.active');
+        if (!activeTab) return 0;
+        return TAB_ORDER.indexOf(activeTab.dataset.tab);
+      }
 
       prevBtn?.addEventListener('click', () => {
-        if (previewActiveIdx > 0) {
-          previewActiveIdx--;
-          updateActiveQuestion();
-        }
+        const idx = _currentTabIdx();
+        if (idx > 0) _activateTab(TAB_ORDER[idx - 1]);
       });
       nextBtn?.addEventListener('click', () => {
-        const cards = previewRoot?.querySelectorAll('.exam-question-card');
-        if (previewActiveIdx < (cards?.length || 1) - 1) {
-          previewActiveIdx++;
-          updateActiveQuestion();
-        }
+        const idx = _currentTabIdx();
+        if (idx < TAB_ORDER.length - 1) _activateTab(TAB_ORDER[idx + 1]);
       });
 
-      // Initialize active question state
-      updateActiveQuestion();
+      // ── Wire "Mulai Asesmen" button in identity form ──
+      // Clicking it advances to Bagian 1 (same as Next).
+      previewRoot?.querySelector('.preview-identity-submit')?.addEventListener('click', () => {
+        _activateTab('bagian-1');
+      });
+
+      // Initialize: Identitas tab active by default (matches HTML default state)
+      _activateTab('identitas');
     }
 
     function _stopPreviewInteractions() {

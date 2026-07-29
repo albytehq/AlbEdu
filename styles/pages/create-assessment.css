@@ -1002,6 +1002,137 @@
   .preview-take-shell .nav-btn { padding: 9px 12px; font-size: 13px; }
 }
 
+/* ═══ PREVIEW IDENTITY PHASE (mirrors take.html #identity-phase) ═══
+   Scoped to .preview-take-shell so it inherits --albedu-* vars.
+   Uses same class names as take-assessment.css .identity-card. */
+.preview-take-shell .preview-identity-section,
+.preview-take-shell .preview-bagian-section {
+  display: block;
+}
+.preview-take-shell .preview-identity-section[hidden],
+.preview-take-shell .preview-bagian-section[hidden] {
+  display: none;
+}
+
+.preview-take-shell .identity-card {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  background: var(--albedu-surface);
+  border: 1px solid var(--albedu-border);
+  border-radius: var(--albedu-radius-lg);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+.preview-take-shell .identity-banner {
+  padding: 28px 28px 24px;
+  background: linear-gradient(135deg, var(--albedu-primary), var(--albedu-primary-hover));
+  color: #fff;
+}
+.preview-take-shell .identity-banner__meta {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.preview-take-shell .identity-banner__title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.preview-take-shell .identity-banner__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.preview-take-shell .identity-banner__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 12px;
+  font-weight: 500;
+}
+.preview-take-shell .identity-banner__chip .albedu-icon {
+  width: 14px;
+  height: 14px;
+}
+.preview-take-shell .identity-card__note {
+  padding: 14px 20px;
+  margin: 16px 28px 0;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.55;
+}
+.preview-take-shell .identity-card__note strong {
+  font-weight: 700;
+}
+.preview-take-shell .identity-card__body {
+  padding: 24px 28px 28px;
+}
+
+/* Identity form (uses global .ifr-* classes from identity-form.css,
+   but scoped to preview root so --albedu-* vars apply via inheritance) */
+.preview-take-shell .ifr-form {
+  max-width: 100%;
+}
+.preview-take-shell .ifr-field__input {
+  /* Override global .ifr-field__input to use scoped --albedu-* vars */
+  color: var(--albedu-heading);
+  background: var(--albedu-surface);
+  border-color: var(--albedu-border);
+}
+.preview-take-shell .ifr-field__input:focus {
+  border-color: var(--albedu-primary);
+  box-shadow: 0 0 0 3px var(--albedu-primary-ring);
+}
+.preview-take-shell .ifr-field__label {
+  color: var(--albedu-heading);
+}
+.preview-take-shell .ifr-required {
+  color: var(--albedu-primary);
+}
+
+/* Submit button inside identity form */
+.preview-take-shell .preview-identity-submit {
+  margin-top: 20px;
+  width: 100%;
+  justify-content: center;
+  background: var(--albedu-primary) !important;
+  border-color: var(--albedu-primary) !important;
+  color: #fff !important;
+}
+.preview-take-shell .preview-identity-submit:hover {
+  background: var(--albedu-primary-hover) !important;
+}
+.preview-take-shell .preview-identity-submit .albedu-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Dark mode overrides for identity form mockup */
+.preview-take-shell[data-mode="dark"] .identity-card__note,
+.albedu-theme-overlay-preview[data-mode="dark"] .identity-card__note {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+.albedu-theme-overlay-preview[data-mode="dark"] .ifr-field__input {
+  color: var(--albedu-heading);
+  background: var(--albedu-surface-alt);
+  border-color: var(--albedu-border);
+}
+
 /* ── Color Picker ──────────────────────────────────────────────── */
 .albedu-color-quickpicks { display: flex; flex-wrap: wrap; gap: 8px; }
 .albedu-color-picker-wrap { display: flex; align-items: center; gap: 10px; }
