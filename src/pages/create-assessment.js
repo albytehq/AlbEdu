@@ -442,12 +442,14 @@
     // ── SCOPED theme injector ──
     // Injects CSS variables ONLY into the overlay preview root element.
     // Never touches documentElement — the wizard form stays unaffected.
+    // Variable names match take-assessment.css so the preview resolves
+    // identically to the actual peserta experience.
     function injectScopedTheme(theme) {
       if (!previewRoot) return;
-      const derived = window.ThemeSystem.derive(theme.primary || '#1D4ED8');
+      const derived = window.ThemeSystem.derive(theme.primary || '#2563eb');
       previewRoot.style.setProperty('--albedu-primary', derived.primary);
       previewRoot.style.setProperty('--albedu-primary-hover', derived.primary_hover);
-      previewRoot.style.setProperty('--albedu-primary-light', derived.primary_muted);
+      previewRoot.style.setProperty('--albedu-primary-muted', derived.primary_muted);
       previewRoot.style.setProperty('--albedu-primary-ring', derived.primary_ring);
       previewRoot.style.setProperty('--albedu-heading', derived.heading);
       previewRoot.style.setProperty('--albedu-body', derived.body);
@@ -455,17 +457,19 @@
       previewRoot.style.setProperty('--albedu-surface-alt', derived.surface_alt);
       previewRoot.style.setProperty('--albedu-border', derived.border);
       previewRoot.style.setProperty('--albedu-font', `'${theme.font || 'Plus Jakarta Sans'}', system-ui, sans-serif`);
+      previewRoot.style.setProperty('--albedu-radius-lg', '8px');
 
       // Dark mode (scoped to preview root only)
       const mode = theme.mode || 'auto';
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       if (mode === 'dark' || (mode === 'auto' && prefersDark)) {
         previewRoot.setAttribute('data-mode', 'dark');
-        previewRoot.style.setProperty('--albedu-surface', '#1E293B');
-        previewRoot.style.setProperty('--albedu-surface-alt', '#0F172A');
-        previewRoot.style.setProperty('--albedu-heading', '#F1F5F9');
-        previewRoot.style.setProperty('--albedu-body', '#CBD5E1');
+        previewRoot.style.setProperty('--albedu-surface', '#1e293b');
+        previewRoot.style.setProperty('--albedu-surface-alt', '#0f172a');
+        previewRoot.style.setProperty('--albedu-heading', '#f1f5f9');
+        previewRoot.style.setProperty('--albedu-body', '#cbd5e1');
         previewRoot.style.setProperty('--albedu-border', '#334155');
+        previewRoot.style.setProperty('--albedu-primary-muted', 'rgba(59, 130, 246, 0.18)');
       } else {
         previewRoot.setAttribute('data-mode', 'light');
       }

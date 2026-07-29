@@ -643,53 +643,129 @@
               <span class="albedu-theme-overlay-preview-label">Preview Asesmen</span>
               <span class="albedu-theme-overlay-preview-meta" id="overlay-preview-meta">Plus Jakarta Sans · Otomatis</span>
             </div>
-            <!-- The preview root — scoped CSS variables live here, not on documentElement -->
+            <!-- The preview root — scoped CSS variables live here, not on documentElement.
+                 This is a pixel-accurate replica of the actual take.html exam phase
+                 (PHASE 3) that peserta sees. Mirrors: exam-header, progress-strip,
+                 page-tabs, exam-page-header, exam-question-card, option-list,
+                 exam-nav. Same class names so scoped CSS vars resolve identically. -->
             <div class="albedu-theme-overlay-preview" id="overlay-preview-root">
-              <div class="albedu-preview-shell">
-                <header class="albedu-preview-shell-header">
-                  <span class="albedu-preview-shell-logo">AlbEdu</span>
-                  <span class="albedu-preview-shell-timer">
-                    <span data-albedu-icon="schedule"></span>
-                    <span>60:00</span>
-                  </span>
+              <div class="preview-take-shell">
+                <!-- Exam header (sticky) -->
+                <header class="exam-header">
+                  <div class="exam-header__left">
+                    <div class="exam-header__badge">Matematika</div>
+                    <div class="exam-header__info">
+                      <h1 class="exam-header__title">Asesmen Tengah Semester Matematika</h1>
+                      <div class="exam-header__user">
+                        <span data-albedu-icon="account_circle"></span>
+                        <span>Ahmad Pratama · 7A</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="exam-header__right">
+                    <div class="exam-timer" role="timer">
+                      <span data-albedu-icon="timer"></span>
+                      <span>60:00</span>
+                    </div>
+                  </div>
                 </header>
-                <main class="albedu-preview-shell-main">
-                  <div class="albedu-preview-shell-progress">
-                    <span class="albedu-preview-shell-progress-label">Soal 3 dari 20</span>
-                    <div class="albedu-preview-shell-progress-bar">
-                      <div class="albedu-preview-shell-progress-fill"></div>
+
+                <!-- Progress strip -->
+                <div class="exam-progress-strip" aria-hidden="true">
+                  <div class="exam-progress-fill" style="width: 15%"></div>
+                </div>
+
+                <!-- Main content area -->
+                <div class="exam-main">
+                  <div class="exam-content">
+                    <!-- Page tabs (Bagian 1 / Bagian 2) -->
+                    <div class="page-tabs" role="tablist" aria-label="Bagian Soal">
+                      <button class="page-tab active" type="button" role="tab" aria-selected="true">Bagian 1</button>
+                      <button class="page-tab" type="button" role="tab" aria-selected="false">Bagian 2</button>
                     </div>
+
+                    <!-- Page header -->
+                    <div class="exam-page-header">
+                      <h2 class="exam-page-title">Bagian 1</h2>
+                      <div class="exam-page-count">10 Soal</div>
+                    </div>
+
+                    <!-- Question card (with .answered state) -->
+                    <article class="exam-question-card answered">
+                      <div class="question-num" aria-label="Soal nomor 3">3</div>
+                      <div class="question-text">Berapakah hasil dari 7 × 8?</div>
+                      <div class="option-list" role="radiogroup" aria-label="Pilihan jawaban soal 3">
+                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                          <div class="option-radio" aria-hidden="true"></div>
+                          <div class="option-key">A</div>
+                          <div class="option-label">54</div>
+                        </div>
+                        <div class="option-item selected" role="radio" aria-checked="true" tabindex="0">
+                          <div class="option-radio" aria-hidden="true"></div>
+                          <div class="option-key">B</div>
+                          <div class="option-label">56</div>
+                        </div>
+                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                          <div class="option-radio" aria-hidden="true"></div>
+                          <div class="option-key">C</div>
+                          <div class="option-label">58</div>
+                        </div>
+                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                          <div class="option-radio" aria-hidden="true"></div>
+                          <div class="option-key">D</div>
+                          <div class="option-label">64</div>
+                        </div>
+                      </div>
+                    </article>
+
+                    <!-- Unanswered question card for contrast -->
+                    <article class="exam-question-card">
+                      <div class="question-num" aria-label="Soal nomor 4">4</div>
+                      <div class="question-text">Sebuah segitiga memiliki alas 12 cm dan tinggi 8 cm. Berapakah luasnya?</div>
+                      <div class="option-list" role="radiogroup" aria-label="Pilihan jawaban soal 4">
+                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                          <div class="option-radio" aria-hidden="true"></div>
+                          <div class="option-key">A</div>
+                          <div class="option-label">48 cm²</div>
+                        </div>
+                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                          <div class="option-radio" aria-hidden="true"></div>
+                          <div class="option-key">B</div>
+                          <div class="option-label">96 cm²</div>
+                        </div>
+                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                          <div class="option-radio" aria-hidden="true"></div>
+                          <div class="option-key">C</div>
+                          <div class="option-label">24 cm²</div>
+                        </div>
+                        <div class="option-item" role="radio" aria-checked="false" tabindex="0">
+                          <div class="option-radio" aria-hidden="true"></div>
+                          <div class="option-key">D</div>
+                          <div class="option-label">72 cm²</div>
+                        </div>
+                      </div>
+                    </article>
                   </div>
-                  <h1 class="albedu-preview-shell-title">Asesmen Tengah Semester Matematika</h1>
-                  <div class="albedu-preview-shell-section">Bagian 1 · Pilihan Ganda</div>
-                  <div class="albedu-preview-shell-question">Berapakah hasil dari 7 × 8?</div>
-                  <div class="albedu-preview-shell-options">
-                    <div class="albedu-preview-shell-option">
-                      <span class="albedu-preview-shell-radio"></span>
-                      <span>A. 54</span>
-                    </div>
-                    <div class="albedu-preview-shell-option is-selected">
-                      <span class="albedu-preview-shell-radio"></span>
-                      <span>B. 56</span>
-                    </div>
-                    <div class="albedu-preview-shell-option">
-                      <span class="albedu-preview-shell-radio"></span>
-                      <span>C. 58</span>
-                    </div>
-                    <div class="albedu-preview-shell-option">
-                      <span class="albedu-preview-shell-radio"></span>
-                      <span>D. 64</span>
-                    </div>
+                </div>
+
+                <!-- Bottom navigation (sticky) -->
+                <nav class="exam-nav" aria-label="Navigasi soal">
+                  <div class="exam-nav__inner">
+                    <button class="nav-btn" type="button" aria-label="Soal sebelumnya">
+                      <span data-albedu-icon="arrow_back"></span>
+                      <span>Sebelumnya</span>
+                    </button>
+                    <div class="exam-nav__progress">3/20</div>
+                    <button class="nav-btn nav-btn--primary" type="button" aria-label="Soal berikutnya">
+                      <span>Selanjutnya</span>
+                      <span data-albedu-icon="arrow_forward"></span>
+                    </button>
+                    <button class="nav-btn nav-btn--primary nav-btn--submit-locked" type="button" disabled aria-label="Kumpulkan asesmen" title="Submit terkunci">
+                      <span data-albedu-icon="lock"></span>
+                      <span>Kumpulkan</span>
+                    </button>
                   </div>
-                  <div class="albedu-preview-shell-actions">
-                    <button class="albedu-preview-shell-btn-secondary" type="button">Sebelumnya</button>
-                    <button class="albedu-preview-shell-btn-primary" type="button">Selanjutnya</button>
-                  </div>
-                </main>
-                <footer class="albedu-preview-shell-footer">
-                  <span>© 2026 AlbEdu</span>
-                  <span>v0.821.0</span>
-                </footer>
+                </nav>
               </div>
             </div>
           </main>
