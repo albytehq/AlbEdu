@@ -369,14 +369,23 @@
   window.BuatUjian = CreateAssessment; // back-compat alias
 
   // Bootstrap
-  document.addEventListener('DOMContentLoaded', () => {
+  // ThemeSystem is loaded as an ES module (<script type="module">) whose
+  // imports (derive.js, validate.js, injector.js, contrast.js) are fetched
+  // asynchronously. By the time DOMContentLoaded fires, window.ThemeSystem
+  // may not be set yet. Poll for it before initializing the theme editor.
+  function _waitForThemeSystem(callback, retries) {
     if (window.ThemeSystem) {
-      window.ThemeSystem.apply(_state.examData.theme_config);
+      callback();
+    } else if (retries > 0) {
+      setTimeout(() => _waitForThemeSystem(callback, retries - 1), 100);
+    } else {
+      console.warn('[theme] ThemeSystem failed to load after 5s — theme editor disabled');
     }
+  }
 
-    initThemeEditor();
-
-    // Wizard modules auto-init if loaded.
+  document.addEventListener('DOMContentLoaded', () => {
+    // Wizard modules auto-init if loaded (these are classic deferred scripts,
+    // so they're ready by DOMContentLoaded).
     if (window.MetadataCard) window.MetadataCard.init();
     if (window.SoalCard) window.SoalCard.init();
     if (window.PublishCard) window.PublishCard.init();
@@ -385,6 +394,12 @@
     if (window.WizardController) window.WizardController.init();
     if (window.ListView) window.ListView.init();
     if (window.KeyboardShortcuts) window.KeyboardShortcuts.init();
+
+    // Theme editor needs ThemeSystem (ES module) — wait for it.
+    _waitForThemeSystem(() => {
+      window.ThemeSystem.apply(_state.examData.theme_config);
+      initThemeEditor();
+    }, 50); // 50 retries × 100ms = 5s max wait
 
     console.info('[CreateAssessment] initialized');
   });
