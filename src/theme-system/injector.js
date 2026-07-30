@@ -41,6 +41,35 @@ export function injectTheme(theme) {
   const colors = deriveColors(theme.primary, theme.text_accent);
   const root = document.documentElement;
 
+  // ── Smart auto-fallback for PRIMARY color ──
+  // Primary is used for: buttons (white text on primary bg), active tabs
+  // (primary text on white bg), badges (primary text on primary-muted bg),
+  // gradient banner (white text on primary gradient).
+  //
+  // If primary is too light:
+  //   - White text on primary buttons becomes invisible
+  //   - Primary text on white active-tab bg becomes invisible
+  //   - White text on gradient banner becomes invisible
+  //
+  // Fix: if white-on-primary contrast < 3.0 (WCAG AA large text), darken
+  // primary until white text is readable on it.
+  let safePrimary = colors.primary;
+  const whiteOnPrimaryRatio = contrastRatio('#ffffff', safePrimary);
+  if (whiteOnPrimaryRatio < 3.0) {
+    const oldPrimary = safePrimary;
+    safePrimary = ensureContrast(safePrimary, '#ffffff', 3.0);
+    // Re-derive the dependent colors from the safe primary
+    const safeDerived = deriveColors(safePrimary, colors.text_accent);
+    colors.primary = safeDerived.primary;
+    colors.primary_hover = safeDerived.primary_hover;
+    colors.primary_muted = safeDerived.primary_muted;
+    colors.primary_ring = safeDerived.primary_ring;
+    console.warn('[theme] primary too light — auto-darkened:',
+      oldPrimary, '→', colors.primary,
+      '(white-on-primary ratio was', whiteOnPrimaryRatio.toFixed(2),
+      ', needed ≥ 3.0)');
+  }
+
   // ── Smart auto-fallback for text_accent ──
   let safeTextAccent = colors.text_accent;
   const surfaceBg = colors.surface; // '#ffffff' light, '#1e293b' dark
@@ -75,13 +104,13 @@ export function injectTheme(theme) {
   // ── Primary color check for gradient banner ──
   // The identity-banner uses linear-gradient(primary → primary-hover) with
   // white text. If primary is too light, white text becomes invisible.
-  const primaryLum = relativeLuminance(colors.primary);
-  const whiteOnPrimaryRatio = contrastRatio('#ffffff', colors.primary);
-  if (whiteOnPrimaryRatio < MIN_CONTRAST_NORMAL) {
-    console.warn('[theme] primary color too light for gradient banner —',
-      'white text may be hard to read on', colors.primary,
-      '(ratio:', whiteOnPrimaryRatio.toFixed(2), ', needed ≥', MIN_CONTRAST_NORMAL + ')',
-      '— consider choosing a darker primary color');
+  // (Already auto-corrected above via safePrimary — this is just a
+  // secondary warning if the auto-corrected primary is STILL too light.)
+  const postSafePrimaryRatio = contrastRatio('#ffffff', colors.primary);
+  if (postSafePrimaryRatio < MIN_CONTRAST_NORMAL) {
+    console.warn('[theme] primary still light after auto-adjust —',
+      'white text on gradient banner may be hard to read on', colors.primary,
+      '(ratio:', postSafePrimaryRatio.toFixed(2), ')');
   }
 
   // CSS Custom Properties

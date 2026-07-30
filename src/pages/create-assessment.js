@@ -462,48 +462,65 @@
     // Never touches documentElement — the wizard form stays unaffected.
     // Variable names match take-assessment.css so the preview resolves
     // identically to the actual peserta experience.
-    // Includes auto-fallback: unsafe text_accent is auto-adjusted.
+    // Includes smart auto-fallback: unsafe primary AND text_accent are
+    // auto-adjusted (mirrors production injector.js).
     function injectScopedTheme(theme) {
       if (!previewRoot) return;
-      const derived = window.ThemeSystem.derive(
+      let derived = window.ThemeSystem.derive(
         theme.primary || '#2563eb',
         theme.text_accent || null  // null → deriveColors falls back to primary
       );
 
-      // Auto-fallback: if text_accent has poor contrast against surface,
-      // auto-adjust it (mirrors production injector.js smart fallback).
+      // ── Auto-fallback for PRIMARY ──
+      // If primary is too light, white text on buttons/badges/tabs invisible.
+      // Darken primary until white-on-primary ratio ≥ 3.0.
+      const hexToRgb = (hex) => {
+        const c = hex.replace('#', '');
+        const f = c.length === 3 ? c.split('').map(x => x + x).join('') : c;
+        const n = parseInt(f, 16);
+        return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+      };
+      const lum = (hex) => {
+        const { r, g, b } = hexToRgb(hex);
+        const lin = (c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
+        return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+      };
+      const ratio = (fg, bg) => (Math.max(lum(fg), lum(bg)) + 0.05) / (Math.min(lum(fg), lum(bg)) + 0.05);
+      const darken = (hex, amt) => {
+        const { r, g, b } = hexToRgb(hex);
+        const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+        return `#${toHex(r * (1 - amt))}${toHex(g * (1 - amt))}${toHex(b * (1 - amt))}`;
+      };
+      const lighten = (hex, amt) => {
+        const { r, g, b } = hexToRgb(hex);
+        const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+        return `#${toHex(r + (255 - r) * amt)}${toHex(g + (255 - g) * amt)}${toHex(b + (255 - b) * amt)}`;
+      };
+
+      // Check primary: white text on primary must be readable
+      if (ratio('#ffffff', derived.primary) < 3.0) {
+        let safeP = derived.primary;
+        for (let i = 0; i < 10; i++) {
+          safeP = darken(safeP, 0.10);
+          if (ratio('#ffffff', safeP) >= 3.0) break;
+        }
+        // Re-derive from safe primary
+        derived = window.ThemeSystem.derive(safeP, theme.text_accent || null);
+      }
+
+      // ── Auto-fallback for text_accent ──
       // Strategy: very light colors → fall back to heading (not muddy darken);
       // medium colors → gradual darken/lighten; threshold = 4.5 (WCAG AA).
+      // Uses hexToRgb/lum/ratio/darken/lighten already defined above.
       let safeTextAccent = derived.text_accent;
       const surfaceBg = derived.surface;
       const minContrast = 4.5; // WCAG AA normal text
       try {
-        const hexToRgb = (hex) => {
-          const c = hex.replace('#', '');
-          const f = c.length === 3 ? c.split('').map(x => x + x).join('') : c;
-          const n = parseInt(f, 16);
-          return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-        };
-        const lum = (hex) => {
-          const { r, g, b } = hexToRgb(hex);
-          const lin = (c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
-          return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-        };
         const fgL = lum(safeTextAccent);
         const bgL = lum(surfaceBg);
-        const ratioVal = (Math.max(fgL, bgL) + 0.05) / (Math.min(fgL, bgL) + 0.05);
+        const ratioVal = ratio(safeTextAccent, surfaceBg);
         if (ratioVal < minContrast) {
           const isLightBg = bgL > 0.5;
-          const darken = (hex, amt) => {
-            const { r, g, b } = hexToRgb(hex);
-            const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
-            return `#${toHex(r * (1 - amt))}${toHex(g * (1 - amt))}${toHex(b * (1 - amt))}`;
-          };
-          const lighten = (hex, amt) => {
-            const { r, g, b } = hexToRgb(hex);
-            const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
-            return `#${toHex(r + (255 - r) * amt)}${toHex(g + (255 - g) * amt)}${toHex(b + (255 - b) * amt)}`;
-          };
 
           if (isLightBg && fgL > 0.7) {
             // Very light color on light surface → fall back to heading (not muddy)
