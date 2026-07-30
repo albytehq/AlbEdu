@@ -1,26 +1,87 @@
 // theme-system/injector.js — inject CSS custom properties into :root.
-// Includes auto-fallback: if user-selected text_accent has poor contrast
-// against the assessment surface, it's auto-adjusted to meet WCAG AA.
+// Includes smart auto-fallback: if user-selected text_accent has poor
+// contrast against the assessment surface, it's auto-adjusted to meet
+// WCAG AA (4.5:1 for normal text).
+//
+// Smart fallback strategy:
+//   - If text_accent is VERY LIGHT (luminance > 0.7): skip gradual
+//     darkening (produces muddy mid-tones). Fall back directly to
+//     --albedu-heading (guaranteed readable dark color).
+//   - If text_accent is medium: try gradual darkening/lightening.
+//   - If text_accent is VERY DARK in dark mode: fall back to
+//     --albedu-heading (light in dark mode).
+//   - Primary color: if too light for gradient banner, warn (white
+//     text on light gradient = invisible).
 
 import { deriveColors } from './derive.js';
 import { ensureContrast, contrastRatio } from './contrast.js';
+
+// WCAG AA threshold for normal text (labels, body text, etc.)
+const MIN_CONTRAST_NORMAL = 4.5;
+// Luminance threshold: above this, a color is "very light" and
+// gradual darkening produces ugly muddy tones — better to fall back.
+const VERY_LIGHT_LUMINANCE = 0.7;
+const VERY_DARK_LUMINANCE = 0.15;
+
+function relativeLuminance(hex) {
+  const { r, g, b } = (() => {
+    const c = hex.replace('#', '');
+    const f = c.length === 3 ? c.split('').map(x => x + x).join('') : c;
+    const n = parseInt(f, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  })();
+  const toLinear = (c) => {
+    const srgb = c / 255;
+    return srgb <= 0.03928 ? srgb / 12.92 : Math.pow((srgb + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
 
 export function injectTheme(theme) {
   const colors = deriveColors(theme.primary, theme.text_accent);
   const root = document.documentElement;
 
-  // Auto-fallback: if text_accent has poor contrast (< 3.0 = WCAG AA large text)
-  // against the surface, auto-adjust it to be readable.
-  // This prevents admin from accidentally making titles invisible.
+  // ── Smart auto-fallback for text_accent ──
   let safeTextAccent = colors.text_accent;
-  const surfaceBg = colors.surface; // '#ffffff' in light mode
-  const minContrast = 3.0; // WCAG AA for large text (titles are 15-22px bold)
-  if (contrastRatio(colors.text_accent, surfaceBg) < minContrast) {
-    safeTextAccent = ensureContrast(colors.text_accent, surfaceBg, minContrast);
-    console.warn('[theme] text_accent auto-adjusted for contrast:',
-      colors.text_accent, '→', safeTextAccent,
-      '(ratio was', contrastRatio(colors.text_accent, surfaceBg).toFixed(2),
-      ', needed ≥', minContrast + ')');
+  const surfaceBg = colors.surface; // '#ffffff' light, '#1e293b' dark
+  const surfaceLum = relativeLuminance(surfaceBg);
+  const accentLum = relativeLuminance(safeTextAccent);
+  const isLightSurface = surfaceLum > 0.5;
+
+  const currentRatio = contrastRatio(safeTextAccent, surfaceBg);
+  if (currentRatio < MIN_CONTRAST_NORMAL) {
+    // Contrast insufficient — need to adjust
+    if (isLightSurface && accentLum > VERY_LIGHT_LUMINANCE) {
+      // Very light color on light surface → gradual darkening produces
+      // muddy tones. Fall back directly to heading color (guaranteed dark).
+      safeTextAccent = colors.heading;
+      console.warn('[theme] text_accent too light for white card —',
+        'fell back to heading color:', colors.text_accent, '→', safeTextAccent,
+        '(ratio was', currentRatio.toFixed(2), ', needed ≥', MIN_CONTRAST_NORMAL + ')');
+    } else if (!isLightSurface && accentLum < VERY_DARK_LUMINANCE) {
+      // Very dark color on dark surface → fall back to heading (light in dark mode)
+      safeTextAccent = colors.heading;
+      console.warn('[theme] text_accent too dark for dark surface —',
+        'fell back to heading color:', safeTextAccent);
+    } else {
+      // Medium color — try gradual adjustment
+      safeTextAccent = ensureContrast(safeTextAccent, surfaceBg, MIN_CONTRAST_NORMAL);
+      console.warn('[theme] text_accent auto-adjusted for contrast:',
+        colors.text_accent, '→', safeTextAccent,
+        '(ratio was', currentRatio.toFixed(2), ', needed ≥', MIN_CONTRAST_NORMAL + ')');
+    }
+  }
+
+  // ── Primary color check for gradient banner ──
+  // The identity-banner uses linear-gradient(primary → primary-hover) with
+  // white text. If primary is too light, white text becomes invisible.
+  const primaryLum = relativeLuminance(colors.primary);
+  const whiteOnPrimaryRatio = contrastRatio('#ffffff', colors.primary);
+  if (whiteOnPrimaryRatio < MIN_CONTRAST_NORMAL) {
+    console.warn('[theme] primary color too light for gradient banner —',
+      'white text may be hard to read on', colors.primary,
+      '(ratio:', whiteOnPrimaryRatio.toFixed(2), ', needed ≥', MIN_CONTRAST_NORMAL + ')',
+      '— consider choosing a darker primary color');
   }
 
   // CSS Custom Properties
@@ -43,16 +104,22 @@ export function injectTheme(theme) {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   if (mode === 'dark' || (mode === 'auto' && prefersDark)) {
     root.setAttribute('data-theme', 'dark');
-    // Override surface colors for dark mode
     root.style.setProperty('--albedu-surface', '#1e293b');
     root.style.setProperty('--albedu-surface-alt', '#0f172a');
     root.style.setProperty('--albedu-heading', '#f1f5f9');
     root.style.setProperty('--albedu-body', '#cbd5e1');
     root.style.setProperty('--albedu-border', '#334155');
-    // Re-check text_accent contrast against dark surface
+    // Re-check text_accent against dark surface
     const darkSurface = '#1e293b';
-    if (contrastRatio(safeTextAccent, darkSurface) < minContrast) {
-      safeTextAccent = ensureContrast(safeTextAccent, darkSurface, minContrast);
+    const darkRatio = contrastRatio(safeTextAccent, darkSurface);
+    if (darkRatio < MIN_CONTRAST_NORMAL) {
+      const darkAccentLum = relativeLuminance(safeTextAccent);
+      if (darkAccentLum < VERY_DARK_LUMINANCE) {
+        // Too dark for dark surface → fall back to light heading
+        safeTextAccent = '#f1f5f9';
+      } else {
+        safeTextAccent = ensureContrast(safeTextAccent, darkSurface, MIN_CONTRAST_NORMAL);
+      }
       root.style.setProperty('--albedu-text-accent', safeTextAccent);
       console.warn('[theme] text_accent re-adjusted for dark mode:', safeTextAccent);
     }

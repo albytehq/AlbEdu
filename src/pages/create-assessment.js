@@ -456,16 +456,13 @@
       );
 
       // Auto-fallback: if text_accent has poor contrast against surface,
-      // auto-adjust it (mirrors production injector.js behavior).
+      // auto-adjust it (mirrors production injector.js smart fallback).
+      // Strategy: very light colors → fall back to heading (not muddy darken);
+      // medium colors → gradual darken/lighten; threshold = 4.5 (WCAG AA).
       let safeTextAccent = derived.text_accent;
       const surfaceBg = derived.surface;
-      const minContrast = 3.0;
-      // Use contrastRatio from contrast.js if available, else skip
+      const minContrast = 4.5; // WCAG AA normal text
       try {
-        const ratio = window.ThemeSystem?.validate
-          ? null  // We'll use the validation result separately
-          : null;
-        // Inline contrast check (simplified — matches contrast.js logic)
         const hexToRgb = (hex) => {
           const c = hex.replace('#', '');
           const f = c.length === 3 ? c.split('').map(x => x + x).join('') : c;
@@ -481,7 +478,6 @@
         const bgL = lum(surfaceBg);
         const ratioVal = (Math.max(fgL, bgL) + 0.05) / (Math.min(fgL, bgL) + 0.05);
         if (ratioVal < minContrast) {
-          // Auto-darken (light surface) or lighten (dark surface)
           const isLightBg = bgL > 0.5;
           const darken = (hex, amt) => {
             const { r, g, b } = hexToRgb(hex);
@@ -493,11 +489,21 @@
             const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
             return `#${toHex(r + (255 - r) * amt)}${toHex(g + (255 - g) * amt)}${toHex(b + (255 - b) * amt)}`;
           };
-          for (let i = 0; i < 10; i++) {
-            safeTextAccent = isLightBg ? darken(safeTextAccent, 0.10) : lighten(safeTextAccent, 0.10);
-            const newL = lum(safeTextAccent);
-            const newRatio = (Math.max(newL, bgL) + 0.05) / (Math.min(newL, bgL) + 0.05);
-            if (newRatio >= minContrast) break;
+
+          if (isLightBg && fgL > 0.7) {
+            // Very light color on light surface → fall back to heading (not muddy)
+            safeTextAccent = derived.heading;
+          } else if (!isLightBg && fgL < 0.15) {
+            // Very dark color on dark surface → fall back to heading (light in dark mode)
+            safeTextAccent = '#f1f5f9';
+          } else {
+            // Medium color → gradual adjustment
+            for (let i = 0; i < 10; i++) {
+              safeTextAccent = isLightBg ? darken(safeTextAccent, 0.10) : lighten(safeTextAccent, 0.10);
+              const newL = lum(safeTextAccent);
+              const newRatio = (Math.max(newL, bgL) + 0.05) / (Math.min(newL, bgL) + 0.05);
+              if (newRatio >= minContrast) break;
+            }
           }
         }
       } catch (e) { /* silent — fall back to original */ }
@@ -563,13 +569,20 @@
         if (validation.allPass) {
           wcagStatus.className = 'albedu-wcag-status albedu-wcag-pass';
           wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="check_circle"></span><span>Contrast OK (Pass)</span>';
-        } else if (validation.textAccentSafe === false) {
-          // text_accent specifically fails — warn but don't block (auto-fallback will fix it)
-          wcagStatus.className = 'albedu-wcag-status albedu-wcag-fail';
-          wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="warning"></span><span>Warna teks aksen kontras rendah — akan otomatis disesuaikan.</span>';
         } else {
+          // Determine which checks failed for better messaging
+          const failedNames = validation.results.filter(r => !r.pass).map(r => r.name);
+          const primaryFails = failedNames.filter(n => n.includes('Primary'));
+          const accentFails = failedNames.filter(n => n.includes('Text Accent'));
           wcagStatus.className = 'albedu-wcag-status albedu-wcag-fail';
-          wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="warning"></span><span>Warna utama mungkin sulit dibaca. Coba warna lebih gelap.</span>';
+          let msg = 'Warna mungkin sulit dibaca. ';
+          if (primaryFails.length) {
+            msg += 'Warna utama terlalu terang untuk teks putih di tombol/banner. ';
+          }
+          if (accentFails.length) {
+            msg += 'Warna teks aksen akan otomatis disesuaikan agar terbaca di kartu putih. ';
+          }
+          wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="warning"></span><span>' + msg.trim() + '</span>';
         }
       }
 
