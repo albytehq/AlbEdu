@@ -1,4 +1,5 @@
 // theme-system/validate.js — WCAG AA contrast validation.
+// Validates BOTH primary and text_accent colors for accessibility.
 
 function relativeLuminance(hex) {
   const { r, g, b } = hexToRgb(hex);
@@ -19,14 +20,25 @@ export function contrastRatio(foreground, background) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-export function validateTheme(primary) {
-  const colors = deriveColors(primary);
+/**
+ * Validate theme colors for WCAG AA compliance.
+ * @param {string} primary - primary brand color hex
+ * @param {string|null} textAccent - optional text accent color hex (defaults to primary)
+ * @returns {{ results: Array, allPass: boolean, textAccentSafe: boolean }}
+ */
+export function validateTheme(primary, textAccent) {
+  const colors = deriveColors(primary, textAccent);
+  const accent = colors.text_accent;
+
   const checks = [
     { name: 'Primary on Surface', fg: colors.primary, bg: colors.surface, minRatio: 4.5 },
     { name: 'Surface on Primary (button text)', fg: colors.surface, bg: colors.primary, minRatio: 4.5 },
     { name: 'Body on Surface', fg: colors.body, bg: colors.surface, minRatio: 4.5 },
     { name: 'Heading on Surface', fg: colors.heading, bg: colors.surface, minRatio: 4.5 },
     { name: 'Primary on Primary Muted', fg: colors.primary, bg: colors.primary_muted, minRatio: 4.5 },
+    // Text accent checks — validates that custom accent is readable on assessment surfaces
+    { name: 'Text Accent on Surface', fg: accent, bg: colors.surface, minRatio: 4.5 },
+    { name: 'Text Accent on Surface Alt', fg: accent, bg: colors.surface_alt, minRatio: 4.5 },
   ];
 
   const results = checks.map(c => {
@@ -39,7 +51,9 @@ export function validateTheme(primary) {
   });
 
   const allPass = results.every(r => r.pass);
-  return { results, allPass };
+  // textAccentSafe = specifically the text accent checks pass (last 2 checks)
+  const textAccentSafe = results.slice(-2).every(r => r.pass);
+  return { results, allPass, textAccentSafe };
 }
 
 import { deriveColors } from './derive.js';

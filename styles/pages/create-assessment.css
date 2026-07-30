@@ -1040,14 +1040,17 @@
   color: #fff;
 }
 .preview-take-shell .identity-banner__meta {
+  /* EXPLICIT white — on gradient surface. Must match production. */
+  color: rgba(255, 255, 255, 0.85);
   font-size: 12px;
   font-weight: 600;
-  opacity: 0.85;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 6px;
 }
 .preview-take-shell .identity-banner__title {
+  /* EXPLICIT white — on gradient surface. Must match production. */
+  color: #fff;
   font-size: 22px;
   font-weight: 700;
   margin: 0;
@@ -1107,10 +1110,10 @@
   box-shadow: 0 0 0 3px var(--albedu-primary-ring);
 }
 .preview-take-shell .ifr-field__label {
-  /* Override the global identity-form.css rule to use the scoped
-     --albedu-text-accent var, so labels adapt to admin's text_accent
-     color picker in the theme overlay. */
-  color: var(--albedu-text-accent, var(--albedu-heading));
+  /* Must match production identity-form.css fallback chain:
+     var(--albedu-text-accent, var(--color-text)) — NOT var(--albedu-heading).
+     This ensures preview == production parity. */
+  color: var(--albedu-text-accent, var(--color-text));
   transition: color 220ms ease;
 }
 .preview-take-shell .ifr-required {

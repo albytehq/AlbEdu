@@ -447,17 +447,66 @@
     // Never touches documentElement — the wizard form stays unaffected.
     // Variable names match take-assessment.css so the preview resolves
     // identically to the actual peserta experience.
+    // Includes auto-fallback: unsafe text_accent is auto-adjusted.
     function injectScopedTheme(theme) {
       if (!previewRoot) return;
       const derived = window.ThemeSystem.derive(
         theme.primary || '#2563eb',
         theme.text_accent || null  // null → deriveColors falls back to primary
       );
+
+      // Auto-fallback: if text_accent has poor contrast against surface,
+      // auto-adjust it (mirrors production injector.js behavior).
+      let safeTextAccent = derived.text_accent;
+      const surfaceBg = derived.surface;
+      const minContrast = 3.0;
+      // Use contrastRatio from contrast.js if available, else skip
+      try {
+        const ratio = window.ThemeSystem?.validate
+          ? null  // We'll use the validation result separately
+          : null;
+        // Inline contrast check (simplified — matches contrast.js logic)
+        const hexToRgb = (hex) => {
+          const c = hex.replace('#', '');
+          const f = c.length === 3 ? c.split('').map(x => x + x).join('') : c;
+          const n = parseInt(f, 16);
+          return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+        };
+        const lum = (hex) => {
+          const { r, g, b } = hexToRgb(hex);
+          const lin = (c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
+          return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+        };
+        const fgL = lum(safeTextAccent);
+        const bgL = lum(surfaceBg);
+        const ratioVal = (Math.max(fgL, bgL) + 0.05) / (Math.min(fgL, bgL) + 0.05);
+        if (ratioVal < minContrast) {
+          // Auto-darken (light surface) or lighten (dark surface)
+          const isLightBg = bgL > 0.5;
+          const darken = (hex, amt) => {
+            const { r, g, b } = hexToRgb(hex);
+            const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+            return `#${toHex(r * (1 - amt))}${toHex(g * (1 - amt))}${toHex(b * (1 - amt))}`;
+          };
+          const lighten = (hex, amt) => {
+            const { r, g, b } = hexToRgb(hex);
+            const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+            return `#${toHex(r + (255 - r) * amt)}${toHex(g + (255 - g) * amt)}${toHex(b + (255 - b) * amt)}`;
+          };
+          for (let i = 0; i < 10; i++) {
+            safeTextAccent = isLightBg ? darken(safeTextAccent, 0.10) : lighten(safeTextAccent, 0.10);
+            const newL = lum(safeTextAccent);
+            const newRatio = (Math.max(newL, bgL) + 0.05) / (Math.min(newL, bgL) + 0.05);
+            if (newRatio >= minContrast) break;
+          }
+        }
+      } catch (e) { /* silent — fall back to original */ }
+
       previewRoot.style.setProperty('--albedu-primary', derived.primary);
       previewRoot.style.setProperty('--albedu-primary-hover', derived.primary_hover);
       previewRoot.style.setProperty('--albedu-primary-muted', derived.primary_muted);
       previewRoot.style.setProperty('--albedu-primary-ring', derived.primary_ring);
-      previewRoot.style.setProperty('--albedu-text-accent', derived.text_accent);
+      previewRoot.style.setProperty('--albedu-text-accent', safeTextAccent);
       previewRoot.style.setProperty('--albedu-heading', derived.heading);
       previewRoot.style.setProperty('--albedu-body', derived.body);
       previewRoot.style.setProperty('--albedu-surface', derived.surface);
@@ -505,15 +554,22 @@
       if (fontSelect) fontSelect.value = draftTheme.font;
       if (modeSelect) modeSelect.value = draftTheme.mode;
 
-      // WCAG validation (against primary, since that's the dominant color)
+      // WCAG validation (checks both primary AND text_accent contrast)
       if (wcagStatus) {
-        const validation = window.ThemeSystem.validate(draftTheme.primary);
+        const validation = window.ThemeSystem.validate(
+          draftTheme.primary,
+          draftTheme.text_accent || null
+        );
         if (validation.allPass) {
           wcagStatus.className = 'albedu-wcag-status albedu-wcag-pass';
           wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="check_circle"></span><span>Contrast OK (Pass)</span>';
+        } else if (validation.textAccentSafe === false) {
+          // text_accent specifically fails — warn but don't block (auto-fallback will fix it)
+          wcagStatus.className = 'albedu-wcag-status albedu-wcag-fail';
+          wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="warning"></span><span>Warna teks aksen kontras rendah — akan otomatis disesuaikan.</span>';
         } else {
           wcagStatus.className = 'albedu-wcag-status albedu-wcag-fail';
-          wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="warning"></span><span>Warna ini mungkin sulit dibaca. Coba warna lebih gelap.</span>';
+          wcagStatus.innerHTML = '<span style="font-size: 14px;" data-albedu-icon="warning"></span><span>Warna utama mungkin sulit dibaca. Coba warna lebih gelap.</span>';
         }
       }
 

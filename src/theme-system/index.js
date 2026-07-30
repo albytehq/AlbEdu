@@ -47,9 +47,9 @@ const ThemeSystem = {
     return getPreset(id);
   },
 
-  // Validate theme (WCAG AA check)
-  validate(primary) {
-    return validateTheme(primary);
+  // Validate theme (WCAG AA check) — checks both primary AND text_accent
+  validate(primary, textAccent) {
+    return validateTheme(primary, textAccent);
   },
 
   // Derive colors without applying

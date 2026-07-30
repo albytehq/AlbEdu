@@ -114,10 +114,20 @@
       color: #fff;
     }
     .identity-banner__meta {
-      font-size: 12px; font-weight: 600; opacity: .85; text-transform: uppercase; letter-spacing: .06em;
+      /* EXPLICIT white — on gradient surface, NOT inherited.
+         Subject/category text on gradient must be white for contrast.
+         Never use text_accent here (would be invisible on same-tone gradient). */
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
       margin-bottom: 6px;
     }
-    .identity-banner__title { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+    .identity-banner__title {
+      /* EXPLICIT white — on gradient surface, NOT inherited.
+         Main assessment title on gradient must be white for contrast.
+         text_accent is for neutral-surface titles only. */
+      color: #fff;
+      font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.02em;
+    }
     .identity-banner__chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
     .identity-banner__chip {
       display: inline-flex; align-items: center; gap: 6px;
