@@ -43,7 +43,20 @@
     window.AlbEdu?.bindIcons?.(I.dom.identityChips);
 
     // Render form via IdentityProvider (async — daftar mode may fetch from DB)
-    if (window.IdentityProvider?.render) {
+    // Ensure mount container exists — if missing (e.g. HTML out of sync),
+    // create it dynamically so the form can still render.
+    if (!I.dom.identityMount) {
+      console.warn('[take] identity-mount not found in DOM — creating dynamically');
+      const identityBody = document.querySelector('.identity-card__body') || I.dom.identityPhase;
+      if (identityBody) {
+        const mount = document.createElement('div');
+        mount.id = 'identity-mount';
+        identityBody.appendChild(mount);
+        I.dom.identityMount = mount;
+      }
+    }
+
+    if (window.IdentityProvider?.render && I.dom.identityMount) {
       try {
         await window.IdentityProvider.render(
           I.dom.identityMount,
