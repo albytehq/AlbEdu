@@ -276,18 +276,49 @@ window.ByteWard = {
 //
 // Fast-path: if Auth.authReady is already true (hot reload / cached module),
 // enforce immediately without waiting for the event.
+//
+// Fix 4: Previously used { once: true } — if auth-ready fired with role=null
+// (transient null during bootstrap), checkPageAccess ran once, saw no user,
+// and queued a redirect. When the real auth-ready with the actual role fired
+// a few ms later, no listener re-ran checkPageAccess — the redirect proceeded.
+//
+// Now: skip auth-ready events with role===null on protected pages. Wait for
+// a real role before enforcing. Use a manual flag instead of { once: true }.
 (function _autoEnforce() {
     if (_isPublicPage()) return;
 
-    function _enforce() {
-        console.info('[ByteWard] auto-enforce: scope=', _getRouteScope(), 'role=', window.Auth?.userRole ?? '(none)');
+    let _enforced = false;
+
+    function _enforce(e) {
+        if (_enforced) return;
+        const role = e?.detail?.role;
+        // On protected pages, skip auth-ready events with null role —
+        // wait for the real session to arrive (main.js grace period
+        // will handle the case where no session ever arrives).
+        if (!role && !_isLoginPage() && !_is404Page()) {
+            console.info('[ByteWard] auto-enforce: skipping null role, waiting for real session');
+            return;
+        }
+        _enforced = true;
+        console.info('[ByteWard] auto-enforce: scope=', _getRouteScope(), 'role=', role ?? '(none)');
         checkPageAccess();
     }
 
-    if (window.Auth?.authReady) {
-        _enforce();
+    if (window.Auth?.authReady && window.Auth?.userRole) {
+        // Fast-path: auth is ready AND has a real role — enforce now.
+        _enforce({ detail: { role: window.Auth.userRole } });
     } else {
-        document.addEventListener('auth-ready', _enforce, { once: true });
+        // Wait for auth-ready events — may fire multiple times (null → real).
+        document.addEventListener('auth-ready', _enforce);
+        // Safety timeout: if no real role arrives after 15s, enforce anyway
+        // (the user is definitely unauthenticated at this point).
+        setTimeout(() => {
+            if (!_enforced) {
+                console.warn('[ByteWard] auto-enforce: 15s timeout — enforcing with null role');
+                _enforced = true;
+                checkPageAccess();
+            }
+        }, 15000);
     }
 })();
 
