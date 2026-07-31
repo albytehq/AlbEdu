@@ -717,11 +717,23 @@
       const rect = anchor.getBoundingClientRect();
       const menuW = 240;
       const menuH = 280;
-      let x = rect.right - menuW;
-      let y = rect.bottom + 6;
 
-      if (y + menuH > window.innerHeight) y = rect.top - menuH - 6;
+      // Position menu below the button, aligned to the button's LEFT edge
+      // (not right-aligned which made it appear far from the button).
+      let x = rect.left;
+      let y = rect.bottom + 4;
+
+      // Keep menu within viewport horizontally
+      if (x + menuW > window.innerWidth - 8) {
+        x = window.innerWidth - menuW - 8;
+      }
       if (x < 8) x = 8;
+
+      // If menu would go below viewport, flip above the button
+      if (y + menuH > window.innerHeight - 8) {
+        y = rect.top - menuH - 4;
+      }
+      if (y < 8) y = 8;
 
       this._ctxMenu.style.left = x + 'px';
       this._ctxMenu.style.top  = y + 'px';
