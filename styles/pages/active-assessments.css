@@ -381,30 +381,46 @@
   100% { background-position: -200% 0; }
 }
 
-/* ═══ GRID VIEW — minimalis assessment cards ═══════════════════ */
+/* ═══ GRID VIEW — compact attractive cards ══════════════════════ */
 .active-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
 }
 
 .aa-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
-  padding: 18px;
+  border-radius: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   cursor: pointer;
-  transition: border-color 200ms ease, box-shadow 200ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
   position: relative;
   overflow: hidden;
 }
+.aa-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--color-primary);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
 .aa-card:hover {
   border-color: var(--color-primary);
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
+.aa-card:hover::before { opacity: 1; }
+
+/* Status-colored accent bar */
+.aa-card[data-status="open"]::before { background: var(--color-success); }
+.aa-card[data-status="closed"]::before { background: var(--color-warning); }
+.aa-card[data-status="archived"]::before { background: var(--color-destructive); }
 
 .aa-card-top {
   display: flex;
@@ -428,110 +444,93 @@
   background: var(--color-surface-2);
   color: var(--color-text);
 }
-.aa-card-menu-btn .albedu-icon { width: 18px; height: 18px; }
+.aa-card-menu-btn .albedu-icon { width: 16px; height: 16px; }
 
 .aa-card-title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--color-text);
   margin: 0;
-  line-height: 1.35;
+  line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  letter-spacing: -0.01em;
 }
 
 .aa-card-meta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
-  font-size: 12px;
+  gap: 4px 10px;
+  font-size: 11px;
   color: var(--color-text-muted);
   align-items: center;
 }
 .aa-meta-item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
-.aa-meta-item .albedu-icon { width: 13px; height: 13px; color: var(--color-text-faint); }
+.aa-meta-item .albedu-icon { width: 12px; height: 12px; color: var(--color-text-faint); }
 .aa-card-code {
-  font-family: JetBrains Mono, monospace;
-  font-size: 11px;
-  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
   background: var(--color-primary-light);
   color: var(--color-primary);
-  padding: 2px 7px;
-  border-radius: 5px;
+  padding: 2px 6px;
+  border-radius: 4px;
   letter-spacing: 0.03em;
   margin-left: auto;
 }
-  letter-spacing: 0.04em;
-}
 
-.aa-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--color-text-faint);
-}
-.aa-card-date { display: inline-flex; align-items: center; gap: 4px; }
-.aa-card-date .albedu-icon { width: 13px; height: 13px; }
-
-.aa-card-quick-actions {
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 180ms ease;
-}
-.aa-card:hover .aa-card-quick-actions { opacity: 1; }
-.aa-card-quick-btn {
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  cursor: pointer;
-  padding: 5px 8px;
-  border-radius: 6px;
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 600;
+/* Status badge — compact pill with colored dot */
+.aa-card-status {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  transition: all 150ms ease;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
-.aa-card-quick-btn:hover {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #fff;
+.aa-card-status::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
 }
-.aa-card-quick-btn.aa-quick-danger:hover {
-  background: var(--color-destructive);
-  border-color: var(--color-destructive);
-}
-.aa-card-quick-btn .albedu-icon { width: 13px; height: 13px; }
+.aa-status-running  { background: var(--color-success-bg); color: var(--color-success); }
+.aa-status-paused   { background: var(--color-warning-bg); color: var(--color-warning); }
+.aa-status-archived { background: var(--color-destructive-bg); color: var(--color-destructive); }
+/* Open = running (green), Closed = paused (amber) */
+.aa-card[data-status="open"] .aa-card-status { background: var(--color-success-bg); color: var(--color-success); }
+.aa-card[data-status="closed"] .aa-card-status { background: var(--color-warning-bg); color: var(--color-warning); }
+.aa-card[data-status="archived"] .aa-card-status { background: var(--color-destructive-bg); color: var(--color-destructive); }
 
 /* ═══ MULAI / TUTUP BUTTON — primary action for manual-mode cards ══ */
 .aa-card-primary-action {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  padding: 10px 16px;
+  padding: 8px 14px;
   border: 1px solid transparent;
-  border-radius: 10px;
-  font-size: 13px;
+  border-radius: 8px;
+  font-size: 12px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   transition: all 180ms ease;
   text-align: center;
-  margin-top: 4px;
+  margin-top: 2px;
 }
-.aa-card-primary-action .albedu-icon { width: 16px; height: 16px; }
+.aa-card-primary-action .albedu-icon { width: 14px; height: 14px; }
 
 .aa-action-start {
   background: var(--color-success);
@@ -601,7 +600,8 @@
 }
 
 @media (max-width: 480px) {
-  .aa-card { padding: 16px; }
+  .aa-card { padding: 12px; }
+  .active-grid { grid-template-columns: 1fr; }
   .aa-card-meta { grid-template-columns: 1fr; }
 }
 
