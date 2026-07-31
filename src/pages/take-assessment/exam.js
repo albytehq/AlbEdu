@@ -80,7 +80,8 @@
   // sense of structure (and prev/next still works for future sections).
   function _renderPageTabs() {
     const state = I.state;
-    if (I.dom.pageTabs) I.dom.pageTabs.hidden = false;
+    if (!I.dom.pageTabs) return;
+    I.dom.pageTabs.hidden = false;
     I.dom.pageTabs.innerHTML = state.soalPages.map((p, idx) => `
       <button class="page-tab ${idx === state.activePageIdx ? 'active' : ''}"
               type="button" role="tab"
@@ -112,6 +113,7 @@
 
     const shuffled = state.shuffledPages[page.pageKey] || page.questions;
 
+    if (!I.dom.questionList) return;
     I.dom.questionList.innerHTML = shuffled.map((q, i) => _buildQuestionCard(q, i, page)).join('');
 
     // Wire option clicks via event delegation on the question list. A fresh
@@ -341,12 +343,13 @@
   function _wireNavButtons() {
     if (!I._examAbort) return;
     const sig = I._examAbort.signal;
+    if (!I.dom.btnPrev || !I.dom.btnNext || !I.dom.btnSubmit) return;
     I.dom.btnPrev.addEventListener('click', () => {
       if (I.state.activePageIdx > 0) {
         I.state.activePageIdx--;
         _renderQuestion(I.state.activePageIdx);
         _renderPageTabs();
-        I.dom.examPhase.querySelector('.exam-main').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        I.dom.examPhase?.querySelector('.exam-main')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, { signal: sig });
     I.dom.btnNext.addEventListener('click', () => {
@@ -354,7 +357,7 @@
         I.state.activePageIdx++;
         _renderQuestion(I.state.activePageIdx);
         _renderPageTabs();
-        I.dom.examPhase.querySelector('.exam-main').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        I.dom.examPhase?.querySelector('.exam-main')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, { signal: sig });
     I.dom.btnSubmit.addEventListener('click', () => {
@@ -366,8 +369,8 @@
   function _updateNavButtons() {
     const state = I.state;
     const isLast = state.activePageIdx === state.soalPages.length - 1;
-    I.dom.btnPrev.disabled = state.activePageIdx === 0;
-    I.dom.btnNext.disabled = isLast;
+    if (I.dom.btnPrev) I.dom.btnPrev.disabled = state.activePageIdx === 0;
+    if (I.dom.btnNext) I.dom.btnNext.disabled = isLast;
     if (I.dom.btnNext) I.dom.btnNext.hidden = isLast;
     if (I.dom.btnSubmit) I.dom.btnSubmit.hidden = !isLast;
   }
@@ -431,7 +434,7 @@
     const m = Math.floor(sisa / 60);
     const s = sisa % 60;
     I.dom.timerDisplay && (I.dom.timerDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
-    I.dom.examTimer.classList.remove('warning', 'critical');
+    if (I.dom.examTimer) I.dom.examTimer.classList.remove('warning', 'critical');
     if (sisa <= TIMER_CRITICAL_SECONDS) I.dom.examTimer.classList.add('critical');
     else if (sisa <= TIMER_WARNING_SECONDS) I.dom.examTimer.classList.add('warning');
   }
@@ -439,6 +442,7 @@
   function _updateSubmitLockState() {
     if (I.state.phase !== 'exam') return;
     const btn = I.dom.btnSubmit;
+    if (!btn) return;
     if (I.state.submitLocked) {
       btn.disabled = true;
       btn.classList.add('nav-btn--submit-locked');
