@@ -714,29 +714,28 @@
       if (!this._ctxMenu) return;
       this._ctxTarget = item;
 
-      // Get button position — the anchor IS the button element itself
+      // Get button position
       const rect = anchor.getBoundingClientRect();
 
-      // Show menu first (hidden=none means getBoundingClientRect on menu = 0)
-      // So we position based on the button, then show.
-      const menuW = 220;
-      const menuH = 260;
+      // Temporarily show menu to measure its actual size
+      this._ctxMenu.style.left = '-9999px';
+      this._ctxMenu.style.top = '-9999px';
+      this._ctxMenu.hidden = false;
+      const menuRect = this._ctxMenu.getBoundingClientRect();
+      const menuW = menuRect.width || 220;
+      const menuH = menuRect.height || 260;
 
-      // Position: directly below the button, right-aligned to button's right edge
-      // (so the menu's right edge matches the button's right edge — natural for
-      // a menu triggered from a button in the top-right corner of a card).
-      let x = rect.right - menuW;
+      // Position: directly below the button, left-aligned to button's left edge
+      // This is the most natural position — menu starts where the button starts.
+      let x = rect.left;
       let y = rect.bottom + 4;
 
-      // If menu would go off left edge, left-align to button instead
-      if (x < 8) {
-        x = rect.left;
-      }
-
-      // If menu would go off right edge, clamp
+      // If menu would go off right edge, shift left so it fits
       if (x + menuW > window.innerWidth - 8) {
         x = window.innerWidth - menuW - 8;
       }
+      // If menu would go off left edge, clamp to 8px
+      if (x < 8) x = 8;
 
       // If menu would go below viewport, flip above the button
       if (y + menuH > window.innerHeight - 8) {
@@ -746,7 +745,6 @@
 
       this._ctxMenu.style.left = Math.round(x) + 'px';
       this._ctxMenu.style.top  = Math.round(y) + 'px';
-      this._ctxMenu.hidden = false;
       _bindIcons(this._ctxMenu);
 
       if (this._ctxToggleLabel) {
