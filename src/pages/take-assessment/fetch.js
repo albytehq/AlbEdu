@@ -71,7 +71,7 @@
     }
   }
 
-  // Access check (open / closed / paused / scheduled)
+  // Access check — simplified to Buka/Tutup for manual mode
   function _checkAccess(assessment) {
     const now = Date.now();
 
@@ -85,22 +85,22 @@
     }
 
     if (assessment.access_mode === 'manual') {
-      if (assessment.ac_manual_status === 'closed') {
+      // Simplified: only check if open or closed.
+      // 'closed', 'finished', null, or anything other than 'open' = closed.
+      if (assessment.ac_manual_status !== 'open') {
+        // Check if assessment was previously running and time expired
         if (assessment.ac_end && new Date(assessment.ac_end).getTime() < now) {
           return { allowed: false,
             title: t('assessment.closed_session_ended_title', null, 'Asesmen Selesai'),
             message: t('assessment.closed_session_ended_msg', null, 'Asesmen ini telah berakhir.'), kind: 'danger' };
         }
+        // Default: assessment is closed (not yet opened or manually closed)
         return { allowed: false,
           title: t('assessment.closed_session_title', null, 'Asesmen Belum Dibuka'),
           message: t('assessment.closed_session_msg', null, 'Tunggu admin membuka asesmen, lalu muat ulang halaman.'),
           kind: 'warning' };
       }
-      if (assessment.ac_manual_status === 'finished') {
-        return { allowed: false,
-          title: t('assessment.closed_session_ended_title', null, 'Asesmen Selesai'),
-          message: t('assessment.closed_session_ended_msg', null, 'Asesmen ini telah berakhir.'), kind: 'danger' };
-      }
+      // Status is 'open' — check if time has expired
       if (assessment.ac_end && new Date(assessment.ac_end).getTime() < now) {
         return { allowed: false,
           title: t('assessment.closed_session_ended_title', null, 'Asesmen Selesai'),

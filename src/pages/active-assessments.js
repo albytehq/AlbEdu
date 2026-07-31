@@ -95,18 +95,21 @@
   }
 
   // Map DB status → canonical status key
+  // Simplified to 2 active states + archived:
+  //   open    = admin has opened the assessment (peserta can access)
+  //   closed  = admin has closed it (peserta sees "belum dibuka" or "selesai")
+  //   archived = moved to archive (hidden from active list)
   function _statusOf(a) {
     if (a.status === 'archived') return 'archived';
-    if (a.ac_manual_status === 'open') return 'running';
-    if (a.ac_manual_status === 'finished') return 'finished';
-    return 'paused'; // includes 'closed' / null / NOT_STARTED
+    if (a.ac_manual_status === 'open') return 'open';
+    // 'closed', 'finished', null, or anything else → closed
+    return 'closed';
   }
 
   const STATUS_META = {
-    running:  { label: 'Berjalan', cls: 'aa-status-running'  },
-    paused:   { label: 'Dijeda',   cls: 'aa-status-paused'   },
-    finished: { label: 'Selesai',  cls: 'aa-status-finished' },
-    archived: { label: 'Arsip',    cls: 'aa-status-archived' },
+    open:     { label: 'Buka',   cls: 'aa-status-running'  },
+    closed:   { label: 'Tutup',  cls: 'aa-status-paused'   },
+    archived: { label: 'Arsip',  cls: 'aa-status-archived' },
   };
 
   // Helper: bind icons in a root element (defensive — in case MutationObserver is slow)
@@ -144,12 +147,11 @@
       this._ctxMenu      = document.getElementById('aa-ctx-menu');
       this._ctxToggleLabel = document.getElementById('aa-ctx-toggle-label');
 
-      // Chip count refs (filter chips provide status counts since KPI strip was removed)
+      // Chip count refs (filter chips provide status counts)
       this._chipCounts = {
         all:       document.getElementById('chip-all'),
-        running:   document.getElementById('chip-running'),
-        paused:    document.getElementById('chip-paused'),
-        finished:  document.getElementById('chip-finished'),
+        open:      document.getElementById('chip-running'),   // chip-running = "Buka"
+        closed:    document.getElementById('chip-paused'),    // chip-paused = "Tutup"
         archived:  document.getElementById('chip-archived'),
       };
 
@@ -425,14 +427,13 @@
     // ── Chip counts update ─────────────────────────────────────
     _updateKPIs() {
       try {
-        const counts = { running: 0, paused: 0, finished: 0, archived: 0 };
+        const counts = { open: 0, closed: 0, archived: 0 };
         this._allData.forEach((a) => { counts[_statusOf(a)]++; });
         const total = this._allData.length;
 
         if (this._chipCounts.all)       this._chipCounts.all.textContent       = total;
-        if (this._chipCounts.running)   this._chipCounts.running.textContent   = counts.running;
-        if (this._chipCounts.paused)    this._chipCounts.paused.textContent    = counts.paused;
-        if (this._chipCounts.finished)  this._chipCounts.finished.textContent  = counts.finished;
+        if (this._chipCounts.open)      this._chipCounts.open.textContent      = counts.open;
+        if (this._chipCounts.closed)    this._chipCounts.closed.textContent    = counts.closed;
         if (this._chipCounts.archived)  this._chipCounts.archived.textContent  = counts.archived;
       } catch (err) {
         console.warn('[ActiveAssessments] _updateKPIs failed:', err);
@@ -676,14 +677,6 @@
         </button>`;
       }
 
-      // Finished → show "Sudah Selesai" (disabled, no action)
-      if (status === 'finished') {
-        return `<button class="aa-card-primary-action aa-action-finished" disabled type="button">
-          <span data-albedu-icon="task_alt"></span>
-          <span>Sudah Selesai</span>
-        </button>`;
-      }
-
       // Scheduled mode → show "Terjadwal" (disabled, auto-opens)
       if (a.access_mode === 'scheduled') {
         return `<button class="aa-card-primary-action aa-action-scheduled" disabled type="button">
@@ -692,17 +685,17 @@
         </button>`;
       }
 
-      // Manual mode → show "Mulai" or "Tutup" based on current ac_manual_status
-      if (status === 'running') {
+      // Manual mode → show "Buka" or "Tutup" based on current status
+      if (status === 'open') {
         return `<button class="aa-card-primary-action aa-action-stop" data-action="toggle-status" type="button">
           <span data-albedu-icon="pause_circle"></span>
           <span>Tutup Akses</span>
         </button>`;
       }
-      // paused (closed) → show "Mulai"
+      // closed → show "Buka"
       return `<button class="aa-card-primary-action aa-action-start" data-action="toggle-status" type="button">
         <span data-albedu-icon="play_circle"></span>
-        <span>Mulai Asesmen</span>
+        <span>Buka Akses</span>
       </button>`;
     },
 
@@ -726,8 +719,8 @@
           <td>${qCount}</td>
           <td>${_fmtDate(a.created_at)}</td>
           <td>
-            <button class="aa-table-primary-action" data-action="${status === 'running' ? 'toggle-status' : status === 'archived' ? 'restore' : 'toggle-status'}" type="button" style="background:transparent;border:none;cursor:pointer;color:var(--color-primary);font-weight:600;font-size:12px;padding:4px 8px;">
-              ${status === 'running' ? 'Tutup' : status === 'archived' ? 'Pulihkan' : 'Mulai'}
+            <button class="aa-table-primary-action" data-action="toggle-status" type="button" style="background:transparent;border:none;cursor:pointer;color:var(--color-primary);font-weight:600;font-size:12px;padding:4px 8px;">
+              ${status === 'open' ? 'Tutup' : status === 'archived' ? 'Pulihkan' : 'Buka'}
             </button>
             <button class="aa-table-row-menu" type="button" aria-label="Menu aksi">
               <span data-albedu-icon="chevron_right"></span>
@@ -768,9 +761,7 @@
       if (this._ctxToggleLabel) {
         const status = _statusOf(item);
         this._ctxToggleLabel.textContent =
-          status === 'running' ? 'Tutup Akses' :
-          status === 'paused'  ? 'Mulai Asesmen'  :
-          'Buka / Tutup';
+          status === 'open' ? 'Tutup Akses' : 'Buka Akses';
       }
     },
 
@@ -828,7 +819,7 @@
       this._applyFilters();
 
       const currentStatus = _statusOf(item);
-      const newStatus = currentStatus === 'running' ? 'closed' : 'open';
+      const newStatus = currentStatus === 'open' ? 'closed' : 'open';
       const label = newStatus === 'open' ? 'dibuka' : 'ditutup';
 
       try {
