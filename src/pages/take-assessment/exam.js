@@ -28,12 +28,12 @@
 
     _internal._setPhase('exam');
 
-    I.dom.examSubject.textContent = state.assessment.subject || 'Asesmen';
-    I.dom.examTitle.textContent = state.assessment.title || 'Asesmen';
+    I.dom.examSubject && (I.dom.examSubject.textContent = state.assessment.subject || 'Asesmen');
+    I.dom.examTitle && (I.dom.examTitle.textContent = state.assessment.title || 'Asesmen');
     const displayName = identity?._display_name || identity?.nama || 'Peserta';
     const subLabel = identity?.tab_nama || identity?.kelas ||
                      (identity?._mode === 'manual' ? 'Peserta' : '');
-    I.dom.examUserText.innerHTML = `${_internal._escAttr(displayName)}${subLabel ? ' — ' + _internal._escAttr(subLabel) : ''}`;
+    I.dom.examUserText && (I.dom.examUserText.innerHTML = `${_internal._escAttr(displayName)}${subLabel ? ' — ' + _internal._escAttr(subLabel) : ''}`);
 
     _renderPageTabs();
     _renderQuestion(state.activePageIdx);
@@ -107,8 +107,8 @@
     const page = state.soalPages[idx];
     if (!page) return;
 
-    I.dom.pageTitle.textContent = page.label;
-    I.dom.pageCount.textContent = `${page.questions.length} Soal`;
+    I.dom.pageTitle && (I.dom.pageTitle.textContent = page.label);
+    I.dom.pageCount && (I.dom.pageCount.textContent = `${page.questions.length} Soal`);
 
     const shuffled = state.shuffledPages[page.pageKey] || page.questions;
 
@@ -430,7 +430,7 @@
   function _updateTimerDisplay(sisa) {
     const m = Math.floor(sisa / 60);
     const s = sisa % 60;
-    I.dom.timerDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    I.dom.timerDisplay && (I.dom.timerDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
     I.dom.examTimer.classList.remove('warning', 'critical');
     if (sisa <= TIMER_CRITICAL_SECONDS) I.dom.examTimer.classList.add('critical');
     else if (sisa <= TIMER_WARNING_SECONDS) I.dom.examTimer.classList.add('warning');

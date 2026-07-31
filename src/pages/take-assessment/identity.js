@@ -16,8 +16,8 @@
     _internal._setPhase('identity');
 
     // Banner
-    I.dom.identitySubj.textContent = assessment.subject || 'Asesmen';
-    I.dom.identityTitle.textContent = assessment.title || 'Asesmen';
+    I.dom.identitySubj && (I.dom.identitySubj.textContent = assessment.subject || 'Asesmen');
+    I.dom.identityTitle && (I.dom.identityTitle.textContent = assessment.title || 'Asesmen');
 
     // Chips
     const chips = [];
@@ -29,7 +29,7 @@
     } else {
       chips.push(`<span class="identity-banner__chip"><span data-albedu-icon="keyboard"></span> Form Manual</span>`);
     }
-    I.dom.identityChips.innerHTML = chips.join('');
+    I.dom.identityChips && (I.dom.identityChips.innerHTML = chips.join(''));
 
     // Note
     if (assessment.note_enabled && assessment.note_text) {

@@ -205,8 +205,8 @@
     const empty = _internal._countEmpty();
     const durSec = result.duration_seconds ?? 0;
 
-    document.getElementById('result-score').textContent = score;
-    document.getElementById('result-score-max').textContent = `/${maxScore}`;
+    const _rs = document.getElementById('result-score'); if (_rs) _rs.textContent = score;
+    const _rsm = document.getElementById('result-score-max'); if (_rsm) _rsm.textContent = `/${maxScore}`;
 
     const stats = document.getElementById('result-stats');
     stats.innerHTML = `
