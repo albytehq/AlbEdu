@@ -33,10 +33,10 @@
 
     // Note
     if (assessment.note_enabled && assessment.note_text) {
-      I.dom.identityNote.hidden = false;
+      if (I.dom.identityNote) I.dom.identityNote.hidden = false;
       I.dom.identityNote.innerHTML = _internal._sanitizeHTML(assessment.note_text);
     } else {
-      I.dom.identityNote.hidden = true;
+      if (I.dom.identityNote) I.dom.identityNote.hidden = true;
     }
 
     // Bind icons injected via innerHTML

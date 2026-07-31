@@ -80,7 +80,7 @@
   // sense of structure (and prev/next still works for future sections).
   function _renderPageTabs() {
     const state = I.state;
-    I.dom.pageTabs.hidden = false;
+    if (I.dom.pageTabs) I.dom.pageTabs.hidden = false;
     I.dom.pageTabs.innerHTML = state.soalPages.map((p, idx) => `
       <button class="page-tab ${idx === state.activePageIdx ? 'active' : ''}"
               type="button" role="tab"
@@ -368,8 +368,8 @@
     const isLast = state.activePageIdx === state.soalPages.length - 1;
     I.dom.btnPrev.disabled = state.activePageIdx === 0;
     I.dom.btnNext.disabled = isLast;
-    I.dom.btnNext.hidden = isLast;
-    I.dom.btnSubmit.hidden = !isLast;
+    if (I.dom.btnNext) I.dom.btnNext.hidden = isLast;
+    if (I.dom.btnSubmit) I.dom.btnSubmit.hidden = !isLast;
   }
 
   function _updateProgress() {

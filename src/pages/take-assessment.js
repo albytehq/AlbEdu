@@ -95,14 +95,14 @@
 
   function _setPhase(phase) {
     state.phase = phase;
-    dom.loadingScreen.hidden = phase !== 'loading';
-    dom.closedScreen.hidden  = phase !== 'closed';
-    dom.identityPhase.hidden = phase !== 'identity';
-    dom.examPhase.hidden     = phase !== 'exam';
-    dom.resultPhase.hidden   = phase !== 'result';
-    if (phase !== 'loading') {
+    if (dom.loadingScreen) dom.loadingScreen.hidden = phase !== 'loading';
+    if (dom.closedScreen)  dom.closedScreen.hidden  = phase !== 'closed';
+    if (dom.identityPhase) dom.identityPhase.hidden = phase !== 'identity';
+    if (dom.examPhase)     dom.examPhase.hidden     = phase !== 'exam';
+    if (dom.resultPhase)   dom.resultPhase.hidden   = phase !== 'result';
+    if (phase !== 'loading' && dom.loadingScreen) {
       dom.loadingScreen.classList.add('fading');
-      setTimeout(() => { dom.loadingScreen.style.display = 'none'; }, 240);
+      setTimeout(() => { if (dom.loadingScreen) dom.loadingScreen.style.display = 'none'; }, 240);
     }
   }
 
