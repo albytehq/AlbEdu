@@ -381,7 +381,7 @@
   100% { background-position: -200% 0; }
 }
 
-/* ═══ GRID VIEW — assessment cards ═════════════════════════════ */
+/* ═══ GRID VIEW — minimalis assessment cards ═══════════════════ */
 .active-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -395,73 +395,28 @@
   padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   cursor: pointer;
-  transition: all 200ms cubic-bezier(.4, 0, .2, 1);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
   position: relative;
   overflow: hidden;
 }
-.aa-card::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: var(--aa-accent, var(--color-primary));
-  transform: scaleY(0);
-  transform-origin: top;
-  transition: transform 220ms ease;
-}
 .aa-card:hover {
   border-color: var(--color-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
 }
-.aa-card:hover::before { transform: scaleY(1); }
 
-.aa-card-head {
+.aa-card-top {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.aa-card-status {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border: 1px solid transparent;
-  white-space: nowrap;
+  justify-content: space-between;
+  gap: 8px;
 }
-.aa-card-status::before {
-  content: '';
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-.aa-status-running  { background: var(--color-success-bg); color: var(--color-success); border-color: rgba(21, 128, 61, 0.25); }
-.aa-status-paused   { background: var(--color-warning-bg); color: var(--color-warning); border-color: rgba(180, 83, 9, 0.25); }
-.aa-status-finished { background: var(--color-surface-3);  color: var(--color-text-2); border-color: rgba(51, 65, 85, 0.2); }
-.aa-status-archived { background: var(--color-destructive-bg); color: var(--color-destructive); border-color: rgba(220, 38, 38, 0.25); }
-
-.aa-status-running .aa-card-status::before {
-  animation: aa-pulse-mini 1.6s ease-out infinite;
-}
-@keyframes aa-pulse-mini {
-  0%   { box-shadow: 0 0 0 0 currentColor; }
-  70%  { box-shadow: 0 0 0 4px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
-}
-
 .aa-card-menu-btn {
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 6px;
+  padding: 4px;
   border-radius: 6px;
   color: var(--color-text-faint);
   transition: all 150ms ease;
@@ -487,43 +442,31 @@
   overflow: hidden;
 }
 
-.aa-card-sub {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  margin: 0;
+.aa-card-meta-row {
   display: flex;
-  align-items: center;
-  gap: 6px;
   flex-wrap: wrap;
-}
-.aa-card-sub .albedu-icon { width: 14px; height: 14px; color: var(--color-text-faint); }
-
-.aa-card-meta {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px 12px;
-  padding: 12px 0;
-  border-top: 1px dashed var(--color-border);
-  border-bottom: 1px dashed var(--color-border);
+  gap: 6px 12px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  align-items: center;
 }
 .aa-meta-item {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--color-text-muted);
+  gap: 4px;
 }
-.aa-meta-item .albedu-icon { width: 14px; height: 14px; color: var(--color-primary); flex-shrink: 0; }
-.aa-meta-item strong { color: var(--color-text); font-weight: 600; font-variant-numeric: tabular-nums; }
-
+.aa-meta-item .albedu-icon { width: 13px; height: 13px; color: var(--color-text-faint); }
 .aa-card-code {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 12px;
+  font-family: JetBrains Mono, monospace;
+  font-size: 11px;
   font-weight: 600;
   background: var(--color-primary-light);
   color: var(--color-primary);
-  padding: 2px 8px;
-  border-radius: 6px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  letter-spacing: 0.03em;
+  margin-left: auto;
+}
   letter-spacing: 0.04em;
 }
 

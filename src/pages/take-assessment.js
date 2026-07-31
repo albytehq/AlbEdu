@@ -120,10 +120,69 @@
     dom.closedIcon.className = 'status-icon' + (kind === 'danger' ? ' danger' : kind === 'success' ? ' success' : '');
     const iconHolder = dom.closedIcon.querySelector('[data-albedu-icon]');
     if (iconHolder) {
-      const iconName = kind === 'danger' ? 'error' : kind === 'success' ? 'task-alt' : 'lock';
+      const iconName = kind === 'danger' ? 'error' : kind === 'success' ? 'task_alt' : 'lock';
       window.AlbEdu?.setIcon?.(iconHolder, iconName);
     }
     _setPhase('closed');
+
+    // ── Auto-poll: detect when admin opens the assessment ──
+    // If the closed screen was shown due to access_status !== 'open'
+    // (not due to invalid token / no session / archived), schedule a
+    // poll every 8s to re-fetch the assessment and re-check access.
+    // When access is granted, auto-reload to resume the flow.
+    if (state.assessment && kind !== 'danger') {
+      _startClosedScreenPoll();
+    }
+  }
+
+  // ── Closed-screen auto-poll ──
+  // Polls the assessment every 8s while the peserta is on the closed screen.
+  // When admin opens access (ac_manual_status === 'open'), auto-reloads
+  // the page so the peserta can continue without manual "Coba Lagi" click.
+  let _closedPollTimer = null;
+
+  function _startClosedScreenPoll() {
+    _stopClosedScreenPoll();
+    _closedPollTimer = setInterval(async () => {
+      // Only poll while on the closed screen
+      if (state.phase !== 'closed') {
+        _stopClosedScreenPoll();
+        return;
+      }
+
+      try {
+        const token = state.assessment?.access_code;
+        if (!token) return;
+
+        const freshAssessment = await TakeAssessment._fetchAssessment(token);
+        if (!freshAssessment) return;
+
+        // Re-check access with fresh data
+        const access = TakeAssessment._checkAccess(freshAssessment);
+        if (access.allowed) {
+          // Admin has opened access — auto-reload to resume
+          _stopClosedScreenPoll();
+          // Show a brief "assessment opened" message before reload
+          if (dom.closedTitle) dom.closedTitle.textContent = 'Asesmen Dibuka!';
+          if (dom.closedMessage) dom.closedMessage.textContent = 'Mohon tunggu, memuat ulang halaman...';
+          if (dom.closedIcon) {
+            dom.closedIcon.className = 'status-icon success';
+            const iconHolder = dom.closedIcon.querySelector('[data-albedu-icon]');
+            if (iconHolder) window.AlbEdu?.setIcon?.(iconHolder, 'task-alt');
+          }
+          setTimeout(() => window.location.reload(), 800);
+        }
+      } catch (_) {
+        // Silent — will retry on next interval
+      }
+    }, 8000); // 8 second poll interval
+  }
+
+  function _stopClosedScreenPoll() {
+    if (_closedPollTimer) {
+      clearInterval(_closedPollTimer);
+      _closedPollTimer = null;
+    }
   }
 
   Object.assign(TakeAssessment, {

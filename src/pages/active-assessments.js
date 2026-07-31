@@ -611,50 +611,20 @@
 
       return `
         <article class="aa-card" data-id="${_esc(a.id)}" data-status="${status}">
-          <header class="aa-card-head">
+          <div class="aa-card-top">
             <span class="aa-card-status ${meta.cls}">${meta.label}</span>
             <button class="aa-card-menu-btn" type="button" aria-label="Menu aksi">
               <span data-albedu-icon="chevron_right"></span>
             </button>
-          </header>
+          </div>
           <h3 class="aa-card-title">${_esc(a.title || 'Tanpa Judul')}</h3>
-          <p class="aa-card-sub">
-            <span data-albedu-icon="school"></span>
-            <span>${_esc(a.subject || 'Tanpa mapel')}</span>
-          </p>
-          <div class="aa-card-meta">
-            <div class="aa-meta-item">
-              <span data-albedu-icon="schedule"></span>
-              <strong>${a.duration_minutes || 0}</strong>&nbsp;menit
-            </div>
-            <div class="aa-meta-item">
-              <span data-albedu-icon="assignment"></span>
-              <strong>${qCount}</strong>&nbsp;soal
-            </div>
-            <div class="aa-meta-item">
-              <span data-albedu-icon="sell"></span>
-              <span class="aa-card-code">#${_esc(code)}</span>
-            </div>
-            <div class="aa-meta-item">
-              <span data-albedu-icon="restart_alt"></span>
-              <span>${a.access_mode === 'scheduled' ? 'Terjadwal' : 'Manual'}</span>
-            </div>
+          <div class="aa-card-meta-row">
+            <span class="aa-meta-item"><span data-albedu-icon="school"></span>${_esc(a.subject || '-')}</span>
+            <span class="aa-meta-item"><span data-albedu-icon="quiz"></span>${qCount} soal</span>
+            <span class="aa-meta-item"><span data-albedu-icon="schedule"></span>${a.duration_minutes || 0}m</span>
+            <span class="aa-card-code">#${_esc(code)}</span>
           </div>
           ${primaryAction}
-          <footer class="aa-card-footer">
-            <span class="aa-card-date">
-              <span data-albedu-icon="schedule"></span>
-              ${_fmtDate(a.created_at)}
-            </span>
-            <div class="aa-card-quick-actions">
-              <button class="aa-card-quick-btn" data-action="copy-code" type="button" aria-label="Salin kode">
-                <span data-albedu-icon="content_copy"></span>
-              </button>
-              <button class="aa-card-quick-btn ${status === 'archived' ? '' : 'aa-quick-danger'}" data-action="${status === 'archived' ? 'restore' : 'archive'}" type="button" aria-label="${status === 'archived' ? 'Restore' : 'Arsipkan'}">
-                <span data-albedu-icon="folder_open"></span>
-              </button>
-            </div>
-          </footer>
         </article>
       `;
     },
@@ -823,7 +793,7 @@
       const label = newStatus === 'open' ? 'dibuka' : 'ditutup';
 
       try {
-        const sb = await _getClient();
+        const sb = window.AlbEdu.supabase.client;
         const { error } = await sb
           .from('assessments')
           .update({ ac_manual_status: newStatus, updated_at: new Date().toISOString() })
@@ -865,7 +835,7 @@
       );
       if (!confirmed) return;
       try {
-        const sb = await _getClient();
+        const sb = window.AlbEdu.supabase.client;
         const { error } = await sb
           .from('assessments')
           .update({ status: 'archived', updated_at: new Date().toISOString() })
@@ -883,7 +853,7 @@
 
     async _restore(item) {
       try {
-        const sb = await _getClient();
+        const sb = window.AlbEdu.supabase.client;
         const { error } = await sb
           .from('assessments')
           .update({ status: 'active', updated_at: new Date().toISOString() })
@@ -907,7 +877,7 @@
       );
       if (!confirmed) return;
       try {
-        const sb = await _getClient();
+        const sb = window.AlbEdu.supabase.client;
         const { error } = await sb.from('assessments').delete().eq('id', item.id);
         if (error) throw error;
         this._allData = this._allData.filter((x) => x.id !== item.id);
