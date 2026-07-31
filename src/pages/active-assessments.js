@@ -815,7 +815,7 @@
       if (this._togglingIds.has(item.id)) return;
       this._togglingIds.add(item.id);
 
-      // Optimistic UI update
+      // Optimistic UI update — show loading button
       this._applyFilters();
 
       const currentStatus = _statusOf(item);
@@ -830,23 +830,31 @@
           .eq('id', item.id);
         if (error) throw error;
 
+        // Update local data
         item.ac_manual_status = newStatus;
+
+        // CRITICAL: Remove from togglingIds BEFORE re-render, so the
+        // new button (Buka/Tutup) shows instead of "Memproses...".
+        this._togglingIds.delete(item.id);
+
         window.notify?.success?.(
-          newStatus === 'open' ? 'Asesmen Dimulai' : 'Akses Ditutup',
+          newStatus === 'open' ? 'Asesmen Dibuka' : 'Akses Ditutup',
           newStatus === 'open'
             ? `Peserta sekarang dapat mengerjakan "${item.title || 'Tanpa Judul'}"`
             : `Akses peserta ke "${item.title || 'Tanpa Judul'}" telah ditutup`,
           2500
         );
+
+        // Re-render with new status (no loading state)
         this._updateKPIs();
         this._applyFilters();
       } catch (err) {
         console.error('[toggleStatus]', err);
-        window.notify?.error?.('Gagal mengubah status', err?.message || 'Unknown error', 3000);
-        // Revert optimistic update
-        this._applyFilters();
-      } finally {
+        // Remove from togglingIds so button reverts to original state
         this._togglingIds.delete(item.id);
+        window.notify?.error?.('Gagal mengubah status', err?.message || 'Unknown error', 3000);
+        // Re-render to revert optimistic loading state
+        this._applyFilters();
       }
     },
 
