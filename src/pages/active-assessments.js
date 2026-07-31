@@ -614,7 +614,7 @@
           <div class="aa-card-top">
             <span class="aa-card-status ${meta.cls}">${meta.label}</span>
             <button class="aa-card-menu-btn" type="button" aria-label="Menu aksi">
-              <span data-albedu-icon="chevron_right"></span>
+              <span data-albedu-icon="more_vert"></span>
             </button>
           </div>
           <h3 class="aa-card-title">${_esc(a.title || 'Tanpa Judul')}</h3>
@@ -693,7 +693,7 @@
               ${status === 'open' ? 'Tutup' : status === 'archived' ? 'Pulihkan' : 'Buka'}
             </button>
             <button class="aa-table-row-menu" type="button" aria-label="Menu aksi">
-              <span data-albedu-icon="chevron_right"></span>
+              <span data-albedu-icon="more_vert"></span>
             </button>
           </td>
         </tr>
@@ -714,20 +714,29 @@
       if (!this._ctxMenu) return;
       this._ctxTarget = item;
 
+      // Get button position — the anchor IS the button element itself
       const rect = anchor.getBoundingClientRect();
-      const menuW = 240;
-      const menuH = 280;
 
-      // Position menu below the button, aligned to the button's LEFT edge
-      // (not right-aligned which made it appear far from the button).
-      let x = rect.left;
+      // Show menu first (hidden=none means getBoundingClientRect on menu = 0)
+      // So we position based on the button, then show.
+      const menuW = 220;
+      const menuH = 260;
+
+      // Position: directly below the button, right-aligned to button's right edge
+      // (so the menu's right edge matches the button's right edge — natural for
+      // a menu triggered from a button in the top-right corner of a card).
+      let x = rect.right - menuW;
       let y = rect.bottom + 4;
 
-      // Keep menu within viewport horizontally
+      // If menu would go off left edge, left-align to button instead
+      if (x < 8) {
+        x = rect.left;
+      }
+
+      // If menu would go off right edge, clamp
       if (x + menuW > window.innerWidth - 8) {
         x = window.innerWidth - menuW - 8;
       }
-      if (x < 8) x = 8;
 
       // If menu would go below viewport, flip above the button
       if (y + menuH > window.innerHeight - 8) {
@@ -735,8 +744,8 @@
       }
       if (y < 8) y = 8;
 
-      this._ctxMenu.style.left = x + 'px';
-      this._ctxMenu.style.top  = y + 'px';
+      this._ctxMenu.style.left = Math.round(x) + 'px';
+      this._ctxMenu.style.top  = Math.round(y) + 'px';
       this._ctxMenu.hidden = false;
       _bindIcons(this._ctxMenu);
 
