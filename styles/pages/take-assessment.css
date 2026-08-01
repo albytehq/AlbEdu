@@ -106,12 +106,15 @@
       border: 1px solid var(--albedu-border, #e2e8f0);
       border-radius: var(--albedu-radius-lg, 8px);
       box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
-      overflow: hidden;
+      /* overflow: visible — let dropdown options render outside card bounds.
+         The banner's border-radius is handled by the banner element itself. */
+      overflow: visible;
     }
     .identity-banner {
       padding: 28px 28px 24px;
       background: linear-gradient(135deg, var(--albedu-primary, #2563eb), var(--albedu-primary-hover, #1d4ed8));
       color: #fff;
+      border-radius: var(--albedu-radius-lg, 8px) var(--albedu-radius-lg, 8px) 0 0;
     }
     .identity-banner__meta {
       /* EXPLICIT white — on gradient surface, NOT inherited.

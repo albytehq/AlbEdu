@@ -1032,12 +1032,13 @@
   border: 1px solid var(--albedu-border);
   border-radius: var(--albedu-radius-lg);
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
-  overflow: hidden;
+  overflow: visible; /* Let dropdown options render outside card */
 }
 .preview-take-shell .identity-banner {
   padding: 28px 28px 24px;
   background: linear-gradient(135deg, var(--albedu-primary), var(--albedu-primary-hover));
   color: #fff;
+  border-radius: var(--albedu-radius-lg) var(--albedu-radius-lg) 0 0;
 }
 .preview-take-shell .identity-banner__meta {
   /* EXPLICIT white — on gradient surface. Must match production. */
