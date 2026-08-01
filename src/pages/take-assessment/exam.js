@@ -57,19 +57,24 @@
                      (identity?._mode === 'manual' ? 'Peserta' : '');
     I.dom.examUserText && (I.dom.examUserText.innerHTML = `${_internal._escAttr(displayName)}${subLabel ? ' — ' + _internal._escAttr(subLabel) : ''}`);
 
+    // Single teardown controller — every listener added during the exam
+    // phase takes this signal so any exit path (blocked / submitted /
+    // expired / result) can clean them up in one shot.
+    //
+    // CRITICAL (C2 fix): This MUST be created BEFORE _wireNavButtons() is
+    // called, because _wireNavButtons() guards with `if (!I._examAbort) return;`
+    // and would otherwise bail out on first exam start, leaving prev/next/
+    // submit buttons without click handlers.
+    if (I._examAbort) I._examAbort.abort();
+    I._examAbort = new AbortController();
+    const sig = I._examAbort.signal;
+
     _renderPageTabs();
     _renderQuestion(state.activePageIdx);
     _startTimer(state.assessment);
     _wireNavButtons();
     _startSecurity();
     _updateSubmitLockState();
-
-    // Single teardown controller — every listener added during the exam
-    // phase takes this signal so any exit path (blocked / submitted /
-    // expired / result) can clean them up in one shot.
-    if (I._examAbort) I._examAbort.abort();
-    I._examAbort = new AbortController();
-    const sig = I._examAbort.signal;
 
     window.addEventListener('beforeunload', _beforeUnloadGuard, { signal: sig });
 
@@ -150,10 +155,18 @@
       const key = opt.dataset.key;
       if (!pageKey || !idq) return;
       const wasSelected = opt.classList.contains('selected');
-      I.dom.questionList.querySelectorAll(`.option-item[data-idq="${idq}"][data-pagekey="${pageKey}"]`)
-        .forEach(o => o.classList.remove('selected'));
+      // M5 fix: update BOTH .selected class AND aria-checked attribute so
+      // screen readers can announce the selection state change (WCAG 4.1.2).
+      const siblings = I.dom.questionList.querySelectorAll(
+        `.option-item[data-idq="${idq}"][data-pagekey="${pageKey}"]`
+      );
+      siblings.forEach(o => {
+        o.classList.remove('selected');
+        o.setAttribute('aria-checked', 'false');
+      });
       if (!wasSelected) {
         opt.classList.add('selected');
+        opt.setAttribute('aria-checked', 'true');
         _saveAnswer(pageKey, parseInt(idq, 10), key);
       } else {
         _saveAnswer(pageKey, parseInt(idq, 10), null);
@@ -205,7 +218,24 @@
         <div class="question-points">Esai — dinilai manual oleh guru</div>
       `;
     } else {
-      const pilihan = Array.isArray(q.pilihan) ? q.pilihan : [];
+      // CRITICAL (C1 fix): Accept BOTH pilihan shapes:
+      //   - Array shape:  ['a', 'b', 'c', 'd']         (legacy / fetch.js normalizer)
+      //   - Object shape: { A:'a', B:'b', C:'c', D:'d' } (production admin UI:
+      //                   buat-ujian/templates.js + soal-editor-modal.js)
+      // The object shape is what the admin UI actually produces, so the
+      // previous `Array.isArray(...) ? ... : []` yielded [] for every
+      // admin-created assessment → 0 options rendered → peserta cannot
+      // answer any PG question.
+      let pilihan;
+      if (Array.isArray(q.pilihan)) {
+        pilihan = q.pilihan;
+      } else if (q.pilihan && typeof q.pilihan === 'object') {
+        // Object shape: preserve the A/B/C/D/E key order from the object.
+        const objKeys = ['A', 'B', 'C', 'D', 'E'];
+        pilihan = objKeys.map(k => q.pilihan[k]).filter(v => v != null && v !== '');
+      } else {
+        pilihan = [];
+      }
       const keys = ['A', 'B', 'C', 'D', 'E'];
       bodyHTML = `
         <div class="option-list" role="radiogroup" aria-label="Pilihan jawaban soal ${displayIdx + 1}">
@@ -410,23 +440,14 @@
     _stopTimer();
     const state = I.state;
 
-    let endMs = null;
-    if (assessment.access_mode === 'scheduled' && assessment.ac_scheduled_end) {
-      endMs = new Date(assessment.ac_scheduled_end).getTime();
-    } else if (assessment.ac_end) {
-      endMs = new Date(assessment.ac_end).getTime();
-    }
-
-    if (!endMs || isNaN(endMs)) {
-      const startMs = state.session?.started_at
-        ? new Date(state.session.started_at).getTime()
-        : Date.now();
-      const durMs = (assessment.duration_minutes || 90) * 60 * 1000;
-      endMs = startMs + durMs;
-      console.warn('[take] ac_end missing — falling back to duration_minutes');
-    }
+    // M8 fix: endMs is now a mutable state field so the re-fetch poll
+    // (every 60s) can update it when admin extends time mid-exam.
+    state._timerEndMs = _computeEndMs(assessment, state);
+    state._timerLastFetch = Date.now();
 
     const tick = () => {
+      const endMs = state._timerEndMs;
+      if (!endMs || isNaN(endMs)) return;
       const sisa = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
       _updateTimerDisplay(sisa);
 
@@ -443,12 +464,65 @@
     };
     tick();
     state.timerInterval = setInterval(tick, 1000);
+
+    // M8: re-fetch assessment every 60s to pick up ac_end changes from admin.
+    // Cheap SELECT (1 row), runs in parallel with BlockChecker (10s poll).
+    state._timerRefetchId = setInterval(async () => {
+      try {
+        const token = state.assessment?.access_code;
+        if (!token) return;
+        const fresh = await _internal._fetchAssessment(token);
+        if (!fresh) return;
+        const newEndMs = _computeEndMs(fresh, state);
+        if (newEndMs && !isNaN(newEndMs) && newEndMs !== state._timerEndMs) {
+          const oldSec = Math.floor((state._timerEndMs - Date.now()) / 1000);
+          const newSec = Math.floor((newEndMs - Date.now()) / 1000);
+          console.info(`[take] ac_end updated: ${oldSec}s → ${newSec}s`);
+          state._timerEndMs = newEndMs;
+          state.assessment = fresh; // also pick up any other field changes
+          // If admin extended time, reset isExpired so timer can fire again
+          if (newSec > 0 && state.isExpired) {
+            state.isExpired = false;
+          }
+          window.notify?.info(
+            'Waktu Diperbarui',
+            `Admin memperbarui durasi asesmen: ${Math.max(0, Math.floor(newSec/60))} menit tersisa.`,
+            4000
+          );
+        }
+      } catch (err) {
+        console.warn('[take] timer re-fetch failed (non-fatal):', err?.message);
+      }
+    }, 60_000);
+  }
+
+  function _computeEndMs(assessment, state) {
+    let endMs = null;
+    if (assessment.access_mode === 'scheduled' && assessment.ac_scheduled_end) {
+      endMs = new Date(assessment.ac_scheduled_end).getTime();
+    } else if (assessment.ac_end) {
+      endMs = new Date(assessment.ac_end).getTime();
+    }
+    if (!endMs || isNaN(endMs)) {
+      const startMs = state?.session?.started_at
+        ? new Date(state.session.started_at).getTime()
+        : Date.now();
+      const durMs = (assessment.duration_minutes || 90) * 60 * 1000;
+      endMs = startMs + durMs;
+      console.warn('[take] ac_end missing — falling back to duration_minutes');
+    }
+    return endMs;
   }
 
   function _stopTimer() {
     if (I.state.timerInterval) {
       clearInterval(I.state.timerInterval);
       I.state.timerInterval = null;
+    }
+    // M8: also clear the re-fetch interval
+    if (I.state._timerRefetchId) {
+      clearInterval(I.state._timerRefetchId);
+      I.state._timerRefetchId = null;
     }
   }
 
@@ -479,7 +553,14 @@
   }
 
   function _getCurrentSisa() {
-    const assessment = I.state.assessment;
+    // M8: prefer the live _timerEndMs (updated by re-fetch poll) over the
+    // original assessment.ac_end. Falls back to assessment fields if
+    // _timerEndMs not set yet.
+    const state = I.state;
+    if (state._timerEndMs && !isNaN(state._timerEndMs)) {
+      return Math.max(0, Math.floor((state._timerEndMs - Date.now()) / 1000));
+    }
+    const assessment = state.assessment;
     let endMs = null;
     if (assessment?.access_mode === 'scheduled' && assessment.ac_scheduled_end) {
       endMs = new Date(assessment.ac_scheduled_end).getTime();
@@ -520,10 +601,13 @@
       }
       if (window.BlockChecker?.start) {
         // Phase 3: BlockChecker replaces BlockListener (10s poll, no Realtime)
+        // M1: also polls assessment.ac_manual_status — fires onAssessmentClosed
+        // when admin clicks "Tutup Akses" mid-exam.
         window.BlockChecker.start(state.session.id, {
           onBlocked:  (reason) => _handleBlocked(reason),
           onSubmitted: () => _handleSubmitted(),
           onExpired:  () => _handleExpired(),
+          onAssessmentClosed: (reason) => _handleBlocked(reason),
         });
       }
       if (window.ExamGuardian?.activate) {
@@ -618,6 +702,11 @@
   function _handleBlocked(reason) {
     if (I.state._redirected) return;
     I.state._redirected = true;
+    // m10 fix: set phase BEFORE the redirect so test harnesses (and any
+    // code running between the state change and the navigation) see the
+    // correct phase. In production this is harmless — the browser navigates
+    // away immediately, but the phase field is now consistent.
+    I.state.phase = 'blocked';
     _teardownExam();
     const reasonEnc = encodeURIComponent(reason || 'Diblokir oleh admin');
     window.location.replace(`blocked.html?reason=${reasonEnc}`);
@@ -626,6 +715,8 @@
   function _handleSubmitted() {
     if (I.state._redirected) return;
     I.state._redirected = true;
+    // m10 fix: set phase BEFORE the redirect (see _handleBlocked)
+    I.state.phase = 'submitted';
     _teardownExam();
     window.location.replace('submitted.html');
   }
@@ -672,7 +763,12 @@
     if (I.state._draftSyncTimer) {
       clearTimeout(I.state._draftSyncTimer);
       I.state._draftSyncTimer = null;
-      _saveLocalDraft();
+      // m9 fix: call I._saveLocalDraft (property reference) instead of the
+      // IIFE-local closure. This lets external code (tests, telemetry) spy
+      // on the call by replacing I._saveLocalDraft. Functionally identical
+      // in production because I._saveLocalDraft === _saveLocalDraft after
+      // the Object.assign at the bottom of this module.
+      (I._saveLocalDraft || _saveLocalDraft)();
     }
     if (I.state.phase === 'exam') {
       try { window.Heartbeat?.syncNow?.(); } catch (_) {}

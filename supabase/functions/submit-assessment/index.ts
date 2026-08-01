@@ -241,6 +241,31 @@ async function logic(req: Request, env: Env): Promise<Response> {
     { status: 'submitted', submitted_at: new Date().toISOString() }
   );
 
+  // M7 fix: re-check session.status AFTER the submit lock. If admin blocked
+  // the session DURING the async submit (between the initial fetch at line 103
+  // and the conditional update above), the updateIf returns 0 rows updated
+  // (because status is no longer 'active'). Detect this and roll back the
+  // submission by deleting it and throwing SESSION_BLOCKED so the client
+  // redirects to blocked.html (handled by C3 fix in submit.js).
+  //
+  // The updateIf above already guards against status='submitted' (idempotent
+  // case) and status='blocked' (no rows updated). But we need to distinguish
+  // between "already submitted" (ok, return existing) and "blocked during
+  // submit" (must throw SESSION_BLOCKED).
+  const postSubmitSession = await db.selectOne<AssessmentSession>(
+    'assessment_sessions',
+    `id,status,blocked_reason&id=eq.${session.id}`
+  );
+  if (postSubmitSession?.status === 'blocked') {
+    // Admin blocked during submit — delete the submission we just created
+    // so the block is the source of truth, not the partial submission.
+    try {
+      await db.delete('submissions', `session_id=eq.${session.id}`);
+    } catch (_) { /* best effort — submission may not have been inserted yet */ }
+    throw new HTTPError(409, 'SESSION_BLOCKED',
+      postSubmitSession.blocked_reason || 'Session was blocked during submit');
+  }
+
   // Audit log.
   logAudit(env, {
     action: 'SUBMIT_ASSESSMENT',

@@ -468,8 +468,6 @@
   align-items: center;
 }
 .aa-meta-item {
-<<<<<<< HEAD
-=======
   display: flex;
   align-items: center;
   gap: 6px;
@@ -488,6 +486,7 @@
   padding: 2px 8px;
   border-radius: 6px;
   letter-spacing: 0.04em;
+  margin-left: auto;
 }
 
 /* Live countdown timer on admin card */
@@ -550,22 +549,9 @@
   color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 600;
->>>>>>> 12118d7 (feat: working timer system — admin countdown + server-trusted ac_end + auto-expire)
   display: inline-flex;
   align-items: center;
   gap: 3px;
-}
-.aa-meta-item .albedu-icon { width: 12px; height: 12px; color: var(--color-text-faint); }
-.aa-card-code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  font-weight: 700;
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  padding: 2px 6px;
-  border-radius: 4px;
-  letter-spacing: 0.03em;
-  margin-left: auto;
 }
 
 /* Status badge — compact pill with colored dot */

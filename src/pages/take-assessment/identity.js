@@ -31,10 +31,31 @@
     }
     I.dom.identityChips && (I.dom.identityChips.innerHTML = chips.join(''));
 
-    // Note
+    // Note (m5 fix: redesigned as a callout with icon + dismiss button)
     if (assessment.note_enabled && assessment.note_text) {
-      if (I.dom.identityNote) I.dom.identityNote.hidden = false;
-      I.dom.identityNote.innerHTML = _internal._sanitizeHTML(assessment.note_text);
+      if (I.dom.identityNote) {
+        I.dom.identityNote.hidden = false;
+        I.dom.identityNote.classList.remove('is-dismissed');
+        const sanitized = _internal._sanitizeHTML(assessment.note_text);
+        I.dom.identityNote.innerHTML = `
+          <span class="identity-card__note__icon" aria-hidden="true">
+            <span data-albedu-icon="info"></span>
+          </span>
+          <div class="identity-card__note__body">${sanitized}</div>
+          <button type="button" class="identity-card__note__dismiss" aria-label="Tutup catatan">
+            <span data-albedu-icon="close"></span>
+          </button>
+        `;
+        // Wire dismiss button
+        const dismissBtn = I.dom.identityNote.querySelector('.identity-card__note__dismiss');
+        if (dismissBtn) {
+          dismissBtn.addEventListener('click', () => {
+            I.dom.identityNote.classList.add('is-dismissed');
+          });
+        }
+        // Bind icons in the note
+        window.AlbEdu?.bindIcons?.(I.dom.identityNote);
+      }
     } else {
       if (I.dom.identityNote) I.dom.identityNote.hidden = true;
     }
@@ -97,12 +118,24 @@
       }
     }
 
-    // Sanitize display name (peserta could enter arbitrary name)
+    // Sanitize identity values (peserta could enter arbitrary content).
+    // m1 fix: truncate ALL string values to 80 chars (not just _display_name).
+    // The 80-char limit matches the DB column default for identity fields
+    // and prevents overly long values from breaking admin views.
+    const MAX_IDENTITY_LEN = 80;
     if (identity._display_name) {
-      identity._display_name = String(identity._display_name).slice(0, 80).trim();
+      identity._display_name = String(identity._display_name).slice(0, MAX_IDENTITY_LEN).trim();
     }
     if (identity.nama) {
-      identity.nama = String(identity.nama).slice(0, 80).trim();
+      identity.nama = String(identity.nama).slice(0, MAX_IDENTITY_LEN).trim();
+    }
+    // Iterate over all other string fields in the identity object
+    for (const key of Object.keys(identity)) {
+      if (key.startsWith('_')) continue; // skip internal fields (_mode, _display_name)
+      const val = identity[key];
+      if (typeof val === 'string' && val.length > MAX_IDENTITY_LEN) {
+        identity[key] = val.slice(0, MAX_IDENTITY_LEN).trim();
+      }
     }
 
     I.state.identity = identity;

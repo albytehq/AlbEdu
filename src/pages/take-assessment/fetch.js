@@ -10,17 +10,26 @@
   const t = I.t || ((key, vars, fallback) => fallback || key);
 
   // Fetch assessment (peserta view — strips admin fields like total_score).
+  //
+  // m7 + m8 fix: returns a tagged result so the caller can distinguish
+  // between "not found" (invalid token / archived), "network error", and
+  // "found". Previously both not-found and network-error returned null,
+  // so init() showed the same misleading "Kode akses tidak valid" title
+  // for both. Now:
+  //   - not found  → null (caller shows "Kode akses tidak valid")
+  //   - archived   → null (caller checks via separate query if needed)
+  //   - network    → throws { _networkError: true } (caller shows "Kesalahan jaringan")
+  //   - found      → returns the assessment object
   async function _fetchAssessment(token) {
     const repo = window.AlbEdu?.repository;
-    if (!repo) return null;
-    try {
-      const snap = await repo.getDoc('assessment_view_peserta', token, 'access_code');
-      if (!snap.exists) return null;
-      return { id: snap.id, ...snap.data() };
-    } catch (err) {
-      console.error('[take] fetchAssessment error:', err);
-      return null;
+    if (!repo) {
+      const err = new Error('Platform layer not ready');
+      err._networkError = true;
+      throw err;
     }
+    const snap = await repo.getDoc('assessment_view_peserta', token, 'access_code');
+    if (!snap.exists) return null;
+    return { id: snap.id, ...snap.data() };
   }
 
   // Fetch session

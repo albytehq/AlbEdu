@@ -7,8 +7,8 @@
   <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://esm.sh https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://edu.albyte-inc.workers.dev https://esm.sh; worker-src 'self'; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; frame-src https://challenges.cloudflare.com; form-action 'self'">
-    <title>Monitoring Real-time — AlbEdu</title>
-    <meta name="description" content="AlbEdu - Dashboard proctoring real-time untuk asesmen">
+    <title>Sesi Aktif — AlbEdu</title>
+    <meta name="description" content="AlbEdu - Dashboard monitoring sesi peserta yang sedang mengerjakan asesmen Anda">
     <meta name="theme-color" content="#2563eb">
 
     <!-- Favicon -->
@@ -52,7 +52,7 @@
     <script src="../../src/auth/main.js" defer></script>
     <script src="../../src/auth/byteward.js" defer></script>
     <script src="../../src/utils/navigasi.js" defer></script>
-    <script src="../../src/utils/self-storage.js" defer></script><link rel="stylesheet" href="../../styles/pages/monitoring.css">
+    <script src="../../src/utils/self-storage.js" defer></script><link rel="stylesheet" href="../../styles/pages/active-sessions.css">
 </head>
 <body>
     <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
@@ -152,68 +152,124 @@
 
             <!-- Content Area -->
             <div class="content-area">
-                <!-- Controls: refresh + auto-refresh toggle -->
-                <div class="mon-controls">
-                    <div>
-                        <label>&nbsp;</label>
-                        <div class="mon-batch-actions" role="group" aria-label="Tindakan">
-                            <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-refresh" type="button">
-                                <span data-albedu-icon="sync"><svg class="albedu-icon" aria-hidden="true"><use href="#i-sync"/></svg></span>
-                                <span>Refresh</span>
-                            </button>
-                            <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-auto-refresh" type="button" aria-pressed="false">
-                                <span data-albedu-icon="timer"><svg class="albedu-icon" aria-hidden="true"><use href="#i-timer"/></svg></span>
-                                <span>Auto 30s</span>
-                            </button>
-                        </div>
+                <!-- ═══ Hero ═══ -->
+                <section class="as-hero">
+                    <div class="as-hero-text">
+                        <h2 class="as-hero-title">Sesi Peserta Aktif</h2>
+                        <p class="as-hero-sub">Pantau peserta yang sedang mengerjakan asesmen Anda secara real-time. Daftar diperbarui otomatis setiap 30 detik.</p>
                     </div>
-                    <div>
-                        <label>&nbsp;</label>
-                        <div class="mon-refresh-indicator" id="auto-refresh-indicator" aria-live="off">
+                    <div class="as-hero-actions">
+                        <button class="as-btn as-btn-secondary" id="btn-refresh" type="button">
                             <span data-albedu-icon="sync"></span>
-                            <span id="last-refresh">Memuat...</span>
+                            <span>Refresh</span>
+                        </button>
+                        <button class="as-btn as-btn-secondary" id="btn-auto-refresh" type="button" aria-pressed="false">
+                            <span data-albedu-icon="timer"></span>
+                            <span>Auto 30s</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ═══ KPI Strip ═══ -->
+                <section class="as-kpi-strip" aria-label="Statistik sesi">
+                    <div class="as-kpi-card as-kpi-total">
+                        <div class="as-kpi-icon"><span data-albedu-icon="groups"></span></div>
+                        <div class="as-kpi-body">
+                            <div class="as-kpi-value" id="kpi-total">0</div>
+                            <div class="as-kpi-label">Total Sesi</div>
                         </div>
                     </div>
+                    <div class="as-kpi-card as-kpi-active">
+                        <div class="as-kpi-icon as-kpi-icon-success"><span data-albedu-icon="play_circle"></span></div>
+                        <div class="as-kpi-body">
+                            <div class="as-kpi-value" id="kpi-active">0</div>
+                            <div class="as-kpi-label">Sedang Aktif</div>
+                        </div>
+                    </div>
+                    <div class="as-kpi-card as-kpi-stale">
+                        <div class="as-kpi-icon as-kpi-icon-warn"><span data-albedu-icon="warning"></span></div>
+                        <div class="as-kpi-body">
+                            <div class="as-kpi-value" id="kpi-stale">0</div>
+                            <div class="as-kpi-label">Heartbeat Stale</div>
+                        </div>
+                    </div>
+                    <div class="as-kpi-card as-kpi-paused">
+                        <div class="as-kpi-icon as-kpi-icon-muted"><span data-albedu-icon="pause_circle"></span></div>
+                        <div class="as-kpi-body">
+                            <div class="as-kpi-value" id="kpi-paused">0</div>
+                            <div class="as-kpi-label">Jeda / Terputus</div>
+                        </div>
+                    </div>
+                    <div class="as-kpi-card as-kpi-progress">
+                        <div class="as-kpi-icon as-kpi-icon-info"><span data-albedu-icon="trending_up"></span></div>
+                        <div class="as-kpi-body">
+                            <div class="as-kpi-value" id="kpi-avg-progress">0%</div>
+                            <div class="as-kpi-label">Rata-rata Progress</div>
+                        </div>
+                    </div>
+                    <div class="as-kpi-card as-kpi-violations">
+                        <div class="as-kpi-icon as-kpi-icon-warn"><span data-albedu-icon="gavel"></span></div>
+                        <div class="as-kpi-body">
+                            <div class="as-kpi-value" id="kpi-violations">0</div>
+                            <div class="as-kpi-label">Total Pelanggaran</div>
+                        </div>
+                    </div>
+                    <div class="as-kpi-card as-kpi-blocked">
+                        <div class="as-kpi-icon as-kpi-icon-danger"><span data-albedu-icon="block"></span></div>
+                        <div class="as-kpi-body">
+                            <div class="as-kpi-value" id="kpi-blocked">0</div>
+                            <div class="as-kpi-label">Diblokir (total)</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ═══ Toolbar ═══ -->
+                <section class="as-toolbar" aria-label="Filter dan pencarian">
+                    <div class="as-search">
+                        <span class="as-search-icon" aria-hidden="true"><span data-albedu-icon="search"></span></span>
+                        <input type="search" class="as-search-input" id="as-search"
+                               placeholder="Cari peserta, email, asesmen, atau kode..."
+                               aria-label="Cari sesi peserta" autocomplete="off">
+                        <button class="as-search-clear" id="as-search-clear" type="button" aria-label="Hapus pencarian" hidden>
+                            <span data-albedu-icon="close"></span>
+                        </button>
+                    </div>
+                    <select class="as-select" id="filter-assessment" aria-label="Filter asesmen" title="Filter berdasarkan asesmen">
+                        <option value="all">Semua Asesmen</option>
+                    </select>
+                    <select class="as-select" id="filter-sort" aria-label="Urutkan" title="Urutkan sesi">
+                        <option value="recent">Terbaru</option>
+                        <option value="oldest">Terlama</option>
+                        <option value="name">Nama (A-Z)</option>
+                        <option value="progress">Progress tertinggi</option>
+                        <option value="violations">Pelanggaran terbanyak</option>
+                    </select>
+                    <div class="as-view-toggle" role="group" aria-label="Tampilan">
+                        <button class="as-view-btn as-view-btn-active" data-view="table" type="button" aria-pressed="true" aria-label="Tampilan tabel">
+                            <span data-albedu-icon="table_rows"></span>
+                        </button>
+                        <button class="as-view-btn" data-view="grid" type="button" aria-pressed="false" aria-label="Tampilan kartu">
+                            <span data-albedu-icon="grid_view"></span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ═══ Filter Chips ═══ -->
+                <section class="as-chips" id="filter-chips" role="group" aria-label="Filter status"></section>
+
+                <!-- ═══ Last refresh indicator ═══ -->
+                <div class="as-refresh-indicator" id="auto-refresh-indicator" aria-live="off">
+                    <span data-albedu-icon="sync"></span>
+                    <span id="last-refresh">Memuat...</span>
                 </div>
 
-                <!-- Stats Bar -->
-                <div class="mon-stats-bar" aria-live="polite">
-                    <div class="mon-stat-card">
-                        <div class="mon-stat-icon">
-                            <span data-albedu-icon="groups"></span>
-                        </div>
-                        <div>
-                            <div class="mon-stat-value" id="stat-active">0</div>
-                            <div class="mon-stat-label">Peserta Aktif</div>
-                        </div>
+                <!-- ═══ Session List (table or grid, rendered by JS) ═══ -->
+                <section class="as-list-wrap" id="sessions-list" aria-live="polite" aria-busy="true">
+                    <div class="as-empty">
+                        <div class="as-empty-icon"><span class="as-spinner"></span></div>
+                        <p class="as-empty-msg">Memuat sesi aktif...</p>
                     </div>
-                    <div class="mon-stat-card">
-                        <div class="mon-stat-icon warn">
-                            <span data-albedu-icon="warning"></span>
-                        </div>
-                        <div>
-                            <div class="mon-stat-value" id="stat-violations">0</div>
-                            <div class="mon-stat-label">Total Pelanggaran</div>
-                        </div>
-                    </div>
-                    <div class="mon-stat-card">
-                        <div class="mon-stat-icon danger">
-                            <span data-albedu-icon="block"></span>
-                        </div>
-                        <div>
-                            <div class="mon-stat-value" id="stat-blocked">0</div>
-                            <div class="mon-stat-label">Diblokir (total)</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ═══ Session List (replaces Realtime grid) ═══ -->
-                <div class="mon-grid" id="sessions-list" aria-live="polite" aria-busy="true">
-                    <div class="albedu-empty-state">
-                        <span class="albedu-spinner"></span>
-                        <p>Memuat sesi aktif...</p>
-                    </div>
-                </div>
+                </section>
             </div>
 
             <footer class="footer">

@@ -110,40 +110,135 @@
          The banner's border-radius is handled by the banner element itself. */
       overflow: visible;
     }
+    /* M13 fix: Softer, theme-aware banner (was heavy two-stop gradient).
+       Now uses CSS custom properties derived from theme_config so admin
+       theming propagates. Falls back to a subtle tint of the primary color. */
     .identity-banner {
       padding: 28px 28px 24px;
-      background: linear-gradient(135deg, var(--albedu-primary, #2563eb), var(--albedu-primary-hover, #1d4ed8));
-      color: #fff;
+      background:
+        linear-gradient(135deg,
+          color-mix(in srgb, var(--albedu-primary, #2563eb) 8%, var(--albedu-surface, #fff)),
+          color-mix(in srgb, var(--albedu-primary, #2563eb) 16%, var(--albedu-surface, #fff)));
+      color: var(--albedu-text, #0f172a);
       border-radius: var(--albedu-radius-lg, 8px) var(--albedu-radius-lg, 8px) 0 0;
+      border-bottom: 1px solid var(--albedu-border, #e2e8f0);
+    }
+    @media (prefers-contrast: more) {
+      /* High-contrast mode: solid surface instead of gradient tint */
+      .identity-banner {
+        background: var(--albedu-surface, #fff);
+        color: var(--albedu-text, #0f172a);
+      }
     }
     .identity-banner__meta {
-      /* EXPLICIT white — on gradient surface, NOT inherited.
-         Subject/category text on gradient must be white for contrast.
-         Never use text_accent here (would be invisible on same-tone gradient). */
-      color: rgba(255, 255, 255, 0.85);
+      /* M13: now uses theme-aware color (was hardcoded white on gradient) */
+      color: var(--albedu-primary, #2563eb);
       font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
       margin-bottom: 6px;
     }
     .identity-banner__title {
-      /* EXPLICIT white — on gradient surface, NOT inherited.
-         Main assessment title on gradient must be white for contrast.
-         text_accent is for neutral-surface titles only. */
-      color: #fff;
+      /* M13: theme-aware color */
+      color: var(--albedu-text, #0f172a);
       font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.02em;
     }
     .identity-banner__chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
     .identity-banner__chip {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 4px 10px; border-radius: 999px;
-      background: rgba(255,255,255,.16); backdrop-filter: blur(6px);
+      /* M13: theme-aware chip background (was white-on-gradient) */
+      background: color-mix(in srgb, var(--albedu-primary, #2563eb) 10%, transparent);
+      color: var(--albedu-primary, #2563eb);
       font-size: 12px; font-weight: 500;
     }
     .identity-banner__chip .material-symbols-outlined { font-size: 14px; }
+
+    /* m5 fix: Redesigned note block — proper callout with icon, dismiss
+       button, and theme-aware styling. Was a basic amber box with no icon
+       and no way to dismiss. */
     .identity-card__note {
-      padding: 14px 20px; margin: 16px 28px 0;
-      background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
-      font-size: 13px; color: #92400e; line-height: 1.55;
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 44px 14px 16px;
+      margin: 16px 28px 0;
+      background: color-mix(in srgb, var(--albedu-primary, #2563eb) 6%, var(--albedu-surface, #fff));
+      border: 1px solid color-mix(in srgb, var(--albedu-primary, #2563eb) 25%, var(--albedu-border, #e2e8f0));
+      border-left: 4px solid var(--albedu-primary, #2563eb);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--albedu-text, #0f172a);
+      line-height: 1.55;
     }
+    .identity-card__note__icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      color: var(--albedu-primary, #2563eb);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .identity-card__note__icon .material-symbols-outlined {
+      font-size: 20px;
+      line-height: 1;
+    }
+    .identity-card__note__body {
+      flex: 1;
+      min-width: 0;
+    }
+    .identity-card__note__body p:first-child { margin-top: 0; }
+    .identity-card__note__body p:last-child { margin-bottom: 0; }
+    .identity-card__note__dismiss {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--albedu-text-muted, #64748b);
+      cursor: pointer;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .identity-card__note__dismiss:hover {
+      background: color-mix(in srgb, var(--albedu-text-muted, #64748b) 10%, transparent);
+      color: var(--albedu-text, #0f172a);
+    }
+    .identity-card__note__dismiss:focus-visible {
+      outline: 2px solid var(--albedu-primary, #2563eb);
+      outline-offset: 1px;
+    }
+    .identity-card__note__dismiss .material-symbols-outlined {
+      font-size: 16px;
+      line-height: 1;
+    }
+    .identity-card__note.is-dismissed {
+      display: none;
+    }
+    @media (prefers-contrast: more) {
+      .identity-card__note {
+        background: var(--albedu-surface, #fff);
+        border: 2px solid var(--albedu-primary, #2563eb);
+      }
+    }
+    /* Dark mode: keep amber-on-dark for visibility */
+    :root:not([data-theme="light"]) .identity-card__note {
+      background: rgba(251, 191, 36, 0.08);
+      border-color: rgba(251, 191, 36, 0.3);
+      border-left-color: #fbbf24;
+      color: var(--albedu-text, #f1f5f9);
+    }
+    :root:not([data-theme="light"]) .identity-card__note__icon,
+    :root:not([data-theme="light"]) .identity-card__note__dismiss {
+      color: #fbbf24;
+    }
+
     .identity-card__body { padding: 24px 28px 28px; }
 
     /* ───────────────────────────────────────────────────────────────────────

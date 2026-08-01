@@ -11,7 +11,8 @@
   const I = _internal._internal;
 
   // HTML sanitizer (subset of ExamViewer.sanitize). Prefers DOMPurify if
-  // available, falls back to a regex-based stripper.
+  // available, then ALWAYS runs a regex-based pass as defense-in-depth so a
+  // broken / missing / tampered DOMPurify cannot leak XSS.
   function _sanitizeHTML(html) {
     if (html == null) return '';
     const str = String(html);
@@ -19,22 +20,38 @@
       'b', 'i', 'em', 'strong', 'br', 'p', 'ul', 'ol', 'li',
       'span', 'sub', 'sup', 'u', 's', 'ruby', 'rt', 'rp', 'bdi', 'bdo', 'mark', 'br'
     ];
+
+    // Pass 1: DOMPurify (preferred — handles malformed HTML, entity tricks,
+    // unicode normalization, etc.). If DOMPurify is missing or throws, we
+    // start from the raw string and rely entirely on Pass 2.
+    let out = str;
     if (typeof window.DOMPurify !== 'undefined') {
       try {
-        return window.DOMPurify.sanitize(str, {
+        out = window.DOMPurify.sanitize(str, {
           ALLOWED_TAGS: SANITIZE_ALLOWED_TAGS,
           ALLOWED_ATTR: ['class', 'style', 'lang', 'dir'],
           ALLOW_DATA_ATTR: false,
         });
-      } catch (_) { /* fall through */ }
+      } catch (_) { out = str; /* fall through to regex pass */ }
     }
-    return str
+
+    // Pass 2 (CRITICAL — C4 fix): Regex defense-in-depth. ALWAYS runs, even
+    // after DOMPurify, so we don't blindly trust the library. This catches:
+    //   - on* event handler attributes (onclick, onerror, onfocus, ...)
+    //   - javascript: / data: URLs in href/src/action
+    //   - <script>, <iframe>, <object>, <embed>, <style>, <link>, <meta>, <base> tags
+    //   - any tag not in the allowlist (whitelist)
+    // Without this, a broken DOMPurify (CDN fail, bug, tamper) would let
+    // arbitrary HTML through unchanged.
+    out = out
       .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
       .replace(/(?:href|src|action)\s*=\s*(?:"[^"]*(?:javascript|data):[^"]*"|'[^']*(?:javascript|data):[^']*')/gi, '')
       .replace(/<(?:script|iframe|object|embed|style|link|meta|base)[^>]*>[\s\S]*?<\/(?:script|iframe|object|embed|style|link)>/gi, '')
       .replace(/<(?:script|iframe|object|embed|style|link|meta|base)[^>]*\/?>/gi, '')
       .replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)([^>]*)>/g, (m, tag) =>
         SANITIZE_ALLOWED_TAGS.includes(tag.toLowerCase()) ? m : '');
+
+    return out;
   }
 
   function _escAttr(s) {

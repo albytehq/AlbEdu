@@ -31,10 +31,11 @@
     /**
      * Start the 10s block-check poll.
      * @param {string} sessionId - assessment_sessions.id
-     * @param {Object} callbacks - { onBlocked, onSubmitted, onExpired, onError }
+     * @param {Object} callbacks - { onBlocked, onSubmitted, onExpired, onError, onAssessmentClosed }
      *   - onBlocked(reason): session.status === 'blocked'
      *   - onSubmitted(): session.status === 'submitted'
      *   - onExpired(): session.status === 'expired' OR session not found
+     *   - onAssessmentClosed(reason): M1 fix — assessment.ac_manual_status transitioned open→closed
      *   - onError(err): non-fatal error (network, etc.) — polling continues
      * @returns {Function} stop function
      */
@@ -48,6 +49,9 @@
       this._sessionId = sessionId;
       this._callbacks = callbacks;
       this._consecutiveErrors = 0;
+      // M1: track previous assessment status to detect open→closed transition
+      this._lastAcStatus = null;
+      this._assessmentId = null;
 
       // Fire immediately (don't wait 10s for first check)
       this._check();
@@ -88,10 +92,13 @@
       try {
         // Pure SELECT — RLS-enforced (peserta can only SELECT own sessions).
         // No DB trigger fires on SELECT (only UPDATE triggers fire).
-        // ~80 byte response (id + status + blocked_reason).
+        // M1: also fetch assessment_id + assessment.ac_manual_status so we can
+        // detect "Tutup Akses" mid-exam (previously BlockChecker only polled
+        // session.status — admin closing the assessment had no effect on
+        // already-running sessions).
         const { data, error } = await supabase
           .from('assessment_sessions')
-          .select('id, status, blocked_reason')
+          .select('id, status, blocked_reason, assessment_id, assessments(ac_manual_status, status, title)')
           .eq('id', this._sessionId)
           .maybeSingle();
 
@@ -105,30 +112,65 @@
         // Session deleted (assessment archived?) → treat as expired
         if (!data) {
           console.info('[block-check] Session not found → expired');
+          const cb = this._callbacks;
           this.stop();
-          this._callbacks?.onExpired?.();
+          cb?.onExpired?.();
           return;
         }
 
         // Check for terminal states
         if (data.status === 'blocked') {
           console.warn(`[block-check] BLOCKED detected: ${data.blocked_reason}`);
+          const cb = this._callbacks;
           this.stop();
-          this._callbacks?.onBlocked?.(data.blocked_reason || 'Blocked by admin');
+          cb?.onBlocked?.(data.blocked_reason || 'Blocked by admin');
           return;
         }
         if (data.status === 'submitted') {
           console.info('[block-check] SUBMITTED detected');
+          const cb = this._callbacks;
           this.stop();
-          this._callbacks?.onSubmitted?.();
+          cb?.onSubmitted?.();
           return;
         }
         if (data.status === 'expired') {
           console.info('[block-check] EXPIRED detected');
+          const cb = this._callbacks;
           this.stop();
-          this._callbacks?.onExpired?.();
+          cb?.onExpired?.();
           return;
         }
+
+        // M1 fix: check parent assessment status (admin "Tutup Akses" mid-exam)
+        const assessment = data.assessments;
+        if (assessment && Array.isArray(assessment) ? assessment[0] : assessment) {
+          const a = Array.isArray(assessment) ? assessment[0] : assessment;
+          const currentAcStatus = a.ac_manual_status;
+          const currentStatus = a.status; // 'active' | 'archived'
+
+          // Archived assessment → expired
+          if (currentStatus && currentStatus !== 'active') {
+            console.info(`[block-check] Assessment ${currentStatus} → expired`);
+            const cb = this._callbacks;
+            this.stop();
+            cb?.onExpired?.();
+            return;
+          }
+
+          // Detect open→closed transition (only fire once per transition)
+          if (this._lastAcStatus === 'open' && currentAcStatus && currentAcStatus !== 'open') {
+            console.warn(`[block-check] Assessment closed by admin (ac_manual_status: open → ${currentAcStatus})`);
+            const cb = this._callbacks;
+            this.stop();
+            cb?.onAssessmentClosed?.(
+              'Asesmen ditutup oleh admin. Sesi Anda telah dihentikan.'
+            );
+            return;
+          }
+          // Track for next poll
+          if (currentAcStatus) this._lastAcStatus = currentAcStatus;
+        }
+
         // status === 'active' | 'paused' | 'disconnected' → keep polling
       } catch (err) {
         this._consecutiveErrors++;
@@ -141,8 +183,9 @@
         // is very wrong. Fire onExpired so peserta is redirected to a safe state.
         if (this._consecutiveErrors >= 5) {
           console.error('[block-check] 5 consecutive failures → assuming expired');
+          const cb = this._callbacks;
           this.stop();
-          this._callbacks?.onExpired?.();
+          cb?.onExpired?.();
         }
         // Otherwise: keep polling. Next interval will retry.
       }
