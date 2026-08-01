@@ -605,7 +605,11 @@
   }
 
   function _handleExpired() {
+    // Guard against race condition: if admin blocked / peserta submitted
+    // at the exact moment timer hit 0, don't fire auto-submit.
     if (I.state.isSubmitting || I.state.phase === 'result') return;
+    if (I.state._redirected) return;
+    if (I.state.phase !== 'exam') return;
     window.notify?.warning(
       t('assessment.time_up', null, 'Waktu Habis'),
       t('assessment.time_up_msg', null, 'Waktu asesmen telah berakhir. Jawaban akan dikumpulkan otomatis.'),
