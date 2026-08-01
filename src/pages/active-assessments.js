@@ -645,10 +645,7 @@
             <span class="aa-meta-item"><span data-albedu-icon="school"></span>${_esc(a.subject || '-')}</span>
             <span class="aa-meta-item"><span data-albedu-icon="quiz"></span>${qCount} soal</span>
             <span class="aa-meta-item"><span data-albedu-icon="schedule"></span>${a.duration_minutes || 0}m</span>
-<<<<<<< HEAD
-=======
             ${countdownHTML}
->>>>>>> 12118d7 (feat: working timer system — admin countdown + server-trusted ac_end + auto-expire)
             <span class="aa-card-code">#${_esc(code)}</span>
           </div>
           ${primaryAction}
@@ -921,14 +918,6 @@
       this._applyFilters();
 
       const currentStatus = _statusOf(item);
-<<<<<<< HEAD
-      const newStatus = currentStatus === 'open' ? 'closed' : 'open';
-      const label = newStatus === 'open' ? 'dibuka' : 'ditutup';
-
-      try {
-        const sb = window.AlbEdu.supabase.client;
-        const { error } = await sb
-=======
       const isOpening = currentStatus !== 'open';
 
       try {
@@ -955,7 +944,6 @@
         }
 
         const { data, error } = await sb
->>>>>>> 12118d7 (feat: working timer system — admin countdown + server-trusted ac_end + auto-expire)
           .from('assessments')
           .update(update)
           .eq('id', item.id)
@@ -964,24 +952,6 @@
 
         if (error) throw error;
 
-<<<<<<< HEAD
-        // Update local data
-        item.ac_manual_status = newStatus;
-
-        // CRITICAL: Remove from togglingIds BEFORE re-render, so the
-        // new button (Buka/Tutup) shows instead of "Memproses...".
-        this._togglingIds.delete(item.id);
-
-        window.notify?.success?.(
-          newStatus === 'open' ? 'Asesmen Dibuka' : 'Akses Ditutup',
-          newStatus === 'open'
-            ? `Peserta sekarang dapat mengerjakan "${item.title || 'Tanpa Judul'}"`
-            : `Akses peserta ke "${item.title || 'Tanpa Judul'}" telah ditutup`,
-          2500
-        );
-
-        // Re-render with new status (no loading state)
-=======
         // Update local item with fresh DB data
         if (data) {
           item.ac_manual_status = data.ac_manual_status;
@@ -1000,21 +970,13 @@
           2500
         );
 
->>>>>>> 12118d7 (feat: working timer system — admin countdown + server-trusted ac_end + auto-expire)
         this._updateKPIs();
         this._applyFilters();
         this._startCountdownTicker();
       } catch (err) {
         console.error('[toggleStatus]', err);
-<<<<<<< HEAD
-        // Remove from togglingIds so button reverts to original state
         this._togglingIds.delete(item.id);
         window.notify?.error?.('Gagal mengubah status', err?.message || 'Unknown error', 3000);
-        // Re-render to revert optimistic loading state
-=======
-        this._togglingIds.delete(item.id);
-        window.notify?.error?.('Gagal mengubah status', err?.message || 'Unknown error', 3000);
->>>>>>> 12118d7 (feat: working timer system — admin countdown + server-trusted ac_end + auto-expire)
         this._applyFilters();
       }
     },
