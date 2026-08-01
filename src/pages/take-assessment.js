@@ -53,9 +53,17 @@
 
   // The split modules created window.TakeAssessment and added their functions.
   // We attach _internal (state/dom/constants/t) + the orchestrator functions here.
+  //
+  // CRITICAL: Sub-modules (identity.js, exam.js, etc.) already captured a
+  // reference to TakeAssessment._internal via `const I = _internal._internal`
+  // when they loaded (before this file). If we REPLACE _internal with a new
+  // object, sub-modules keep their stale reference to the empty object.
+  // Instead, we MUST MUTATE the existing object so the sub-modules' reference
+  // stays valid and sees the populated state/dom/constants/t.
   const TakeAssessment = window.TakeAssessment || {};
   window.TakeAssessment = TakeAssessment;
-  TakeAssessment._internal = { state, dom, constants, t };
+  if (!TakeAssessment._internal) TakeAssessment._internal = {};
+  Object.assign(TakeAssessment._internal, { state, dom, constants, t });
 
   function _cacheDOM() {
     dom.loadingScreen = document.getElementById('loading-screen');
