@@ -398,7 +398,7 @@
         const sb = window.AlbEdu.supabase.client;
         const { data, error } = await sb
           .from('assessments')
-          .select('id, access_code, title, subject, duration_minutes, status, ac_manual_status, ac_end, ac_remaining_time, access_mode, created_at, sections')
+          .select('id, access_code, title, subject, duration_minutes, status, ac_manual_status, ac_end, ac_remaining_time, access_mode, created_at, created_by, sections')
           .eq('created_by', session.user.id)
           .order('created_at', { ascending: false })
           .limit(50);
@@ -952,8 +952,14 @@
         };
 
         if (isOpening) {
-          // Start: ac_end = now + duration_minutes
-          update.ac_end = new Date(Date.now() + (item.duration_minutes || 60) * 60 * 1000).toISOString();
+          // Resume from paused state if remaining_time exists, else fresh start.
+          // BUGFIX: previously always used duration_minutes — re-opening a paused
+          // assessment restarted the timer from full duration instead of resuming.
+          const hasRemaining = item.ac_remaining_time && item.ac_remaining_time > 0;
+          const secondsToAdd = hasRemaining
+            ? item.ac_remaining_time
+            : (item.duration_minutes || 60) * 60;
+          update.ac_end = new Date(Date.now() + secondsToAdd * 1000).toISOString();
           update.ac_remaining_time = null;
         } else {
           // Pause: save remaining seconds from ac_end
@@ -969,16 +975,27 @@
           .update(update)
           .eq('id', item.id)
           .select('id, ac_manual_status, ac_end, ac_remaining_time')
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
 
-        // Update local item with fresh DB data
-        if (data) {
-          item.ac_manual_status = data.ac_manual_status;
-          item.ac_end = data.ac_end;
-          item.ac_remaining_time = data.ac_remaining_time;
+        // CRITICAL: If data is null, the UPDATE affected 0 rows.
+        // This means RLS denied the update (admin doesn't own this row,
+        // or peran_user() didn't return 'admin'). Without this check,
+        // the code silently proceeds with stale local data.
+        if (!data) {
+          throw new Error(
+            'Update gagal — 0 rows affected. ' +
+            'Kemungkinan: RLS policy menolak akses (created_by tidak cocok dengan user login), ' +
+            'atau asesmen sudah dihapus. ' +
+            `Assessment ID: ${item.id}, Created by: ${item.created_by || 'unknown'}`
+          );
         }
+
+        // Update local item with fresh DB data
+        item.ac_manual_status = data.ac_manual_status;
+        item.ac_end = data.ac_end;
+        item.ac_remaining_time = data.ac_remaining_time;
 
         // Remove from togglingIds BEFORE re-render
         this._togglingIds.delete(item.id);
@@ -997,7 +1014,15 @@
       } catch (err) {
         console.error('[toggleStatus]', err);
         this._togglingIds.delete(item.id);
-        window.notify?.error?.('Gagal mengubah status', err?.message || 'Unknown error', 3000);
+        // Show actionable error message
+        const errMsg = err?.message || 'Unknown error';
+        let userMsg = 'Gagal mengubah status';
+        if (errMsg.includes('0 rows') || errMsg.includes('RLS')) {
+          userMsg = 'Gagal: Akses ditolak (RLS). Pastikan Anda adalah pembuat asesmen ini.';
+        } else if (errMsg.includes('JWT') || errMsg.includes('401')) {
+          userMsg = 'Gagal: Sesi login berakhir. Silakan login ulang.';
+        }
+        window.notify?.error?.(userMsg, errMsg, 5000);
         this._applyFilters();
       }
     },
