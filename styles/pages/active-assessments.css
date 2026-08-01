@@ -468,6 +468,89 @@
   align-items: center;
 }
 .aa-meta-item {
+<<<<<<< HEAD
+=======
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.aa-meta-item .albedu-icon { width: 14px; height: 14px; color: var(--color-primary); flex-shrink: 0; }
+.aa-meta-item strong { color: var(--color-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.aa-card-code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+}
+
+/* Live countdown timer on admin card */
+.aa-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.aa-countdown .albedu-icon { width: 12px; height: 12px; }
+.aa-countdown-warning {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+.aa-countdown-critical {
+  color: var(--color-destructive);
+  background: var(--color-destructive-bg);
+  animation: aa-countdown-pulse 1s ease-in-out infinite;
+}
+@keyframes aa-countdown-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.aa-countdown-paused {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+.aa-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--color-text-faint);
+}
+.aa-card-date { display: inline-flex; align-items: center; gap: 4px; }
+.aa-card-date .albedu-icon { width: 13px; height: 13px; }
+
+.aa-card-quick-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+.aa-card:hover .aa-card-quick-actions { opacity: 1; }
+.aa-card-quick-btn {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  padding: 5px 8px;
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+>>>>>>> 12118d7 (feat: working timer system — admin countdown + server-trusted ac_end + auto-expire)
   display: inline-flex;
   align-items: center;
   gap: 3px;

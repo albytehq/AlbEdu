@@ -398,7 +398,7 @@
         const sb = window.AlbEdu.supabase.client;
         const { data, error } = await sb
           .from('assessments')
-          .select('id, access_code, title, subject, duration_minutes, status, ac_manual_status, access_mode, created_at, sections')
+          .select('id, access_code, title, subject, duration_minutes, status, ac_manual_status, ac_end, ac_remaining_time, access_mode, created_at, sections')
           .eq('created_by', session.user.id)
           .order('created_at', { ascending: false })
           .limit(50);
@@ -414,6 +414,10 @@
           this._setState('loaded', { requestId });
           this._updateKPIs();
           this._applyFilters();
+          // Start countdown ticker if any open assessments have ac_end
+          if (this._allData.some(a => _statusOf(a) === 'open' && a.ac_end)) {
+            this._startCountdownTicker();
+          }
         }
       } catch (err) {
         if (requestId !== this._requestId) return;
@@ -609,6 +613,25 @@
       const code = a.access_code || '—';
       const primaryAction = this._primaryActionHTML(a, status);
 
+      // Live countdown for open assessments
+      let countdownHTML = '';
+      if (status === 'open' && a.ac_end) {
+        const endMs = new Date(a.ac_end).getTime();
+        const remaining = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        countdownHTML = `<span class="aa-countdown" data-ac-end="${a.ac_end}" data-assessment-id="${_esc(a.id)}">
+          <span data-albedu-icon="timer"></span>
+          <span class="aa-countdown-text">${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}</span>
+        </span>`;
+      } else if (status === 'closed' && a.ac_remaining_time && a.ac_remaining_time > 0) {
+        const mins = Math.ceil(a.ac_remaining_time / 60);
+        countdownHTML = `<span class="aa-countdown aa-countdown-paused">
+          <span data-albedu-icon="pause_circle"></span>
+          <span>Dijeda — ${mins}m tersisa</span>
+        </span>`;
+      }
+
       return `
         <article class="aa-card" data-id="${_esc(a.id)}" data-status="${status}">
           <div class="aa-card-top">
@@ -622,6 +645,10 @@
             <span class="aa-meta-item"><span data-albedu-icon="school"></span>${_esc(a.subject || '-')}</span>
             <span class="aa-meta-item"><span data-albedu-icon="quiz"></span>${qCount} soal</span>
             <span class="aa-meta-item"><span data-albedu-icon="schedule"></span>${a.duration_minutes || 0}m</span>
+<<<<<<< HEAD
+=======
+            ${countdownHTML}
+>>>>>>> 12118d7 (feat: working timer system — admin countdown + server-trusted ac_end + auto-expire)
             <span class="aa-card-code">#${_esc(code)}</span>
           </div>
           ${primaryAction}
@@ -799,6 +826,92 @@
       }
     },
 
+    // ── Live countdown ticker ──
+    // Runs a single 1s interval that updates ALL [data-ac-end] elements
+    // on the page. Started after toggle or after initial render.
+    _countdownInterval: null,
+
+    _startCountdownTicker() {
+      if (this._countdownInterval) return; // already running
+      this._countdownInterval = setInterval(() => {
+        this._updateCountdowns();
+      }, 1000);
+      // Also update immediately
+      this._updateCountdowns();
+    },
+
+    _updateCountdowns() {
+      const elements = document.querySelectorAll('.aa-countdown[data-ac-end]');
+      if (!elements.length) {
+        // No countdowns visible — stop the ticker to save CPU
+        if (this._countdownInterval) {
+          clearInterval(this._countdownInterval);
+          this._countdownInterval = null;
+        }
+        return;
+      }
+
+      elements.forEach(el => {
+        const acEnd = el.dataset.acEnd;
+        if (!acEnd) return;
+        const endMs = new Date(acEnd).getTime();
+        const remaining = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        const textEl = el.querySelector('.aa-countdown-text');
+        if (textEl) {
+          textEl.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+        }
+
+        // Timer warning states
+        el.classList.toggle('aa-countdown-warning', remaining <= 300 && remaining > 60);
+        el.classList.toggle('aa-countdown-critical', remaining <= 60);
+
+        // If timer hit 0 — auto-close the assessment
+        if (remaining === 0) {
+          const assessmentId = el.dataset.assessmentId;
+          if (assessmentId && !this._expiredIds?.has(assessmentId)) {
+            this._expiredIds = this._expiredIds || new Set();
+            this._expiredIds.add(assessmentId);
+            this._handleTimerExpired(assessmentId);
+          }
+        }
+      });
+    },
+
+    async _handleTimerExpired(assessmentId) {
+      try {
+        const sb = window.AlbEdu.supabase.client;
+        await sb
+          .from('assessments')
+          .update({
+            ac_manual_status: 'closed',
+            ac_end: null,
+            ac_remaining_time: 0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', assessmentId);
+
+        window.notify?.warning?.(
+          'Waktu Habis',
+          'Asesmen telah berakhir otomatis — waktu habis.',
+          4000
+        );
+
+        // Update local data
+        const item = this._allData.find(a => a.id === assessmentId);
+        if (item) {
+          item.ac_manual_status = 'closed';
+          item.ac_end = null;
+          item.ac_remaining_time = 0;
+        }
+        this._updateKPIs();
+        this._applyFilters();
+      } catch (err) {
+        console.error('[timer-expired]', err);
+      }
+    },
+
     async _toggleStatus(item, btn) {
       // Prevent double-toggle
       if (this._togglingIds.has(item.id)) return;
@@ -808,17 +921,50 @@
       this._applyFilters();
 
       const currentStatus = _statusOf(item);
+<<<<<<< HEAD
       const newStatus = currentStatus === 'open' ? 'closed' : 'open';
       const label = newStatus === 'open' ? 'dibuka' : 'ditutup';
 
       try {
         const sb = window.AlbEdu.supabase.client;
         const { error } = await sb
+=======
+      const isOpening = currentStatus !== 'open';
+
+      try {
+        const sb = window.AlbEdu.supabase.client;
+
+        // On open: set ac_end = now + duration (server-trusted timer)
+        // On close (pause): save remaining time, null ac_end
+        const update = {
+          ac_manual_status: isOpening ? 'open' : 'closed',
+          updated_at: new Date().toISOString(),
+        };
+
+        if (isOpening) {
+          // Start: ac_end = now + duration_minutes
+          update.ac_end = new Date(Date.now() + (item.duration_minutes || 60) * 60 * 1000).toISOString();
+          update.ac_remaining_time = null;
+        } else {
+          // Pause: save remaining seconds from ac_end
+          if (item.ac_end) {
+            const remaining = Math.max(0, Math.floor((new Date(item.ac_end).getTime() - Date.now()) / 1000));
+            update.ac_remaining_time = remaining;
+          }
+          update.ac_end = null;
+        }
+
+        const { data, error } = await sb
+>>>>>>> 12118d7 (feat: working timer system — admin countdown + server-trusted ac_end + auto-expire)
           .from('assessments')
-          .update({ ac_manual_status: newStatus, updated_at: new Date().toISOString() })
-          .eq('id', item.id);
+          .update(update)
+          .eq('id', item.id)
+          .select('id, ac_manual_status, ac_end, ac_remaining_time')
+          .single();
+
         if (error) throw error;
 
+<<<<<<< HEAD
         // Update local data
         item.ac_manual_status = newStatus;
 
@@ -835,14 +981,40 @@
         );
 
         // Re-render with new status (no loading state)
+=======
+        // Update local item with fresh DB data
+        if (data) {
+          item.ac_manual_status = data.ac_manual_status;
+          item.ac_end = data.ac_end;
+          item.ac_remaining_time = data.ac_remaining_time;
+        }
+
+        // Remove from togglingIds BEFORE re-render
+        this._togglingIds.delete(item.id);
+
+        window.notify?.success?.(
+          isOpening ? 'Asesmen Dibuka' : 'Akses Ditutup',
+          isOpening
+            ? `Peserta dapat mengerjakan "${item.title || 'Tanpa Judul'}". Timer: ${item.duration_minutes || 60} menit.`
+            : `Akses ditutup. Sisa waktu disimpan.`,
+          2500
+        );
+
+>>>>>>> 12118d7 (feat: working timer system — admin countdown + server-trusted ac_end + auto-expire)
         this._updateKPIs();
         this._applyFilters();
+        this._startCountdownTicker();
       } catch (err) {
         console.error('[toggleStatus]', err);
+<<<<<<< HEAD
         // Remove from togglingIds so button reverts to original state
         this._togglingIds.delete(item.id);
         window.notify?.error?.('Gagal mengubah status', err?.message || 'Unknown error', 3000);
         // Re-render to revert optimistic loading state
+=======
+        this._togglingIds.delete(item.id);
+        window.notify?.error?.('Gagal mengubah status', err?.message || 'Unknown error', 3000);
+>>>>>>> 12118d7 (feat: working timer system — admin countdown + server-trusted ac_end + auto-expire)
         this._applyFilters();
       }
     },
