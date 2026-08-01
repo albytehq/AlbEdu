@@ -522,7 +522,12 @@
         const assessmentDoc = await repo.getDoc('assessment_view_peserta', token, 'access_code');
         if (!assessmentDoc.exists) return null;
 
-        const assessmentId = assessmentDoc.id;
+        // CRITICAL: Use the UUID from the data, NOT assessmentDoc.id.
+        // assessmentDoc.id returns the access_code (because getDoc was called
+        // with idCol='access_code'), but assessment_sessions.assessment_id
+        // expects a UUID. The view's data contains the real UUID in its 'id' field.
+        const assessmentData = assessmentDoc.data();
+        const assessmentId = assessmentData.id; // UUID from assessments table
 
         // Check for existing session
         const sessionSnap = await repo.getDocs('assessment_sessions', {

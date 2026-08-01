@@ -19,6 +19,28 @@
     const isResume = options?.isResume === true;
     const state = I.state;
 
+    // Guard: if soalPages is empty or not an array, can't start exam
+    if (!Array.isArray(state.soalPages) || state.soalPages.length === 0) {
+      console.error('[take] _startExam: soalPages empty — cannot start exam');
+      _internal._showClosed(
+        'Soal Tidak Tersedia',
+        'Asesmen ini belum memiliki soal. Hubungi admin.',
+        'danger'
+      );
+      return;
+    }
+
+    // Guard: session must exist
+    if (!state.session?.id) {
+      console.error('[take] _startExam: session.id missing — cannot start exam');
+      _internal._showClosed(
+        'Sesi Tidak Valid',
+        'Sesi asesmen tidak ditemukan. Silakan masuk kembali melalui halaman asesmen.',
+        'danger'
+      );
+      return;
+    }
+
     const seed = _internal._computeSeed(state.session);
     state.sessionNonce = seed;
     state.shuffledPages = _internal._shufflePages(state.soalPages, seed);
@@ -28,12 +50,24 @@
 
     _internal._setPhase('exam');
 
-    I.dom.examSubject.textContent = state.assessment.subject || 'Asesmen';
-    I.dom.examTitle.textContent = state.assessment.title || 'Asesmen';
+    I.dom.examSubject && (I.dom.examSubject.textContent = state.assessment.subject || 'Asesmen');
+    I.dom.examTitle && (I.dom.examTitle.textContent = state.assessment.title || 'Asesmen');
     const displayName = identity?._display_name || identity?.nama || 'Peserta';
     const subLabel = identity?.tab_nama || identity?.kelas ||
                      (identity?._mode === 'manual' ? 'Peserta' : '');
-    I.dom.examUserText.innerHTML = `${_internal._escAttr(displayName)}${subLabel ? ' — ' + _internal._escAttr(subLabel) : ''}`;
+    I.dom.examUserText && (I.dom.examUserText.innerHTML = `${_internal._escAttr(displayName)}${subLabel ? ' — ' + _internal._escAttr(subLabel) : ''}`);
+
+    // Single teardown controller — every listener added during the exam
+    // phase takes this signal so any exit path (blocked / submitted /
+    // expired / result) can clean them up in one shot.
+    //
+    // CRITICAL (C2 fix): This MUST be created BEFORE _wireNavButtons() is
+    // called, because _wireNavButtons() guards with `if (!I._examAbort) return;`
+    // and would otherwise bail out on first exam start, leaving prev/next/
+    // submit buttons without click handlers.
+    if (I._examAbort) I._examAbort.abort();
+    I._examAbort = new AbortController();
+    const sig = I._examAbort.signal;
 
     _renderPageTabs();
     _renderQuestion(state.activePageIdx);
@@ -41,13 +75,6 @@
     _wireNavButtons();
     _startSecurity();
     _updateSubmitLockState();
-
-    // Single teardown controller — every listener added during the exam
-    // phase takes this signal so any exit path (blocked / submitted /
-    // expired / result) can clean them up in one shot.
-    if (I._examAbort) I._examAbort.abort();
-    I._examAbort = new AbortController();
-    const sig = I._examAbort.signal;
 
     window.addEventListener('beforeunload', _beforeUnloadGuard, { signal: sig });
 
@@ -80,6 +107,7 @@
   // sense of structure (and prev/next still works for future sections).
   function _renderPageTabs() {
     const state = I.state;
+    if (!I.dom.pageTabs) return;
     I.dom.pageTabs.hidden = false;
     I.dom.pageTabs.innerHTML = state.soalPages.map((p, idx) => `
       <button class="page-tab ${idx === state.activePageIdx ? 'active' : ''}"
@@ -107,11 +135,12 @@
     const page = state.soalPages[idx];
     if (!page) return;
 
-    I.dom.pageTitle.textContent = page.label;
-    I.dom.pageCount.textContent = `${page.questions.length} Soal`;
+    I.dom.pageTitle && (I.dom.pageTitle.textContent = page.label);
+    I.dom.pageCount && (I.dom.pageCount.textContent = `${page.questions.length} Soal`);
 
     const shuffled = state.shuffledPages[page.pageKey] || page.questions;
 
+    if (!I.dom.questionList) return;
     I.dom.questionList.innerHTML = shuffled.map((q, i) => _buildQuestionCard(q, i, page)).join('');
 
     // Wire option clicks via event delegation on the question list. A fresh
@@ -126,10 +155,18 @@
       const key = opt.dataset.key;
       if (!pageKey || !idq) return;
       const wasSelected = opt.classList.contains('selected');
-      I.dom.questionList.querySelectorAll(`.option-item[data-idq="${idq}"][data-pagekey="${pageKey}"]`)
-        .forEach(o => o.classList.remove('selected'));
+      // M5 fix: update BOTH .selected class AND aria-checked attribute so
+      // screen readers can announce the selection state change (WCAG 4.1.2).
+      const siblings = I.dom.questionList.querySelectorAll(
+        `.option-item[data-idq="${idq}"][data-pagekey="${pageKey}"]`
+      );
+      siblings.forEach(o => {
+        o.classList.remove('selected');
+        o.setAttribute('aria-checked', 'false');
+      });
       if (!wasSelected) {
         opt.classList.add('selected');
+        opt.setAttribute('aria-checked', 'true');
         _saveAnswer(pageKey, parseInt(idq, 10), key);
       } else {
         _saveAnswer(pageKey, parseInt(idq, 10), null);
@@ -181,7 +218,24 @@
         <div class="question-points">Esai — dinilai manual oleh guru</div>
       `;
     } else {
-      const pilihan = Array.isArray(q.pilihan) ? q.pilihan : [];
+      // CRITICAL (C1 fix): Accept BOTH pilihan shapes:
+      //   - Array shape:  ['a', 'b', 'c', 'd']         (legacy / fetch.js normalizer)
+      //   - Object shape: { A:'a', B:'b', C:'c', D:'d' } (production admin UI:
+      //                   buat-ujian/templates.js + soal-editor-modal.js)
+      // The object shape is what the admin UI actually produces, so the
+      // previous `Array.isArray(...) ? ... : []` yielded [] for every
+      // admin-created assessment → 0 options rendered → peserta cannot
+      // answer any PG question.
+      let pilihan;
+      if (Array.isArray(q.pilihan)) {
+        pilihan = q.pilihan;
+      } else if (q.pilihan && typeof q.pilihan === 'object') {
+        // Object shape: preserve the A/B/C/D/E key order from the object.
+        const objKeys = ['A', 'B', 'C', 'D', 'E'];
+        pilihan = objKeys.map(k => q.pilihan[k]).filter(v => v != null && v !== '');
+      } else {
+        pilihan = [];
+      }
       const keys = ['A', 'B', 'C', 'D', 'E'];
       bodyHTML = `
         <div class="option-list" role="radiogroup" aria-label="Pilihan jawaban soal ${displayIdx + 1}">
@@ -341,12 +395,13 @@
   function _wireNavButtons() {
     if (!I._examAbort) return;
     const sig = I._examAbort.signal;
+    if (!I.dom.btnPrev || !I.dom.btnNext || !I.dom.btnSubmit) return;
     I.dom.btnPrev.addEventListener('click', () => {
       if (I.state.activePageIdx > 0) {
         I.state.activePageIdx--;
         _renderQuestion(I.state.activePageIdx);
         _renderPageTabs();
-        I.dom.examPhase.querySelector('.exam-main').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        I.dom.examPhase?.querySelector('.exam-main')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, { signal: sig });
     I.dom.btnNext.addEventListener('click', () => {
@@ -354,7 +409,7 @@
         I.state.activePageIdx++;
         _renderQuestion(I.state.activePageIdx);
         _renderPageTabs();
-        I.dom.examPhase.querySelector('.exam-main').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        I.dom.examPhase?.querySelector('.exam-main')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, { signal: sig });
     I.dom.btnSubmit.addEventListener('click', () => {
@@ -366,10 +421,10 @@
   function _updateNavButtons() {
     const state = I.state;
     const isLast = state.activePageIdx === state.soalPages.length - 1;
-    I.dom.btnPrev.disabled = state.activePageIdx === 0;
-    I.dom.btnNext.disabled = isLast;
-    I.dom.btnNext.hidden = isLast;
-    I.dom.btnSubmit.hidden = !isLast;
+    if (I.dom.btnPrev) I.dom.btnPrev.disabled = state.activePageIdx === 0;
+    if (I.dom.btnNext) I.dom.btnNext.disabled = isLast;
+    if (I.dom.btnNext) I.dom.btnNext.hidden = isLast;
+    if (I.dom.btnSubmit) I.dom.btnSubmit.hidden = !isLast;
   }
 
   function _updateProgress() {
@@ -385,23 +440,14 @@
     _stopTimer();
     const state = I.state;
 
-    let endMs = null;
-    if (assessment.access_mode === 'scheduled' && assessment.ac_scheduled_end) {
-      endMs = new Date(assessment.ac_scheduled_end).getTime();
-    } else if (assessment.ac_end) {
-      endMs = new Date(assessment.ac_end).getTime();
-    }
-
-    if (!endMs || isNaN(endMs)) {
-      const startMs = state.session?.started_at
-        ? new Date(state.session.started_at).getTime()
-        : Date.now();
-      const durMs = (assessment.duration_minutes || 90) * 60 * 1000;
-      endMs = startMs + durMs;
-      console.warn('[take] ac_end missing — falling back to duration_minutes');
-    }
+    // M8 fix: endMs is now a mutable state field so the re-fetch poll
+    // (every 60s) can update it when admin extends time mid-exam.
+    state._timerEndMs = _computeEndMs(assessment, state);
+    state._timerLastFetch = Date.now();
 
     const tick = () => {
+      const endMs = state._timerEndMs;
+      if (!endMs || isNaN(endMs)) return;
       const sisa = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
       _updateTimerDisplay(sisa);
 
@@ -418,6 +464,54 @@
     };
     tick();
     state.timerInterval = setInterval(tick, 1000);
+
+    // M8: re-fetch assessment every 60s to pick up ac_end changes from admin.
+    // Cheap SELECT (1 row), runs in parallel with BlockChecker (10s poll).
+    state._timerRefetchId = setInterval(async () => {
+      try {
+        const token = state.assessment?.access_code;
+        if (!token) return;
+        const fresh = await _internal._fetchAssessment(token);
+        if (!fresh) return;
+        const newEndMs = _computeEndMs(fresh, state);
+        if (newEndMs && !isNaN(newEndMs) && newEndMs !== state._timerEndMs) {
+          const oldSec = Math.floor((state._timerEndMs - Date.now()) / 1000);
+          const newSec = Math.floor((newEndMs - Date.now()) / 1000);
+          console.info(`[take] ac_end updated: ${oldSec}s → ${newSec}s`);
+          state._timerEndMs = newEndMs;
+          state.assessment = fresh; // also pick up any other field changes
+          // If admin extended time, reset isExpired so timer can fire again
+          if (newSec > 0 && state.isExpired) {
+            state.isExpired = false;
+          }
+          window.notify?.info(
+            'Waktu Diperbarui',
+            `Admin memperbarui durasi asesmen: ${Math.max(0, Math.floor(newSec/60))} menit tersisa.`,
+            4000
+          );
+        }
+      } catch (err) {
+        console.warn('[take] timer re-fetch failed (non-fatal):', err?.message);
+      }
+    }, 60_000);
+  }
+
+  function _computeEndMs(assessment, state) {
+    let endMs = null;
+    if (assessment.access_mode === 'scheduled' && assessment.ac_scheduled_end) {
+      endMs = new Date(assessment.ac_scheduled_end).getTime();
+    } else if (assessment.ac_end) {
+      endMs = new Date(assessment.ac_end).getTime();
+    }
+    if (!endMs || isNaN(endMs)) {
+      const startMs = state?.session?.started_at
+        ? new Date(state.session.started_at).getTime()
+        : Date.now();
+      const durMs = (assessment.duration_minutes || 90) * 60 * 1000;
+      endMs = startMs + durMs;
+      console.warn('[take] ac_end missing — falling back to duration_minutes');
+    }
+    return endMs;
   }
 
   function _stopTimer() {
@@ -425,13 +519,18 @@
       clearInterval(I.state.timerInterval);
       I.state.timerInterval = null;
     }
+    // M8: also clear the re-fetch interval
+    if (I.state._timerRefetchId) {
+      clearInterval(I.state._timerRefetchId);
+      I.state._timerRefetchId = null;
+    }
   }
 
   function _updateTimerDisplay(sisa) {
     const m = Math.floor(sisa / 60);
     const s = sisa % 60;
-    I.dom.timerDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    I.dom.examTimer.classList.remove('warning', 'critical');
+    I.dom.timerDisplay && (I.dom.timerDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+    if (I.dom.examTimer) I.dom.examTimer.classList.remove('warning', 'critical');
     if (sisa <= TIMER_CRITICAL_SECONDS) I.dom.examTimer.classList.add('critical');
     else if (sisa <= TIMER_WARNING_SECONDS) I.dom.examTimer.classList.add('warning');
   }
@@ -439,6 +538,7 @@
   function _updateSubmitLockState() {
     if (I.state.phase !== 'exam') return;
     const btn = I.dom.btnSubmit;
+    if (!btn) return;
     if (I.state.submitLocked) {
       btn.disabled = true;
       btn.classList.add('nav-btn--submit-locked');
@@ -453,7 +553,14 @@
   }
 
   function _getCurrentSisa() {
-    const assessment = I.state.assessment;
+    // M8: prefer the live _timerEndMs (updated by re-fetch poll) over the
+    // original assessment.ac_end. Falls back to assessment fields if
+    // _timerEndMs not set yet.
+    const state = I.state;
+    if (state._timerEndMs && !isNaN(state._timerEndMs)) {
+      return Math.max(0, Math.floor((state._timerEndMs - Date.now()) / 1000));
+    }
+    const assessment = state.assessment;
     let endMs = null;
     if (assessment?.access_mode === 'scheduled' && assessment.ac_scheduled_end) {
       endMs = new Date(assessment.ac_scheduled_end).getTime();
@@ -494,10 +601,13 @@
       }
       if (window.BlockChecker?.start) {
         // Phase 3: BlockChecker replaces BlockListener (10s poll, no Realtime)
+        // M1: also polls assessment.ac_manual_status — fires onAssessmentClosed
+        // when admin clicks "Tutup Akses" mid-exam.
         window.BlockChecker.start(state.session.id, {
           onBlocked:  (reason) => _handleBlocked(reason),
           onSubmitted: () => _handleSubmitted(),
           onExpired:  () => _handleExpired(),
+          onAssessmentClosed: (reason) => _handleBlocked(reason),
         });
       }
       if (window.ExamGuardian?.activate) {
@@ -592,6 +702,11 @@
   function _handleBlocked(reason) {
     if (I.state._redirected) return;
     I.state._redirected = true;
+    // m10 fix: set phase BEFORE the redirect so test harnesses (and any
+    // code running between the state change and the navigation) see the
+    // correct phase. In production this is harmless — the browser navigates
+    // away immediately, but the phase field is now consistent.
+    I.state.phase = 'blocked';
     _teardownExam();
     const reasonEnc = encodeURIComponent(reason || 'Diblokir oleh admin');
     window.location.replace(`blocked.html?reason=${reasonEnc}`);
@@ -600,6 +715,8 @@
   function _handleSubmitted() {
     if (I.state._redirected) return;
     I.state._redirected = true;
+    // m10 fix: set phase BEFORE the redirect (see _handleBlocked)
+    I.state.phase = 'submitted';
     _teardownExam();
     window.location.replace('submitted.html');
   }
@@ -650,7 +767,12 @@
     if (I.state._draftSyncTimer) {
       clearTimeout(I.state._draftSyncTimer);
       I.state._draftSyncTimer = null;
-      _saveLocalDraft();
+      // m9 fix: call I._saveLocalDraft (property reference) instead of the
+      // IIFE-local closure. This lets external code (tests, telemetry) spy
+      // on the call by replacing I._saveLocalDraft. Functionally identical
+      // in production because I._saveLocalDraft === _saveLocalDraft after
+      // the Object.assign at the bottom of this module.
+      (I._saveLocalDraft || _saveLocalDraft)();
     }
     if (I.state.phase === 'exam') {
       try { window.Heartbeat?.syncNow?.(); } catch (_) {}

@@ -212,9 +212,18 @@
     });
 
     // Initial sync — getSession() returns the cached session immediately.
+    // Fix 3: We now await this in _bootstrap() before _markReady(), so the
+    // session is guaranteed to be loaded before auth listeners fire.
+    // This eliminates the bootstrap race where INITIALIZE fires with null
+    // user before the cached session is available.
     client.auth.getSession().then(({ data }) => {
       if (!_currentUser && data?.session) {
         _currentUser = _toUser(data.session);
+        // Notify listeners that the real session arrived — this cancels
+        // any grace-period redirect that main.js may have queued.
+        _listeners.forEach(cb => {
+          try { cb(_currentUser, 'INITIAL_SESSION'); } catch (_) {}
+        });
       }
     }).catch(() => { /* non-fatal — onAuthStateChange will fire */ });
 
@@ -464,6 +473,14 @@
         isError: () => _error != null,
         getError: () => _error,
       };
+
+      // Fix 3: Await getSession() BEFORE marking platform ready.
+      // This ensures the cached session is loaded before any auth listener
+      // fires, eliminating the bootstrap race where INITIALIZE fires with
+      // null user before getSession() resolves.
+      try {
+        await _client.auth.getSession();
+      } catch (_) { /* non-fatal — onAuthStateChange will fire */ }
 
       _markReady();
       document.dispatchEvent(new CustomEvent('albedu:platform-ready'));
