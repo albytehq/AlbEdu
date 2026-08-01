@@ -594,7 +594,7 @@
       });
 
       // Wire primary action buttons in table rows
-      this._tableBody.querySelectorAll('.aa-table-primary-action').forEach((btn) => {
+      this._tableBody.querySelectorAll('.aa-table-btn[data-action]').forEach((btn) => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           const action = btn.dataset.action;
@@ -698,24 +698,45 @@
       const meta = STATUS_META[status];
       const qCount = _countQuestions(a.sections);
       const code = a.access_code || '—';
-      const primaryAction = this._primaryActionHTML(a, status);
+
+      // Live countdown for table rows
+      let timerCell = `<span class="aa-table-timer-static">${a.duration_minutes || 0}m</span>`;
+      if (status === 'open' && a.ac_end) {
+        const endMs = new Date(a.ac_end).getTime();
+        const remaining = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        timerCell = `<span class="aa-countdown aa-countdown-inline" data-ac-end="${a.ac_end}" data-assessment-id="${_esc(a.id)}">
+          <span class="aa-countdown-text">${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}</span>
+        </span>`;
+      } else if (status === 'closed' && a.ac_remaining_time && a.ac_remaining_time > 0) {
+        const mins = Math.ceil(a.ac_remaining_time / 60);
+        timerCell = `<span class="aa-table-timer-paused">${mins}m tersisa</span>`;
+      }
+
+      // Action button
+      let actionBtn = '';
+      if (status === 'archived') {
+        actionBtn = `<button class="aa-table-btn aa-table-btn-restore" data-action="restore" type="button">Pulihkan</button>`;
+      } else if (a.access_mode === 'scheduled') {
+        actionBtn = `<span class="aa-table-btn-disabled">Terjadwal</span>`;
+      } else if (status === 'open') {
+        actionBtn = `<button class="aa-table-btn aa-table-btn-close" data-action="toggle-status" type="button">Tutup</button>`;
+      } else {
+        actionBtn = `<button class="aa-table-btn aa-table-btn-open" data-action="toggle-status" type="button">Buka</button>`;
+      }
 
       return `
         <tr class="aa-table-row" data-id="${_esc(a.id)}" data-status="${status}">
           <td><span class="aa-card-status ${meta.cls}">${meta.label}</span></td>
           <td>
             <span class="aa-table-title">${_esc(a.title || 'Tanpa Judul')}</span>
-            <span class="aa-table-sub">${a.access_mode === 'scheduled' ? 'Terjadwal' : 'Manual'}</span>
+            <span class="aa-table-sub">${_esc(a.subject || '-')} • ${qCount} soal</span>
           </td>
-          <td>${_esc(a.subject || '-')}</td>
           <td><code class="aa-card-code">#${_esc(code)}</code></td>
-          <td>${a.duration_minutes || 0}m</td>
-          <td>${qCount}</td>
-          <td>${_fmtDate(a.created_at)}</td>
-          <td>
-            <button class="aa-table-primary-action" data-action="toggle-status" type="button" style="background:transparent;border:none;cursor:pointer;color:var(--color-primary);font-weight:600;font-size:12px;padding:4px 8px;">
-              ${status === 'open' ? 'Tutup' : status === 'archived' ? 'Pulihkan' : 'Buka'}
-            </button>
+          <td class="aa-table-timer-cell">${timerCell}</td>
+          <td class="aa-table-actions-cell">
+            ${actionBtn}
             <button class="aa-table-row-menu" type="button" aria-label="Menu aksi">
               <span data-albedu-icon="more_vert"></span>
             </button>
