@@ -19,6 +19,28 @@
     const isResume = options?.isResume === true;
     const state = I.state;
 
+    // Guard: if soalPages is empty or not an array, can't start exam
+    if (!Array.isArray(state.soalPages) || state.soalPages.length === 0) {
+      console.error('[take] _startExam: soalPages empty — cannot start exam');
+      _internal._showClosed(
+        'Soal Tidak Tersedia',
+        'Asesmen ini belum memiliki soal. Hubungi admin.',
+        'danger'
+      );
+      return;
+    }
+
+    // Guard: session must exist
+    if (!state.session?.id) {
+      console.error('[take] _startExam: session.id missing — cannot start exam');
+      _internal._showClosed(
+        'Sesi Tidak Valid',
+        'Sesi asesmen tidak ditemukan. Silakan masuk kembali melalui halaman asesmen.',
+        'danger'
+      );
+      return;
+    }
+
     const seed = _internal._computeSeed(state.session);
     state.sessionNonce = seed;
     state.shuffledPages = _internal._shufflePages(state.soalPages, seed);

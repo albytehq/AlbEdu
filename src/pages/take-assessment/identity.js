@@ -111,11 +111,14 @@
     // phase instead of re-showing the identity form.
     try {
       const repo = window.AlbEdu?.repository;
-      if (repo) {
-        await repo.updateDoc('assessment_sessions', I.state.session.id, {
+      const sessionId = I.state?.session?.id;
+      if (repo && sessionId) {
+        await repo.updateDoc('assessment_sessions', sessionId, {
           identity_snapshot: identity,
           updated_at: new Date().toISOString(),
         });
+      } else {
+        console.warn('[take] cannot persist identity — session.id missing', { session: I.state?.session });
       }
     } catch (err) {
       console.warn('[take] persist identity failed (will retry via heartbeat):', err);
