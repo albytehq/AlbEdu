@@ -143,6 +143,8 @@ let _stopProfileListener = null;
 let _initialized         = false;
 let _authStateTimer      = null;
 let _graceTimer          = null;  // 3s grace period before redirect on transient null user
+let _syncingUserId       = null; // Race condition dedup for _syncUserDocument
+let _syncingPromise      = null; // Race condition dedup for _syncUserDocument
 
 // Re-aliased from user-helpers.js.
 const _buildAvatarUrl    = window.AuthHelpers.buildAvatarUrl;
@@ -499,10 +501,20 @@ async function _createUserDocViaServer(userId) {
 //      changes from another tab, etc.) — but don't rely on it for initial load.
 //   3. Keep a safety-net timer in case the initial fetch hangs (network stall).
 function _syncUserDocument(userId) {
+    // Race condition guard: Supabase often fires both INITIAL_SESSION and
+    // SIGNED_IN after Google OAuth redirect. Both call _syncUserDocument.
+    // The first call clears the preflight (line 466), the second gets
+    // missing_preflight. Dedup: if already syncing for the same userId,
+    // return the existing promise.
+    if (_syncingUserId === userId && _syncingPromise) {
+        return _syncingPromise;
+    }
+    _syncingUserId = userId;
+
     _stopProfileListener?.();
     _stopProfileListener = null;
 
-    return new Promise((resolve, reject) => {
+    _syncingPromise = new Promise((resolve, reject) => {
         let settled  = false;
         let creating = false; // guard: only one _createUserDocViaServer call
 
@@ -527,8 +539,9 @@ function _syncUserDocument(userId) {
             try {
                 const repo = window.AlbEdu?.repository;
                 if (!repo) {
-                    settle(reject, new Error('[Auth] repository not ready'));
-                    return;
+                    // Fix (Agent 5 finding): throw CompletionError instead of
+                    // plain Error so the auth-completion-error event fires.
+                    throw new CompletionError('platform_not_ready');
                 }
                 const snap = await repo.getDoc('users', userId);
                 if (snap?.exists) {
@@ -598,6 +611,9 @@ function _syncUserDocument(userId) {
 
         _initialFetch();
         _attachRealtime();
+    }).finally(() => {
+        _syncingUserId = null;
+        _syncingPromise = null;
     });
 }
 
@@ -957,19 +973,31 @@ async function _handleAuthStateChange(user, event) {
     } catch (_err) {
         console.error('[Auth] auth state handling failed:', _err?.message || _err);
 
-        // If the error is a CompletionError (device_limit_reached, for example),
-        // dispatch a custom event so the login page UI can display the
-        // specific user-friendly message instead of a generic redirect.
-        if (_err instanceof CompletionError) {
-            document.dispatchEvent(new CustomEvent('auth-completion-error', {
-                detail: {
-                    backendCode: _err.backendCode,
-                    message: _err.message,
-                },
-            }));
-        }
+        // Dispatch auth-completion-error for ALL errors (not just CompletionError).
+        // Fix (Agent 5 finding): plain Error instances were bypassing the event
+        // dispatch, leaving the user with no visible error message.
+        const backendCode = _err instanceof CompletionError
+            ? _err.backendCode
+            : 'user_completion_failed';
+        const userMessage = _err instanceof CompletionError
+            ? _err.message
+            : _t('auth.user_completion_failed', null, 'Gagal menyelesaikan login. Silakan coba lagi.');
+        document.dispatchEvent(new CustomEvent('auth-completion-error', {
+            detail: {
+                backendCode,
+                message: userMessage,
+            },
+        }));
 
-        if (user && !_userData) {
+        // Only sign out on definitive auth errors (not on transient failures
+        // like rate_limit_exceeded or network timeout).
+        // Fix (Agent 1 finding): signing out on rate_limit_exceeded burns
+        // another preflight on retry, making the problem worse.
+        const isTransientError = backendCode === 'rate_limit_exceeded' ||
+            backendCode === 'platform_not_ready' ||
+            (_err && !(_err instanceof CompletionError));
+
+        if (user && !_userData && !isTransientError) {
             _stopProfileListener?.();
             _stopProfileListener = null;
             _currentUser  = null;
