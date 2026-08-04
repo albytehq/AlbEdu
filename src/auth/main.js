@@ -542,9 +542,14 @@ function _syncUserDocument(userId) {
                     settle(resolve, fresh);
                 }
             } catch (err) {
-                // Initial fetch failed (network/RLS/timeout). Fall back to
-                // the Edge Function, which can both fetch AND create
-                // server-side using the service role key (bypasses RLS).
+                // If _createUserDoc (called in the try block above) threw,
+                // `creating` is already true. The old code checked `if (!creating)`
+                // and SILENTLY SWALLOWED the error — the safety net timer then
+                // fired 16s later with a generic "user_completion_failed" instead
+                // of the actual error (e.g. "missing_preflight").
+                //
+                // Fix: if `creating` is already true, the error came from
+                // _createUserDoc — reject immediately with the real error.
                 if (!creating) {
                     creating = true;
                     try {
@@ -554,6 +559,11 @@ function _syncUserDocument(userId) {
                     } catch (e) {
                         settle(reject, e);
                     }
+                } else {
+                    // Error from _createUserDoc (called in try block) — reject
+                    // immediately so the user sees the REAL error, not a 16s
+                    // timeout generic "user_completion_failed".
+                    settle(reject, err);
                 }
             }
         };
