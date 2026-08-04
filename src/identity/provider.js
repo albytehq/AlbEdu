@@ -105,15 +105,62 @@ window.IdentityProvider = (() => {
     }
 
     if (identityObj._mode === 'manual') {
-      // Manual mode: validate via IdentityFormRenderer
-      if (window.IdentityFormRenderer) {
-        return window.IdentityFormRenderer.validate();
+      // M2 fix: Actually validate the PASSED identityObj against identityConfig.fields.
+      // Previously this delegated to IdentityFormRenderer.validate() (singleton form
+      // state), which ignored the identityObj argument — making the API misleading
+      // and impossible to use for server-side / pre-fill / retry validation.
+      //
+      // Now we validate identityObj directly. If the caller also wants to validate
+      // the live form (e.g. before _onIdentitySubmit), they should call
+      // IdentityFormRenderer.validate() explicitly.
+      const fields = (identityConfig && Array.isArray(identityConfig.fields))
+        ? identityConfig.fields
+        : [];
+
+      if (fields.length === 0) {
+        // No config — accept any manual identity as long as it has a display name.
+        if (!identityObj._display_name && !identityObj.nama) {
+          errors.push(t('identity.field_required', { field: 'Nama' }, 'Field "Nama" wajib diisi.'));
+        }
+        return errors;
       }
-      // Fallback: check fields
-      const fields = identityConfig.fields || [];
+
       fields.forEach(f => {
-        if (f.required && !identityObj[f.id]) {
-          errors.push(t('identity.field_required', { field: f.label }, `Field "${f.label}" wajib diisi.`));
+        const v = identityObj[f.id] != null ? String(identityObj[f.id]).trim() : '';
+        const lbl = f.label || f.id;
+
+        // Required check
+        if (f.required && !v) {
+          errors.push(t('identity.field_required', { field: lbl }, `Field "${lbl}" wajib diisi.`));
+          return;
+        }
+        if (!v) return; // optional & empty → skip further checks
+
+        // Type-specific
+        switch (f.type) {
+          case 'email':
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+              errors.push(`Field "${lbl}": format email tidak valid.`);
+            }
+            break;
+          case 'number':
+            if (!/^-?\d+(\.\d+)?$/.test(v)) {
+              errors.push(`Field "${lbl}": harus berupa angka.`);
+            }
+            break;
+          case 'select':
+            if (!Array.isArray(f.options) || !f.options.includes(v)) {
+              errors.push(`Field "${lbl}": nilai tidak ada di opsi.`);
+            }
+            break;
+        }
+
+        // max_length
+        const ml = (f.type === 'text' || f.type === 'textarea') && f.max_length
+          ? parseInt(f.max_length, 10)
+          : null;
+        if (ml && v.length > ml) {
+          errors.push(`Field "${lbl}": melebihi ${ml} karakter.`);
         }
       });
       return errors;
@@ -176,16 +223,37 @@ window.IdentityProvider = (() => {
 
     const submitBtn = document.createElement('button');
     submitBtn.type = 'button';
-    submitBtn.className = 'ip-btn ip-btn--primary';
+    submitBtn.className = 'ip-btn ip-btn--primary ip-submit-btn';
     submitBtn.textContent = 'Mulai Asesmen';
-    submitBtn.onclick = () => {
+    // M4 fix: loading state guard — prevent double-click during the async
+    // identity submit. The caller's onSubmit() returns a Promise (or void);
+    // we set `data-state="submitting"` + disable the button until it resolves.
+    let isSubmitting = false;
+    const originalLabel = submitBtn.textContent;
+    submitBtn.onclick = async () => {
+      if (isSubmitting) return;
       const errors = window.IdentityFormRenderer.validate();
       if (errors.length > 0) {
         window.IdentityFormRenderer.showErrors(errors);
         return;
       }
       const identity = window.IdentityFormRenderer.getIdentityObject();
-      onSubmit(identity);
+      isSubmitting = true;
+      submitBtn.disabled = true;
+      submitBtn.setAttribute('data-state', 'submitting');
+      submitBtn.setAttribute('aria-busy', 'true');
+      submitBtn.innerHTML = `<span class="ip-submit-btn__spinner" aria-hidden="true"></span><span>Memulai...</span>`;
+      try {
+        const result = onSubmit(identity);
+        if (result && typeof result.then === 'function') await result;
+      } finally {
+        // Reset only if the page hasn't transitioned (e.g. on error)
+        isSubmitting = false;
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('data-state');
+        submitBtn.removeAttribute('aria-busy');
+        submitBtn.textContent = originalLabel;
+      }
     };
     actions.appendChild(submitBtn);
 
@@ -225,6 +293,21 @@ window.IdentityProvider = (() => {
     });
 
     const hasEmbeddedAnggota = tabsNormalized.length > 0 && tabsNormalized[0].anggota !== null;
+
+    // M4-minor fix: empty/misconfigured state for daftar (tabs=[])
+    if (tabsNormalized.length === 0) {
+      const emptyState = document.createElement('div');
+      emptyState.className = 'ip-empty-state';
+      emptyState.setAttribute('role', 'alert');
+      emptyState.innerHTML = `
+        <div class="ip-empty-state__icon" data-albedu-icon="error_outline"></div>
+        <div class="ip-empty-state__title">Asesmen Belum Dikonfigurasi</div>
+        <div class="ip-empty-state__msg">Daftar tab/kelas kosong. Hubungi admin untuk mengonfigurasi asesmen ini.</div>
+        <button class="ip-btn ip-btn--secondary" type="button" onclick="window.location.reload()">Muat Ulang</button>
+      `;
+      mount.appendChild(emptyState);
+      return;
+    }
 
     // Daftar info
     const info = document.createElement('div');
@@ -294,6 +377,20 @@ window.IdentityProvider = (() => {
     namaLabel.innerHTML = `Pilih Nama <span class="ip-required">*</span>`;
     namaWrap.appendChild(namaLabel);
 
+    // M12 fix: search input for long nama lists (>8 entries).
+    // Shown above the dropdown, filters options by case-insensitive substring.
+    // Hidden by default; revealed when list > 8 in _populateNamaDropdown.
+    const searchWrap = document.createElement('div');
+    searchWrap.className = 'ip-daftar-search';
+    searchWrap.style.display = 'none';
+    const searchInput = document.createElement('input');
+    searchInput.type = 'search';
+    searchInput.className = 'ip-field__input ip-daftar-search__input';
+    searchInput.placeholder = 'Cari nama...';
+    searchInput.setAttribute('aria-label', 'Cari nama peserta');
+    searchWrap.appendChild(searchInput);
+    namaWrap.appendChild(searchWrap);
+
     const namaDropdown = _createCustomDropdown({
       placeholder: '-- Pilih Nama --',
       options: [],
@@ -304,26 +401,46 @@ window.IdentityProvider = (() => {
     });
     namaWrap.appendChild(namaDropdown.element);
 
+    // M12: store full list so we can re-filter on search input
+    let _fullNamaList = [];
     function _populateNamaDropdown(list) {
-      if (!list || list.length === 0) {
+      _fullNamaList = Array.isArray(list) ? list : [];
+      if (_fullNamaList.length === 0) {
         namaDropdown.setOptions([]);
         namaDropdown.setPlaceholder('(Tab kosong)');
         errBox.textContent = 'Tab ini kosong. Hubungi admin atau isi manual di bawah.';
+        searchWrap.style.display = 'none';
       } else {
-        namaDropdown.setOptions(list.map(n => ({ value: n, label: n })));
+        _renderFilteredNama('');
         namaDropdown.setPlaceholder('-- Pilih Nama --');
+        // M12: show search input if list is long
+        searchWrap.style.display = _fullNamaList.length > 8 ? '' : 'none';
       }
       namaWrap.classList.remove('ip-field--hidden');
     }
+    function _renderFilteredNama(query) {
+      const q = (query || '').trim().toLowerCase();
+      const filtered = q
+        ? _fullNamaList.filter(n => String(n).toLowerCase().includes(q))
+        : _fullNamaList;
+      namaDropdown.setOptions(filtered.map(n => ({ value: n, label: n })));
+    }
+    // M12: wire search input
+    searchInput.addEventListener('input', (e) => {
+      _renderFilteredNama(e.target.value);
+    });
 
     // Manual name fallback
     const manualWrap = document.createElement('div');
     manualWrap.className = 'ip-manual-toggle';
+    // M3 fix: use a unique id per provider instance (counter) to avoid
+    // duplicate IDs when the daftar form is re-rendered.
+    const manualToggleId = `ip_manual_toggle_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const manualCb = document.createElement('input');
     manualCb.type = 'checkbox';
-    manualCb.id = 'ip_manual_toggle';
+    manualCb.id = manualToggleId;
     const manualLbl = document.createElement('label');
-    manualLbl.htmlFor = 'ip_manual_toggle';
+    manualLbl.htmlFor = manualToggleId;
     manualLbl.textContent = t('identity.manual_toggle_label', null, 'Nama saya tidak ada di daftar (isi manual)');
     manualWrap.appendChild(manualCb);
     manualWrap.appendChild(manualLbl);
@@ -360,8 +477,50 @@ window.IdentityProvider = (() => {
 
     const submitBtn = document.createElement('button');
     submitBtn.type = 'button';
-    submitBtn.className = 'ip-btn ip-btn--primary';
-    submitBtn.innerHTML = '<span style="font-size:16px;margin-right:4px;" data-albedu-icon="play_arrow"></span> Mulai Asesmen';
+    submitBtn.className = 'ip-btn ip-btn--primary ip-submit-btn';
+    const daftarSubmitHTML = '<span style="font-size:16px;margin-right:4px;" data-albedu-icon="play_arrow"></span> Mulai Asesmen';
+    submitBtn.innerHTML = daftarSubmitHTML;
+    // M4 fix: loading state guard for daftar mode (mirror of manual mode)
+    let daftarIsSubmitting = false;
+    submitBtn.onclick = async () => {
+      if (daftarIsSubmitting) return;
+      errBox.textContent = '';
+
+      if (!state.tab_nama) {
+        errBox.textContent = 'Silakan pilih tab terlebih dahulu.';
+        return;
+      }
+      if (!state.nama || !state.nama.trim()) {
+        errBox.textContent = 'Silakan pilih atau masukkan nama.';
+        return;
+      }
+
+      const identity = {
+        _mode: 'daftar',
+        _display_name: state.nama.trim(),
+        nama: state.nama.trim(),
+        tab_id: state.tab_nama,
+        tab_nama: state.tab_nama,
+        daftar_id: state.daftar_id,
+        isManualName: manualCb.checked,
+      };
+
+      daftarIsSubmitting = true;
+      submitBtn.disabled = true;
+      submitBtn.setAttribute('data-state', 'submitting');
+      submitBtn.setAttribute('aria-busy', 'true');
+      submitBtn.innerHTML = `<span class="ip-submit-btn__spinner" aria-hidden="true"></span><span>Memulai...</span>`;
+      try {
+        const result = onSubmit(identity);
+        if (result && typeof result.then === 'function') await result;
+      } finally {
+        daftarIsSubmitting = false;
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('data-state');
+        submitBtn.removeAttribute('aria-busy');
+        submitBtn.innerHTML = daftarSubmitHTML;
+      }
+    };
     actions.appendChild(submitBtn);
 
     mount.appendChild(actions);
@@ -385,30 +544,6 @@ window.IdentityProvider = (() => {
     manualInput.oninput = e => {
       state.nama = e.target.value;
       errBox.textContent = '';
-    };
-
-    submitBtn.onclick = () => {
-      errBox.textContent = '';
-
-      if (!state.tab_nama) {
-        errBox.textContent = 'Silakan pilih tab terlebih dahulu.';
-        return;
-      }
-      if (!state.nama || !state.nama.trim()) {
-        errBox.textContent = 'Silakan pilih atau masukkan nama.';
-        return;
-      }
-
-      const identity = {
-        _mode: 'daftar',
-        _display_name: state.nama.trim(),
-        nama: state.nama.trim(),
-        tab_id: state.tab_nama,
-        tab_nama: state.tab_nama,
-        daftar_id: state.daftar_id,
-        isManualName: manualCb.checked,
-      };
-      onSubmit(identity);
     };
   }
 

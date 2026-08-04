@@ -95,18 +95,21 @@
   }
 
   // Map DB status → canonical status key
+  // Simplified to 2 active states + archived:
+  //   open    = admin has opened the assessment (peserta can access)
+  //   closed  = admin has closed it (peserta sees "belum dibuka" or "selesai")
+  //   archived = moved to archive (hidden from active list)
   function _statusOf(a) {
     if (a.status === 'archived') return 'archived';
-    if (a.ac_manual_status === 'open') return 'running';
-    if (a.ac_manual_status === 'finished') return 'finished';
-    return 'paused'; // includes 'closed' / null / NOT_STARTED
+    if (a.ac_manual_status === 'open') return 'open';
+    // 'closed', 'finished', null, or anything else → closed
+    return 'closed';
   }
 
   const STATUS_META = {
-    running:  { label: 'Berjalan', cls: 'aa-status-running'  },
-    paused:   { label: 'Dijeda',   cls: 'aa-status-paused'   },
-    finished: { label: 'Selesai',  cls: 'aa-status-finished' },
-    archived: { label: 'Arsip',    cls: 'aa-status-archived' },
+    open:     { label: 'Buka',   cls: 'aa-status-running'  },
+    closed:   { label: 'Tutup',  cls: 'aa-status-paused'   },
+    archived: { label: 'Arsip',  cls: 'aa-status-archived' },
   };
 
   // Helper: bind icons in a root element (defensive — in case MutationObserver is slow)
@@ -144,12 +147,11 @@
       this._ctxMenu      = document.getElementById('aa-ctx-menu');
       this._ctxToggleLabel = document.getElementById('aa-ctx-toggle-label');
 
-      // Chip count refs (filter chips provide status counts since KPI strip was removed)
+      // Chip count refs (filter chips provide status counts)
       this._chipCounts = {
         all:       document.getElementById('chip-all'),
-        running:   document.getElementById('chip-running'),
-        paused:    document.getElementById('chip-paused'),
-        finished:  document.getElementById('chip-finished'),
+        open:      document.getElementById('chip-running'),   // chip-running = "Buka"
+        closed:    document.getElementById('chip-paused'),    // chip-paused = "Tutup"
         archived:  document.getElementById('chip-archived'),
       };
 
@@ -396,7 +398,7 @@
         const sb = window.AlbEdu.supabase.client;
         const { data, error } = await sb
           .from('assessments')
-          .select('id, access_code, title, subject, duration_minutes, status, ac_manual_status, access_mode, created_at, sections')
+          .select('id, access_code, title, subject, duration_minutes, status, ac_manual_status, ac_end, ac_remaining_time, access_mode, created_at, created_by, sections')
           .eq('created_by', session.user.id)
           .order('created_at', { ascending: false })
           .limit(50);
@@ -412,6 +414,10 @@
           this._setState('loaded', { requestId });
           this._updateKPIs();
           this._applyFilters();
+          // Start countdown ticker if any open assessments have ac_end
+          if (this._allData.some(a => _statusOf(a) === 'open' && a.ac_end)) {
+            this._startCountdownTicker();
+          }
         }
       } catch (err) {
         if (requestId !== this._requestId) return;
@@ -425,14 +431,13 @@
     // ── Chip counts update ─────────────────────────────────────
     _updateKPIs() {
       try {
-        const counts = { running: 0, paused: 0, finished: 0, archived: 0 };
+        const counts = { open: 0, closed: 0, archived: 0 };
         this._allData.forEach((a) => { counts[_statusOf(a)]++; });
         const total = this._allData.length;
 
         if (this._chipCounts.all)       this._chipCounts.all.textContent       = total;
-        if (this._chipCounts.running)   this._chipCounts.running.textContent   = counts.running;
-        if (this._chipCounts.paused)    this._chipCounts.paused.textContent    = counts.paused;
-        if (this._chipCounts.finished)  this._chipCounts.finished.textContent  = counts.finished;
+        if (this._chipCounts.open)      this._chipCounts.open.textContent      = counts.open;
+        if (this._chipCounts.closed)    this._chipCounts.closed.textContent    = counts.closed;
         if (this._chipCounts.archived)  this._chipCounts.archived.textContent  = counts.archived;
       } catch (err) {
         console.warn('[ActiveAssessments] _updateKPIs failed:', err);
@@ -589,7 +594,7 @@
       });
 
       // Wire primary action buttons in table rows
-      this._tableBody.querySelectorAll('.aa-table-primary-action').forEach((btn) => {
+      this._tableBody.querySelectorAll('.aa-table-btn[data-action]').forEach((btn) => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           const action = btn.dataset.action;
@@ -608,52 +613,42 @@
       const code = a.access_code || '—';
       const primaryAction = this._primaryActionHTML(a, status);
 
+      // Live countdown for open assessments
+      let countdownHTML = '';
+      if (status === 'open' && a.ac_end) {
+        const endMs = new Date(a.ac_end).getTime();
+        const remaining = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        countdownHTML = `<span class="aa-countdown" data-ac-end="${a.ac_end}" data-assessment-id="${_esc(a.id)}">
+          <span data-albedu-icon="timer"></span>
+          <span class="aa-countdown-text">${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}</span>
+        </span>`;
+      } else if (status === 'closed' && a.ac_remaining_time && a.ac_remaining_time > 0) {
+        const mins = Math.ceil(a.ac_remaining_time / 60);
+        countdownHTML = `<span class="aa-countdown aa-countdown-paused">
+          <span data-albedu-icon="pause_circle"></span>
+          <span>Dijeda — ${mins}m tersisa</span>
+        </span>`;
+      }
+
       return `
         <article class="aa-card" data-id="${_esc(a.id)}" data-status="${status}">
-          <header class="aa-card-head">
+          <div class="aa-card-top">
             <span class="aa-card-status ${meta.cls}">${meta.label}</span>
             <button class="aa-card-menu-btn" type="button" aria-label="Menu aksi">
-              <span data-albedu-icon="chevron_right"></span>
+              <span data-albedu-icon="more_vert"></span>
             </button>
-          </header>
+          </div>
           <h3 class="aa-card-title">${_esc(a.title || 'Tanpa Judul')}</h3>
-          <p class="aa-card-sub">
-            <span data-albedu-icon="school"></span>
-            <span>${_esc(a.subject || 'Tanpa mapel')}</span>
-          </p>
-          <div class="aa-card-meta">
-            <div class="aa-meta-item">
-              <span data-albedu-icon="schedule"></span>
-              <strong>${a.duration_minutes || 0}</strong>&nbsp;menit
-            </div>
-            <div class="aa-meta-item">
-              <span data-albedu-icon="assignment"></span>
-              <strong>${qCount}</strong>&nbsp;soal
-            </div>
-            <div class="aa-meta-item">
-              <span data-albedu-icon="sell"></span>
-              <span class="aa-card-code">#${_esc(code)}</span>
-            </div>
-            <div class="aa-meta-item">
-              <span data-albedu-icon="restart_alt"></span>
-              <span>${a.access_mode === 'scheduled' ? 'Terjadwal' : 'Manual'}</span>
-            </div>
+          <div class="aa-card-meta-row">
+            <span class="aa-meta-item"><span data-albedu-icon="school"></span>${_esc(a.subject || '-')}</span>
+            <span class="aa-meta-item"><span data-albedu-icon="quiz"></span>${qCount} soal</span>
+            <span class="aa-meta-item"><span data-albedu-icon="schedule"></span>${a.duration_minutes || 0}m</span>
+            ${countdownHTML}
+            <span class="aa-card-code">#${_esc(code)}</span>
           </div>
           ${primaryAction}
-          <footer class="aa-card-footer">
-            <span class="aa-card-date">
-              <span data-albedu-icon="schedule"></span>
-              ${_fmtDate(a.created_at)}
-            </span>
-            <div class="aa-card-quick-actions">
-              <button class="aa-card-quick-btn" data-action="copy-code" type="button" aria-label="Salin kode">
-                <span data-albedu-icon="content_copy"></span>
-              </button>
-              <button class="aa-card-quick-btn ${status === 'archived' ? '' : 'aa-quick-danger'}" data-action="${status === 'archived' ? 'restore' : 'archive'}" type="button" aria-label="${status === 'archived' ? 'Restore' : 'Arsipkan'}">
-                <span data-albedu-icon="folder_open"></span>
-              </button>
-            </div>
-          </footer>
         </article>
       `;
     },
@@ -676,14 +671,6 @@
         </button>`;
       }
 
-      // Finished → show "Sudah Selesai" (disabled, no action)
-      if (status === 'finished') {
-        return `<button class="aa-card-primary-action aa-action-finished" disabled type="button">
-          <span data-albedu-icon="task_alt"></span>
-          <span>Sudah Selesai</span>
-        </button>`;
-      }
-
       // Scheduled mode → show "Terjadwal" (disabled, auto-opens)
       if (a.access_mode === 'scheduled') {
         return `<button class="aa-card-primary-action aa-action-scheduled" disabled type="button">
@@ -692,17 +679,17 @@
         </button>`;
       }
 
-      // Manual mode → show "Mulai" or "Tutup" based on current ac_manual_status
-      if (status === 'running') {
+      // Manual mode → show "Buka" or "Tutup" based on current status
+      if (status === 'open') {
         return `<button class="aa-card-primary-action aa-action-stop" data-action="toggle-status" type="button">
           <span data-albedu-icon="pause_circle"></span>
           <span>Tutup Akses</span>
         </button>`;
       }
-      // paused (closed) → show "Mulai"
+      // closed → show "Buka"
       return `<button class="aa-card-primary-action aa-action-start" data-action="toggle-status" type="button">
         <span data-albedu-icon="play_circle"></span>
-        <span>Mulai Asesmen</span>
+        <span>Buka Akses</span>
       </button>`;
     },
 
@@ -711,26 +698,47 @@
       const meta = STATUS_META[status];
       const qCount = _countQuestions(a.sections);
       const code = a.access_code || '—';
-      const primaryAction = this._primaryActionHTML(a, status);
+
+      // Live countdown for table rows
+      let timerCell = `<span class="aa-table-timer-static">${a.duration_minutes || 0}m</span>`;
+      if (status === 'open' && a.ac_end) {
+        const endMs = new Date(a.ac_end).getTime();
+        const remaining = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        timerCell = `<span class="aa-countdown aa-countdown-inline" data-ac-end="${a.ac_end}" data-assessment-id="${_esc(a.id)}">
+          <span class="aa-countdown-text">${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}</span>
+        </span>`;
+      } else if (status === 'closed' && a.ac_remaining_time && a.ac_remaining_time > 0) {
+        const mins = Math.ceil(a.ac_remaining_time / 60);
+        timerCell = `<span class="aa-table-timer-paused">${mins}m tersisa</span>`;
+      }
+
+      // Action button
+      let actionBtn = '';
+      if (status === 'archived') {
+        actionBtn = `<button class="aa-table-btn aa-table-btn-restore" data-action="restore" type="button">Pulihkan</button>`;
+      } else if (a.access_mode === 'scheduled') {
+        actionBtn = `<span class="aa-table-btn-disabled">Terjadwal</span>`;
+      } else if (status === 'open') {
+        actionBtn = `<button class="aa-table-btn aa-table-btn-close" data-action="toggle-status" type="button">Tutup</button>`;
+      } else {
+        actionBtn = `<button class="aa-table-btn aa-table-btn-open" data-action="toggle-status" type="button">Buka</button>`;
+      }
 
       return `
         <tr class="aa-table-row" data-id="${_esc(a.id)}" data-status="${status}">
           <td><span class="aa-card-status ${meta.cls}">${meta.label}</span></td>
           <td>
             <span class="aa-table-title">${_esc(a.title || 'Tanpa Judul')}</span>
-            <span class="aa-table-sub">${a.access_mode === 'scheduled' ? 'Terjadwal' : 'Manual'}</span>
+            <span class="aa-table-sub">${_esc(a.subject || '-')} • ${qCount} soal</span>
           </td>
-          <td>${_esc(a.subject || '-')}</td>
           <td><code class="aa-card-code">#${_esc(code)}</code></td>
-          <td>${a.duration_minutes || 0}m</td>
-          <td>${qCount}</td>
-          <td>${_fmtDate(a.created_at)}</td>
-          <td>
-            <button class="aa-table-primary-action" data-action="${status === 'running' ? 'toggle-status' : status === 'archived' ? 'restore' : 'toggle-status'}" type="button" style="background:transparent;border:none;cursor:pointer;color:var(--color-primary);font-weight:600;font-size:12px;padding:4px 8px;">
-              ${status === 'running' ? 'Tutup' : status === 'archived' ? 'Pulihkan' : 'Mulai'}
-            </button>
+          <td class="aa-table-timer-cell">${timerCell}</td>
+          <td class="aa-table-actions-cell">
+            ${actionBtn}
             <button class="aa-table-row-menu" type="button" aria-label="Menu aksi">
-              <span data-albedu-icon="chevron_right"></span>
+              <span data-albedu-icon="more_vert"></span>
             </button>
           </td>
         </tr>
@@ -751,26 +759,43 @@
       if (!this._ctxMenu) return;
       this._ctxTarget = item;
 
+      // Get button position
       const rect = anchor.getBoundingClientRect();
-      const menuW = 240;
-      const menuH = 280;
-      let x = rect.right - menuW;
-      let y = rect.bottom + 6;
 
-      if (y + menuH > window.innerHeight) y = rect.top - menuH - 6;
+      // Temporarily show menu to measure its actual size
+      this._ctxMenu.style.left = '-9999px';
+      this._ctxMenu.style.top = '-9999px';
+      this._ctxMenu.hidden = false;
+      const menuRect = this._ctxMenu.getBoundingClientRect();
+      const menuW = menuRect.width || 220;
+      const menuH = menuRect.height || 260;
+
+      // Position: directly below the button, left-aligned to button's left edge
+      // This is the most natural position — menu starts where the button starts.
+      let x = rect.left;
+      let y = rect.bottom + 4;
+
+      // If menu would go off right edge, shift left so it fits
+      if (x + menuW > window.innerWidth - 8) {
+        x = window.innerWidth - menuW - 8;
+      }
+      // If menu would go off left edge, clamp to 8px
       if (x < 8) x = 8;
 
-      this._ctxMenu.style.left = x + 'px';
-      this._ctxMenu.style.top  = y + 'px';
-      this._ctxMenu.hidden = false;
+      // If menu would go below viewport, flip above the button
+      if (y + menuH > window.innerHeight - 8) {
+        y = rect.top - menuH - 4;
+      }
+      if (y < 8) y = 8;
+
+      this._ctxMenu.style.left = Math.round(x) + 'px';
+      this._ctxMenu.style.top  = Math.round(y) + 'px';
       _bindIcons(this._ctxMenu);
 
       if (this._ctxToggleLabel) {
         const status = _statusOf(item);
         this._ctxToggleLabel.textContent =
-          status === 'running' ? 'Tutup Akses' :
-          status === 'paused'  ? 'Mulai Asesmen'  :
-          'Buka / Tutup';
+          status === 'open' ? 'Tutup Akses' : 'Buka Akses';
       }
     },
 
@@ -819,43 +844,186 @@
       }
     },
 
+    // ── Live countdown ticker ──
+    // Runs a single 1s interval that updates ALL [data-ac-end] elements
+    // on the page. Started after toggle or after initial render.
+    _countdownInterval: null,
+
+    _startCountdownTicker() {
+      if (this._countdownInterval) return; // already running
+      this._countdownInterval = setInterval(() => {
+        this._updateCountdowns();
+      }, 1000);
+      // Also update immediately
+      this._updateCountdowns();
+    },
+
+    _updateCountdowns() {
+      const elements = document.querySelectorAll('.aa-countdown[data-ac-end]');
+      if (!elements.length) {
+        // No countdowns visible — stop the ticker to save CPU
+        if (this._countdownInterval) {
+          clearInterval(this._countdownInterval);
+          this._countdownInterval = null;
+        }
+        return;
+      }
+
+      elements.forEach(el => {
+        const acEnd = el.dataset.acEnd;
+        if (!acEnd) return;
+        const endMs = new Date(acEnd).getTime();
+        const remaining = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        const textEl = el.querySelector('.aa-countdown-text');
+        if (textEl) {
+          textEl.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+        }
+
+        // Timer warning states
+        el.classList.toggle('aa-countdown-warning', remaining <= 300 && remaining > 60);
+        el.classList.toggle('aa-countdown-critical', remaining <= 60);
+
+        // If timer hit 0 — auto-close the assessment
+        if (remaining === 0) {
+          const assessmentId = el.dataset.assessmentId;
+          if (assessmentId && !this._expiredIds?.has(assessmentId)) {
+            this._expiredIds = this._expiredIds || new Set();
+            this._expiredIds.add(assessmentId);
+            this._handleTimerExpired(assessmentId);
+          }
+        }
+      });
+    },
+
+    async _handleTimerExpired(assessmentId) {
+      try {
+        const sb = window.AlbEdu.supabase.client;
+        await sb
+          .from('assessments')
+          .update({
+            ac_manual_status: 'closed',
+            ac_end: null,
+            ac_remaining_time: 0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', assessmentId);
+
+        window.notify?.warning?.(
+          'Waktu Habis',
+          'Asesmen telah berakhir otomatis — waktu habis.',
+          4000
+        );
+
+        // Update local data
+        const item = this._allData.find(a => a.id === assessmentId);
+        if (item) {
+          item.ac_manual_status = 'closed';
+          item.ac_end = null;
+          item.ac_remaining_time = 0;
+        }
+        this._updateKPIs();
+        this._applyFilters();
+      } catch (err) {
+        console.error('[timer-expired]', err);
+      }
+    },
+
     async _toggleStatus(item, btn) {
       // Prevent double-toggle
       if (this._togglingIds.has(item.id)) return;
       this._togglingIds.add(item.id);
 
-      // Optimistic UI update
+      // Optimistic UI update — show loading button
       this._applyFilters();
 
       const currentStatus = _statusOf(item);
-      const newStatus = currentStatus === 'running' ? 'closed' : 'open';
-      const label = newStatus === 'open' ? 'dibuka' : 'ditutup';
+      const isOpening = currentStatus !== 'open';
 
       try {
-        const sb = await _getClient();
-        const { error } = await sb
+        const sb = window.AlbEdu.supabase.client;
+
+        // On open: set ac_end = now + duration (server-trusted timer)
+        // On close (pause): save remaining time, null ac_end
+        const update = {
+          ac_manual_status: isOpening ? 'open' : 'closed',
+          updated_at: new Date().toISOString(),
+        };
+
+        if (isOpening) {
+          // Resume from paused state if remaining_time exists, else fresh start.
+          // BUGFIX: previously always used duration_minutes — re-opening a paused
+          // assessment restarted the timer from full duration instead of resuming.
+          const hasRemaining = item.ac_remaining_time && item.ac_remaining_time > 0;
+          const secondsToAdd = hasRemaining
+            ? item.ac_remaining_time
+            : (item.duration_minutes || 60) * 60;
+          update.ac_end = new Date(Date.now() + secondsToAdd * 1000).toISOString();
+          update.ac_remaining_time = null;
+        } else {
+          // Pause: save remaining seconds from ac_end
+          if (item.ac_end) {
+            const remaining = Math.max(0, Math.floor((new Date(item.ac_end).getTime() - Date.now()) / 1000));
+            update.ac_remaining_time = remaining;
+          }
+          update.ac_end = null;
+        }
+
+        const { data, error } = await sb
           .from('assessments')
-          .update({ ac_manual_status: newStatus, updated_at: new Date().toISOString() })
-          .eq('id', item.id);
+          .update(update)
+          .eq('id', item.id)
+          .select('id, ac_manual_status, ac_end, ac_remaining_time')
+          .maybeSingle();
+
         if (error) throw error;
 
-        item.ac_manual_status = newStatus;
+        // CRITICAL: If data is null, the UPDATE affected 0 rows.
+        // This means RLS denied the update (admin doesn't own this row,
+        // or peran_user() didn't return 'admin'). Without this check,
+        // the code silently proceeds with stale local data.
+        if (!data) {
+          throw new Error(
+            'Update gagal — 0 rows affected. ' +
+            'Kemungkinan: RLS policy menolak akses (created_by tidak cocok dengan user login), ' +
+            'atau asesmen sudah dihapus. ' +
+            `Assessment ID: ${item.id}, Created by: ${item.created_by || 'unknown'}`
+          );
+        }
+
+        // Update local item with fresh DB data
+        item.ac_manual_status = data.ac_manual_status;
+        item.ac_end = data.ac_end;
+        item.ac_remaining_time = data.ac_remaining_time;
+
+        // Remove from togglingIds BEFORE re-render
+        this._togglingIds.delete(item.id);
+
         window.notify?.success?.(
-          newStatus === 'open' ? 'Asesmen Dimulai' : 'Akses Ditutup',
-          newStatus === 'open'
-            ? `Peserta sekarang dapat mengerjakan "${item.title || 'Tanpa Judul'}"`
-            : `Akses peserta ke "${item.title || 'Tanpa Judul'}" telah ditutup`,
+          isOpening ? 'Asesmen Dibuka' : 'Akses Ditutup',
+          isOpening
+            ? `Peserta dapat mengerjakan "${item.title || 'Tanpa Judul'}". Timer: ${item.duration_minutes || 60} menit.`
+            : `Akses ditutup. Sisa waktu disimpan.`,
           2500
         );
+
         this._updateKPIs();
         this._applyFilters();
+        this._startCountdownTicker();
       } catch (err) {
         console.error('[toggleStatus]', err);
-        window.notify?.error?.('Gagal mengubah status', err?.message || 'Unknown error', 3000);
-        // Revert optimistic update
-        this._applyFilters();
-      } finally {
         this._togglingIds.delete(item.id);
+        // Show actionable error message
+        const errMsg = err?.message || 'Unknown error';
+        let userMsg = 'Gagal mengubah status';
+        if (errMsg.includes('0 rows') || errMsg.includes('RLS')) {
+          userMsg = 'Gagal: Akses ditolak (RLS). Pastikan Anda adalah pembuat asesmen ini.';
+        } else if (errMsg.includes('JWT') || errMsg.includes('401')) {
+          userMsg = 'Gagal: Sesi login berakhir. Silakan login ulang.';
+        }
+        window.notify?.error?.(userMsg, errMsg, 5000);
+        this._applyFilters();
       }
     },
 
@@ -866,7 +1034,7 @@
       );
       if (!confirmed) return;
       try {
-        const sb = await _getClient();
+        const sb = window.AlbEdu.supabase.client;
         const { error } = await sb
           .from('assessments')
           .update({ status: 'archived', updated_at: new Date().toISOString() })
@@ -884,7 +1052,7 @@
 
     async _restore(item) {
       try {
-        const sb = await _getClient();
+        const sb = window.AlbEdu.supabase.client;
         const { error } = await sb
           .from('assessments')
           .update({ status: 'active', updated_at: new Date().toISOString() })
@@ -908,7 +1076,7 @@
       );
       if (!confirmed) return;
       try {
-        const sb = await _getClient();
+        const sb = window.AlbEdu.supabase.client;
         const { error } = await sb.from('assessments').delete().eq('id', item.id);
         if (error) throw error;
         this._allData = this._allData.filter((x) => x.id !== item.id);

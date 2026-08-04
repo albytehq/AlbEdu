@@ -142,6 +142,7 @@ let _profileState        = null;
 let _stopProfileListener = null;
 let _initialized         = false;
 let _authStateTimer      = null;
+let _graceTimer          = null;  // 3s grace period before redirect on transient null user
 
 // Re-aliased from user-helpers.js.
 const _buildAvatarUrl    = window.AuthHelpers.buildAvatarUrl;
@@ -770,15 +771,33 @@ async function authLogout(options = {}) {
     }
 }
 
-async function _handleAuthStateChange(user) {
+async function _handleAuthStateChange(user, event) {
+    // ── Event-aware auth state handling ──
+    // The `event` parameter tells us WHY the user changed:
+    //   INITIALIZE      — synthetic first-fire from AuthService wrapper
+    //   INITIAL_SESSION — Supabase's first real session check
+    //   SIGNED_IN       — user just logged in
+    //   SIGNED_OUT      — user logged out OR token refresh failed
+    //   TOKEN_REFRESHED — access token was refreshed (session is alive)
+    //   USER_UPDATED    — user metadata updated
+    //
+    // CRITICAL: On INITIALIZE / INITIAL_SESSION / TOKEN_REFRESHED with
+    // null user, we must NOT redirect to login — the session may still
+    // be loading from cache or the refresh hasn't completed yet.
+    // Only redirect on explicit SIGNED_OUT.
+
     clearTimeout(_authStateTimer);
+    // Fix 5: Safety net only dismisses loading spinner — does NOT force
+    // _authReady=true with null user (which would trigger byteward redirect).
     _authStateTimer = setTimeout(() => {
-        _authReady = true;
         window.UI?.hideAuthLoading?.();
     }, AUTH_STATE_TIMEOUT_MS);
 
     try {
         if (user) {
+            // Real user arrived — cancel any pending grace-period redirect.
+            clearTimeout(_graceTimer);
+
             // Email verification gate.
             //
             // Previously this read `user._supabaseUser?.email_confirmed_at`,
@@ -859,6 +878,23 @@ async function _handleAuthStateChange(user) {
                 window.UI?.afterLogin?.();
             }
         } else {
+            // ── Event-aware null-user handling ──
+            // Not all null-user events mean "user is gone". Only SIGNED_OUT
+            // is a definitive "session ended" signal. INITIALIZE / INITIAL_SESSION
+            // / TOKEN_REFRESHED with null user means the session is still
+            // loading from cache or the refresh hasn't completed yet.
+            //
+            // CRITICAL FIX: Previously, ANY null user → immediate redirect.
+            // Now we only redirect on explicit SIGNED_OUT. For other events
+            // with null user, we set _authReady=true (so UI isn't stuck on
+            // loading forever) but DON'T redirect — give the real session
+            // a chance to arrive.
+
+            const isDefinitiveSignOut = event === 'SIGNED_OUT' || _logoutInProgress;
+            const isTransientNull = !event || event === 'INITIALIZE' ||
+                event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED' ||
+                event === 'USER_UPDATED';
+
             _currentUser  = null;
             _userRole     = null;
             _userData     = null;
@@ -866,15 +902,46 @@ async function _handleAuthStateChange(user) {
             _authReady    = true;
             document.dispatchEvent(new CustomEvent('auth-ready', { detail: { role: null } }));
 
-            if (_isInsideApp()) {
-                // Unauthenticated on a protected page → send to login.
-                // Skip redirect if authLogout() is already handling it
-                // (prevents double-redirect race condition).
-                if (!_logoutInProgress) {
-                    setTimeout(_redirectToLogin, LOGOUT_REDIRECT_DELAY_MS);
+            if (isDefinitiveSignOut) {
+                // Legitimate sign-out (manual logout, refresh token expired,
+                // cross-tab broadcast). Redirect to login.
+                if (_isInsideApp()) {
+                    if (!_logoutInProgress) {
+                        setTimeout(_redirectToLogin, LOGOUT_REDIRECT_DELAY_MS);
+                    }
+                } else {
+                    window.UI?.afterLogout?.();
+                }
+            } else if (isTransientNull) {
+                // Transient null — session may still be loading. Don't redirect.
+                // Set a 3s grace timer: if no real session arrives, THEN redirect.
+                // This handles the race where getSession() hasn't resolved yet.
+                if (_isInsideApp()) {
+                    clearTimeout(_graceTimer);
+                    _graceTimer = setTimeout(() => {
+                        // Re-check: did a real session arrive in the meantime?
+                        const currentUser = _getAuth()?.currentUser;
+                        if (currentUser) {
+                            // Session arrived during grace period — all good.
+                            return;
+                        }
+                        // Still no session after 3s — genuine unauthenticated.
+                        if (!_logoutInProgress) {
+                            console.warn('[Auth] no session after 3s grace period — redirecting to login');
+                            _redirectToLogin();
+                        }
+                    }, 3000);
+                } else {
+                    window.UI?.afterLogout?.();
                 }
             } else {
-                window.UI?.afterLogout?.();
+                // Unknown event with null user — treat conservatively but
+                // don't redirect immediately (give 1s grace).
+                if (_isInsideApp() && !_logoutInProgress) {
+                    setTimeout(_redirectToLogin, 1000);
+                } else {
+                    window.UI?.afterLogout?.();
+                }
             }
         }
     } catch (_err) {
@@ -921,8 +988,70 @@ function _initializeSystem() {
 
     try {
         // Native auth state subscription. Callback signature:
-        // (user, event) => void. We only use user here.
-        _getAuth().onAuthStateChange((user) => _handleAuthStateChange(user));
+        // (user, event) => void. We pass BOTH params now — the event
+        // tells us WHY the user changed (INITIALIZE vs SIGNED_OUT vs
+        // TOKEN_REFRESHED), which prevents premature redirects on
+        // transient null-user states during bootstrap or token refresh.
+        _getAuth().onAuthStateChange((user, event) => _handleAuthStateChange(user, event));
+
+        // ── Fix 2: Proactive session revalidation on tab refocus ──
+        // When the user leaves an AlbEdu tab idle and returns, the browser
+        // may have throttled Supabase's autoRefreshToken timer. We proactively
+        // call getSession() to check if the session is still alive, and if
+        // not, attempt ONE manual refreshSession() before giving up.
+        let _visibilityCheckInProgress = false;
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return;
+            if (_visibilityCheckInProgress || _logoutInProgress) return;
+            _visibilityCheckInProgress = true;
+
+            // Give Supabase SDK a tick to fire its own auto-refresh on refocus.
+            setTimeout(async () => {
+                try {
+                    const sb = window.AlbEdu?.supabase?.client;
+                    if (!sb) { _visibilityCheckInProgress = false; return; }
+
+                    const { data } = await sb.auth.getSession();
+                    if (data?.session) {
+                        // Session alive — if currentUser was null due to a race,
+                        // the real session will arrive via onAuthStateChange.
+                        // Cancel any pending grace timer.
+                        clearTimeout(_graceTimer);
+                        return;
+                    }
+
+                    // No session — try ONE manual refresh before giving up.
+                    const { data: refreshed, error } = await sb.auth.refreshSession();
+                    if (error || !refreshed?.session) {
+                        // Genuine expiry — let SIGNED_OUT flow handle it.
+                        console.warn('[Auth] session expired on tab refocus — refresh failed');
+                    }
+                } catch (err) {
+                    console.warn('[Auth] visibility revalidation error:', err?.message || err);
+                } finally {
+                    _visibilityCheckInProgress = false;
+                }
+            }, 250);
+        });
+
+        // ── Fix 6: Network reconnection recovery ──
+        // When the user's network drops and comes back, proactively
+        // revalidate the session (the drop may have caused a Supabase
+        // API call to fail, which Supabase sometimes interprets as sign-out).
+        document.addEventListener('albedu:platform-reconnected', () => {
+            if (_logoutInProgress) return;
+            setTimeout(async () => {
+                try {
+                    const sb = window.AlbEdu?.supabase?.client;
+                    if (!sb) return;
+                    const { data } = await sb.auth.getSession();
+                    if (!data?.session) {
+                        // Try manual refresh on reconnect.
+                        await sb.auth.refreshSession();
+                    }
+                } catch (_) { /* silent — onAuthStateChange will handle */ }
+            }, 500);
+        });
 
         // Safety net: if the platform layer resolved the session from cache
         // before this listener registered, _handleAuthStateChange may have

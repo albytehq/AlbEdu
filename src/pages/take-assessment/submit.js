@@ -135,11 +135,27 @@
       state.isSubmitting = false;
 
     } catch (err) {
-      // SESSION_BLOCKED may come back as an error status
+      // CRITICAL (C3 fix): Handle SESSION_BLOCKED regardless of how the error
+      // is shaped. Previously the code only checked `err.status === 409`
+      // (HTTP-level), but the resilience layer / rpc.invoke throws the
+      // Supabase Fn error object directly, which carries `error.code` (not
+      // `error.status`). The dead-code check at line 109 (`rawData?.error?.code`)
+      // was unreachable because the inner fn threw before rawData was assigned.
+      //
+      // Now we check BOTH:
+      //   - err.code === 'SESSION_BLOCKED'  (Supabase Fn error shape, thrown by inner fn)
+      //   - err.status === 409              (HTTP-level conflict, thrown by fetch layer)
+      //   - err.message includes 'SESSION_BLOCKED' (defensive — some wrappers stringify)
       const status = err?.status || err?.context?.status;
-      if (status === 409) {
+      const errCode = err?.code || err?.context?.code;
+      const errMsg = err?.message || '';
+      const isBlocked = status === 409
+        || errCode === 'SESSION_BLOCKED'
+        || /SESSION_BLOCKED/i.test(errMsg);
+
+      if (isBlocked) {
         state.isSubmitting = false;
-        _internal._handleBlocked(err.message || 'Session blocked');
+        _internal._handleBlocked(errMsg || 'Session blocked');
         return;
       }
 
@@ -205,8 +221,8 @@
     const empty = _internal._countEmpty();
     const durSec = result.duration_seconds ?? 0;
 
-    document.getElementById('result-score').textContent = score;
-    document.getElementById('result-score-max').textContent = `/${maxScore}`;
+    const _rs = document.getElementById('result-score'); if (_rs) _rs.textContent = score;
+    const _rsm = document.getElementById('result-score-max'); if (_rsm) _rsm.textContent = `/${maxScore}`;
 
     const stats = document.getElementById('result-stats');
     stats.innerHTML = `

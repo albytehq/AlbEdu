@@ -86,11 +86,24 @@
 
     if (assessment.access_mode === 'manual') {
       if (assessment.ac_manual_status === 'closed') {
+        // Three sub-cases for 'closed':
+        //   a) ac_end exists AND in the past → time naturally expired → "Selesai"
+        //   b) ac_end exists AND in the future → admin closed mid-exam → "Ditutup Admin"
+        //   c) no ac_end → never opened → "Belum Dibuka"
         if (assessment.ac_end && new Date(assessment.ac_end).getTime() < now) {
           return { allowed: false,
             title: t('assessment.closed_session_ended_title', null, 'Asesmen Selesai'),
             message: t('assessment.closed_session_ended_msg', null, 'Asesmen ini telah berakhir.'), kind: 'danger' };
         }
+        if (assessment.ac_end && new Date(assessment.ac_end).getTime() >= now) {
+          // Admin closed the assessment while timer was still running.
+          // The ac_end is in the future, but ac_manual_status is 'closed'.
+          // This means admin actively clicked "Tutup Akses".
+          return { allowed: false,
+            title: t('assessment.closed_by_admin_title', null, 'Asesmen Ditutup oleh Admin'),
+            message: t('assessment.closed_by_admin_msg', null, 'Admin telah menutup akses ke asesmen ini. Hubungi admin untuk informasi lebih lanjut.'), kind: 'danger' };
+        }
+        // No ac_end at all → assessment was never opened
         return { allowed: false,
           title: t('assessment.closed_session_title', null, 'Asesmen Belum Dibuka'),
           message: t('assessment.closed_session_msg', null, 'Tunggu admin membuka asesmen, lalu muat ulang halaman.'),
