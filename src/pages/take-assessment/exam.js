@@ -82,14 +82,14 @@
     const state = I.state;
     I.dom.pageTabs.hidden = false;
     I.dom.pageTabs.innerHTML = state.soalPages.map((p, idx) => `
-      <button class="page-tab ${idx === state.activePageIdx ? 'active' : ''}"
+      <button class="ex-section-tab ${idx === state.activePageIdx ? 'active' : ''}"
               type="button" role="tab"
               aria-selected="${idx === state.activePageIdx}"
               data-page-idx="${idx}">
         ${_internal._escAttr(p.label)}
       </button>
     `).join('');
-    I.dom.pageTabs.querySelectorAll('.page-tab').forEach(btn => {
+    I.dom.pageTabs.querySelectorAll('.ex-section-tab').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.pageIdx, 10);
         if (idx !== state.activePageIdx) {
@@ -119,14 +119,14 @@
     if (I.dom.questionList._delegatedAbort) I.dom.questionList._delegatedAbort.abort();
     I.dom.questionList._delegatedAbort = new AbortController();
     I.dom.questionList.addEventListener('click', (e) => {
-      const opt = e.target.closest('.option-item');
+      const opt = e.target.closest('.ex-option');
       if (!opt) return;
       const pageKey = opt.dataset.pagekey;
       const idq = opt.dataset.idq;
       const key = opt.dataset.key;
       if (!pageKey || !idq) return;
       const wasSelected = opt.classList.contains('selected');
-      I.dom.questionList.querySelectorAll(`.option-item[data-idq="${idq}"][data-pagekey="${pageKey}"]`)
+      I.dom.questionList.querySelectorAll(`.ex-option[data-idq="${idq}"][data-pagekey="${pageKey}"]`)
         .forEach(o => o.classList.remove('selected'));
       if (!wasSelected) {
         opt.classList.add('selected');
@@ -139,7 +139,7 @@
     }, { signal: I.dom.questionList._delegatedAbort.signal });
 
     // Wire esai textareas + image previews, then render math + icons.
-    I.dom.questionList.querySelectorAll('textarea.esai-textarea').forEach(ta => {
+    I.dom.questionList.querySelectorAll('textarea.ex-esai').forEach(ta => {
       const pageKey = ta.dataset.pagekey;
       const idq = ta.dataset.idq;
       ta.addEventListener('input', _debounceEsai(pageKey, parseInt(idq, 10), ta));
@@ -172,33 +172,33 @@
     let bodyHTML = '';
     if (page.typeQuestion === 'esai') {
       bodyHTML = `
-        <textarea class="albedu-textarea esai-textarea"
+        <textarea class="ex-esai albedu-textarea"
                   data-pagekey="${_internal._escAttr(pageKey)}"
                   data-idq="${_internal._escAttr(q.idq)}"
                   placeholder="Tulis jawaban Anda di sini..."
                   aria-label="Jawaban esai untuk soal ${displayIdx + 1}"
                   maxlength="5000">${_internal._escAttr(jawaban || '')}</textarea>
-        <div class="question-points">Esai — dinilai manual oleh guru</div>
+        <div class="ex-question__points">Esai — dinilai manual oleh guru</div>
       `;
     } else {
       const pilihan = Array.isArray(q.pilihan) ? q.pilihan : [];
       const keys = ['A', 'B', 'C', 'D', 'E'];
       bodyHTML = `
-        <div class="option-list" role="radiogroup" aria-label="Pilihan jawaban soal ${displayIdx + 1}">
+        <div class="ex-options" role="radiogroup" aria-label="Pilihan jawaban soal ${displayIdx + 1}">
           ${pilihan.slice(0, 5).map((opt, i) => {
             const key = keys[i];
             const sel = jawaban === key ? 'selected' : '';
             return `
-              <div class="option-item ${sel}"
+              <div class="ex-option ${sel}"
                    role="radio"
                    aria-checked="${jawaban === key}"
                    tabindex="0"
                    data-pagekey="${_internal._escAttr(pageKey)}"
                    data-idq="${_internal._escAttr(q.idq)}"
                    data-key="${_internal._escAttr(key)}">
-                <div class="option-radio" aria-hidden="true"></div>
-                <div class="option-key">${_internal._escAttr(key)}</div>
-                <div class="option-label">${_internal._sanitizeHTML(opt)}</div>
+                <div class="ex-option__radio" aria-hidden="true"></div>
+                <div class="ex-option__key">${_internal._escAttr(key)}</div>
+                <div class="ex-option__label">${_internal._sanitizeHTML(opt)}</div>
               </div>
             `;
           }).join('')}
@@ -207,13 +207,15 @@
     }
 
     return `
-      <article class="exam-question-card ${isAnswered ? 'answered' : ''}"
+      <article class="ex-question ${isAnswered ? 'answered' : ''}"
                data-pagekey="${_internal._escAttr(pageKey)}"
                data-idq="${_internal._escAttr(q.idq)}">
-        <div class="question-num" aria-label="Soal nomor ${displayIdx + 1}">${displayIdx + 1}</div>
-        <div class="question-text">${qText}</div>
-        ${mediaHTML}
-        ${bodyHTML}
+        <div class="ex-question__num" aria-label="Soal nomor ${displayIdx + 1}">${displayIdx + 1}</div>
+        <div class="ex-question__body">
+          <div class="ex-question__text">${qText}</div>
+          <div class="ex-question__media">${mediaHTML}</div>
+          ${bodyHTML}
+        </div>
       </article>
     `;
   }
@@ -258,12 +260,12 @@
       }
     }
 
-    return parts.length > 0 ? `<div class="question-media">${parts.join('')}</div>` : '';
+    return parts.length > 0 ? parts.join('') : '';
   }
 
   function _updateQuestionAnsweredState(pageKey, idq, answered) {
     const card = I.dom.questionList.querySelector(
-      `.exam-question-card[data-pagekey="${pageKey}"][data-idq="${idq}"]`);
+      `.ex-question[data-pagekey="${pageKey}"][data-idq="${idq}"]`);
     if (card) card.classList.toggle('answered', answered);
   }
 

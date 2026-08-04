@@ -210,21 +210,21 @@
 
     const stats = document.getElementById('result-stats');
     stats.innerHTML = `
-      <div class="result-stat result-stat--benar">
-        <div class="result-stat__num">${correct}</div>
-        <div class="result-stat__label">Benar</div>
+      <div class="rs-stat rs-stat--benar">
+        <div class="rs-stat__num">${correct}</div>
+        <div class="rs-stat__label">Benar</div>
       </div>
-      <div class="result-stat result-stat--salah">
-        <div class="result-stat__num">${Math.max(0, total - correct - empty)}</div>
-        <div class="result-stat__label">Salah</div>
+      <div class="rs-stat rs-stat--salah">
+        <div class="rs-stat__num">${Math.max(0, total - correct - empty)}</div>
+        <div class="rs-stat__label">Salah</div>
       </div>
-      <div class="result-stat result-stat--kosong">
-        <div class="result-stat__num">${empty}</div>
-        <div class="result-stat__label">Kosong</div>
+      <div class="rs-stat rs-stat--kosong">
+        <div class="rs-stat__num">${empty}</div>
+        <div class="rs-stat__label">Kosong</div>
       </div>
-      <div class="result-stat">
-        <div class="result-stat__num">${_internal._formatDuration(durSec)}</div>
-        <div class="result-stat__label">Durasi</div>
+      <div class="rs-stat">
+        <div class="rs-stat__num">${_internal._formatDuration(durSec)}</div>
+        <div class="rs-stat__label">Durasi</div>
       </div>
     `;
 
@@ -257,8 +257,8 @@
     }
 
     detailEl.innerHTML = Object.values(bySection).map(sec => `
-      <div class="result-section">
-        <h2 class="result-section__title">${_internal._escAttr(sec.name)}</h2>
+      <div class="rs-section">
+        <h3 class="rs-section__title">${_internal._escAttr(sec.name)}</h3>
         ${sec.items.map((item, i) => _renderResultItem(item, i)).join('')}
       </div>
     `).join('');
@@ -272,6 +272,16 @@
           window.location.href = '../login.html';
         }
       };
+    }
+
+    // Wire collapsible detail toggle
+    const toggleBtn = document.getElementById('btn-toggle-detail');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+        toggleBtn.setAttribute('aria-expanded', String(!expanded));
+        if (detailEl) detailEl.hidden = expanded;
+      });
     }
 
     _internal._renderMath(detailEl);
@@ -298,13 +308,13 @@
     }
 
     return `
-      <div class="result-item">
-        <div class="result-item__head">
-          <span class="result-item__num">${idx + 1}</span>
-          <span class="result-item__status ${status}">${statusLabel}</span>
+      <div class="rs-item">
+        <div class="rs-item__head">
+          <span class="rs-item__num">${idx + 1}</span>
+          <span class="rs-item__status ${status}">${statusLabel}</span>
         </div>
-        <div class="result-item__q">${qText}</div>
-        <div class="result-item__meta">${metaHTML}</div>
+        <div class="rs-item__q">${qText}</div>
+        <div class="rs-item__meta">${metaHTML}</div>
       </div>
     `;
   }

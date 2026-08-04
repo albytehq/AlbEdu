@@ -105,7 +105,8 @@
 <body>
 
       <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
-<!-- PHASE 1: LOADING -->
+
+  <!-- ═══ PHASE 1: LOADING ═══ -->
   <div id="loading-screen" role="status" aria-live="polite">
     <div class="loading-logo" aria-hidden="true">
       <span data-albedu-icon="school"></span>
@@ -115,7 +116,7 @@
     <p id="loading-status">Memuat data peserta</p>
   </div>
 
-  <!-- PHASE 0: CLOSED / ERROR / PAUSED -->
+  <!-- ═══ PHASE 0: CLOSED / ERROR ═══ -->
   <div id="closed-screen" class="take-status-screen" hidden role="alert" aria-live="assertive">
     <div class="status-icon" id="closed-icon">
       <span data-albedu-icon="lock"></span>
@@ -134,65 +135,72 @@
     </div>
   </div>
 
-  <!-- PHASE 2: IDENTITY -->
+  <!-- ═══ PHASE 2: IDENTITY (Google Form-like welcome card) ═══ -->
   <main id="identity-phase" hidden aria-labelledby="identity-title">
-    <section class="identity-card">
-      <header class="identity-banner">
-        <div class="identity-banner__meta" id="identity-subject">Asesmen</div>
-        <h1 class="identity-banner__title" id="identity-title">Asesmen</h1>
-        <div class="identity-banner__chips" id="identity-chips"></div>
-      </header>
-      <div class="identity-card__note" id="identity-note" hidden></div>
-      <div class="identity-card__body" id="identity-mount">
-        <!-- IdentityProvider akan merender form di sini -->
-      </div>
-    </section>
-  </main>
-
-  <!-- PHASE 3: EXAM -->
-  <main id="exam-phase" hidden aria-labelledby="exam-title">
-    <header class="exam-header">
-      <div class="exam-header__left">
-        <div class="exam-header__badge" id="exam-subject">Asesmen</div>
-        <div class="exam-header__info">
-          <h1 class="exam-header__title" id="exam-title">Asesmen</h1>
-          <div class="exam-header__user" id="exam-user">
-            <span data-albedu-icon="account_circle"></span>
-            <span id="exam-user-text">Peserta</span>
-          </div>
+    <div class="id-wrap">
+      <div class="id-card">
+        <header class="id-header">
+          <div class="id-meta" id="identity-subject">Asesmen</div>
+          <h1 class="id-title" id="identity-title">Asesmen</h1>
+          <div class="id-chips" id="identity-chips"></div>
+        </header>
+        <div class="id-note" id="identity-note" hidden></div>
+        <div class="id-body" id="identity-mount">
+          <!-- IdentityProvider akan merender form di sini -->
         </div>
       </div>
-      <div class="exam-header__right">
-        <div class="exam-timer" id="exam-timer" role="timer" aria-live="off" aria-atomic="true">
+    </div>
+  </main>
+
+  <!-- ═══ PHASE 3: EXAM (Google Form-like — sticky top + single column + sticky bottom) ═══ -->
+  <main id="exam-phase" hidden aria-labelledby="exam-title">
+    <!-- Sticky Top Bar: subject + title + timer -->
+    <header class="ex-topbar">
+      <div class="ex-topbar__left">
+        <div class="ex-subject" id="exam-subject">Asesmen</div>
+        <h1 class="ex-title" id="exam-title">Asesmen</h1>
+      </div>
+      <div class="ex-topbar__right">
+        <div class="ex-user" id="exam-user">
+          <span data-albedu-icon="account_circle"></span>
+          <span id="exam-user-text">Peserta</span>
+        </div>
+        <div class="ex-timer" id="exam-timer" role="timer" aria-live="off" aria-atomic="true">
           <span data-albedu-icon="timer"></span>
           <span id="timer-display">--:--</span>
         </div>
       </div>
     </header>
 
-    <div class="exam-main">
-      <div class="exam-content">
-        <div class="page-tabs" id="page-tabs" role="tablist" aria-label="Bagian Soal"></div>
-        <div class="exam-page-header">
-          <h2 class="exam-page-title" id="page-title">Bagian 1</h2>
-          <div class="exam-page-count" id="page-count">0 Soal</div>
+    <!-- Section tabs (collapsible) -->
+    <div class="ex-sectionbar">
+      <div class="ex-sections" id="page-tabs" role="tablist" aria-label="Bagian Soal"></div>
+    </div>
+
+    <!-- Main content: single column, max-width 800px, centered -->
+    <div class="ex-main">
+      <div class="ex-content">
+        <div class="ex-page-header">
+          <h2 class="ex-page-title" id="page-title">Bagian 1</h2>
+          <div class="ex-page-count" id="page-count">0 Soal</div>
         </div>
         <div id="question-list" role="region" aria-live="polite" aria-label="Daftar soal"></div>
       </div>
     </div>
 
-    <nav class="exam-nav" aria-label="Navigasi soal">
-      <div class="exam-nav__inner">
-        <button class="nav-btn" id="btn-prev" type="button" aria-label="Soal sebelumnya">
+    <!-- Sticky Bottom Nav: prev/progress/next/submit -->
+    <nav class="ex-bottomnav" aria-label="Navigasi soal">
+      <div class="ex-bottomnav__inner">
+        <button class="ex-nav-btn ex-nav-btn--prev" id="btn-prev" type="button" aria-label="Bagian sebelumnya">
           <span data-albedu-icon="arrow_back"></span>
           <span>Sebelumnya</span>
         </button>
-        <div class="exam-nav__progress" id="nav-progress" aria-live="polite" style="font-size:13px;color:var(--albedu-body,#64748b);font-weight:500;">0/0</div>
-        <button class="nav-btn nav-btn--primary" id="btn-next" type="button" aria-label="Soal berikutnya">
+        <div class="ex-progress" id="nav-progress" aria-live="polite">0/0</div>
+        <button class="ex-nav-btn ex-nav-btn--next" id="btn-next" type="button" aria-label="Bagian berikutnya">
           <span>Selanjutnya</span>
           <span data-albedu-icon="arrow_forward"></span>
         </button>
-        <button class="nav-btn nav-btn--primary nav-btn--submit-locked" id="btn-submit" type="button" disabled aria-label="Kumpulkan asesmen" title="Submit terkunci">
+        <button class="ex-nav-btn ex-nav-btn--submit" id="btn-submit" type="button" disabled aria-label="Kumpulkan asesmen" title="Submit terkunci">
           <span data-albedu-icon="lock"></span>
           <span>Kumpulkan</span>
         </button>
@@ -200,25 +208,35 @@
     </nav>
   </main>
 
-  <!-- PHASE 4: RESULT -->
+  <!-- ═══ PHASE 4: RESULT (clean score + collapsible detail) ═══ -->
   <main id="result-phase" hidden aria-labelledby="result-title">
-    <div class="result-container">
-      <div class="result-hero">
-        <div class="result-hero__icon" id="result-icon">
+    <div class="rs-wrap">
+      <div class="rs-hero">
+        <div class="rs-hero__icon" id="result-icon">
           <span data-albedu-icon="task_alt"></span>
         </div>
-        <h1 class="result-hero__title" id="result-title">Asesmen Selesai</h1>
-        <p class="result-hero__sub" id="result-sub">Berikut adalah hasil pengerjaan Anda.</p>
-        <div class="result-score" aria-live="polite">
-          <span id="result-score">0</span><span class="result-score__max" id="result-score-max">/100</span>
+        <h1 class="rs-hero__title" id="result-title">Asesmen Selesai</h1>
+        <p class="rs-hero__sub" id="result-sub">Berikut adalah hasil pengerjaan Anda.</p>
+        <div class="rs-score" aria-live="polite">
+          <span class="rs-score__num" id="result-score">0</span>
+          <span class="rs-score__max" id="result-score-max">/100</span>
         </div>
-        <div class="result-stats" id="result-stats"></div>
+        <div class="rs-stats" id="result-stats"></div>
       </div>
-      <div id="result-detail"></div>
-      <div class="result-actions">
+
+      <!-- Collapsible detail — default hidden, click to expand -->
+      <div class="rs-detail-section">
+        <button class="rs-detail-toggle" id="btn-toggle-detail" type="button" aria-expanded="false" aria-controls="result-detail">
+          <span data-albedu-icon="expand_more"></span>
+          <span>Lihat Detail Jawaban</span>
+        </button>
+        <div class="rs-detail" id="result-detail" hidden></div>
+      </div>
+
+      <div class="rs-actions">
         <button class="albedu-btn albedu-btn-secondary" type="button" id="btn-back-login">
           <span data-albedu-icon="logout"></span>
-          <span>Kembali ke Login</span>
+          <span>Kembali ke Beranda</span>
         </button>
       </div>
     </div>

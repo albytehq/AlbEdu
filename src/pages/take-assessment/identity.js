@@ -21,13 +21,13 @@
 
     // Chips
     const chips = [];
-    chips.push(`<span class="identity-banner__chip"><span data-albedu-icon="schedule"></span> ${_internal._escAttr(assessment.duration_minutes || 0)} menit</span>`);
+    chips.push(`<span class="id-chip"><span data-albedu-icon="schedule"></span> ${_internal._escAttr(assessment.duration_minutes || 0)} menit</span>`);
     if (assessment.identity_mode === 'daftar') {
       const label = assessment.identity_config?.daftar_label ||
                     assessment.identity_config?.daftar_tipe || 'Daftar Nama';
-      chips.push(`<span class="identity-banner__chip"><span data-albedu-icon="format_list_bulleted"></span> ${_internal._escAttr(label)}</span>`);
+      chips.push(`<span class="id-chip"><span data-albedu-icon="format_list_bulleted"></span> ${_internal._escAttr(label)}</span>`);
     } else {
-      chips.push(`<span class="identity-banner__chip"><span data-albedu-icon="keyboard"></span> Form Manual</span>`);
+      chips.push(`<span class="id-chip"><span data-albedu-icon="keyboard"></span> Form Manual</span>`);
     }
     I.dom.identityChips.innerHTML = chips.join('');
 
