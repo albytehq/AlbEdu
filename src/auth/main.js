@@ -458,9 +458,13 @@ async function _createUserDocViaServer(userId) {
             headers: { Authorization: `Bearer ${session.access_token}` },
         });
         if (!result.ok) {
-            fnError = result.error;
+            // result.error is a string message; wrap so _extractFunctionErrorCode
+            // can still surface the backend code via .context.json() fallback.
+            const wrapped = new Error(result.error || 'resilience_call_failed');
+            wrapped.data = result.data;
+            fnError = wrapped;
         } else {
-            data = result.value;
+            data = result.data;  // callEF returns { ok, status, data }, not { ok, value }
         }
     } else {
         // Fallback: raw call with manual retry (3 attempts)
