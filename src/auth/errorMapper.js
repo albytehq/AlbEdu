@@ -98,6 +98,22 @@ export const ERROR_MESSAGES = {
     user_completion_failed:
         'Gagal menyelesaikan login. Silakan coba lagi.',
 
+    // Specific DB/server error codes (Agent 3 finding — was masked by genericError)
+    db_lookup_failed:
+        'Gagal mengakses data pengguna. Server mungkin sedang sibuk. Silakan coba lagi.',
+
+    db_insert_failed:
+        'Gagal membuat akun pengguna. Silakan coba lagi. Jika masalah berlanjut, hubungi admin.',
+
+    rpc_failed:
+        'Gagal memverifikasi perangkat. Silakan coba lagi.',
+
+    server_error:
+        'Terjadi kesalahan di server. Silakan coba lagi dalam beberapa saat.',
+
+    server_config_error:
+        'Server belum dikonfigurasi dengan benar. Hubungi admin.',
+
     missing_preflight:
         'Data sesi login tidak ditemukan. Silakan coba login kembali.',
 

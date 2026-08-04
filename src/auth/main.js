@@ -439,17 +439,48 @@ async function _createUserDocViaServer(userId) {
         throw new CompletionError('invalid_token');
     }
 
-    const { data, error: fnError } = await _getSbClient().functions.invoke('user-auth-complete', {
-        headers: {
-            Authorization: `Bearer ${session.access_token}`,
-        },
-        body: {
-            preflightId:  preflight.preflightId,
-            deviceId:     preflight.deviceId,
-            browserHash:  preflight.browserHash || null,
-            deviceInfo:   preflight.deviceInfo  || null,
-        },
-    });
+    // Fix (Agent 7 finding): use resilience layer for retry + timeout instead
+    // of raw functions.invoke. The resilience layer provides:
+    //   - 3x retry with exponential backoff (1.5s, 3s, 4.5s)
+    //   - 30s timeout (vs unbounded wait before)
+    //   - Circuit breaker (3 fails → 60s cooldown)
+    const efBody = {
+        preflightId:  preflight.preflightId,
+        deviceId:     preflight.deviceId,
+        browserHash:  preflight.browserHash || null,
+        deviceInfo:   preflight.deviceInfo  || null,
+    };
+
+    let data, fnError;
+    const resilience = window.AlbEduResilience;
+    if (resilience?.callEF) {
+        const result = await resilience.callEF('user-auth-complete', efBody, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!result.ok) {
+            fnError = result.error;
+        } else {
+            data = result.value;
+        }
+    } else {
+        // Fallback: raw call with manual retry (3 attempts)
+        let attempts = 0;
+        while (attempts < 3) {
+            try {
+                const rawResult = await _getSbClient().functions.invoke('user-auth-complete', {
+                    headers: { Authorization: `Bearer ${session.access_token}` },
+                    body: efBody,
+                });
+                data = rawResult.data;
+                fnError = rawResult.error;
+                if (!fnError) break;
+            } catch (e) {
+                fnError = e;
+            }
+            attempts++;
+            if (attempts < 3) await new Promise(r => setTimeout(r, 1500 * attempts));
+        }
+    }
 
     if (fnError) {
         const backendCode = await _extractFunctionErrorCode(fnError);

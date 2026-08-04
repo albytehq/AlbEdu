@@ -68,7 +68,7 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseUrl || !serviceRoleKey) {
       console.error("[user-auth-complete] missing Supabase env vars");
-      return genericError(headers, 500);
+      return specificError("server_config_error", headers, 500);
     }
 
     const token = bearerToken(req);
@@ -138,7 +138,7 @@ serve(async (req) => {
         "[user-auth-complete] users lookup failed:",
         existingErr.message,
       );
-      return genericError(headers, 500);
+      return specificError("db_lookup_failed", headers, 500);
     }
 
     if (!existingUser) {
@@ -152,7 +152,7 @@ serve(async (req) => {
           "[user-auth-complete] device verified count failed:",
           countErr.message,
         );
-        return genericError(headers, 500);
+        return specificError("rpc_failed", headers, 500);
       }
 
       if ((verifiedCount ?? 0) >= 2) {
@@ -180,7 +180,7 @@ serve(async (req) => {
           "[user-auth-complete] users insert failed:",
           insertUserErr.message,
         );
-        return genericError(headers, 500);
+        return specificError("db_insert_failed", headers, 500);
       }
     } else if (existingUser.peran !== "peserta") {
       return json({ success: true, user: existingUser }, 200, headers);
@@ -198,7 +198,7 @@ serve(async (req) => {
         "[user-auth-complete] device lookup failed:",
         deviceLookupErr.message,
       );
-      return genericError(headers, 500);
+      return specificError("db_lookup_failed", headers, 500);
     }
 
     if (existingDevice?.id) {
@@ -245,12 +245,12 @@ serve(async (req) => {
         "[user-auth-complete] profile reload failed:",
         profileErr.message,
       );
-      return genericError(headers, 500);
+      return specificError("db_lookup_failed", headers, 500);
     }
 
     return json({ success: true, user: profile }, 200, headers);
   } catch (err) {
     console.error("[user-auth-complete] unhandled exception:", err);
-    return genericError(headers, 500);
+    return specificError("server_error", headers, 500);
   }
 });

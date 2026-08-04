@@ -43,14 +43,27 @@ export function waitForTurnstileReady(timeout = TIMING_CONFIG.TURNSTILE_READY_TI
 }
 
 export function getTurnstileToken(widgetId = null) {
-    // Try the hidden input first (form-submit fallback)
+    // Prefer the official API with the specific widgetId.
+    // Fix (Agent 6 finding): previously the code queried the FIRST
+    // cf-turnstile-response input in the DOM, returning the wrong
+    // widget's token when multiple Turnstile widgets exist (e.g.
+    // visible password-login widget + invisible #userTurnstile widget).
+    if (widgetId && window.turnstile?.getResponse) {
+        const token = window.turnstile.getResponse(widgetId);
+        if (token) return token;
+    }
+
+    // Fallback: use the active widget ID if no widgetId was passed
+    const fallbackId = widgetId || _activeWidgetId;
+    if (fallbackId && window.turnstile?.getResponse) {
+        const token = window.turnstile.getResponse(fallbackId);
+        if (token) return token;
+    }
+
+    // Last resort: read from the hidden input (form-submit fallback)
     const responseInput = document.querySelector('input[name="cf-turnstile-response"]');
     if (responseInput?.value) {
         return responseInput.value;
-    }
-
-    if (window.turnstile?.getResponse) {
-        return window.turnstile.getResponse(widgetId) || '';
     }
 
     return '';
