@@ -800,3 +800,58 @@ textarea.ifr-field__input {
 .ip-dropdown__options::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
 }
+
+
+/* ═══ ip-daftar-search (M12 fix — search input for long name lists) ═══ */
+.ip-daftar-search {
+  margin-bottom: 8px;
+}
+.ip-daftar-search__input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-border-2, #e2e8f0);
+  border-radius: 10px;
+  background: var(--color-surface-2, #f8fafc);
+  color: var(--color-text, #0f172a);
+  font-size: 14px;
+  font-family: inherit;
+  min-height: 42px;
+  box-sizing: border-box;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.ip-daftar-search__input:focus {
+  outline: none;
+  border-color: var(--color-primary, #2563eb);
+  background: var(--color-surface, #fff);
+  box-shadow: 0 0 0 3px var(--color-primary-ring, rgba(37,99,235,0.12));
+}
+
+/* ═══ ip-empty-state (M4-minor — empty daftar tabs) ═══ */
+.ip-empty-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+.ip-empty-state__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: var(--color-surface-2, #f8fafc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted, #64748b);
+}
+.ip-empty-state__icon .material-symbols-outlined { font-size: 28px; }
+.ip-empty-state__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text, #0f172a);
+  margin: 0 0 8px;
+}
+.ip-empty-state__msg {
+  font-size: 14px;
+  color: var(--color-text-muted, #64748b);
+  margin: 0 0 20px;
+  line-height: 1.5;
+}

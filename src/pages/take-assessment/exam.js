@@ -383,27 +383,16 @@
   }
 
   // Timer
+  // Fix (Agent 8): endMs stored on state._timerEndMs (mutable) + 60s re-fetch poll
   function _startTimer(assessment) {
     _stopTimer();
     const state = I.state;
 
-    let endMs = null;
-    if (assessment.access_mode === 'scheduled' && assessment.ac_scheduled_end) {
-      endMs = new Date(assessment.ac_scheduled_end).getTime();
-    } else if (assessment.ac_end) {
-      endMs = new Date(assessment.ac_end).getTime();
-    }
-
-    if (!endMs || isNaN(endMs)) {
-      const startMs = state.session?.started_at
-        ? new Date(state.session.started_at).getTime()
-        : Date.now();
-      const durMs = (assessment.duration_minutes || 90) * 60 * 1000;
-      endMs = startMs + durMs;
-      console.warn('[take] ac_end missing — falling back to duration_minutes');
-    }
+    state._timerEndMs = _computeEndMs(assessment, state);
 
     const tick = () => {
+      const endMs = state._timerEndMs;
+      if (!endMs || isNaN(endMs)) return;
       const sisa = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
       _updateTimerDisplay(sisa);
 
@@ -420,12 +409,51 @@
     };
     tick();
     state.timerInterval = setInterval(tick, 1000);
+
+    // M8: re-fetch assessment every 60s to pick up ac_end changes from admin
+    state._timerRefetchId = setInterval(async () => {
+      try {
+        const token = state.assessment?.access_code;
+        if (!token) return;
+        const fresh = await _internal._fetchAssessment(token);
+        if (!fresh) return;
+        const newEndMs = _computeEndMs(fresh, state);
+        if (newEndMs && !isNaN(newEndMs) && newEndMs !== state._timerEndMs) {
+          console.info('[take] ac_end updated:', state._timerEndMs, '→', newEndMs);
+          state._timerEndMs = newEndMs;
+          state.assessment = fresh;
+          if (newEndMs > Date.now() && state.isExpired) state.isExpired = false;
+        }
+      } catch (err) { /* non-fatal */ }
+    }, 60_000);
+  }
+
+  function _computeEndMs(assessment, state) {
+    let endMs = null;
+    if (assessment.access_mode === 'scheduled' && assessment.ac_scheduled_end) {
+      endMs = new Date(assessment.ac_scheduled_end).getTime();
+    } else if (assessment.ac_end) {
+      endMs = new Date(assessment.ac_end).getTime();
+    }
+    if (!endMs || isNaN(endMs)) {
+      const startMs = state?.session?.started_at
+        ? new Date(state.session.started_at).getTime()
+        : Date.now();
+      const durMs = (assessment.duration_minutes || 90) * 60 * 1000;
+      endMs = startMs + durMs;
+      console.warn('[take] ac_end missing — falling back to duration_minutes');
+    }
+    return endMs;
   }
 
   function _stopTimer() {
     if (I.state.timerInterval) {
       clearInterval(I.state.timerInterval);
       I.state.timerInterval = null;
+    }
+    if (I.state._timerRefetchId) {
+      clearInterval(I.state._timerRefetchId);
+      I.state._timerRefetchId = null;
     }
   }
 
@@ -455,7 +483,12 @@
   }
 
   function _getCurrentSisa() {
-    const assessment = I.state.assessment;
+    // M8: prefer live _timerEndMs (updated by re-fetch poll)
+    const state = I.state;
+    if (state._timerEndMs && !isNaN(state._timerEndMs)) {
+      return Math.max(0, Math.floor((state._timerEndMs - Date.now()) / 1000));
+    }
+    const assessment = state.assessment;
     let endMs = null;
     if (assessment?.access_mode === 'scheduled' && assessment.ac_scheduled_end) {
       endMs = new Date(assessment.ac_scheduled_end).getTime();

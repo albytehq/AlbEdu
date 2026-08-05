@@ -58,8 +58,8 @@
      --take-shadow-pause:    0 4px 16px rgba(245, 158, 11, 0.30);
 
      /* ── Typography ── */
-     --take-font-serif: 'Playfair Display', 'Lora', Georgia, serif;
-     --take-font-sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+     --take-font-serif: 'Georgia', 'Times New Roman', serif;
+     --take-font-sans:  var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Plus Jakarta Sans', sans-serif);
 
      /* ── Layout dimensions ── */
      --take-topbar-h:        60px;
@@ -829,6 +829,13 @@
      border-color: var(--take-text-muted);
      color: #FFFFFF;
      opacity: 0.7;
+   }
+   /* Submit locked state (Agent 8 — class was toggled by JS but had no CSS) */
+   .ex-nav-btn--submit.nav-btn--submit-locked {
+     background: var(--take-text-muted);
+     border-color: var(--take-text-muted);
+     opacity: 0.6;
+     cursor: not-allowed;
    }
 
 

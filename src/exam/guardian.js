@@ -242,12 +242,13 @@ const ExamGuardian = (() => {
   }
 
   // --- deactivate -----------------------------------------------------------
-  // FIX BUG-10: Reset warningCount saat deactivate agar state bersih
-  // untuk sesi asesmen berikutnya. Sebelumnya warningCount persist
-  // dan bisa trigger false max-violation jika ExamGuardian di-reuse.
+  // Fix (Agent 4): DON'T reset _warningCount on deactivate() — only reset on
+  // activate(). deactivate() is called by AntiCheat.pause() (during submit
+  // dialog). If submit fails + _resumeSecurity() calls activate(), the old
+  // code erased all accumulated violations → peserta got a fresh slate.
   function deactivate() {
     _isActive = false;
-    _warningCount = 0;
+    // NOTE: _warningCount intentionally NOT reset here — see comment above.
     clearTimeout(_touchTimer);
 
     _removeCSS();

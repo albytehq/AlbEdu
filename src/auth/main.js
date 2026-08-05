@@ -774,11 +774,14 @@ async function authLogout(options = {}) {
 
         try { sessionStorage.removeItem(USER_PREFLIGHT_KEY); } catch (_) {}
         // Clear any exam-in-progress data that shouldn't persist across sessions
+        // Fix (Agent 9): also clear assessment_token + assessment_session_id
+        // (no 'albedu_' prefix — would survive logout → next user resumes exam)
         try {
             const keysToRemove = [];
             for (let i = 0; i < sessionStorage.length; i++) {
                 const key = sessionStorage.key(i);
-                if (key && (key.startsWith('albedu_') || key.startsWith('exam_'))) {
+                if (key && (key.startsWith('albedu_') || key.startsWith('exam_') ||
+                    key === 'assessment_token' || key === 'assessment_session_id')) {
                     keysToRemove.push(key);
                 }
             }
