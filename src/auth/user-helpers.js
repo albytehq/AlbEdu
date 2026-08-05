@@ -41,13 +41,12 @@ function escapeHTML(str) {
 }
 
 function isProfileComplete(data) {
-    if (!data) return false;
-    // avatar_url is the current column name (renamed from foto_profil by
-    // migration 20260701_002_alter_users_snake_case.sql). Keep all three
-    // shapes readable so legacy callers don't break.
-    const foto = data.avatar_url || data.foto_profil || data.fotoProfil || '';
-    return typeof data.nama === 'string' && data.nama.trim().length > 0
-        && typeof foto       === 'string' && foto.trim().length > 0;
+    // Enterprise: profile_complete is always true now — name + avatar are
+    // captured automatically from Google (peserta) or derived from email (admin).
+    // The old gate checked for nama + avatar_url, but both are now set at
+    // INSERT time by the Edge Functions. Keeping this as always-true so
+    // legacy callers (byteward, panel.js) don't break.
+    return true;
 }
 
 function makeProfileState(isComplete) {
@@ -58,9 +57,8 @@ function normalizeUserDoc(data, userId) {
     data.nama  = data.nama  || '';
     data.peran = data.peran || 'peserta';
 
-    // Sync all three key shapes (avatar_url / foto_profil / fotoProfil) so
-    // isProfileComplete() and any legacy display code (panel.js, navigasi.js,
-    // ui.js, profile editor) keep working regardless of which they read.
+    // Enterprise: prefer Google avatar (stored as avatar_url by EF).
+    // If not available, fall back to ui-avatars.com (deterministic initials).
     const existingFoto = data.avatar_url || data.foto_profil || data.fotoProfil || '';
     const resolvedFoto = existingFoto || buildAvatarUrl(data.email || userId);
 

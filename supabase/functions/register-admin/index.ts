@@ -407,16 +407,15 @@ serve(async (req) => {
       return genericError(corsHeaders, 500);
     }
 
-    // foto_profil / profil_lengkap were renamed to avatar_url / profile_complete
-    // by migration 20260701_002_alter_users_snake_case.sql. Inserting the old
-    // column name causes every admin registration to fail with a Postgres
-    // "column does not exist" error (caught below as a generic 500). Use the
-    // current schema.
+    // Enterprise: derive nama from email (admin can edit later in profile).
+    // Also set profile_complete=true so the profile-complete gate never blocks.
+    const derivedName = email.split("@")[0].replace(/[._\-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
     const { error: profileError } = await supabase.from("users").insert({
       id: userId,
       email,
+      nama: derivedName,
       peran: "admin",
-      profile_complete: false,
+      profile_complete: true,
     });
 
     if (profileError) {

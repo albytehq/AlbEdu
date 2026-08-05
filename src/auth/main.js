@@ -654,6 +654,21 @@ function _syncUserDocument(userId) {
 
 function _applyUserSnapshot(rawData, userId) {
     const data    = _normalizeUserDoc(rawData, userId);
+
+    // Enterprise: merge Google profile data (name + avatar) if the DB row
+    // doesn't have them yet. This handles the race where the EF hasn't
+    // been redeployed yet but the user already logged in via Google.
+    if (_currentUser) {
+        if (!data.nama && _currentUser.displayName) {
+            data.nama = _currentUser.displayName;
+        }
+        if (!data.avatar_url && _currentUser.photoURL) {
+            data.avatar_url = _currentUser.photoURL;
+            data.foto_profil = _currentUser.photoURL;
+            data.fotoProfil = _currentUser.photoURL;
+        }
+    }
+
     _userData     = data;
     _userRole     = data.peran;
     _profileState = _makeProfileState(_isProfileComplete(data));

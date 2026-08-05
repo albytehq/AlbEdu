@@ -171,8 +171,10 @@ serve(async (req) => {
     const { error: insertUserErr } = await supabase.from("users").insert({
         id: user.id,
         email: user.email ?? "",
+        nama: user.user_metadata?.full_name || user.user_metadata?.name || "",
+        avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
         peran: "peserta",
-        profile_complete: false,
+        profile_complete: true,
       });
 
       if (insertUserErr) {
