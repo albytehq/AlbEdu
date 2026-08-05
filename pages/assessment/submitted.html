@@ -163,7 +163,12 @@
     // Use BASE_PATH-aware landing URL (was ../login.html — 404)
     document.getElementById('back-btn').addEventListener('click', function (e) {
       e.preventDefault();
-      const basePath = window.Auth?.getBasePath?.() || '/';
+      var basePath = '/';
+      try {
+        var p = window.location.pathname;
+        var idx = p.indexOf('/pages/');
+        if (idx > 0) basePath = p.substring(0, idx) + '/';
+      } catch (_) {}
       window.location.href = basePath;
     });
   </script>

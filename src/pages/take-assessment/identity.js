@@ -38,16 +38,16 @@
         I.dom.identityNote.classList.remove('is-dismissed');
         const sanitized = _internal._sanitizeHTML(assessment.note_text);
         I.dom.identityNote.innerHTML = `
-          <span class="identity-card__note__icon" aria-hidden="true">
+          <span class="id-note__icon" aria-hidden="true">
             <span data-albedu-icon="info"></span>
           </span>
-          <div class="identity-card__note__body">${sanitized}</div>
-          <button type="button" class="identity-card__note__dismiss" aria-label="Tutup catatan">
+          <div class="id-note__body">${sanitized}</div>
+          <button type="button" class="id-note__dismiss" aria-label="Tutup catatan">
             <span data-albedu-icon="close"></span>
           </button>
         `;
         // Wire dismiss button
-        const dismissBtn = I.dom.identityNote.querySelector('.identity-card__note__dismiss');
+        const dismissBtn = I.dom.identityNote.querySelector('.id-note__dismiss');
         if (dismissBtn) {
           dismissBtn.addEventListener('click', () => {
             I.dom.identityNote.classList.add('is-dismissed');
@@ -68,7 +68,7 @@
     // create it dynamically so the form can still render.
     if (!I.dom.identityMount) {
       console.warn('[take] identity-mount not found in DOM — creating dynamically');
-      const identityBody = document.querySelector('.identity-card__body') || I.dom.identityPhase;
+      const identityBody = document.querySelector('.id-body') || I.dom.identityPhase;
       if (identityBody) {
         const mount = document.createElement('div');
         mount.id = 'identity-mount';

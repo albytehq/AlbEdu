@@ -220,12 +220,17 @@
     const reason = new URLSearchParams(window.location.search).get('reason');
     if (reason) {
       document.getElementById('reason-box').classList.add('show');
-      document.getElementById('reason-text').textContent = decodeURIComponent(reason);
+      document.getElementById('reason-text').textContent = reason;
     }
-    // Use BASE_PATH-aware landing URL (was ../login.html — 404)
+    // Use inline BASE_PATH detection (Auth.getBasePath not available — main.js not loaded)
     document.getElementById('back-btn').addEventListener('click', function (e) {
       e.preventDefault();
-      const basePath = window.Auth?.getBasePath?.() || '/';
+      var basePath = '/';
+      try {
+        var p = window.location.pathname;
+        var idx = p.indexOf('/pages/');
+        if (idx > 0) basePath = p.substring(0, idx) + '/';
+      } catch (_) {}
       window.location.href = basePath;
     });
   </script>

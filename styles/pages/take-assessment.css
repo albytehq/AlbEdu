@@ -121,7 +121,7 @@
    }
 
    /* Sticky bars lock scroll on iOS Safari when the exam is active. */
-   body.exam-active { overflow: hidden; }
+   body.exam-active { overflow-x: hidden; overflow-y: auto; }
    body.exam-active input,
    body.exam-active textarea {
      user-select: text !important;
@@ -378,6 +378,18 @@
      line-height: 1.55;
    }
    .id-note strong { color: #78350F; }
+
+   /* Note block child elements (m5 fix — icon + body + dismiss) */
+   .id-note { display: flex; align-items: flex-start; gap: 12px; position: relative; }
+   .id-note__icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: var(--take-warning); }
+   .id-note__icon .material-symbols-outlined { font-size: 20px; }
+   .id-note__body { flex: 1; min-width: 0; }
+   .id-note__body p:first-child { margin-top: 0; }
+   .id-note__body p:last-child { margin-bottom: 0; }
+   .id-note__dismiss { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; padding: 0; border: 0; background: transparent; color: #92400E; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+   .id-note__dismiss:hover { background: rgba(146,64,14,0.1); }
+   .id-note__dismiss .material-symbols-outlined { font-size: 16px; }
+   .id-note.is-dismissed { display: none; }
 
    .id-body {
      padding: 32px;

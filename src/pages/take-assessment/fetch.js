@@ -10,31 +10,31 @@
   const t = I.t || ((key, vars, fallback) => fallback || key);
 
   // Fetch assessment (peserta view — strips admin fields like total_score).
+  // Fix (Agent 7): Rethrow network errors instead of swallowing into null.
+  // init() catches these and shows "Kesalahan Jaringan" (m8 fix).
   async function _fetchAssessment(token) {
     const repo = window.AlbEdu?.repository;
-    if (!repo) return null;
-    try {
-      const snap = await repo.getDoc('assessment_view_peserta', token, 'access_code');
-      if (!snap.exists) return null;
-      return { id: snap.id, ...snap.data() };
-    } catch (err) {
-      console.error('[take] fetchAssessment error:', err);
-      return null;
+    if (!repo) {
+      const err = new Error('Platform layer not ready');
+      err._networkError = true;
+      throw err;
     }
+    const snap = await repo.getDoc('assessment_view_peserta', token, 'access_code');
+    if (!snap.exists) return null;
+    return { id: snap.id, ...snap.data() };
   }
 
   // Fetch session
   async function _fetchSession(sessionId) {
     const repo = window.AlbEdu?.repository;
-    if (!repo) return null;
-    try {
-      const snap = await repo.getDoc('assessment_sessions', sessionId);
-      if (!snap.exists) return null;
-      return { id: snap.id, ...snap.data() };
-    } catch (err) {
-      console.error('[take] fetchSession error:', err);
-      return null;
+    if (!repo) {
+      const err = new Error('Platform layer not ready');
+      err._networkError = true;
+      throw err;
     }
+    const snap = await repo.getDoc('assessment_sessions', sessionId);
+    if (!snap.exists) return null;
+    return { id: snap.id, ...snap.data() };
   }
 
   // Restore identity snapshot + draft answers + violation count from the

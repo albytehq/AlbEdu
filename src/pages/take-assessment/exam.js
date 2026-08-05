@@ -35,19 +35,19 @@
                      (identity?._mode === 'manual' ? 'Peserta' : '');
     I.dom.examUserText.innerHTML = `${_internal._escAttr(displayName)}${subLabel ? ' — ' + _internal._escAttr(subLabel) : ''}`;
 
+    // CRITICAL FIX (Agent 1+2+8): Create AbortController BEFORE _wireNavButtons()
+    // _wireNavButtons() guards with `if (!I._examAbort) return;` — if this is
+    // created after, nav buttons never get listeners attached.
+    if (I._examAbort) I._examAbort.abort();
+    I._examAbort = new AbortController();
+    const sig = I._examAbort.signal;
+
     _renderPageTabs();
     _renderQuestion(state.activePageIdx);
     _startTimer(state.assessment);
     _wireNavButtons();
     _startSecurity();
     _updateSubmitLockState();
-
-    // Single teardown controller — every listener added during the exam
-    // phase takes this signal so any exit path (blocked / submitted /
-    // expired / result) can clean them up in one shot.
-    if (I._examAbort) I._examAbort.abort();
-    I._examAbort = new AbortController();
-    const sig = I._examAbort.signal;
 
     window.addEventListener('beforeunload', _beforeUnloadGuard, { signal: sig });
 
@@ -348,7 +348,7 @@
         I.state.activePageIdx--;
         _renderQuestion(I.state.activePageIdx);
         _renderPageTabs();
-        I.dom.examPhase.querySelector('.exam-main').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        I.dom.examPhase?.querySelector('.ex-main')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, { signal: sig });
     I.dom.btnNext.addEventListener('click', () => {
@@ -356,7 +356,7 @@
         I.state.activePageIdx++;
         _renderQuestion(I.state.activePageIdx);
         _renderPageTabs();
-        I.dom.examPhase.querySelector('.exam-main').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        I.dom.examPhase?.querySelector('.ex-main')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, { signal: sig });
     I.dom.btnSubmit.addEventListener('click', () => {
@@ -500,6 +500,7 @@
           onBlocked:  (reason) => _handleBlocked(reason),
           onSubmitted: () => _handleSubmitted(),
           onExpired:  () => _handleExpired(),
+          onAssessmentClosed: (reason) => _handleBlocked(reason),
         });
       }
       if (window.ExamGuardian?.activate) {
@@ -594,6 +595,7 @@
   function _handleBlocked(reason) {
     if (I.state._redirected) return;
     I.state._redirected = true;
+    I.state.phase = 'blocked';
     _teardownExam();
     const reasonEnc = encodeURIComponent(reason || 'Diblokir oleh admin');
     window.location.replace(`blocked.html?reason=${reasonEnc}`);
@@ -602,12 +604,15 @@
   function _handleSubmitted() {
     if (I.state._redirected) return;
     I.state._redirected = true;
+    I.state.phase = 'submitted';
     _teardownExam();
     window.location.replace('submitted.html');
   }
 
   function _handleExpired() {
     if (I.state.isSubmitting || I.state.phase === 'result') return;
+    if (I.state._redirected) return;
+    if (I.state.phase !== 'exam') return;
     window.notify?.warning(
       t('assessment.time_up', null, 'Waktu Habis'),
       t('assessment.time_up_msg', null, 'Waktu asesmen telah berakhir. Jawaban akan dikumpulkan otomatis.'),
