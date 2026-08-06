@@ -179,13 +179,40 @@
         // Fire onError callback (non-fatal — UI can show "reconnecting..." indicator)
         this._callbacks?.onError?.(err);
 
-        // After 5 consecutive errors (50s without successful poll), something
-        // is very wrong. Fire onExpired so peserta is redirected to a safe state.
-        if (this._consecutiveErrors >= 5) {
-          console.error('[block-check] 5 consecutive failures → assuming expired');
+        // F6-03 fix: previously 5 consecutive errors (50s offline) auto-fired
+        // onExpired → auto-submit. This was catastrophic for mobile peserta
+        // on flaky networks (subway, elevator, school wifi congestion) — they
+        // lost their exam because of a transient connectivity blip.
+        //
+        // New behavior: after 5 consecutive errors, we DON'T auto-expire.
+        // Instead we escalate to onError with a special "sustained_outage"
+        // code, and the UI is responsible for showing a modal that lets the
+        // peserta CHOOSE: "Coba Lagi" (retry) or "Kumpulkan Sekarang" (submit).
+        // This matches Canvas/Moodle behavior for sustained network outages
+        // during exams.
+        //
+        // We still cap at 30 consecutive errors (5 minutes) as a hard safety
+        // net — at that point the exam is almost certainly over server-side
+        // (status flipped to expired by pg_cron) and staying on the page
+        // accomplishes nothing.
+        if (this._consecutiveErrors >= 30) {
+          console.error('[block-check] 30 consecutive failures (5 min outage) → assuming expired');
           const cb = this._callbacks;
           this.stop();
           cb?.onExpired?.();
+          return;
+        }
+
+        // F6-03 fix: sustained outage notification (5 errors = 50s offline).
+        // The UI layer can show a "Reconnect or Submit?" modal via onError.
+        if (this._consecutiveErrors === 5) {
+          console.warn('[block-check] Sustained outage detected (50s) — escalating to UI');
+          this._callbacks?.onError?.({
+            ...err,
+            code: 'SUSTAINED_OUTAGE',
+            consecutiveErrors: this._consecutiveErrors,
+            message: 'Koneksi terputus lebih dari 50 detik. Jawaban tersimpan lokal.',
+          });
         }
         // Otherwise: keep polling. Next interval will retry.
       }

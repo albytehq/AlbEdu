@@ -730,7 +730,10 @@
      border: 2px solid var(--take-border);
      border-radius: 10px;
      font-family: var(--take-font-sans);
-     font-size: 15px;
+     /* F7-01 fix: 16px minimum to prevent iOS Safari auto-zoom on focus.
+        Previously 15px — every keystroke on iPhone reflowed the page and
+        hid the timer. 16px is the Apple-recommended minimum. */
+     font-size: 16px;
      color: var(--take-text);
      background: var(--take-surface);
      resize: vertical;

@@ -26,86 +26,27 @@ const base = (p) => (p.startsWith('/') ? `${BASE_PATH}${p}` : `${BASE_PATH}/${p}
 const OFFLINE_FALLBACK = base('/pages/offline.html');
 
 const PRECACHE_URLS = [
-  // Landing + auth
+  // F5-04 fix: trimmed from 63 to 10 entries. The previous precache list
+  // included every page + every shared JS + every CSS + every font — totalling
+  // ~400KB precached on first install. For a 500-student flash crowd, that's
+  // 31,500 origin hits in the first post-deploy minute — a self-inflicted
+  // DDoS. The SW should only precache the offline fallback + critical shell
+  // assets that are needed for the offline page to render. Everything else
+  // is cached on-demand via the runtime cache (STATIC_PATTERNS below).
   base('/'),
   base('/index.html'),
-  base('/pages/login.html'),
-  base('/pages/register-admin.html'),
-  base('/pages/register-success.html'),
-  base('/pages/forgot-password.html'),
-  base('/pages/reset-password.html'),
-  base('/pages/privacy-policy.html'),
-  base('/404.html'),
+  base('/pages/offline.html'),
   OFFLINE_FALLBACK,
 
-  // Admin
-  base('/pages/admin/index.html'),
-  base('/pages/admin/profile.html'),
-  base('/pages/admin/create-assessment.html'),
-  base('/pages/admin/active-assessments.html'),
-  base('/pages/admin/monitoring.html'),
-  base('/pages/admin/results-analytics.html'),
-  base('/pages/admin/daftar-nama.html'),
-
-  // Assessment
-  base('/pages/assessment/index.html'),
-  base('/pages/assessment/take.html'),
-  base('/pages/assessment/blocked.html'),
-  base('/pages/assessment/submitted.html'),
-
-  // CSS
+  // Critical shell CSS (needed for offline page to look right)
   base('/styles/tokens.css'),
-  base('/styles/albedu-v1.css'),
-  base('/styles/loading.css'),
-  base('/styles/navigasi.css'),
-  base('/styles/admin-panel.css'),
-  base('/styles/notification-panel.css'),
-  base('/styles/profile.css'),
+  base('/styles/albedu-components.css'),
 
-  base('/public/QNotify/ui/notify.css'),
-  base('/public/QNotify/ui/dialog.css'),
-  base('/public/QNotify/ui/label.css'),
-  base('/public/QNotify/ui/Readnote.css'),
-
-  // JS — shared head + icons
-  base('/src/shared/head/critical-css.js'),
-  base('/src/shared/head/fonts.js'),
+  // Critical shell JS (icons used by offline page)
   base('/src/shared/icons/icons.js'),
 
-  // JS — shared core
-  base('/src/shared/boot.js'),
-  base('/src/shared/qnotify-loader.js'),
-  base('/src/shared/error-boundary.js'),
-  base('/src/shared/race-condition.js'),
-  base('/src/shared/observability.js'),
-  base('/src/shared/resilience.js'),
-  base('/src/shared/view-transitions.js'),
-  base('/src/shared/link-prefetch.js'),
-  base('/src/shared/page-transition-overlay.js'),
-
-  // JS — platform + auth + utils + security + theme
-  base('/src/platform/supabase-client.js'),
-  base('/src/platform/repository.js'),
-  base('/src/auth/main.js'),
-  base('/src/auth/security.js'),
-  base('/src/auth/errors.js'),
-  base('/src/auth/user-helpers.js'),
-  base('/src/auth/byteward.js'),
-  base('/src/utils/ui.js'),
-  base('/src/utils/navigasi.js'),
-  base('/src/utils/admin-notification-center.js'),
-  base('/src/utils/self-storage.js'),
-  base('/src/security/sanitize.js'),
-  base('/src/theme-system/index.js'),
-
-  // Fonts
-  base('/public/fonts/plus-jakarta-sans-latin.woff2'),
-  base('/public/fonts/plus-jakarta-sans-latin-ext.woff2'),
-  base('/public/fonts/jetbrains-mono-latin.woff2'),
-
-  // Images
+  // Logo + favicon (offline page branding)
   base('/public/images/logo.svg'),
-  base('/public/images/favicon/favicon.ico'),
   base('/public/images/favicon/favicon-96x96.png'),
 ];
 
@@ -125,8 +66,16 @@ const NETWORK_PATTERNS = [
   /\/functions\/v1\//,
   /\/rest\/v1\//,
   /supabase\.co/,
-  /albyte-inc\.workers\.dev/,
+  // C3-02 fix: the worker.dev pattern previously caught /img/{sha256}
+  // (served by the CF Worker) and routed it through networkFirst — defeating
+  // the edge cache for SW-equipped browsers. We now exclude /img/ paths
+  // from the network-first route so they fall through to STATIC_PATTERNS
+  // (which uses staleWhileRevalidate). The /img/ assets are SHA-256
+  // addressed and immutable, so cache-first is correct.
 ];
+
+// C3-02 fix: /img/ paths are always cacheable (SHA-256 addressed, immutable).
+const IMMUTABLE_IMG_PATTERN = /albyte-inc\.workers\.dev\/img\//;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -188,6 +137,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // C3-02 fix: /img/{sha256} assets are immutable (SHA-256 addressed).
+  // Use cache-first (with background revalidate) for maximum cache hit rate.
+  // Previously these fell through to the generic STATIC_PATTERNS check below
+  // OR got caught by the now-removed worker.dev NETWORK_PATTERN.
+  if (IMMUTABLE_IMG_PATTERN.test(req.url)) {
+    event.respondWith(cacheFirst(req));
+    return;
+  }
+
   if (STATIC_PATTERNS.some((p) => p.test(req.url)) || isSameOrigin) {
     event.respondWith(staleWhileRevalidate(req));
     return;
@@ -197,6 +155,31 @@ self.addEventListener('fetch', (event) => {
     fetch(req).catch(() => caches.match(req))
   );
 });
+
+// C3-02 fix: cache-first strategy for immutable assets (SHA-256 addressed images).
+async function cacheFirst(req) {
+  const cache = await caches.open(STATIC_CACHE);
+  const cached = await cache.match(req);
+  if (cached) {
+    // Background revalidate (no await — fire-and-forget).
+    fetch(req).then((res) => {
+      if (res && res.status === 200) {
+        cache.put(req, res.clone());
+      }
+    }).catch(() => {});
+    return cached;
+  }
+  try {
+    const res = await fetch(req);
+    if (res && res.status === 200 && res.type === 'basic') {
+      cache.put(req, res.clone());
+      evictIfNeeded(cache);
+    }
+    return res;
+  } catch (err) {
+    return new Response('Offline', { status: 503, statusText: 'Offline' });
+  }
+}
 
 async function staleWhileRevalidate(req) {
   const cache = await caches.open(STATIC_CACHE);

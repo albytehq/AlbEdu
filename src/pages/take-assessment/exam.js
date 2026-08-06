@@ -118,25 +118,98 @@
     // AbortController per render so re-renders don't accumulate handlers.
     if (I.dom.questionList._delegatedAbort) I.dom.questionList._delegatedAbort.abort();
     I.dom.questionList._delegatedAbort = new AbortController();
-    I.dom.questionList.addEventListener('click', (e) => {
-      const opt = e.target.closest('.ex-option');
-      if (!opt) return;
+    const _delegatedSignal = I.dom.questionList._delegatedAbort.signal;
+
+    // Shared helper: select/deselect an option (used by click + keyboard).
+    function _toggleOption(opt) {
       const pageKey = opt.dataset.pagekey;
       const idq = opt.dataset.idq;
       const key = opt.dataset.key;
       if (!pageKey || !idq) return;
       const wasSelected = opt.classList.contains('selected');
       I.dom.questionList.querySelectorAll(`.ex-option[data-idq="${idq}"][data-pagekey="${pageKey}"]`)
-        .forEach(o => o.classList.remove('selected'));
+        .forEach(o => {
+          o.classList.remove('selected');
+          o.setAttribute('aria-checked', 'false');
+          // F4-01 fix: maintain roving tabindex — only the selected option
+          // (or first option if none selected) is tabbable. This lets keyboard
+          // users Tab between question groups instead of every option.
+          o.setAttribute('tabindex', '-1');
+        });
       if (!wasSelected) {
         opt.classList.add('selected');
+        opt.setAttribute('aria-checked', 'true');
+        opt.setAttribute('tabindex', '0'); // selected = tabbable
         _saveAnswer(pageKey, parseInt(idq, 10), key);
       } else {
+        opt.setAttribute('tabindex', '0'); // first option = tabbable when none selected
         _saveAnswer(pageKey, parseInt(idq, 10), null);
       }
       _updateQuestionAnsweredState(pageKey, idq, !wasSelected);
       _updateProgress();
-    }, { signal: I.dom.questionList._delegatedAbort.signal });
+    }
+
+    I.dom.questionList.addEventListener('click', (e) => {
+      const opt = e.target.closest('.ex-option');
+      if (!opt) return;
+      _toggleOption(opt);
+    }, { signal: _delegatedSignal });
+
+    // F4-01 fix: keyboard support for exam radio options (SC 2.1.1 Keyboard).
+    // Previously the radios had tabindex="0" but only a click handler —
+    // keyboard users could focus but not select. Now we implement the
+    // standard ARIA radiogroup keyboard pattern:
+    //   - Space / Enter: select the focused option
+    //   - ArrowDown / ArrowRight: move focus to next option (wrap)
+    //   - ArrowUp / ArrowLeft: move focus to prev option (wrap)
+    // See: https://www.w3.org/WAI/ARIA/apg/patterns/radiogroup/
+    I.dom.questionList.addEventListener('keydown', (e) => {
+      const opt = e.target.closest('.ex-option');
+      if (!opt) return;
+
+      const pageKey = opt.dataset.pagekey;
+      const idq = opt.dataset.idq;
+      if (!pageKey || !idq) return;
+
+      // Find all sibling options in the same radiogroup.
+      const siblings = Array.from(
+        I.dom.questionList.querySelectorAll(`.ex-option[data-idq="${idq}"][data-pagekey="${pageKey}"]`)
+      );
+      const idx = siblings.indexOf(opt);
+      if (idx === -1) return;
+
+      switch (e.key) {
+        case ' ':
+        case 'Enter':
+          e.preventDefault();
+          _toggleOption(opt);
+          break;
+        case 'ArrowDown':
+        case 'ArrowRight':
+          e.preventDefault();
+          {
+            const next = siblings[(idx + 1) % siblings.length];
+            // Roving tabindex: current opt becomes un-tabbable, next becomes tabbable.
+            opt.setAttribute('tabindex', '-1');
+            next.setAttribute('tabindex', '0');
+            next.focus();
+          }
+          break;
+        case 'ArrowUp':
+        case 'ArrowLeft':
+          e.preventDefault();
+          {
+            const prev = siblings[(idx - 1 + siblings.length) % siblings.length];
+            opt.setAttribute('tabindex', '-1');
+            prev.setAttribute('tabindex', '0');
+            prev.focus();
+          }
+          break;
+        default:
+          // No-op — let other keys (Tab, etc.) pass through.
+          break;
+      }
+    }, { signal: _delegatedSignal });
 
     // Wire esai textareas + image previews, then render math + icons.
     I.dom.questionList.querySelectorAll('textarea.ex-esai').forEach(ta => {
@@ -198,12 +271,17 @@
         <div class="ex-options" role="radiogroup" aria-label="Pilihan jawaban soal ${displayIdx + 1}">
           ${pilihan.slice(0, 5).map((opt, i) => {
             const key = keys[i];
-            const sel = jawaban === key ? 'selected' : '';
+            const isSelected = jawaban === key;
+            // F4-01 fix: roving tabindex. Only the selected option (or the
+            // first option if none selected) is tabbable (tabindex="0"); all
+            // others are tabindex="-1" (focusable only via arrow keys).
+            const isFirst = i === 0;
+            const tabindex = isSelected || (isFirst && !jawaban) ? '0' : '-1';
             return `
-              <div class="ex-option ${sel}"
+              <div class="ex-option ${isSelected ? 'selected' : ''}"
                    role="radio"
-                   aria-checked="${jawaban === key}"
-                   tabindex="0"
+                   aria-checked="${isSelected}"
+                   tabindex="${tabindex}"
                    data-pagekey="${_internal._escAttr(pageKey)}"
                    data-idq="${_internal._escAttr(q.idq)}"
                    data-key="${_internal._escAttr(key)}">
@@ -395,17 +473,36 @@
 
   // Timer
   // Fix (Agent 8): endMs stored on state._timerEndMs (mutable) + 60s re-fetch poll
+  // F4-03 fix: aria-live threshold announcements at 5min and 1min remaining.
+  //   The timer element itself has aria-live="off" (so screen readers don't
+  //   announce every second tick — that would be noise). We use a separate
+  //   visually-hidden aria-live="assertive" region that we only update when
+  //   a meaningful threshold is crossed (5 min, 1 min, time up).
   function _startTimer(assessment) {
     _stopTimer();
     const state = I.state;
 
     state._timerEndMs = _computeEndMs(assessment, state);
+    // F4-03 fix: track which thresholds we've already announced so we don't
+    // re-announce them on every tick.
+    state._timerAnnounced5min = false;
+    state._timerAnnounced1min = false;
 
     const tick = () => {
       const endMs = state._timerEndMs;
       if (!endMs || isNaN(endMs)) return;
       const sisa = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
       _updateTimerDisplay(sisa);
+
+      // F4-03 fix: threshold announcements via dedicated aria-live region.
+      if (!state._timerAnnounced5min && sisa <= 300 && sisa > 60) {
+        state._timerAnnounced5min = true;
+        _announceTimer(`Sisa waktu 5 menit.`);
+      }
+      if (!state._timerAnnounced1min && sisa <= 60 && sisa > 0) {
+        state._timerAnnounced1min = true;
+        _announceTimer(`Sisa waktu 1 menit. Segera kumpulkan jawaban.`);
+      }
 
       if (sisa <= SUBMIT_UNLOCK_SECONDS && state.submitLocked) {
         state.submitLocked = false;
@@ -414,6 +511,7 @@
 
       if (sisa <= 0 && !state.isExpired && state.phase === 'exam') {
         state.isExpired = true;
+        _announceTimer(`Waktu habis. Jawaban dikumpulkan otomatis.`);
         _stopTimer();
         _handleExpired();
       }
@@ -434,9 +532,32 @@
           state._timerEndMs = newEndMs;
           state.assessment = fresh;
           if (newEndMs > Date.now() && state.isExpired) state.isExpired = false;
+          // F4-03 fix: reset announced flags if time was extended by admin.
+          if (newEndMs > endMs) {
+            state._timerAnnounced5min = false;
+            state._timerAnnounced1min = false;
+          }
         }
       } catch (err) { /* non-fatal */ }
     }, 60_000);
+  }
+
+  // F4-03 fix: dedicated announcement region. Created lazily on first call.
+  function _announceTimer(message) {
+    let region = document.getElementById('timer-announcer');
+    if (!region) {
+      region = document.createElement('div');
+      region.id = 'timer-announcer';
+      region.setAttribute('role', 'status');
+      region.setAttribute('aria-live', 'assertive');
+      region.setAttribute('aria-atomic', 'true');
+      // Visually hidden but available to screen readers.
+      region.className = 'sr-only';
+      region.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
+      document.body.appendChild(region);
+    }
+    // Setting textContent triggers the aria-live announcement.
+    region.textContent = message;
   }
 
   function _computeEndMs(assessment, state) {

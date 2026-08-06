@@ -53,7 +53,7 @@
   document.write('<link rel="icon" type="image/svg+xml" href="' + window.__ALBEDU_BASE__ + 'public/images/favicon/favicon.svg">');
   document.write('<link rel="apple-touch-icon" href="' + window.__ALBEDU_BASE__ + 'public/images/favicon/apple-touch-icon.png">');
   document.write('<link rel="icon" type="image/png" sizes="96x96" href="' + window.__ALBEDU_BASE__ + 'public/images/favicon/favicon-96x96.png">');
-  document.write('<link rel="manifest" href="' + window.__ALBEDU_BASE__ + 'public/images/favicon/site.webmanifest">');
+  document.write('<link rel="manifest" href="public/manifest.json">');
 </script>
 
 <!-- Dynamic base path detection — works on localhost + GitHub Pages subpath -->
@@ -103,7 +103,7 @@
 <!-- Dot Grid Background -->
 <div class="dot-grid" aria-hidden="true"></div>
 
-<div class="wrapper">
+<div class="wrapper" id="main-content" role="main" tabindex="-1">
     <div class="error" role="img" aria-label="404 error — halaman tidak ditemukan">
         <!-- Left "4" -->
         <svg class="num-svg num-left" viewBox="0 0 100 130" aria-hidden="true">

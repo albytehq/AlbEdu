@@ -13,14 +13,46 @@
   const SUBMIT_RETRY_BASE_MS = C.SUBMIT_RETRY_BASE_MS || 1500;
   const SUBMIT_UNLOCK_SECONDS = C.SUBMIT_UNLOCK_SECONDS || 600;
 
+  // ── Idempotency guard for submit (F6-01 fix) ──────────────────────────
+  // Prevents double-submit race: the previous implementation checked
+  // `state.isSubmitting` BEFORE awaiting `_confirmSubmit()` but only SET it
+  // AFTER — so two rapid clicks both passed the guard. We now use the
+  // shared IdempotencyGuard from race-condition.js which marks the key
+  // inflight synchronously inside markInflight(), before any await.
+  const _submitGuard = (window.AlbEdu?.raceCondition?.createIdempotencyGuard?.()
+                       || _createFallbackIdempotencyGuard());
+
+  function _createFallbackIdempotencyGuard() {
+    let _inflight = false, _done = false;
+    return {
+      canExecute: () => !_inflight && !_done,
+      markInflight: () => { if (_inflight) return false; _inflight = true; return true; },
+      markDone: () => { _inflight = false; _done = true; },
+      markFailed: () => { _inflight = false; },
+      isInflight: () => _inflight,
+      isDone: () => _done,
+      reset: () => { _inflight = false; _done = false; },
+    };
+  }
+
   // Submit exam
   async function _submitExam(opts = {}) {
     const skipConfirm = opts.skipConfirm === true;
     const isAuto = opts.isAuto === true;
     const state = I.state;
 
-    if (state.isSubmitting) return;
-    if (state.phase === 'result') return;
+    // F6-01 fix: phase check first — never re-enter after we've reached result.
+    if (state.phase === 'result' || state._redirected) return;
+
+    // F6-01 fix: idempotency guard. Two rapid clicks both call _submitExam;
+    // the second one is rejected here BEFORE _confirmSubmit() runs.
+    // The idempotency key is the session id — submit is idempotent server-side
+    // via the session_id UNIQUE constraint (see submit-assessment RPC).
+    const submitKey = `submit:${state.session?.id || 'unknown'}`;
+    if (!_submitGuard.canExecute(submitKey)) {
+      console.info('[take] submit already in progress / done — skipping');
+      return;
+    }
 
     if (state.submitLocked && !isAuto) {
       const sisa = _internal._getCurrentSisa();
@@ -32,20 +64,51 @@
       return;
     }
 
-    if (!skipConfirm) {
-      const confirmed = await _confirmSubmit();
-      if (!confirmed) return;
+    // F6-01 fix: mark inflight SYNCHRONOUSLY before any await. This is the
+    // critical change — the guard now blocks the second click before
+    // _confirmSubmit()'s await yield.
+    if (!_submitGuard.markInflight(submitKey)) {
+      console.info('[take] submit race lost — another call already inflight');
+      return;
     }
 
+    // Set isSubmitting too (used by other modules) — but the guard is the
+    // authoritative lock now.
     state.isSubmitting = true;
+
+    if (!skipConfirm) {
+      try {
+        const confirmed = await _confirmSubmit();
+        if (!confirmed) {
+          _submitGuard.markFailed(submitKey);
+          state.isSubmitting = false;
+          return;
+        }
+      } catch (err) {
+        _submitGuard.markFailed(submitKey);
+        state.isSubmitting = false;
+        throw err;
+      }
+    }
+
     state.endTime = Date.now();
 
     _internal._pauseSecurity();
     window.Heartbeat?.stop?.();
 
+    // F6-04 fix: clear any pending esai debounce timer BEFORE saving draft.
+    // Previously a stale 400ms timer could write an old value back to
+    // localStorage AFTER _clearLocalDraft runs (on submit success),
+    // overwriting the submitted answer in the local cache. Clearing it here
+    // guarantees no async draft write can race with submit.
     if (state._draftSyncTimer) {
       clearTimeout(state._draftSyncTimer);
       state._draftSyncTimer = null;
+    }
+    // Also clear any pending Heartbeat debounce so it doesn't fire mid-submit.
+    if (window.Heartbeat?._debounceTimer) {
+      clearTimeout(window.Heartbeat._debounceTimer);
+      window.Heartbeat._debounceTimer = null;
     }
     _internal._saveLocalDraft();
 
@@ -55,13 +118,16 @@
       : 0;
 
     // Submit is idempotent via the session_id UNIQUE constraint, so retries are
-    // safe. Circuit breaker (3 fails → 60s cooldown) + exp backoff + 30s timeout.
+    // safe. We also send an idempotency_key (F6-01 fix) so the server-side
+    // RPC can deduplicate any retries from the same client attempt.
     const resilience = window.AlbEdu?.resilience;
+    const idempotencyKey = `${state.session.id}-${state.endTime}-${Math.random().toString(36).slice(2, 10)}`;
     const submitBody = {
       session_id: state.session.id,
       answers,
       duration_seconds,
       violation_count: state.violations,
+      idempotency_key: idempotencyKey,
     };
 
     try {
@@ -121,6 +187,12 @@
 
       const result = rawData?.data || rawData;
 
+      // F6-01 fix: mark submit as done — no further submit attempts allowed
+      // for this session (5-min auto-reset in the guard allows retry after
+      // cooldown if needed, but during a single exam session this prevents
+      // any duplicate submit from racing through).
+      _submitGuard.markDone(submitKey);
+
       if (result?.idempotent) {
         _renderResult(result);
         _internal._clearLocalDraft();
@@ -135,6 +207,9 @@
       state.isSubmitting = false;
 
     } catch (err) {
+      // F6-01 fix: release the inflight lock so the user can retry.
+      _submitGuard.markFailed(submitKey);
+
       // CRITICAL (C3 fix): Handle SESSION_BLOCKED regardless of how the error
       // is shaped. Previously the code only checked `err.status === 409`
       // (HTTP-level), but the resilience layer / rpc.invoke throws the

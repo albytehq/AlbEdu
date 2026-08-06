@@ -1,0 +1,30 @@
+# robots.txt for AlbEdu
+# Generated: August 2026
+# F10-02 fix: allow crawling of public pages, disallow auth/admin/exam pages.
+
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /pages/privacy-policy.html
+
+# Auth pages — should not be indexed (no user value, login required)
+Disallow: /pages/login.html
+Disallow: /pages/register-admin.html
+Disallow: /pages/register-success.html
+Disallow: /pages/forgot-password.html
+Disallow: /pages/reset-password.html
+
+# Admin panel — requires auth, no user value for searchers
+Disallow: /pages/admin/
+
+# Exam runtime — student-only, noindex already set in HTML
+Disallow: /pages/assessment/
+Disallow: /pages/ujian/
+
+# API and platform internals
+Disallow: /src/
+Disallow: /supabase/
+Disallow: /cloudflare-worker/
+
+# Sitemap
+Sitemap: https://albedu.id/sitemap.xml

@@ -17,7 +17,7 @@
   <link rel="icon" type="image/svg+xml" href="../../public/images/favicon/favicon.svg" />
   <link rel="icon" type="image/png" sizes="96x96" href="../../public/images/favicon/favicon-96x96.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="../../public/images/favicon/apple-touch-icon.png" />
-  <link rel="manifest" href="../../public/images/favicon/site.webmanifest" />
+  <link rel="manifest" href="../../public/manifest.json" />
 
   <!-- Fonts --><!-- Design Tokens + AlbEdu Design System -->
       <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
@@ -104,6 +104,14 @@
   <link rel="stylesheet" href="../../styles/pages/take-assessment.css">
 </head>
 <body>
+
+      <!-- F4-02 fix: skip-link target. The page has 3 phase-specific <main>
+           elements that are hidden/shown dynamically. We use a visible
+           anchor that the skip-link focuses; it auto-shifts focus into
+           whichever phase is currently visible via the focus handler. -->
+      <a id="main-content" href="#main-content" class="albedu-skip-anchor" tabindex="-1"
+         aria-label="Konten utama"
+         onfocus="document.querySelector('main:not([hidden])')?.focus?.()"></a>
 
       <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
 

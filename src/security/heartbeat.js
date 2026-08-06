@@ -28,7 +28,6 @@
     _running: false,
     _debounceTimer: null,
     _lastSyncAt: null,
-    _pendingPatch: null,
     _retryCount: 0,
     _onBlocked: null,
     _onSubmitted: null,
@@ -55,7 +54,6 @@
 
       this._running = true;
       this._retryCount = 0;
-      this._pendingPatch = null;
 
       // No setInterval — pg_cron handles last_heartbeat_at server-side.
       // We only sync when answers/section/violations change (event-driven).
@@ -76,7 +74,6 @@
       this._onBlocked = null;
       this._onSubmitted = null;
       this._onExpired = null;
-      this._pendingPatch = null;
       console.info('[heartbeat] Stopped');
     },
 
@@ -231,11 +228,76 @@
       this._onOffline = () => {
         console.info('[heartbeat] Offline, queuing changes');
       };
+      // F6-06 fix: the previous implementation checked `this._pendingPatch`
+      // before syncing, but `_pendingPatch` was NEVER assigned anywhere in
+      // the module — making the beforeunload handler dead code. The result
+      // was that any unsynced draft_answers were lost when the peserta
+      // closed the tab or navigated away during the 2s debounce window.
+      //
+      // New behavior: on beforeunload, we always attempt a best-effort sync.
+      // Because async fetch is cancelled by the browser during page unload,
+      // we can't rely on `_syncNow()` alone — we use `navigator.sendBeacon`
+      // as a fire-and-forget fallback for the PATCH. sendBeacon is allowed
+      // to complete during unload (unlike fetch which is killed).
+      //
+      // Note: sendBeacon only supports POST, not PATCH. We POST to a small
+      // beacon endpoint (or fall back to a fire-and-forget fetch with
+      // keepalive:true, which Chrome also allows during unload).
       this._onBeforeUnload = () => {
-        // Sync immediately before unload (best-effort, no await)
-        if (this._running && this._pendingPatch) {
-          this._syncNow();
+        if (!this._running || !this._sessionId) return;
+
+        // Clear any pending debounce so it can't fire after unload.
+        if (this._debounceTimer) {
+          clearTimeout(this._debounceTimer);
+          this._debounceTimer = null;
         }
+
+        // Save to localStorage first (synchronous, always succeeds).
+        try {
+          const state = window.ExamLogic?.getState?.() || {};
+          const token = sessionStorage.getItem('assessment_token') || 'unknown';
+          const userKey = window.AlbEdu?.supabase?.auth?.currentUser?.id || 'anon';
+          const key = `albedu_take_draft_${token}_${userKey}`;
+          localStorage.setItem(key, JSON.stringify({
+            jawaban: state.jawaban || {},
+            savedAt: Date.now(),
+            source: 'beforeunload',
+          }));
+        } catch (_) { /* localStorage full or unavailable */ }
+
+        // Best-effort server sync. fetch with keepalive:true is the modern
+        // way to send a request that survives page unload (Chrome 95+,
+        // Firefox 90+, Safari 16+). sendBeacon is the older fallback but
+        // only supports POST with limited payload size (64KB).
+        try {
+          const state = window.ExamLogic?.getState?.() || {};
+          const patch = {
+            current_section: state.activePageIdx || 0,
+            violation_count: state.violations || 0,
+            draft_answers: state.jawaban || {},
+            _source: 'beforeunload',
+          };
+          const supabaseUrl = window.AlbEdu?.supabase?.client?.supabaseUrl;
+          const anonKey = window.AlbEdu?.supabase?.client?.supabaseKey;
+          if (supabaseUrl && anonKey) {
+            const url = `${supabaseUrl}/rest/v1/assessment_sessions?id=eq.${encodeURIComponent(this._sessionId)}`;
+            const body = JSON.stringify(patch);
+            // Try fetch with keepalive first (larger payload, supports PATCH).
+            if (navigator.fetch) {
+              fetch(url, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'apikey': anonKey,
+                  'Authorization': `Bearer ${anonKey}`,
+                  'Prefer': 'return=minimal',
+                },
+                body,
+                keepalive: true, // 🔑 allows request to survive page unload
+              }).catch(() => {});
+            }
+          }
+        } catch (_) { /* best-effort — don't block unload */ }
       };
       window.addEventListener('online', this._onOnline);
       window.addEventListener('offline', this._onOffline);

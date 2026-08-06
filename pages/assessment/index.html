@@ -10,6 +10,8 @@
     <title>Masuk Asesmen — AlbEdu</title>
     <meta name="description" content="AlbEdu - Masukkan kode akses untuk mengerjakan asesmen">
     <meta name="theme-color" content="#2563eb">
+  <!-- F10-07 fix: auth/admin pages should not be indexed -->
+  <meta name="robots" content="noindex, nofollow">
 
     <link rel="icon" type="image/x-icon" href="../../public/images/favicon/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="../../public/images/favicon/favicon.svg">
@@ -51,7 +53,7 @@
 </head>
 <body>
         <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
-<div class="token-container">
+<div class="token-container" id="main-content" role="main" tabindex="-1">
         <div class="token-logo">
             <span data-albedu-icon="quiz"></span>
         </div>

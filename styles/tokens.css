@@ -765,24 +765,32 @@ main, p, h1, h2, h3, h4, h5, h6, li, blockquote, [contenteditable] {
 
 /* ═══════════════════════════════════════════════════════════════
    AlbEdu v1.0.0 — Enterprise Design Tokens (--albedu-*)
-   White-blue palette. Auto-derived from --albedu-primary by theme-system.
-   ============================================================================= */
-:root {
-  /* Primary (set by ThemeSystem.apply()) */
-  --albedu-primary: #2563eb;
-  --albedu-primary-hover: #1d4ed8;
-  --albedu-primary-muted: #eff6ff;
-  --albedu-primary-ring: rgba(37, 99, 235, 0.2);
+   =============================================================================
+   F2-01 fix: Previously this block hardcoded --albedu-* values (e.g.
+   --albedu-primary: #2563eb) which OVERRODE the legacy token bridge at
+   line 131-145 (which maps --albedu-primary → var(--color-primary) = #1D4ED8).
+   Result: two different "primary blues" coexisted on the same page
+   depending on which CSS family a consumer used.
 
-  /* Fixed palette */
-  --albedu-heading: #0f172a;
-  --albedu-body: #475569;
-  --albedu-surface: #ffffff;
-  --albedu-surface-alt: #f8fafc;
-  --albedu-border: #e2e8f0;
-  --albedu-success: #10b981;
-  --albedu-warning: #f59e0b;
-  --albedu-danger: #ef4444;
+   The fix: make this block PURE ALIASES to --color-* (the canonical system).
+   No hardcoded values. Theme switching now propagates correctly because
+   --color-* is what ThemeSystem mutates. */
+:root {
+  /* Primary — aliased to --color-* (canonical) */
+  --albedu-primary:       var(--color-primary);
+  --albedu-primary-hover: var(--color-primary-hover);
+  --albedu-primary-muted: var(--color-primary-light);
+  --albedu-primary-ring:  var(--color-primary-ring);
+
+  /* Fixed palette — aliased */
+  --albedu-heading:       var(--color-text);
+  --albedu-body:          var(--color-text-2);
+  --albedu-surface:       var(--color-surface);
+  --albedu-surface-alt:   var(--color-surface-2);
+  --albedu-border:        var(--color-border);
+  --albedu-success:       var(--color-success);
+  --albedu-warning:       var(--color-warning);
+  --albedu-danger:        var(--color-destructive);
 
   /* Typography */
   --albedu-font: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -808,62 +816,25 @@ main, p, h1, h2, h3, h4, h5, h6, li, blockquote, [contenteditable] {
   --albedu-transition: 150ms cubic-bezier(.4, 0, .2, 1);
   --albedu-transition-slow: 250ms cubic-bezier(.4, 0, .2, 1);
 
-  /* Z-index */
-  --albedu-z-modal: 9000;
-  --albedu-z-overlay: 8999;
+  /* Z-index — F2-06 fix: cap at --z-max: 100 (defined in canonical layer).
+     Previously --albedu-z-modal was 9000, conflicting with the --z-max: 100
+     cap used elsewhere. Now all z-index values are derived from the same
+     0-100 scale. */
+  --albedu-z-modal: 90;
+  --albedu-z-overlay: 80;
 }
 
-/* Dark mode — both [data-theme="dark"] (manual toggle) AND
-   @media (prefers-color-scheme: dark) (OS-level) flip the full AlbEdu
-   token set. Previously only 5 of 19 tokens flipped via [data-theme],
-   and the media query only flipped legacy --color-* — so OS-dark users
-   saw mixed light/dark UI. */
-[data-theme="dark"],
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --albedu-primary: #3b82f6;
-    --albedu-primary-hover: #60a5fa;
-    --albedu-primary-muted: rgba(59, 130, 246, 0.12);
-    --albedu-primary-ring: rgba(59, 130, 246, 0.35);
-
-    --albedu-heading: #f1f5f9;
-    --albedu-body: #cbd5e1;
-    --albedu-surface: #1e293b;
-    --albedu-surface-alt: #0f172a;
-    --albedu-border: #334155;
-
-    --albedu-success: #34d399;
-    --albedu-warning: #fbbf24;
-    --albedu-danger: #f87171;
-
-    --albedu-shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
-    --albedu-shadow-md: 0 4px 12px rgba(0, 0, 0, .4);
-    --albedu-shadow-lg: 0 12px 32px rgba(0, 0, 0, .5);
-    --albedu-shadow-modal: 0 24px 64px rgba(0, 0, 0, .6);
-  }
-}
-
-/* Manual toggle takes precedence over OS preference. */
+/* F2-01 fix: removed duplicate dark-mode block.
+   Previously there were TWO identical blocks: one for [data-theme="dark"]
+   + @media (prefers-color-scheme: dark), and another for [data-theme="dark"]
+   alone. They were byte-identical, just duplicated. Now there's only one.
+   Also: since --albedu-* are now pure aliases to --color-*, the dark-mode
+   overrides happen at the --color-* layer (defined earlier in this file),
+   so we don't need to repeat them here. The aliases propagate automatically. */
 [data-theme="dark"] {
-  --albedu-primary: #3b82f6;
-  --albedu-primary-hover: #60a5fa;
-  --albedu-primary-muted: rgba(59, 130, 246, 0.12);
-  --albedu-primary-ring: rgba(59, 130, 246, 0.35);
-
-  --albedu-heading: #f1f5f9;
-  --albedu-body: #cbd5e1;
-  --albedu-surface: #1e293b;
-  --albedu-surface-alt: #0f172a;
-  --albedu-border: #334155;
-
-  --albedu-success: #34d399;
-  --albedu-warning: #fbbf24;
-  --albedu-danger: #f87171;
-
-  --albedu-shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
-  --albedu-shadow-md: 0 4px 12px rgba(0, 0, 0, .4);
-  --albedu-shadow-lg: 0 12px 32px rgba(0, 0, 0, .5);
-  --albedu-shadow-modal: 0 24px 64px rgba(0, 0, 0, .6);
+  /* No-op — --color-* dark variants (defined above) propagate via the
+     alias block. This rule exists only to ensure [data-theme="dark"]
+     specificity is preserved for any legacy selectors that test for it. */
 }
 
 /* ═══════════════════════════════════════════════════════════════

@@ -114,6 +114,15 @@ export function injectTheme(theme) {
   }
 
   // CSS Custom Properties
+  // F2-20 fix: previously this only set --albedu-* tokens. Since the
+  // tokens.css refactor (F2-01), --albedu-* are pure aliases to --color-*,
+  // BUT setting --albedu-primary directly (as we do here) overrides the
+  // alias with a hardcoded value — meaning --color-primary stays at the
+  // default while --albedu-primary becomes the themed value. This caused
+  // the "theme-picker only re-themes half the app" bug.
+  //
+  // Fix: set BOTH --albedu-* AND --color-* so all consumers (legacy
+  // --albedu-* and canonical --color-*) get the themed value.
   root.style.setProperty('--albedu-primary', colors.primary);
   root.style.setProperty('--albedu-primary-hover', colors.primary_hover);
   root.style.setProperty('--albedu-primary-muted', colors.primary_muted);
@@ -128,16 +137,37 @@ export function injectTheme(theme) {
   root.style.setProperty('--albedu-warning', colors.warning);
   root.style.setProperty('--albedu-danger', colors.danger);
 
+  // F2-20 fix: also set --color-* (canonical system) so all pages
+  // that use --color-* (admin panel, login, etc.) get the themed value.
+  root.style.setProperty('--color-primary', colors.primary);
+  root.style.setProperty('--color-primary-hover', colors.primary_hover);
+  root.style.setProperty('--color-primary-light', colors.primary_muted);
+  root.style.setProperty('--color-primary-ring', colors.primary_ring);
+  root.style.setProperty('--color-text', colors.heading);
+  root.style.setProperty('--color-text-2', colors.body);
+  root.style.setProperty('--color-surface', colors.surface);
+  root.style.setProperty('--color-surface-2', colors.surface_alt);
+  root.style.setProperty('--color-border', colors.border);
+  root.style.setProperty('--color-success', colors.success);
+  root.style.setProperty('--color-warning', colors.warning);
+  root.style.setProperty('--color-destructive', colors.danger);
+
   // Dark mode
   const mode = theme.mode || 'auto';
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   if (mode === 'dark' || (mode === 'auto' && prefersDark)) {
     root.setAttribute('data-theme', 'dark');
+    // F2-20 fix: set BOTH --albedu-* AND --color-* for dark mode overrides.
     root.style.setProperty('--albedu-surface', '#1e293b');
     root.style.setProperty('--albedu-surface-alt', '#0f172a');
     root.style.setProperty('--albedu-heading', '#f1f5f9');
     root.style.setProperty('--albedu-body', '#cbd5e1');
     root.style.setProperty('--albedu-border', '#334155');
+    root.style.setProperty('--color-surface', '#1e293b');
+    root.style.setProperty('--color-surface-2', '#0f172a');
+    root.style.setProperty('--color-text', '#f1f5f9');
+    root.style.setProperty('--color-text-2', '#cbd5e1');
+    root.style.setProperty('--color-border', '#334155');
     // Re-check text_accent against dark surface
     const darkSurface = '#1e293b';
     const darkRatio = contrastRatio(safeTextAccent, darkSurface);

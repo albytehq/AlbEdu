@@ -34,7 +34,11 @@ body {
   width: 100%;
   padding: 10px 12px;
   font-family: var(--albedu-font);
-  font-size: 14px;
+  /* F7-01 fix: 16px minimum to prevent iOS Safari auto-zoom on focus.
+     iOS Safari automatically zooms the viewport when an input has
+     font-size < 16px on focus, which hides the timer in the exam page
+     and disorients the peserta. 16px is the Apple-recommended minimum. */
+  font-size: 16px;
   color: var(--albedu-heading);
   background: var(--albedu-surface);
   border: 1px solid var(--albedu-border);
@@ -93,21 +97,37 @@ body {
 }
 
 /* ── Buttons ───────────────────────────────────────────────────────────── */
+/* F2-04 fix: previously .albedu-btn was defined here AND in
+   albedu-components.css with conflicting font-weights (500 vs 600) and
+   sizes. This block is now ALIGNED with albedu-components.css so the
+   two definitions are identical (harmless duplication) instead of
+   conflicting. Pages that load only albedu-v1.css (404, dsr-queue,
+   offline) get the same button treatment as pages that load both. */
 .albedu-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 16px;
   border-radius: var(--albedu-radius-sm);
   font-family: var(--albedu-font);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all var(--albedu-transition);
+  transition: background var(--albedu-transition), border-color var(--albedu-transition), transform var(--albedu-transition);
   white-space: nowrap;
   text-decoration: none;
   line-height: 1.4;
+  min-height: 40px;
+}
+.albedu-btn:focus-visible {
+  outline: 2px solid var(--albedu-primary);
+  outline-offset: 2px;
+}
+.albedu-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 .albedu-btn .material-symbols-outlined { font-size: 18px; }
 
@@ -115,22 +135,24 @@ body {
   background: var(--albedu-primary);
   color: #fff;
   border-color: var(--albedu-primary);
-  box-shadow: 0 1px 2px var(--albedu-primary-ring);
 }
 .albedu-btn-primary:hover:not(:disabled) {
   background: var(--albedu-primary-hover);
   border-color: var(--albedu-primary-hover);
-  box-shadow: 0 4px 12px var(--albedu-primary-ring);
   transform: translateY(-1px);
 }
 .albedu-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
 
 .albedu-btn-secondary {
   background: var(--albedu-surface);
-  color: var(--albedu-primary);
-  border-color: var(--albedu-primary);
+  color: var(--albedu-heading);
+  border-color: var(--albedu-border);
 }
-.albedu-btn-secondary:hover:not(:disabled) { background: var(--albedu-primary-muted); }
+.albedu-btn-secondary:hover:not(:disabled) {
+  border-color: var(--albedu-primary);
+  color: var(--albedu-primary);
+  transform: translateY(-1px);
+}
 
 .albedu-btn-ghost {
   background: transparent;
@@ -141,11 +163,21 @@ body {
 .albedu-btn-ghost:disabled { opacity: .4; cursor: not-allowed; }
 
 .albedu-btn-danger { background: var(--albedu-danger); color: #fff; border-color: var(--albedu-danger); }
-.albedu-btn-danger:hover:not(:disabled) { background: #dc2626; }
+.albedu-btn-danger:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
 
-.albedu-btn-sm { padding: 6px 10px; font-size: 13px; }
+.albedu-btn-sm { padding: 6px 12px; font-size: 13px; min-height: 32px; }
 .albedu-btn-sm .material-symbols-outlined { font-size: 16px; }
-.albedu-btn-lg { padding: 12px 22px; font-size: 15px; }
+.albedu-btn-lg { padding: 14px 24px; font-size: 16px; min-height: 48px; }
+.albedu-btn--block { display: flex; width: 100%; justify-content: center; }
+
+/* F7-02 fix: 44px minimum touch target on mobile */
+@media (max-width: 768px) {
+  .albedu-btn { min-height: 44px; }
+  .albedu-btn-sm { min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .albedu-btn:hover:not(:disabled) { transform: none; }
+}
 
 /* Full-width block button — for forms, single-CTA cards, auth pages */
 .albedu-btn--block { display: flex; width: 100%; justify-content: center; }

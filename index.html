@@ -3,21 +3,92 @@
 
 <head>
     <meta name="albedu-worker-base" content="https://edu.albyte-inc.workers.dev">
-  <link rel="preload" href="src/shared/icons/icons.js" as="script">
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://esm.sh https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://edu.albyte-inc.workers.dev https://esm.sh; worker-src 'self'; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; frame-src https://challenges.cloudflare.com; form-action 'self'">
-  <title>Kelola Asesmen Online, Tanpa Ribet — AlbEdu</title>
-  <meta name="description" content="Platform asesmen untuk semua kebutuhan evaluasi — SD, SMP, SMA, kuliah, hingga personal use. Buat asesmen dalam hitungan menit, koreksi otomatis, data hasil real-time.">
+  <title>AlbEdu — Platform Asesmen Online untuk Guru Sekolah & Kampus</title>
+  <meta name="description" content="AlbEdu adalah platform asesmen online gratis untuk guru Indonesia. Buat ujian/asesmen dalam beberapa menit, bagikan kode 6-angka ke siswa, dan pantau hasil real-time. Tanpa instalasi, siswa tidak perlu registrasi.">
+
+  <!-- SEO: Open Graph (F10-03 fix) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AlbEdu">
+  <meta property="og:title" content="AlbEdu — Platform Asesmen Online untuk Guru">
+  <meta property="og:description" content="Buat ujian/asesmen online gratis untuk guru Indonesia. Bagikan kode 6-angka, siswa kerjakan tanpa registrasi, hasil real-time.">
+  <meta property="og:url" content="https://albedu.id">
+  <meta property="og:image" content="public/images/logo.svg">
+  <meta property="og:locale" content="id_ID">
+
+  <!-- SEO: Twitter Card (F10-05 fix) -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AlbEdu — Platform Asesmen Online untuk Guru">
+  <meta name="twitter:description" content="Buat ujian/asesmen online gratis untuk guru Indonesia. Bagikan kode 6-angka, siswa kerjakan tanpa registrasi, hasil real-time.">
+  <meta name="twitter:image" content="public/images/logo.svg">
+
+  <!-- SEO: Canonical (F10-06 fix) -->
+  <link rel="canonical" href="https://albedu.id/">
+
+  <!-- SEO: JSON-LD Structured Data (F10-03 fix) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://albedu.id/#org",
+        "name": "AlbEdu",
+        "url": "https://albedu.id",
+        "logo": "https://albedu.id/public/images/logo.svg",
+        "description": "Platform asesmen online gratis untuk guru Indonesia."
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://albedu.id/#app",
+        "name": "AlbEdu",
+        "url": "https://albedu.id",
+        "applicationCategory": "EducationApplication",
+        "operatingSystem": "Web Browser",
+        "inLanguage": "id",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "IDR"
+        },
+        "description": "Platform asesmen online gratis untuk guru Indonesia. Buat ujian, bagikan kode, pantau hasil real-time.",
+        "featureList": [
+          "Buat asesmen dengan wizard",
+          "Bagikan kode 6-angka ke siswa",
+          "Siswa kerjakan tanpa registrasi (login Google)",
+          "Koreksi otomatis pilihan ganda & isian",
+          "Pantau hasil real-time",
+          "Anti-cheat: deteksi tab-switch & DevTools"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://albedu.id/#website",
+        "url": "https://albedu.id",
+        "name": "AlbEdu",
+        "publisher": { "@id": "https://albedu.id/#org" },
+        "inLanguage": "id"
+      }
+    ]
+  }
+  </script>
+
   <meta name="theme-color" content="#2563eb">
 
-  <!-- Favicon set (single source of truth) -->
+  <!-- Favicon set (F7-03 fix: link the rich manifest, not the stub) -->
   <link rel="icon" type="image/x-icon" href="public/images/favicon/favicon.ico">
   <link rel="icon" type="image/svg+xml" href="public/images/favicon/favicon.svg">
   <link rel="icon" type="image/png" sizes="96x96" href="public/images/favicon/favicon-96x96.png">
   <link rel="apple-touch-icon" sizes="180x180" href="public/images/favicon/apple-touch-icon.png">
-  <link rel="manifest" href="public/images/favicon/site.webmanifest">
+  <link rel="manifest" href="public/manifest.json">
+
+  <!-- ═══ F5-03 fix: Font preloads moved to HTML <head> (was JS-injected) ═══ -->
+  <link rel="preload" href="public/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="preload" href="public/fonts/plus-jakarta-sans-latin-ext.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <!-- JetBrains Mono omitted from landing preload — landing has no monospace text (F5-06 fix, ~31KB saved) -->
 
   <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
   <script src="src/shared/head/critical-css.js"></script>
@@ -26,25 +97,21 @@
   <link rel="stylesheet" href="styles/tokens.css">
   <link rel="stylesheet" href="styles/albedu-components.css">
 
-  <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
-  <script defer src="src/shared/head/fonts.js"></script>
+  <!-- ═══ F5-01 fix: Strip Supabase platform layer from landing page ═══ -->
+  <!-- Landing page has ZERO Supabase-dependent code. The previous script tags
+       loaded ~140KB of Supabase SDK + resilience + repository + sanitize + boot
+       for no reason. Only icons.js remains (icons are used by the landing). -->
   <script defer src="src/shared/icons/icons.js"></script>
-  <script defer src="src/platform/supabase-client.js"></script>
-    <script defer src="src/shared/resilience.js"></script>
-  <script defer src="src/platform/repository.js"></script>
-  <script defer src="src/security/sanitize.js"></script>
-  <script defer src="src/shared/boot.js"></script>
 
-    <!-- ═══ Page CSS ═══ -->
+  <!-- ═══ Page CSS ═══ -->
   <link rel="stylesheet" href="styles/landing.css">
 
 </head>
 
 <body>
-  <!-- Skip to main content -->
+  <!-- Skip to main content (F4-02 fix: target #main exists below) -->
   <a href="#main" class="albedu-skip-link">Langsung ke konten utama</a>
 
-  <!-- Language switcher (SVG icons — no font flash) -->
   <!-- ═══ Navbar ═══ -->
   <header class="navbar" role="banner">
     <div class="navbar-inner">
@@ -67,29 +134,31 @@
 
   <main id="main" role="main">
 
-    <!-- ═══ Hero Section ═══ -->
+    <!-- ═══ Hero Section (F1-01 fix: honest copy, no AI slop) ═══ -->
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-bg" aria-hidden="true"></div>
       <div class="hero-grid" aria-hidden="true"></div>
       <div class="hero-content">
         <div class="hero-badge reveal">
           <span data-albedu-icon="science" class="albedu-icon--20" aria-hidden="true"></span>
-          <span>Akses Awal — Sudah Tersedia</span>
+          <span>Akses Awal — Gratis Dipakai</span>
         </div>
         <h1 id="hero-title" class="hero-title reveal reveal-delay-1">
-          <span>Kelola Asesmen Online,</span><br><span class="text-primary">Tanpa Ribet</span>
+          <span>Platform Asesmen Online</span><br><span class="text-primary">untuk Guru Indonesia</span>
         </h1>
         <p class="hero-subtitle reveal reveal-delay-2">
-          Buat asesmen dalam hitungan menit, koreksi otomatis, dan pantau hasil peserta secara real-time. Semua dari satu platform — untuk sekolah, kampus, dan kebutuhan personal.
+          AlbEdu adalah platform gratis untuk membuat dan mengelola ujian online. Guru membuat soal pilihan ganda atau esai, siswa mengerjakan dengan kode 6-angka tanpa registrasi, dan hasil koreksi muncul otomatis di dashboard guru.
         </p>
         <div class="hero-ctas reveal reveal-delay-3">
-          <a href="pages/login.html" class="albedu-btn albedu-btn-primary albedu-btn-lg hero-cta-primary">
+          <a href="pages/register-admin.html" class="albedu-btn albedu-btn-primary albedu-btn-lg hero-cta-primary">
             <span data-albedu-icon="rocketLaunch" class="albedu-icon--20" aria-hidden="true"></span>
-            <span>Mulai Sekarang</span>
+            <span>Daftar sebagai Admin</span>
           </a>
+          <!-- F1-01 fix: "Lihat Demo" previously linked to #how (text section) — dark pattern.
+               Now links to the "Cara Kerja" section with relabel to "Lihat Cara Kerja" (honest). -->
           <a href="#how" class="albedu-btn albedu-btn-secondary albedu-btn-lg hero-cta-secondary">
             <span data-albedu-icon="play-circle" class="albedu-icon--20" aria-hidden="true"></span>
-            <span>Lihat Demo</span>
+            <span>Lihat Cara Kerja</span>
           </a>
         </div>
       </div>
@@ -101,7 +170,7 @@
         <div class="section-header reveal">
           <span class="section-label">Masalah</span>
           <h2 id="problem-title" class="section-title">Kendala yang Dihadapi Guru</h2>
-          <p class="section-desc">Proses asesmen konvensional penuh hambatan yang membuang waktu dan energi.</p>
+          <p class="section-desc">Proses asesmen konvensional memakan waktu yang bisa dipakai untuk mengajar.</p>
         </div>
         <div class="problem-grid">
           <article class="problem-card reveal reveal-delay-1">
@@ -109,14 +178,14 @@
               <span data-albedu-icon="design-services" class="albedu-icon--24"></span>
             </div>
             <h3>Pengerjaan Manual</h3>
-            <p>Menyusun soal satu per satu, mencetak kertas, dan membagikan ke peserta memakan waktu berjam-jam yang bisa dipakai untuk mengajar.</p>
+            <p>Menyusun soal, mencetak kertas, dan membagikan ke peserta butuh waktu berjam-jam yang bisa dipakai untuk mengajar.</p>
           </article>
           <article class="problem-card reveal reveal-delay-2">
             <div class="problem-icon" aria-hidden="true">
               <span data-albedu-icon="history" class="albedu-icon--24"></span>
             </div>
             <h3>Pengoreksian Lama</h3>
-            <p>Mengoreksi ratusan lembar jawaban manual berisiko kesalahan dan membutuhkan waktu berminggu-minggu sebelum hasil bisa diumumkan.</p>
+            <p>Mengoreksi ratusan lembar jawaban manual berisiko kesalahan dan butuh waktu berhari-hari sebelum hasil bisa diumumkan.</p>
           </article>
           <article class="problem-card reveal reveal-delay-3">
             <div class="problem-icon" aria-hidden="true">
@@ -134,30 +203,30 @@
       <div class="container">
         <div class="section-header reveal">
           <span class="section-label">Solusi</span>
-          <h2 id="solution-title" class="section-title">AlbEdu Solusinya</h2>
-          <p class="section-desc">Satu platform yang menyelesaikan semua kebutuhan asesmen Anda, dari pembuatan hingga analisis.</p>
+          <h2 id="solution-title" class="section-title">Apa Itu AlbEdu</h2>
+          <p class="section-desc">AlbEdu menggabungkan pembuatan soal, distribusi kode, koreksi otomatis, dan analisis hasil dalam satu platform web.</p>
         </div>
         <div class="solution-grid">
           <article class="solution-card reveal reveal-delay-1">
             <div class="solution-icon" aria-hidden="true">
               <span data-albedu-icon="bolt" class="albedu-icon--24"></span>
             </div>
-            <h3>Buat Asesmen dalam Hitungan Menit</h3>
-            <p>Wizard pembuatan asesmen yang intuitif — tinggal pilih jenis soal, atur waktu, dan asesmen siap dibagikan. Tidak perlu keahlian teknis.</p>
+            <h3>Buat Asesmen dengan Wizard</h3>
+            <p>Pilih jenis soal (pilihan ganda atau esai), atur durasi, dan bagikan. Tidak perlu keahlian teknis — wizard memandu langkah demi langkah.</p>
           </article>
           <article class="solution-card reveal reveal-delay-2">
             <div class="solution-icon" aria-hidden="true">
               <span data-albedu-icon="smart-toy" class="albedu-icon--24"></span>
             </div>
             <h3>Koreksi Otomatis</h3>
-            <p>Sistem mengoreksi jawaban pilihan ganda dan isian secara otomatis saat peserta selesai mengerjakan. Tanpa mengoreksi manual, tanpa delay.</p>
+            <p>Pilihan ganda dan isian dikoreksi otomatis saat siswa submit. Esai dinilai manual oleh guru dari dashboard.</p>
           </article>
           <article class="solution-card reveal reveal-delay-3">
             <div class="solution-icon" aria-hidden="true">
               <span data-albedu-icon="monitoring" class="albedu-icon--24"></span>
             </div>
-            <h3>Data Hasil Real-Time</h3>
-            <p>Pantau hasil asesmen secara langsung — lihat skor, distribusi jawaban, dan analisis per soal segera setelah peserta submit.</p>
+            <h3>Hasil Real-Time</h3>
+            <p>Pantau skor, distribusi jawaban, dan analisis per soal segera setelah siswa submit. Tidak perlu menunggu.</p>
           </article>
         </div>
       </div>
@@ -168,59 +237,72 @@
       <div class="container">
         <div class="section-header reveal">
           <span class="section-label">Cara Kerja</span>
-          <h2 id="how-title" class="section-title">Tiga Langkah Simpel</h2>
-          <p class="section-desc">Dari nol hingga hasil, hanya butuh 3 langkah.</p>
+          <h2 id="how-title" class="section-title">Tiga Langkah Memakai AlbEdu</h2>
+          <p class="section-desc">Dari membuat soal hingga melihat hasil, hanya butuh 3 langkah.</p>
         </div>
         <div class="steps-container">
           <article class="step-card reveal reveal-delay-1">
             <div class="step-number" aria-hidden="true">1</div>
             <div class="step-body">
               <h3>Buat Asesmen</h3>
-              <p>Gunakan wizard untuk menyusun soal, atur durasi dan opsi pengerjaan. Selesai dalam beberapa menit.</p>
+              <p>Login sebagai admin, gunakan wizard untuk menyusun soal, atur durasi dan opsi pengerjaan (acak soal, anti-cheat). Selesai dalam beberapa menit.</p>
             </div>
           </article>
           <article class="step-card reveal reveal-delay-2">
             <div class="step-number" aria-hidden="true">2</div>
             <div class="step-body">
-              <h3>Bagikan Token</h3>
-              <p>Dapatkan token unik yang bisa dibagikan ke peserta. Mereka langsung mengerjakan tanpa perlu registrasi.</p>
+              <h3>Bagikan Kode 6-Angka</h3>
+              <p>Setelah publish, AlbEdu memberi kode 6-angka. Bagikan ke siswa via WhatsApp atau tulis di papan. Siswa masuk ke albedu.id/ujian dan input kode — tidak perlu registrasi.</p>
             </div>
           </article>
           <article class="step-card reveal reveal-delay-3">
             <div class="step-number" aria-hidden="true">3</div>
             <div class="step-body">
               <h3>Lihat Hasil</h3>
-              <p>Hasil muncul secara real-time di dashboard. Analisis skor, waktu pengerjaan, dan distribusi jawaban.</p>
+              <p>Hasil muncul di dashboard admin secara real-time. Lihat skor per siswa, distribusi jawaban per soal, dan ekspor ke Excel jika perlu.</p>
             </div>
           </article>
         </div>
       </div>
     </section>
 
-    <!-- ═══ Early Access ═══ -->
-    <section class="section proof-section" aria-labelledby="proof-title">
+    <!-- ═══ FAQ Section (F1-21 + F10-09 fix: replaces fake stats grid) ═══ -->
+    <section class="section faq-section" aria-labelledby="faq-title">
       <div class="container">
         <div class="section-header reveal">
-          <span class="section-label">Akses Awal</span>
-          <h2 id="proof-title" class="section-title">AlbEdu Akses Awal Sudah Ada</h2>
-          <p class="section-desc">Kami sedang membangun platform asesmen yang lebih baik. Jadilah bagian dari awal — masuk sekarang dan bentuk AlbEdu bersama kami.</p>
+          <span class="section-label">FAQ</span>
+          <h2 id="faq-title" class="section-title">Pertanyaan yang Sering Ditanyakan</h2>
+          <p class="section-desc">Hal-hal yang mungkin ingin Anda ketahui sebelum mulai.</p>
         </div>
-        <div class="stats-grid reveal">
-          <div class="stat-item">
-            <div class="stat-icon" aria-hidden="true"><span data-albedu-icon="rocketLaunch" class="albedu-icon--24"></span></div>
-            <div class="stat-number">Akses Awal</div>
-            <div class="stat-label">Tersedia Sekarang</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-icon" aria-hidden="true"><span data-albedu-icon="chat-bubble" class="albedu-icon--24"></span></div>
-            <div class="stat-number">Masukanmu</div>
-            <div class="stat-label">Bentuk Masa Depan AlbEdu</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-icon" aria-hidden="true"><span data-albedu-icon="bolt" class="albedu-icon--24"></span></div>
-            <div class="stat-number">Gratis</div>
-            <div class="stat-label">Selama Masa Akses Awal</div>
-          </div>
+        <div class="faq-list reveal">
+          <details class="faq-item">
+            <summary>Apakah AlbEdu gratis?</summary>
+            <p>Ya, AlbEdu gratis dipakai selama masa Akses Awal. Tidak ada biaya langganan, tidak ada batasan jumlah asesmen. Kami membangun ini untuk membantu guru Indonesia.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Apakah siswa perlu registrasi?</summary>
+            <p>Tidak. Siswa hanya perlu kode 6-angka dari guru dan login dengan Google (untuk verifikasi identitas). Tidak ada form registrasi, tidak perlu email password.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Jenis soal apa yang didukung?</summary>
+            <p>Saat ini AlbEdu mendukung pilihan ganda (PG) dan esai. PG dikoreksi otomatis; esai dinilai manual oleh guru dari dashboard. Dukungan untuk soal isian singkat dan menjodohkan sedang dalam pengembangan.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Bagaimana cara mencegah kecurangan?</summary>
+            <p>AlbEdu punya anti-cheat bawaan: deteksi tab-switch (siswa pindah tab), deteksi DevTools, dan deteksi keyboard shortcut mencurigakan. Pelanggaran tercatat di dashboard admin. Admin bisa memblokir siswa secara real-time.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Berapa jumlah siswa maksimal per asesmen?</summary>
+            <p>Tidak ada batas keras, tetapi untuk stabilitas optimal kami merekomendasikan maksimal 500 siswa concurrent (mengerjakan bersamaan). Untuk ujian sekolah besar, bagi menjadi beberapa sesi.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Apakah AlbEdu bisa diakses dari HP?</summary>
+            <p>Ya, AlbEdu adalah web app yang responsive. Siswa bisa mengerjakan dari HP, tablet, atau laptop. Untuk pengalaman terbaik, gunakan Chrome atau Safari versi terbaru.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Apakah data siswa aman?</summary>
+            <p>Data disimpan di Supabase (Postgres) dengan Row Level Security. Setiap guru hanya bisa melihat data organisasinya sendiri. Siswa hanya bisa melihat asesmen yang sedang mereka kerjakan. Data tidak dibagikan ke pihak ketiga.</p>
+          </details>
         </div>
       </div>
     </section>
@@ -230,11 +312,11 @@
       <div class="container">
         <div class="cta-card reveal">
           <div class="cta-content">
-            <h2 id="cta-title" class="cta-title">Siap Mengelola Asesmen?</h2>
-            <p class="cta-desc">Akses awal AlbEdu sudah tersedia. Daftar sebagai admin untuk membuat dan mengelola asesmen. Peserta tidak perlu mendaftar — masuk langsung dengan Google.</p>
+            <h2 id="cta-title" class="cta-title">Coba AlbEdu Sekarang</h2>
+            <p class="cta-desc">Daftar sebagai admin untuk membuat asesmen pertama Anda. Siswa tidak perlu mendaftar — mereka masuk langsung dengan Google dan kode 6-angka dari Anda.</p>
             <a href="pages/register-admin.html" class="albedu-btn albedu-btn-primary albedu-btn-lg cta-btn">
               <span data-albedu-icon="person-add" class="albedu-icon--20" aria-hidden="true"></span>
-              <span>Daftar Admin</span>
+              <span>Daftar Admin Gratis</span>
             </a>
           </div>
         </div>
@@ -255,6 +337,8 @@
           <ul class="footer-links">
             <li><a href="pages/login.html">Login</a></li>
             <li><a href="pages/register-admin.html">Daftar Admin</a></li>
+            <!-- F10-10 fix: link to privacy policy from landing -->
+            <li><a href="pages/privacy-policy.html">Kebijakan Privasi</a></li>
             <li><a href="mailto:support@albedu.id">Bantuan</a></li>
           </ul>
         </nav>

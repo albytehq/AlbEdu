@@ -660,7 +660,8 @@
 }
 
 .menu-toggle {
-    width: 36px; height: 36px;
+    /* F7-02 fix: 44x44px minimum touch target (WCAG 2.5.8 AA). Was 36px. */
+    width: 44px; height: 44px;
     border-radius: var(--radius-md, 8px);
     border: 1px solid var(--color-border);
     background: transparent;

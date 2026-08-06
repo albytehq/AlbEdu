@@ -92,17 +92,23 @@
     --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: 300ms cubic-bezier(0.22, 1, 0.36, 1);
     
-    /* Z-index layers */
-    --z-dropdown: 1000;
-    --z-sticky: 1020;
-    --z-fixed: 1030;
-    --z-modal-backdrop: 1040;
-    --z-modal: 1050;
-    --z-popover: 1060;
-    --z-tooltip: 1070;
-    --z-profile-button: 10000;
-    --z-profile-overlay: 20000;
-    --z-logout-modal: 30000;
+    /* Z-index layers — F2-06 fix: all capped at 100 */
+    --z-dropdown: 60;
+    --z-sticky: 70;
+    /* F2-06 fix: cap all z-index at 100. Previously these were 1030-30000,
+       conflicting with the --z-max: 100 cap used in tokens.css. The
+       --z-logout-modal: 30000 rendered above the global loading overlay,
+       trapping users. Now all profile-related z-index values fit in the
+       0-100 scale: profile button (top of normal flow), overlay (above
+       button), logout modal (above overlay). */
+    --z-fixed: 50;
+    --z-modal-backdrop: 80;
+    --z-modal: 85;
+    --z-popover: 88;
+    --z-tooltip: 90;
+    --z-profile-button: 70;
+    --z-profile-overlay: 80;
+    --z-logout-modal: 90;
 }
 
 /* ==================== ANIMASI & TRANSISI ==================== */
