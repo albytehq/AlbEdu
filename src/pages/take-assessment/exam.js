@@ -181,7 +181,18 @@
         <div class="ex-question__points">Esai — dinilai manual oleh guru</div>
       `;
     } else {
-      const pilihan = Array.isArray(q.pilihan) ? q.pilihan : [];
+      // C1 FIX: Accept BOTH pilihan shapes:
+      //   Array:  ['a', 'b', 'c', 'd']
+      //   Object: { A:'a', B:'b', C:'c', D:'d' } (production admin UI format)
+      let pilihan;
+      if (Array.isArray(q.pilihan)) {
+        pilihan = q.pilihan;
+      } else if (q.pilihan && typeof q.pilihan === 'object') {
+        const objKeys = ['A', 'B', 'C', 'D', 'E'];
+        pilihan = objKeys.map(k => q.pilihan[k]).filter(v => v != null && v !== '');
+      } else {
+        pilihan = [];
+      }
       const keys = ['A', 'B', 'C', 'D', 'E'];
       bodyHTML = `
         <div class="ex-options" role="radiogroup" aria-label="Pilihan jawaban soal ${displayIdx + 1}">
