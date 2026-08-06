@@ -30,6 +30,7 @@
       this._btnPrev = document.getElementById('btn-prev');
       this._btnNext = document.getElementById('btn-next');
       this._btnPublishFinal = document.getElementById('btn-publish-final');
+      this._btnPreview = document.getElementById('btn-preview-peserta');
       this._stepContents = [
         document.getElementById('step-1'),
         document.getElementById('step-2'),
@@ -50,6 +51,7 @@
       this._btnPrev?.addEventListener('click', () => this._prevStep());
       this._btnNext?.addEventListener('click', () => this._nextStep());
       this._btnPublishFinal?.addEventListener('click', () => window.PublishCard?._publish());
+      this._btnPreview?.addEventListener('click', () => window.PesertaPreview?.open());
 
       // Step indicator clicks — only allow jumping back to completed steps.
       this._stepIndicators.forEach((el) => {

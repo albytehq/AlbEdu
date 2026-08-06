@@ -46,7 +46,8 @@
     <link rel="stylesheet" href="../../styles/albedu-v1.css">
     <link rel="stylesheet" href="../../styles/albedu-components.css">
     <link rel="stylesheet" href="../../styles/identity-form.css">
-    <link rel="stylesheet" href="../../styles/pages/create-assessment.css"><!-- Fonts --><!-- Supabase SDK --><!-- Auth baseline -->
+    <link rel="stylesheet" href="../../styles/pages/create-assessment.css">
+    <link rel="stylesheet" href="../../styles/pages/take-assessment.css"><!-- Preview Peserta -->
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
     <script src="../../src/auth/errors.js" defer></script>
@@ -479,6 +480,10 @@
                             <span>Batal</span>
                         </button>
                         <div class="albedu-wizard-footer-right">
+                            <button class="albedu-btn albedu-btn-ghost" id="btn-preview-peserta" type="button" title="Lihat tampilan dari sisi peserta">
+                                <span data-albedu-icon="visibility"></span>
+                                <span>Preview Peserta</span>
+                            </button>
                             <button class="albedu-btn albedu-btn-secondary" id="btn-prev" type="button" hidden>
                                 <span data-albedu-icon="arrow_back"><svg class="albedu-icon" aria-hidden="true"><use href="#i-arrow_back"/></svg></span>
                                 <span>Sebelumnya</span>
@@ -931,6 +936,7 @@
     <script src="../../src/pages/buat-ujian/soal-editor-modal.js" defer></script>
     <script src="../../src/pages/buat-ujian/soal-card.js" defer></script>
     <script src="../../src/pages/buat-ujian/publish-card.js" defer></script>
+    <script src="../../src/pages/buat-ujian/peserta-preview.js" defer></script>
     <script src="../../src/pages/buat-ujian/wizard-controller.js" defer></script>
     <script src="../../src/pages/buat-ujian/list-view.js" defer></script>
 
