@@ -82,9 +82,10 @@
 
                     <div class="field field-password">
                         <label for="password">Kata Sandi</label>
-                        <input id="password" name="password" type="password" autocomplete="new-password" minlength="8"
+                        <div class="input-wrap">
+                            <input id="password" name="password" type="password" autocomplete="new-password" minlength="8"
                             class="albedu-input" placeholder="Minimal 8 karakter" required>
-                        <button type="button" class="toggle-visibility" data-target="password"
+                            <button type="button" class="toggle-visibility" data-target="password"
                             aria-label="Tampilkan kata sandi">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 class="icon-eye">
@@ -97,6 +98,7 @@
                                 <line x1="1" y1="1" x2="23" y2="23" />
                             </svg>
                         </button>
+                        </div>
                         <!-- Strength bars — managed by AdminOnboarding.js -->
                         <div class="password-strength" id="passwordStrength" hidden>
                             <div class="strength-bar"></div>
@@ -109,9 +111,10 @@
 
                     <div class="field field-password">
                         <label for="confirmPassword">Konfirmasi Kata Sandi</label>
-                        <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password"
+                        <div class="input-wrap">
+                            <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password"
                             minlength="8" class="albedu-input" placeholder="Ulangi kata sandi" required>
-                        <button type="button" class="toggle-visibility" data-target="confirmPassword"
+                            <button type="button" class="toggle-visibility" data-target="confirmPassword"
                             aria-label="Tampilkan kata sandi">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 class="icon-eye">
@@ -124,6 +127,7 @@
                                 <line x1="1" y1="1" x2="23" y2="23" />
                             </svg>
                         </button>
+                        </div>
                     </div>
 
                     <!-- Turnstile widget -->

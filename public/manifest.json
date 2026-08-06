@@ -3,8 +3,8 @@
   "short_name": "AlbEdu",
   "description": "Platform asesmen online untuk semua kebutuhan evaluasi — SD, SMP, SMA, kuliah, hingga personal use. Buat, kelola, dan pantau asesmen dengan anti-cheat berlapis.",
   "version": "v0.821.0",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#ffffff",
@@ -14,31 +14,31 @@
   "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "/public/images/favicon/favicon-96x96.png",
+      "src": "images/favicon/favicon-96x96.png",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/public/images/favicon/web-app-manifest-192x192.png",
+      "src": "images/favicon/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/public/images/favicon/web-app-manifest-512x512.png",
+      "src": "images/favicon/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/public/images/favicon/web-app-manifest-192x192.png",
+      "src": "images/favicon/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/public/images/favicon/web-app-manifest-512x512.png",
+      "src": "images/favicon/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -49,22 +49,22 @@
       "name": "Buat Asesmen",
       "short_name": "Buat",
       "description": "Buat asesmen baru",
-      "url": "/pages/admin/create-assessment.html",
-      "icons": [{ "src": "/public/images/favicon/favicon-96x96.png", "sizes": "96x96" }]
+      "url": "pages/admin/create-assessment.html",
+      "icons": [{ "src": "images/favicon/favicon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Asesmen Aktif",
       "short_name": "Aktif",
       "description": "Kelola asesmen yang sedang berjalan",
-      "url": "/pages/admin/active-assessments.html",
-      "icons": [{ "src": "/public/images/favicon/favicon-96x96.png", "sizes": "96x96" }]
+      "url": "pages/admin/active-assessments.html",
+      "icons": [{ "src": "images/favicon/favicon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Masuk Asesmen",
       "short_name": "Masuk",
       "description": "Input kode akses untuk mengerjakan asesmen",
-      "url": "/pages/assessment/index.html",
-      "icons": [{ "src": "/public/images/favicon/favicon-96x96.png", "sizes": "96x96" }]
+      "url": "pages/assessment/index.html",
+      "icons": [{ "src": "images/favicon/favicon-96x96.png", "sizes": "96x96" }]
     }
   ]
 }

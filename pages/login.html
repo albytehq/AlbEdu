@@ -113,9 +113,10 @@
                             <label for="password">Kata Sandi</label>
                             <a href="forgot-password.html" id="forgotPasswordLink">Lupa Kata Sandi?</a>
                         </div>
-                        <input id="password" name="password" type="password" autocomplete="current-password"
+                        <div class="input-wrap">
+                            <input id="password" name="password" type="password" autocomplete="current-password"
                             class="albedu-input" placeholder="Masukkan kata sandi" required>
-                        <button type="button" class="toggle-visibility" data-target="password"
+                            <button type="button" class="toggle-visibility" data-target="password"
                             aria-label="Tampilkan kata sandi">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-eye">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -127,6 +128,7 @@
                                 <line x1="1" y1="1" x2="23" y2="23" />
                             </svg>
                         </button>
+                        </div>
                     </div>
 
                     <!-- v0.821.0: Turnstile widget for brute-force protection (SEC-A-C2) -->
