@@ -185,6 +185,45 @@ serve(async (req) => {
         return specificError("db_insert_failed", headers, 500);
       }
     } else if (existingUser.peran !== "peserta") {
+      // FIX: previously returned early WITHOUT updating nama/avatar from
+      // Google metadata. This caused profile.html to show NULL nama and
+      // NULL avatar_url for admins who registered via email then linked
+      // Google. Google metadata (full_name, picture) is available in
+      // user.user_metadata — we should backfill it if the existing user
+      // row is missing it.
+      const googleName = user.user_metadata?.full_name || user.user_metadata?.name || "";
+      const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+
+      const needsUpdate =
+        (googleName && !existingUser.nama) ||
+        (googleAvatar && !existingUser.avatar_url);
+
+      if (needsUpdate) {
+        const updatePayload: Record<string, string | null> = {};
+        if (googleName && !existingUser.nama) updatePayload.nama = googleName;
+        if (googleAvatar && !existingUser.avatar_url) updatePayload.avatar_url = googleAvatar;
+
+        console.log("[user-auth-complete] backfilling Google profile data for existing user:", {
+          userId: user.id,
+          hasNama: !!existingUser.nama,
+          hasAvatar: !!existingUser.avatar_url,
+          updating: Object.keys(updatePayload),
+        });
+
+        const { error: updateErr } = await supabase
+          .from("users")
+          .update(updatePayload)
+          .eq("id", user.id);
+
+        if (updateErr) {
+          console.error("[user-auth-complete] backfill update failed:", updateErr.message);
+          // Non-fatal — return existing user data
+        } else {
+          // Merge updated fields into existingUser for the response
+          Object.assign(existingUser, updatePayload);
+        }
+      }
+
       return json({ success: true, user: existingUser }, 200, headers);
     }
 

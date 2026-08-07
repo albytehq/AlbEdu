@@ -197,7 +197,9 @@
         id: u.id,
         email: u.email || '',
         displayName: u.user_metadata?.full_name || u.user_metadata?.name || '',
-        photoURL: u.user_metadata?.avatar_url || null,
+        // FIX: Google returns avatar in either 'avatar_url' or 'picture'
+        // (depends on OAuth flow). Check both so profile avatar shows.
+        photoURL: u.user_metadata?.avatar_url || u.user_metadata?.picture || null,
         emailVerified: u.email_confirmed_at != null,
         // Raw Supabase user object — escape hatch for advanced consumers.
         raw: u,
