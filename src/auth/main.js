@@ -616,32 +616,24 @@ function _syncUserDocument(userId) {
             }
         };
 
-        // Subscribe to FUTURE changes (profile edits, role changes from
-        // another tab, etc.). NOT used for the initial fetch — _initialFetch()
-        // handles that synchronously.
+        // S6-01 fix: DISABLED per-user Realtime channel.
+        //
+        // The auth:user-profile:${userId} Realtime channel was opened for EVERY
+        // logged-in user. At 500 concurrent students, this = 500 WebSocket
+        // connections + 5 admin channels = 505 WS, which is 252% of Supabase
+        // Free plan's 200-connection Realtime limit.
+        //
+        // Profile updates (admin changes role, user edits profile) are RARE —
+        // they're picked up on next page load (full sync via _initialFetch)
+        // or on manual refresh. No need for real-time push.
+        //
+        // If mid-session profile updates become required in the future, use
+        // a 60s HTTP poll (1 req/user/60s = 8.3 req/s at 500 students) instead
+        // of a persistent WebSocket. See audit S6 for details.
         const _attachRealtime = () => {
-            const repo = window.AlbEdu?.repository;
-            if (!repo) return;
-            const channelName = `auth:user-profile:${userId}`;
-            try {
-                const unsub = repo.subscribe(
-                    channelName,
-                    'users',
-                    async () => {
-                        try {
-                            const snap = await repo.getDoc('users', userId);
-                            if (snap?.exists) {
-                                _applyUserSnapshot(snap.data(), userId);
-                            }
-                        } catch (_) { /* non-critical — realtime update */ }
-                    },
-                    `id=eq.${userId}`
-                );
-                _stopProfileListener = unsub;
-            } catch (_) {
-                // Realtime subscription is best-effort — don't fail the whole
-                // sync just because the channel couldn't be established.
-            }
+            // No-op — Realtime disabled to stay within Free plan 200-connection limit.
+            // Profile changes picked up on next page load.
+            console.info('[auth] Realtime profile channel disabled (S6-01 fix — Free plan 200-WS limit)');
         };
 
         _initialFetch();

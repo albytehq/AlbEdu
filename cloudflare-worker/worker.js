@@ -45,7 +45,10 @@
 // CACHING:
 //   • Cloudflare Cache API (caches.default) for /img/{hash} responses
 //   • Cache key: https://cache.local/img/{hash}
-//   • TTL: 24h (Cache-Control: public, max-age=86400)
+//   • TTL: 1 year immutable (Cache-Control: public, max-age=31536000, immutable)
+//     S7-01/C3-01 fix: was 24h, but /img/{hash} is SHA-256 addressed —
+//     content NEVER changes for a given hash. 1-year immutable gives 5x
+//     better cache hit ratio and cuts B2 origin egress 5x.
 //   • ETag: hash (enables 304 Not Modified)
 //
 // BANDWIDTH ALLIANCE:
@@ -55,7 +58,10 @@
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const CACHE_TTL_SECONDS = 86400; // 24 hours
+// S7-01/C3-01 fix: 1 year immutable for SHA-256 addressed assets.
+// Was 86400 (24h) — but /img/{hash} content NEVER changes for a given
+// hash, so 24h TTL caused 5x more origin fetches than necessary.
+const CACHE_TTL_SECONDS = 31536000; // 1 year (immutable — SHA-256 addressed)
 const CONFIG_CACHE_TTL = 3600;   // 1 hour for /api/supabase-config
 
 const ALLOWED_ORIGINS = new Set([
@@ -287,7 +293,7 @@ function handleHealth(env) {
  *
  * Response headers:
  *   Content-Type: image/jpeg (or original)
- *   Cache-Control: public, max-age=86400
+ *   Cache-Control: public, max-age=31536000, immutable
  *   ETag: "{hash}"
  *   X-Cache: HIT | MISS
  *   X-Storage-Backend: b2 | github
@@ -378,7 +384,7 @@ async function handleImg(request, env, ctx) {
     status: 200,
     headers: {
       'Content-Type': contentType,
-      'Cache-Control': `public, max-age=${CACHE_TTL_SECONDS}`,
+      'Cache-Control': `public, max-age=${CACHE_TTL_SECONDS}, immutable`,
       'ETag': `"${hash}"`,
       'X-Cache': 'MISS',
       'X-Storage-Backend': storageBackend,
