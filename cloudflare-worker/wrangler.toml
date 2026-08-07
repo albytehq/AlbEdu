@@ -1,0 +1,16 @@
+name = "edu"
+main = "worker.js"
+compatibility_date = "2024-09-25"
+account_id = "d0a01513e24f58710cbff7dcb7b7d8ac"
+
+# Workers.dev subdomain route (existing deployment)
+workers_dev = true
+
+# Note: Environment variables (SUPABASE_URL, SUPABASE_ANON_KEY, etc.) are
+# managed via Cloudflare Dashboard and are NOT re-deployed here. This deploy
+# only updates the worker.js code (which contains the cache TTL fix).
+# Existing env vars are preserved across deploys.
+
+# No build step needed — worker.js is plain JS (no bundler, no TypeScript)
+[build]
+command = ""
