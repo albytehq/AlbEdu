@@ -300,9 +300,11 @@
             if (nameEl  && user && user.nama)  nameEl.textContent  = user.nama;
             if (emailEl && user && user.email) emailEl.textContent = user.email;
 
-            if (avatarEl && user && user.foto_profil) {
-                // Validate URL scheme — only https: or data:image/ allowed.
-                var fpUrl = user.foto_profil;
+            if (avatarEl && (user.foto_profil || user.avatar_url)) {
+                // FIX: check both foto_profil AND avatar_url (sidebar uses both,
+                // profile was only checking foto_profil). _normalizeUserDoc sets
+                // both to the same value, but be defensive.
+                var fpUrl = user.foto_profil || user.avatar_url;
                 var fpSafe = '';
                 if (/^https:/i.test(fpUrl) || /^data:image\//i.test(fpUrl) || !/^[a-z]+:/i.test(fpUrl)) {
                     fpSafe = fpUrl;
@@ -347,26 +349,65 @@
             _revealLastLogin(loginStr);
         }
 
-        // Listen ke auth-ready event
-        document.addEventListener('auth-ready', function () {
-            console.log('[Profile] auth-ready event fired');
+        // FIX: Use 3-tier fallback like navigasi.js to avoid race condition
+        // where auth-ready fires BEFORE this listener attaches.
+        //
+        // Tier 1: Fast path — auth already ready + userData populated
+        // Tier 2: Event listener for auth-ready
+        // Tier 3: Polling fallback (every 300ms × 20 attempts = 6s)
+        //
+        // The previous code only had Tier 1 + Tier 2 with { once: true }.
+        // If auth-ready fired during page load (before this script ran),
+        // the { once: true } listener never caught it, and the 3s timeout
+        // ran with null userData → profile showed HTML defaults.
+        var _profileRendered = false;
+        function _tryRenderProfile() {
+            if (_profileRendered) return;
             var userData = window.Auth?.userData;
-            _renderProfile(userData, false);
-        }, { once: true });
-
-        if (window.Auth?.authReady && window.Auth?.userData) {
-            console.log('[Profile] Fast path: auth already ready');
-            _renderProfile(window.Auth.userData, false);
+            if (userData && (userData.nama || userData.email || userData.avatar_url)) {
+                _profileRendered = true;
+                console.log('[Profile] Rendering profile with real user data:', {
+                    nama: userData.nama,
+                    email: userData.email,
+                    hasAvatar: !!userData.avatar_url
+                });
+                _renderProfile(userData, false);
+                return true;
+            }
+            return false;
         }
 
+        // Tier 1: Fast path
+        if (_tryRenderProfile()) {
+            console.log('[Profile] Fast path: auth already ready with data');
+        } else {
+            // Tier 2: Event listener (no { once: true } — we guard with _profileRendered)
+            document.addEventListener('auth-ready', function () {
+                console.log('[Profile] auth-ready event fired');
+                // Small delay — userData might be set slightly after event
+                setTimeout(_tryRenderProfile, 50);
+            });
+
+            // Tier 3: Polling fallback (catches race where event already fired)
+            var _polls = 0;
+            var _pollAuth = setInterval(function () {
+                if (_tryRenderProfile() || ++_polls > 20) {
+                    clearInterval(_pollAuth);
+                    if (_polls > 20 && !_profileRendered) {
+                        console.warn('[Profile] Polling timeout — forcing render with whatever we have');
+                        _renderProfile(window.Auth?.userData, true);
+                    }
+                }
+            }, 300);
+        }
+
+        // Safety net: if still not rendered after 5s, force render
         setTimeout(function () {
-            // If skeleton still visible after 3s, force render with whatever we have
-            var skeletonStillVisible = !document.getElementById('profile-real')?.classList.contains('skeleton-hidden');
-            if (skeletonStillVisible && !document.getElementById('profile-skeleton')?.classList.contains('skeleton-hidden')) {
-                console.log('[Profile] Timeout waiting for auth-ready — fetching UUID dari Supabase');
+            if (!_profileRendered) {
+                console.log('[Profile] 5s timeout — forcing render');
                 _renderProfile(window.Auth?.userData, true);
             }
-        }, 3000);
+        }, 5000);
 
         // Update tampilan setelah user simpan profil
         window.addEventListener('pep-saved', function (e) {
