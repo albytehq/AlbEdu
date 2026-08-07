@@ -29,10 +29,23 @@
 
    :root {
      /* ── Color: Blue Trust Enterprise palette ── */
-     --take-primary:         #1E40AF;
-     --take-primary-hover:   #1E3A8A;
-     --take-primary-light:   #EFF6FF;
-     --take-primary-600:    #2563EB;          /* gradient stop */
+     /* FIX: --take-* variables are now ALIASES of --color-* (set by
+        ThemeSystem.apply). Previously they were hardcoded (#1E40AF)
+        which meant custom themes from the theme editor NEVER applied
+        to the exam page or preview — both showed hardcoded blue
+        regardless of what primary color the admin selected.
+
+        The aliasing works because ThemeSystem.apply() sets --color-*
+        on :root via inline styles. Since --take-* references --color-*,
+        they automatically pick up the themed values.
+
+        For non-themeable tokens (accent, success, warning, danger,
+        shadows, layout dims), we keep hardcoded values — those don't
+        change per-assessment. */
+     --take-primary:         var(--color-primary, #1E40AF);
+     --take-primary-hover:   var(--color-primary-hover, #1E3A8A);
+     --take-primary-light:   var(--color-primary-light, #EFF6FF);
+     --take-primary-600:    var(--color-primary, #2563EB);          /* gradient stop */
 
      --take-accent:          #FBBF24;
      --take-success:         #10B981;
@@ -42,17 +55,17 @@
      --take-danger:          #EF4444;
      --take-danger-bg:       #FEF2F2;
 
-     --take-bg:              #F8FAFC;
-     --take-surface:         #FFFFFF;
-     --take-surface-2:      #F8FAFC;          /* subtle card-fill / stat bg */
+     --take-bg:              var(--color-bg, #F8FAFC);
+     --take-surface:         var(--color-surface, #FFFFFF);
+     --take-surface-2:      var(--color-surface-2, #F8FAFC);          /* subtle card-fill / stat bg */
 
-     --take-text:            #0F172A;
-     --take-text-muted:      #64748B;
+     --take-text:            var(--color-text, #0F172A);
+     --take-text-muted:      var(--color-text-muted, #64748B);
 
-     --take-border:          #E2E8F0;
+     --take-border:          var(--color-border, #E2E8F0);
      --take-border-dark:     #CBD5E1;
 
-     --take-ring:            rgba(30, 64, 175, 0.10);
+     --take-ring:            var(--color-primary-ring, rgba(30, 64, 175, 0.10));
      --take-shadow-card:     0 4px 24px rgba(15, 23, 42, 0.06);
      --take-shadow-hover:    0 2px 12px rgba(15, 23, 42, 0.04);
      --take-shadow-pause:    0 4px 16px rgba(245, 158, 11, 0.30);
@@ -70,18 +83,21 @@
    }
 
    /* Dark mode — gated by [data-theme="dark"] */
+   /* FIX: alias --take-* to --color-* dark values (set by ThemeSystem
+      in dark mode). Previously hardcoded dark colors that didn't match
+      the admin's custom theme. */
    [data-theme="dark"] {
-     --take-bg:              #0F172A;
-     --take-surface:         #1E293B;
-     --take-surface-2:       #18233A;
+     --take-bg:              var(--color-bg, #0F172A);
+     --take-surface:         var(--color-surface, #1E293B);
+     --take-surface-2:       var(--color-surface-2, #18233A);
 
-     --take-text:            #F1F5F9;
-     --take-text-muted:      #94A3B8;
+     --take-text:            var(--color-text, #F1F5F9);
+     --take-text-muted:      var(--color-text-muted, #94A3B8);
 
-     --take-border:          #334155;
+     --take-border:          var(--color-border, #334155);
      --take-border-dark:     #475569;
 
-     --take-primary-light:   rgba(30, 64, 175, 0.18);
+     --take-primary-light:   var(--color-primary-light, rgba(30, 64, 175, 0.18));
      --take-success-bg:      rgba(16, 185, 129, 0.16);
      --take-danger-bg:       rgba(239, 68, 68, 0.16);
      --take-warning-bg:      rgba(245, 158, 11, 0.14);
