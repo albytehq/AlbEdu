@@ -803,7 +803,11 @@
 }
 .albedu-btn-primary:hover:not(:disabled) {
   background: var(--albedu-primary-hover);
-  transform: translateY(-1px);
+  /* Fix: removed transform: translateY(-1px) — was causing overlap with
+     neighboring buttons. Also had higher specificity (0,3,0) than
+     page-specific overrides (0,2,0), making them impossible. */
+  position: relative;
+  z-index: 1;
 }
 .albedu-btn-secondary {
   background: var(--albedu-surface);
@@ -813,7 +817,9 @@
 .albedu-btn-secondary:hover:not(:disabled) {
   border-color: var(--albedu-primary);
   color: var(--albedu-primary);
-  transform: translateY(-1px);
+  /* Fix: removed transform: translateY(-1px) */
+  position: relative;
+  z-index: 1;
 }
 .albedu-btn-ghost {
   background: transparent;
@@ -829,7 +835,9 @@
 }
 .albedu-btn-danger:hover:not(:disabled) {
   opacity: 0.9;
-  transform: translateY(-1px);
+  /* Fix: removed transform: translateY(-1px) */
+  position: relative;
+  z-index: 1;
 }
 .albedu-btn-sm { padding: 6px 12px; font-size: 13px; min-height: 32px; }
 .albedu-btn-lg { padding: 14px 24px; font-size: 16px; min-height: 48px; }

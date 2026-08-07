@@ -139,7 +139,12 @@ body {
 .albedu-btn-primary:hover:not(:disabled) {
   background: var(--albedu-primary-hover);
   border-color: var(--albedu-primary-hover);
-  transform: translateY(-1px);
+  /* Fix: removed transform: translateY(-1px) — was causing buttons to shift
+     up on hover and visually overlap neighboring buttons. The transform
+     also won over .hero-cta-primary:hover due to higher specificity
+     (0,3,0 vs 0,2,0), making per-page overrides impossible. */
+  position: relative;
+  z-index: 1;
 }
 .albedu-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
 
@@ -151,7 +156,9 @@ body {
 .albedu-btn-secondary:hover:not(:disabled) {
   border-color: var(--albedu-primary);
   color: var(--albedu-primary);
-  transform: translateY(-1px);
+  /* Fix: removed transform: translateY(-1px) — same overlap issue as primary */
+  position: relative;
+  z-index: 1;
 }
 
 .albedu-btn-ghost {
@@ -163,7 +170,7 @@ body {
 .albedu-btn-ghost:disabled { opacity: .4; cursor: not-allowed; }
 
 .albedu-btn-danger { background: var(--albedu-danger); color: #fff; border-color: var(--albedu-danger); }
-.albedu-btn-danger:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+.albedu-btn-danger:hover:not(:disabled) { opacity: 0.9; /* Fix: removed transform: translateY(-1px) */ position: relative; z-index: 1; }
 
 .albedu-btn-sm { padding: 6px 12px; font-size: 13px; min-height: 32px; }
 .albedu-btn-sm .material-symbols-outlined { font-size: 16px; }
@@ -627,7 +634,9 @@ body {
    Buttons lift slightly on hover and press back down on active — a tactile
    cue borrowed from native mobile UIs. Card-hover lifts cards in lists. */
 .albedu-btn { transition: all var(--albedu-transition), transform var(--albedu-transition); }
-.albedu-btn:hover:not(:disabled) { transform: translateY(-1px); }
+/* Fix: removed transform: translateY(-1px) from generic .albedu-btn:hover —
+   was causing ALL buttons to shift up on hover, overlapping neighbors. */
+.albedu-btn:hover:not(:disabled) { position: relative; z-index: 1; }
 .albedu-btn:active:not(:disabled) { transform: translateY(0); }
 
 .albedu-card-hover {
