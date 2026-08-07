@@ -40,19 +40,17 @@ jobs:
           PROJECT="$SUPABASE_PROJECT_REF"
           SPECIFIC_EF="${{ github.event.inputs.ef-name }}"
 
-          # All EFs in the project
+          # All EFs in the project (R3 fix: removed 4 dead EFs — heartbeat,
+          # cleanup-assessment, data-export, dsr-handler — deleted from source
+          # and production. Do NOT re-add them.)
           ALL_EFS=(
             register-admin
             user-auth-preflight
             user-auth-complete
             access-code-attempt
             submit-assessment
-            heartbeat
             block-participant
             assessment-lifecycle
-            cleanup-assessment
-            data-export
-            dsr-handler
             health-check
             asset-upload
             asset-release
@@ -106,12 +104,8 @@ jobs:
             user-auth-complete
             access-code-attempt
             submit-assessment
-            heartbeat
             block-participant
             assessment-lifecycle
-            cleanup-assessment
-            data-export
-            dsr-handler
             health-check
             asset-upload
             asset-release
