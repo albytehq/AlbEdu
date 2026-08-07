@@ -706,22 +706,34 @@ body::before {
             position: relative;
         }
 
+        /* Wrapper for input + toggle so toggle centers vertically against
+           the input (not the whole .field-password which includes label). */
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
         .toggle-visibility {
             position: absolute;
-            right: var(--sp-3);
+            right: var(--sp-2);
             top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
             cursor: pointer;
             color: var(--color-text-faint);
-            padding: var(--sp-1);
+            /* Padding gives touch target size (8px = ~44px with 18px svg).
+               Removed min-height/min-width: 44px because the input itself is
+               only ~38px tall, and a 44px toggle centered on a 38px input
+               extends 3px above and below the input — making it look
+               misaligned. With padding-based sizing, the toggle is 34px
+               (18px svg + 8px*2 padding) which fits inside the input. */
+            padding: 8px;
             display: flex;
             align-items: center;
-            transition: color var(--transition-fast);
-            min-width: 44px;
-            min-height: 44px;
             justify-content: center;
+            transition: color var(--transition-fast);
         }
 
         .toggle-visibility:hover {
