@@ -59,13 +59,83 @@
 
       this._activeSection = 0;
       this._render(state.examData);
+
+      // FIX: Apply custom theme to preview overlay so it matches what
+      // peserta will actually see. Previously preview showed admin theme
+      // (default blue) instead of the assessment's custom theme.
+      this._applyTheme(state.examData.theme_config);
+
       this._overlay.hidden = false;
       document.body.style.overflow = 'hidden';
+    },
+
+    /**
+     * Apply assessment's custom theme to the preview overlay.
+     * Scopes theme to .pp-modal so it doesn't affect the admin dashboard
+     * behind the overlay. Mirrors take-assessment/fetch.js _applyTheme but
+     * with scope parameter.
+     */
+    _applyTheme(themeConfig) {
+      if (!themeConfig || typeof themeConfig !== 'object') {
+        console.log('[Preview] No theme_config — using default admin theme');
+        return;
+      }
+
+      // Wait for ThemeSystem to be ready, then apply
+      const tryApply = (attempts = 0) => {
+        if (!window.ThemeSystem?.apply) {
+          if (attempts < 20) {
+            setTimeout(() => tryApply(attempts + 1), 100);
+          } else {
+            console.warn('[Preview] ThemeSystem not loaded after 2s — preview uses default theme');
+          }
+          return;
+        }
+
+        try {
+          const cfg = {
+            primary: themeConfig.primary || (themeConfig.TW && themeConfig.TW !== 'default' ? themeConfig.TW : undefined),
+            text_accent: themeConfig.text_accent || null,
+            font: themeConfig.font || 'Plus Jakarta Sans',
+            mode: themeConfig.mode || 'auto',
+            preset: themeConfig.preset || 'default',
+          };
+          console.log('[Preview] Applying custom theme:', cfg);
+          window.ThemeSystem.apply(cfg);
+        } catch (err) {
+          console.warn('[Preview] Theme apply failed:', err);
+        }
+      };
+      tryApply();
     },
 
     close() {
       this._overlay.hidden = true;
       document.body.style.overflow = '';
+      // FIX: Restore admin theme when preview closes.
+      // Re-apply the admin's saved theme from localStorage.
+      this._restoreAdminTheme();
+    },
+
+    /**
+     * Restore admin dashboard theme after preview closes.
+     * Reads saved theme from localStorage (set by theme-system).
+     */
+    _restoreAdminTheme() {
+      try {
+        const saved = localStorage.getItem('albedu-theme') || 'default';
+        if (window.ThemeSystem?.apply) {
+          // Apply default/preset theme — admin dashboard doesn't use custom
+          // primary colors per-assessment, it uses the global default.
+          window.ThemeSystem.apply({
+            primary: undefined,  // let deriveColors use default
+            preset: saved,
+            mode: 'auto',
+          });
+        }
+      } catch (err) {
+        console.warn('[Preview] Restore admin theme failed:', err);
+      }
     },
 
     _render(examData) {
