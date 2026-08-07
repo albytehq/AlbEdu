@@ -139,10 +139,9 @@ body {
 .albedu-btn-primary:hover:not(:disabled) {
   background: var(--albedu-primary-hover);
   border-color: var(--albedu-primary-hover);
-  /* Fix: removed transform: translateY(-1px) — was causing buttons to shift
-     up on hover and visually overlap neighboring buttons. The transform
-     also won over .hero-cta-primary:hover due to higher specificity
-     (0,3,0 vs 0,2,0), making per-page overrides impossible. */
+  color: #fff;  /* CRITICAL: must set color explicitly — a:hover in tokens.css
+     has specificity (0,1,1) and would otherwise override .albedu-btn-primary
+     (0,1,0) making text blue-on-blue = invisible on hover */
   position: relative;
   z-index: 1;
 }
@@ -156,7 +155,6 @@ body {
 .albedu-btn-secondary:hover:not(:disabled) {
   border-color: var(--albedu-primary);
   color: var(--albedu-primary);
-  /* Fix: removed transform: translateY(-1px) — same overlap issue as primary */
   position: relative;
   z-index: 1;
 }
@@ -170,7 +168,7 @@ body {
 .albedu-btn-ghost:disabled { opacity: .4; cursor: not-allowed; }
 
 .albedu-btn-danger { background: var(--albedu-danger); color: #fff; border-color: var(--albedu-danger); }
-.albedu-btn-danger:hover:not(:disabled) { opacity: 0.9; /* Fix: removed transform: translateY(-1px) */ position: relative; z-index: 1; }
+.albedu-btn-danger:hover:not(:disabled) { opacity: 0.9; color: #fff; position: relative; z-index: 1; }
 
 .albedu-btn-sm { padding: 6px 12px; font-size: 13px; min-height: 32px; }
 .albedu-btn-sm .material-symbols-outlined { font-size: 16px; }
