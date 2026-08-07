@@ -211,12 +211,12 @@
 
       // Build full preview HTML — mirrors take.html structure EXACTLY
       content.innerHTML = `
-        <!-- IDENTITY PHASE PREVIEW -->
-        <div class="id-wrap" id="pp-identity">
+        <!-- IDENTITY PHASE PREVIEW — mirrors take.html <main id="identity-phase"> -->
+        <main class="id-wrap" id="pp-identity" aria-labelledby="pp-identity-title">
           <div class="id-card">
             <header class="id-header">
               <div class="id-meta">${this._esc(subject || 'Asesmen')}</div>
-              <h1 class="id-title">${this._esc(title)}</h1>
+              <h1 class="id-title" id="pp-identity-title">${this._esc(title)}</h1>
               <div class="id-chips">${chips}</div>
             </header>
             ${noteHTML}
@@ -232,21 +232,21 @@
               </div>
             </div>
           </div>
-        </div>
+        </main>
 
-        <!-- EXAM PHASE PREVIEW (hidden initially) -->
-        <div class="ex-phase-preview" id="pp-exam" hidden>
+        <!-- EXAM PHASE PREVIEW — mirrors take.html <main id="exam-phase"> -->
+        <main class="ex-phase-preview" id="pp-exam" hidden aria-labelledby="pp-exam-title">
           <header class="ex-topbar">
             <div class="ex-topbar__left">
               <div class="ex-subject">${this._esc(subject || 'Asesmen')}</div>
-              <h1 class="ex-title">${this._esc(title)}</h1>
+              <h1 class="ex-title" id="pp-exam-title">${this._esc(title)}</h1>
             </div>
             <div class="ex-topbar__right">
               <div class="ex-user">
                 <span data-albedu-icon="account_circle"></span>
                 <span>Nama Peserta</span>
               </div>
-              <div class="ex-timer">
+              <div class="ex-timer" role="timer" aria-live="off" aria-atomic="true">
                 <span data-albedu-icon="timer"></span>
                 <span>${String(duration).padStart(2, '0')}:00</span>
               </div>
@@ -254,7 +254,7 @@
           </header>
 
           <div class="ex-sectionbar">
-            <div class="ex-sections" id="pp-tabs">${tabsHTML}</div>
+            <div class="ex-sections" id="pp-tabs" role="tablist" aria-label="Bagian Soal">${tabsHTML}</div>
           </div>
 
           <div class="ex-main">
@@ -263,27 +263,62 @@
                 <h2 class="ex-page-title">${this._esc(activeSec?.name || 'Bagian 1')}</h2>
                 <div class="ex-page-count">${activeSec?.questions?.length || 0} Soal</div>
               </div>
-              <div id="pp-questions">${questionsHTML}</div>
+              <div id="pp-questions" role="region" aria-live="polite" aria-label="Daftar soal">${questionsHTML}</div>
             </div>
           </div>
 
-          <nav class="ex-bottomnav">
+          <nav class="ex-bottomnav" aria-label="Navigasi soal">
             <div class="ex-bottomnav__inner">
-              <button class="ex-nav-btn ex-nav-btn--prev" data-pp-prev type="button" disabled>
+              <button class="ex-nav-btn ex-nav-btn--prev" data-pp-prev type="button" disabled aria-label="Bagian sebelumnya">
                 <span data-albedu-icon="arrow_back"></span>
                 <span>Sebelumnya</span>
               </button>
-              <div class="ex-progress">0/${totalQ}</div>
-              <button class="ex-nav-btn ex-nav-btn--next" data-pp-next type="button">
+              <div class="ex-progress" aria-live="polite">0/${totalQ}</div>
+              <button class="ex-nav-btn ex-nav-btn--next" data-pp-next type="button" aria-label="Bagian berikutnya">
                 <span>Selanjutnya</span>
                 <span data-albedu-icon="arrow_forward"></span>
               </button>
-              <button class="ex-nav-btn ex-nav-btn--submit" data-pp-submit type="button" disabled>
+              <button class="ex-nav-btn ex-nav-btn--submit" data-pp-submit type="button" disabled aria-label="Kumpulkan asesmen" title="Submit terkunci">
                 <span data-albedu-icon="lock"></span>
                 <span>Kumpulkan</span>
               </button>
             </div>
           </nav>
+        </main>
+
+        <!-- RESULT PHASE PREVIEW — mirrors take.html <main id="result-phase"> -->
+        <main class="rs-wrap" id="pp-result" hidden aria-labelledby="pp-result-title">
+          <div class="rs-hero">
+            <div class="rs-hero__icon">
+              <span data-albedu-icon="task_alt"></span>
+            </div>
+            <h1 class="rs-hero__title" id="pp-result-title">Asesmen Selesai</h1>
+            <p class="rs-hero__sub">Berikut adalah hasil pengerjaan Anda.</p>
+            <div class="rs-score" aria-live="polite">
+              <span class="rs-score__num">—</span>
+              <span class="rs-score__max">/100</span>
+            </div>
+            <div class="rs-stats" id="pp-result-stats"></div>
+          </div>
+          <div class="rs-detail-section">
+            <button class="rs-detail-toggle" data-pp-toggle-detail type="button" aria-expanded="false" aria-controls="pp-result-detail">
+              <span data-albedu-icon="expand_more"></span>
+              <span>Lihat Detail Jawaban</span>
+            </button>
+            <div class="rs-detail" id="pp-result-detail" hidden></div>
+          </div>
+          <div class="rs-actions">
+            <button class="albedu-btn albedu-btn-secondary" data-pp-close type="button">
+              <span data-albedu-icon="logout"></span>
+              <span>Tutup Preview</span>
+            </button>
+          </div>
+        </main>
+
+        <!-- PAUSE BANNER — mirrors take.html <div id="pause-banner"> -->
+        <div class="pp-pause-banner" id="pp-pause-banner" hidden role="alert" aria-live="assertive">
+          <span data-albedu-icon="pause_circle"></span>
+          <span>Asesmen dijeda oleh admin. Mohon tunggu.</span>
         </div>
       `;
 
@@ -298,10 +333,17 @@
       const qText = this._sanitize(q.pertanyaan || '');
       const type = section.type_question || 'PG';
 
+      // FIX: Build media HTML — mirrors take.html/exam.js _buildMediaHTML
+      const mediaHTML = this._buildMediaHTML(q);
+
       let bodyHTML = '';
       if (type === 'esai') {
         bodyHTML = `
-          <textarea class="ex-esai" placeholder="Tulis jawaban Anda di sini..." disabled></textarea>
+          <textarea class="ex-esai albedu-textarea"
+                    placeholder="Tulis jawaban Anda di sini..."
+                    aria-label="Jawaban esai untuk soal ${idx + 1}"
+                    maxlength="5000"
+                    disabled></textarea>
           <div class="ex-question__points">Esai — dinilai manual oleh guru</div>
         `;
       } else {
@@ -316,27 +358,88 @@
         }
         const keys = ['A', 'B', 'C', 'D', 'E'];
         bodyHTML = `
-          <div class="ex-options" role="radiogroup">
-            ${pilihan.slice(0, 5).map((opt, i) => `
-              <div class="ex-option" role="radio" aria-checked="false" tabindex="0" data-pp-option>
+          <div class="ex-options" role="radiogroup" aria-label="Pilihan jawaban soal ${idx + 1}">
+            ${pilihan.slice(0, 5).map((opt, i) => {
+              const key = keys[i];
+              // FIX: roving tabindex matching take.html (F4-01 pattern)
+              const isFirst = i === 0;
+              const tabindex = isFirst ? '0' : '-1';
+              return `
+              <div class="ex-option"
+                   role="radio"
+                   aria-checked="false"
+                   tabindex="${tabindex}"
+                   data-pp-option
+                   data-key="${this._esc(key)}">
                 <div class="ex-option__radio" aria-hidden="true"></div>
-                <div class="ex-option__key">${keys[i]}</div>
+                <div class="ex-option__key">${this._esc(key)}</div>
                 <div class="ex-option__label">${this._sanitize(String(opt))}</div>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         `;
       }
 
+      // FIX: article structure matches take.html exactly
+      // - aria-label on question num
+      // - media container
       return `
         <article class="ex-question" data-pp-q="${idx}">
-          <div class="ex-question__num">${idx + 1}</div>
+          <div class="ex-question__num" aria-label="Soal nomor ${idx + 1}">${idx + 1}</div>
           <div class="ex-question__body">
             <div class="ex-question__text">${qText}</div>
+            <div class="ex-question__media">${mediaHTML}</div>
             ${bodyHTML}
           </div>
         </article>
       `;
+    },
+
+    /**
+     * Build media HTML — mirrors take.html/exam.js _buildMediaHTML.
+     * Handles video (YouTube embed) + images with zoom + onerror fallback.
+     */
+    _buildMediaHTML(q) {
+      if (!q.media) return '';
+      const parts = [];
+      const video = q.media.video;
+      const images = Array.isArray(q.media.gambar) ? q.media.gambar : [];
+
+      if (video?.enabled) {
+        let embedSrc = '';
+        if (video.videoId) {
+          embedSrc = `https://www.youtube.com/embed/${encodeURIComponent(video.videoId)}?rel=0&modestbranding=1`;
+        } else if (video.src) {
+          const yt = String(video.src).match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{6,})/);
+          if (yt) embedSrc = `https://www.youtube.com/embed/${encodeURIComponent(yt[1])}?rel=0&modestbranding=1`;
+        }
+        if (embedSrc) {
+          parts.push(`
+            <div class="media-video">
+              <iframe src="${this._esc(embedSrc)}" loading="lazy"
+                      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowfullscreen
+                      title="Video soal"></iframe>
+            </div>
+          `);
+        }
+      }
+
+      if (images.length > 0) {
+        const urls = images.map(img => {
+          if (typeof img === 'string') return img;
+          if (img && typeof img === 'object' && img.url) return img.url;
+          return '';
+        }).filter(Boolean);
+        if (urls.length > 0) {
+          parts.push(urls.map(u =>
+            `<img src="${this._esc(u)}" data-zoom="${this._esc(u)}" alt="Gambar soal" loading="lazy" />`
+          ).join(''));
+        }
+      }
+
+      return parts.length > 0 ? parts.join('') : '';
     },
 
     _wireInteractions(sections, totalQ) {
@@ -346,6 +449,40 @@
       content.querySelector('[data-pp-goto-exam]')?.addEventListener('click', () => {
         content.querySelector('#pp-identity').hidden = true;
         content.querySelector('#pp-exam').hidden = false;
+      });
+
+      // FIX: Submit → Result transition (mirrors take.html submit flow)
+      content.querySelector('[data-pp-submit]')?.addEventListener('click', () => {
+        const answered = content.querySelectorAll('.ex-option.selected').length;
+        const score = totalQ > 0 ? Math.round((answered / totalQ) * 100) : 0;
+
+        // Populate result stats (mock — preview can't actually score)
+        const statsEl = content.querySelector('#pp-result-stats');
+        if (statsEl) {
+          statsEl.innerHTML = `
+            <div class="rs-stat rs-stat--benar"><div class="rs-stat__num">—</div><div class="rs-stat__label">Benar</div></div>
+            <div class="rs-stat rs-stat--salah"><div class="rs-stat__num">—</div><div class="rs-stat__label">Salah</div></div>
+            <div class="rs-stat rs-stat--kosong"><div class="rs-stat__num">${totalQ - answered}</div><div class="rs-stat__label">Kosong</div></div>
+            <div class="rs-stat"><div class="rs-stat__num">—</div><div class="rs-stat__label">Durasi</div></div>
+          `;
+        }
+        const scoreNum = content.querySelector('.rs-score__num');
+        if (scoreNum) scoreNum.textContent = score;
+
+        content.querySelector('#pp-exam').hidden = true;
+        content.querySelector('#pp-result').hidden = false;
+        // Scroll to top of result
+        content.scrollTop = 0;
+      });
+
+      // FIX: Result detail toggle (mirrors take.html btn-toggle-detail)
+      content.querySelector('[data-pp-toggle-detail]')?.addEventListener('click', () => {
+        const btn = content.querySelector('[data-pp-toggle-detail]');
+        const detail = content.querySelector('#pp-result-detail');
+        if (!btn || !detail) return;
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!expanded));
+        detail.hidden = expanded;
       });
 
       // Section tabs
@@ -406,13 +543,21 @@
       const qContainer = content.querySelector('#pp-questions');
       qContainer.innerHTML = (sec.questions || []).map((q, i) => this._renderQuestion(q, i, sec)).join('');
 
-      // Update nav buttons
+      // Update nav buttons — mirrors take.html _updateNavButtons
       const prev = content.querySelector('[data-pp-prev]');
       const next = content.querySelector('[data-pp-next]');
       const submit = content.querySelector('[data-pp-submit]');
       if (prev) prev.disabled = this._activeSection === 0;
-      if (next) next.hidden = this._activeSection === sections.length - 1;
-      if (submit) submit.hidden = this._activeSection !== sections.length - 1;
+      if (next) {
+        next.disabled = this._activeSection === sections.length - 1;
+        next.hidden = this._activeSection === sections.length - 1;
+      }
+      if (submit) {
+        // FIX: enable submit on last section (preview doesn't lock submit —
+        // admin should be able to click it to see the result phase preview)
+        submit.hidden = this._activeSection !== sections.length - 1;
+        submit.disabled = false;
+      }
 
       // Re-bind icons
       window.AlbEdu?.bindIcons?.(qContainer);
