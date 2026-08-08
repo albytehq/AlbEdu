@@ -359,5 +359,19 @@
 
   window.CreateAssessment = CreateAssessment;
   window.BuatUjian = CreateAssessment; // back-compat alias
-  // Custom theme feature removed for Akses Awal.
+
+  // Initialize all buat-ujian wizard modules on DOMContentLoaded.
+  // (Previously this was inside the theme editor init block which was
+  // removed — but the module initialization was also lost. Restored here
+  // without any theme editor code.)
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.MetadataCard) window.MetadataCard.init();
+    if (window.SoalCard) window.SoalCard.init();
+    if (window.PublishCard) window.PublishCard.init();
+    if (window.SoalEditorModal) window.SoalEditorModal.init();
+    if (window.TemplatePicker) window.TemplatePicker.init();
+    if (window.WizardController) window.WizardController.init();
+    if (window.ListView) window.ListView.init();
+    if (window.KeyboardShortcuts) window.KeyboardShortcuts.init();
+  });
 })();
