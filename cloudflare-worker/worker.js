@@ -312,23 +312,29 @@ async function currentSession(request, env, { allowRefresh = true } = {}) {
 }
 
 async function handleLogin(request, env, url) {
-  if (request.method === 'GET' && url.searchParams.get('provider') === 'google') {
-    // The final OAuth callback must be configured in Supabase Auth redirect URLs.
-    const callback = new URL('/api/auth/callback', url.origin);
-    callback.searchParams.set('return_to', url.searchParams.get('return_to') || '/pages/login.html');
-    const authorize = new URL(`${env.SUPABASE_URL}/auth/v1/authorize`);
-    authorize.searchParams.set('provider', 'google');
-    authorize.searchParams.set('redirect_to', callback.toString());
-    const verifier = base64Url(crypto.getRandomValues(new Uint8Array(48)));
-    authorize.searchParams.set('code_challenge', await pkceChallenge(verifier));
-    authorize.searchParams.set('code_challenge_method', 's256');
-    const response = Response.redirect(authorize.toString(), 302);
-    response.headers.append('Set-Cookie', cookie('albedu_oauth_verifier', verifier, { maxAge: 600, httpOnly: true, path: '/api/auth/callback' }));
-    return response;
-  }
-  if (request.method !== 'POST') return authJson(request, { error: 'Method not allowed' }, 405);
-  let body;
-  try { body = await request.json(); } catch (_) { return authJson(request, { error: 'Payload login tidak valid.' }, 400); }
+  try {
+    if (request.method === 'GET' && url.searchParams.get('provider') === 'google') {
+      // The final OAuth callback must be configured in Supabase Auth redirect URLs.
+      const callback = new URL('/api/auth/callback', url.origin);
+      callback.searchParams.set('return_to', url.searchParams.get('return_to') || '/pages/login.html');
+      const authorize = new URL(`${env.SUPABASE_URL}/auth/v1/authorize`);
+      authorize.searchParams.set('provider', 'google');
+      authorize.searchParams.set('redirect_to', callback.toString());
+      const verifier = base64Url(crypto.getRandomValues(new Uint8Array(48)));
+      authorize.searchParams.set('code_challenge', await pkceChallenge(verifier));
+      authorize.searchParams.set('code_challenge_method', 's256');
+      // FIX: Response.redirect() returns an immutable Response — can't append headers.
+      // Must create a new Response with the redirect status + custom headers.
+      const redirectHeaders = new Headers({
+        'Location': authorize.toString(),
+        'Set-Cookie': cookie('albedu_oauth_verifier', verifier, { maxAge: 600, httpOnly: true, path: '/api/auth/callback' }),
+      });
+      Object.entries(authHeaders(request)).forEach(([key, value]) => redirectHeaders.set(key, value));
+      return new Response(null, { status: 302, headers: redirectHeaders });
+    }
+    if (request.method !== 'POST') return authJson(request, { error: 'Method not allowed' }, 405);
+    let body;
+    try { body = await request.json(); } catch (_) { return authJson(request, { error: 'Payload login tidak valid.' }, 400); }
   const payload = body?.id_token
     ? { provider: 'google', token: body.id_token }
     : { email: body?.email, password: body?.password, gotrue_meta_security: body?.captchaToken ? { captcha_token: body.captchaToken } : undefined };
@@ -340,6 +346,10 @@ async function handleLogin(request, env, url) {
   const headers = new Headers(authHeaders(request, { 'Content-Type': 'application/json' }));
   appendSetCookies(headers, setAuthCookies(data.access_token, data.refresh_token));
   return new Response(JSON.stringify({ user: userPayload(data.user) }), { status: 200, headers });
+  } catch (err) {
+    console.error('[login] Error:', err?.stack || err);
+    return authJson(request, { error: 'Terjadi kesalahan server. Silakan coba lagi.' }, 500);
+  }
 }
 
 async function handleOAuthCallback(request, env, url) {
@@ -352,16 +362,24 @@ async function handleOAuthCallback(request, env, url) {
   } catch (_) {
     return Response.redirect(`${url.origin}/api/auth/login?auth_error=oauth`, 302);
   }
-  if (!code || !verifier || !ALLOWED_ORIGINS.has(safeReturnTo.origin)) return Response.redirect(`${url.origin}/api/auth/login?auth_error=oauth`, 302);
+  if (!code || !verifier || !ALLOWED_ORIGINS.has(safeReturnTo.origin)) {
+    const errHeaders = new Headers({ 'Location': `${url.origin}/api/auth/login?auth_error=oauth` });
+    return new Response(null, { status: 302, headers: errHeaders });
+  }
   const response = await supabaseAuth(env, 'token?grant_type=pkce', {
     method: 'POST', body: JSON.stringify({ auth_code: code, code_verifier: verifier }),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok || !data.access_token) return Response.redirect(`${url.origin}/pages/login.html?auth_error=oauth`, 302);
-  const redirect = Response.redirect(safeReturnTo.toString(), 302);
-  appendSetCookies(redirect.headers, setAuthCookies(data.access_token, data.refresh_token));
-  redirect.headers.append('Set-Cookie', cookie('albedu_oauth_verifier', '', { maxAge: 0, httpOnly: true, path: '/api/auth/callback' }));
-  return redirect;
+  if (!response.ok || !data.access_token) {
+    const errHeaders = new Headers({ 'Location': `${url.origin}/pages/login.html?auth_error=oauth` });
+    return new Response(null, { status: 302, headers: errHeaders });
+  }
+  // FIX: Response.redirect() is immutable — create new Response with headers
+  const redirectHeaders = new Headers({ 'Location': safeReturnTo.toString() });
+  appendSetCookies(redirectHeaders, setAuthCookies(data.access_token, data.refresh_token));
+  redirectHeaders.append('Set-Cookie', cookie('albedu_oauth_verifier', '', { maxAge: 0, httpOnly: true, path: '/api/auth/callback' }));
+  Object.entries(authHeaders(request)).forEach(([key, value]) => redirectHeaders.set(key, value));
+  return new Response(null, { status: 302, headers: redirectHeaders });
 }
 
 async function handleForgotPassword(request, env) {
@@ -393,7 +411,7 @@ async function handleRecoveryCallback(request, env, url) {
   const type = url.searchParams.get('type');
   const returnTo = url.searchParams.get('return_to') || '/pages/reset-password.html';
   if (!code || type !== 'recovery') {
-    return Response.redirect(`${url.origin}/pages/reset-password.html?error=invalid`, 302);
+    return new Response(null, { status: 302, headers: new Headers({ 'Location': `${url.origin}/pages/reset-password.html?error=invalid` }) });
   }
   // Exchange PKCE code for session
   const response = await supabaseAuth(env, 'token?grant_type=pkce', {
@@ -401,14 +419,14 @@ async function handleRecoveryCallback(request, env, url) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.access_token) {
-    return Response.redirect(`${url.origin}/pages/reset-password.html?error=expired`, 302);
+    return new Response(null, { status: 302, headers: new Headers({ 'Location': `${url.origin}/pages/reset-password.html?error=expired` }) });
   }
   // Set auth cookies and redirect to reset-password page
-  const redirect = Response.redirect(`${url.origin}${returnTo}`, 302);
-  const headers = new Headers(redirect.headers);
-  appendSetCookies(headers, setAuthCookies(data.access_token, data.refresh_token));
-  Object.entries(authHeaders(request)).forEach(([key, value]) => headers.set(key, value));
-  return new Response(null, { status: 302, headers });
+  // FIX: create new Response (not Response.redirect) so we can set cookies
+  const redirectHeaders = new Headers({ 'Location': `${url.origin}${returnTo}` });
+  appendSetCookies(redirectHeaders, setAuthCookies(data.access_token, data.refresh_token));
+  Object.entries(authHeaders(request)).forEach(([key, value]) => redirectHeaders.set(key, value));
+  return new Response(null, { status: 302, headers: redirectHeaders });
 }
 
 // POST /api/auth/reset — change password using current session (from cookie)
