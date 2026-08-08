@@ -136,7 +136,7 @@ function corsHeaders(origin) {
   return {
     'Access-Control-Allow-Origin': allowed ? origin : 'null',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token, X-Exam-Mode, Prefer, X-Client, X-Idempotency-Key',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token, X-Exam-Mode, Prefer, X-Client, X-Client-Info, X-Idempotency-Key, apikey, X-Total-Count, Range',
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
   };
