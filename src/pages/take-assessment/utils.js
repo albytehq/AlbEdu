@@ -116,9 +116,6 @@
       }, { once: true });
     });
   }
-      }, 100);
-    });
-  }
 
   // mulberry32 PRNG — stable per session so a peserta's shuffle is the same
   // on refresh (the seed is derived from session.id + started_at).
