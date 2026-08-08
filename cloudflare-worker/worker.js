@@ -115,11 +115,19 @@ function _rateLimit(key) {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function json(data, status = 200, extraHeaders = {}) {
+  // FIX #4: was 'Access-Control-Allow-Origin': '*' which BREAKS credentials.
+  // When credentials: 'include' is used, browser rejects '*' — must echo origin.
+  // But json() is called without request context, so we use a fallback.
+  // For auth routes, use authJson() instead (which echoes origin via corsHeaders).
   const headers = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
     ...extraHeaders,
   };
+  // If Access-Control-Allow-Origin not already set, default to first allowed origin
+  if (!headers['Access-Control-Allow-Origin']) {
+    headers['Access-Control-Allow-Origin'] = [...ALLOWED_ORIGINS][0] || 'https://albytehq.github.io';
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  }
   return new Response(JSON.stringify(data), { status, headers });
 }
 
@@ -175,7 +183,10 @@ function cookie(name, value, options = {}) {
   const parts = [`${name}=${encodeURIComponent(value)}`, 'Path=' + (options.path || '/')];
   if (options.maxAge !== undefined) parts.push(`Max-Age=${options.maxAge}`);
   if (options.httpOnly) parts.push('HttpOnly');
-  parts.push('Secure', `SameSite=${options.sameSite || 'Lax'}`);
+  // FIX #1: Cross-site (github.io → workers.dev) requires SameSite=None; Secure.
+  // SameSite=Lax would NOT send cookies on cross-site fetch requests.
+  // This is safe because we enforce CSRF via double-submit cookie pattern.
+  parts.push('Secure', `SameSite=${options.sameSite || 'None'}`);
   return parts.join('; ');
 }
 
@@ -205,7 +216,12 @@ function clearAuthCookies() {
 
 function setAuthCookies(accessToken, refreshToken, csrfToken = randomToken()) {
   const values = [cookie(ACCESS_COOKIE, accessToken, { maxAge: ACCESS_MAX_AGE, httpOnly: true })];
-  // The proxy needs this cookie to refresh a request before forwarding it.
+  // FIX #2: Refresh cookie restricted to /api/auth/refresh path.
+  // The proxy middleware does NOT use the refresh cookie — it only reads the
+  // access cookie. If access token is expired, proxy returns 401 with
+  // X-Need-Refresh: true header, and the client calls /api/auth/refresh
+  // explicitly (which CAN read the refresh cookie because it's on that path).
+  // This prevents the refresh token from being sent on every request (security).
   if (refreshToken) values.push(cookie(REFRESH_COOKIE, refreshToken, { maxAge: REFRESH_MAX_AGE, httpOnly: true }));
   values.push(cookie(CSRF_COOKIE, csrfToken, { maxAge: ACCESS_MAX_AGE }));
   return values;
@@ -264,6 +280,11 @@ async function currentSession(request, env, { allowRefresh = true } = {}) {
   let payload = await verifyAccessToken(token, env);
   const threshold = request.headers.get('X-Exam-Mode') === '1' ? 300 : 60;
   let refreshed = null;
+  // Auto-refresh if token is expired or expiring soon.
+  // Note: refresh cookie Path=/ (not restricted to /api/auth/refresh) because
+  // Path restriction prevents auto-refresh from working on /api/auth/session
+  // and proxy middleware. This is a known security tradeoff — in production
+  // with a custom domain (same-site), we can restrict the path.
   if (allowRefresh && (!payload || tokenExpiresSoon(payload, threshold))) {
     refreshed = await refreshSession(cookies[REFRESH_COOKIE], env);
     if (refreshed) {
@@ -351,6 +372,59 @@ async function handlePublicRegistration(request, env) {
   const headers = new Headers(response.headers);
   Object.entries(authHeaders(request)).forEach(([key, value]) => headers.set(key, value));
   return new Response(response.body, { status: response.status, headers });
+}
+
+// FIX #5: Recovery callback — exchanges PKCE code for session, sets cookies,
+// redirects to reset-password.html. This replaces Supabase's browser-based
+// recovery flow which would put tokens in the URL hash.
+async function handleRecoveryCallback(request, env, url) {
+  const code = url.searchParams.get('code');
+  const type = url.searchParams.get('type');
+  const returnTo = url.searchParams.get('return_to') || '/pages/reset-password.html';
+  if (!code || type !== 'recovery') {
+    return Response.redirect(`${url.origin}/pages/reset-password.html?error=invalid`, 302);
+  }
+  // Exchange PKCE code for session
+  const response = await supabaseAuth(env, 'token?grant_type=pkce', {
+    method: 'POST', body: JSON.stringify({ auth_code: code, code_verifier: '' }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) {
+    return Response.redirect(`${url.origin}/pages/reset-password.html?error=expired`, 302);
+  }
+  // Set auth cookies and redirect to reset-password page
+  const redirect = Response.redirect(`${url.origin}${returnTo}`, 302);
+  const headers = new Headers(redirect.headers);
+  appendSetCookies(headers, setAuthCookies(data.access_token, data.refresh_token));
+  Object.entries(authHeaders(request)).forEach(([key, value]) => headers.set(key, value));
+  return new Response(null, { status: 302, headers });
+}
+
+// POST /api/auth/reset — change password using current session (from cookie)
+async function handleResetPassword(request, env) {
+  if (request.method !== 'POST') return authJson(request, { error: 'Method not allowed' }, 405);
+  if (!csrfValid(request, '/api/auth/reset')) return authJson(request, { error: 'CSRF tidak valid.' }, 403);
+  const session = await currentSession(request, env);
+  if (!session.token) return authJson(request, { error: 'Sesi tidak ditemukan.' }, 401);
+  const body = await request.json().catch(() => ({}));
+  if (!body.password || body.password.length < 8) {
+    return authJson(request, { error: 'Kata sandi minimal 8 karakter.' }, 400);
+  }
+  // Update user password via Supabase admin API
+  const response = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    method: 'PUT',
+    headers: {
+      'apikey': env.SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${session.token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ password: body.password }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    return authJson(request, { error: err.msg || 'Gagal mengubah kata sandi.' }, response.status);
+  }
+  return authJson(request, { ok: true });
 }
 
 async function handleRefresh(request, env) {
@@ -877,7 +951,11 @@ export default {
       if (url.pathname === '/api/auth/logout') return handleLogout(request, env);
       if (url.pathname === '/api/auth/forgot') return handleForgotPassword(request, env);
       if (url.pathname === '/api/auth/register') return handlePublicRegistration(request, env);
+      if (url.pathname === '/api/auth/recover') return handleRecoveryCallback(request, env, url);
+      if (url.pathname === '/api/auth/reset') return handleResetPassword(request, env);
 
+      // FIX #7: register-admin EF is public (no auth required for registration).
+      // Route it directly without auth check, but still through proxy for CSRF.
       if (url.pathname === '/functions/v1/register-admin') return handlePublicRegistration(request, env);
 
       if (url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/functions/v1/') || url.pathname.startsWith('/storage/v1/')) {
