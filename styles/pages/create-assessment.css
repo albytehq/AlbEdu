@@ -52,13 +52,6 @@
 .albedu-step-desc { font-size: 14px; color: var(--color-text-muted); margin: 0 0 24px; }
 
 /* ── Form Sections ────────────────────────────────────────────── */
-.albedu-theme-section {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 16px;
-}
 .albedu-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .albedu-field { display: flex; flex-direction: column; gap: 6px; }
 .albedu-field-full { grid-column: 1 / -1; }
@@ -267,47 +260,7 @@
 .albedu-empty-state p { font-size: 14px; color: var(--color-text-faint); }
 
 /* ── Preset Chips ──────────────────────────────────────────────── */
-.albedu-preset-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.albedu-preset-chip {
-  padding: 6px 14px; border: 1px solid var(--color-border); border-radius: 8px;
-  background: var(--color-surface); color: var(--color-text-muted);
-  font-size: 13px; font-weight: 500; cursor: pointer; transition: all 150ms ease;
-}
-.albedu-preset-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.albedu-preset-chip.albedu-active {
-  background: var(--color-primary); border-color: var(--color-primary); color: #fff;
-}
-
-/* ── Theme Preview ─────────────────────────────────────────────── */
-/* (legacy .albedu-theme-grid kept for back-compat but no longer rendered) */
-.albedu-theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-@media (max-width: 768px) { .albedu-theme-grid { grid-template-columns: 1fr; } }
-.albedu-theme-controls { display: flex; flex-direction: column; gap: 16px; }
-.albedu-theme-control-group { display: flex; flex-direction: column; gap: 8px; }
-.albedu-theme-control-group > label,
-.albedu-theme-control-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-2);
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.albedu-theme-control-hint {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-text-faint);
-  font-style: italic;
-}
-.albedu-theme-preview {
-  background: var(--color-surface-2); border: 1px solid var(--color-border);
-  border-radius: 12px; padding: 20px;
-}
-.albedu-theme-preview-title {
-  font-size: 12px; font-weight: 700; color: var(--color-text-muted);
-  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;
-}
+@media (max-width: 768px) { }
 .albedu-preview-card {
   background: var(--color-surface); border: 1px solid var(--color-border);
   border-radius: 8px; padding: 20px;
@@ -319,357 +272,42 @@
 .albedu-preview-radio { width: 16px; height: 16px; border: 2px solid var(--color-border); border-radius: 50%; flex-shrink: 0; }
 
 /* ═══ THEME MODE TOGGLE (Default / Custom) ══════════════════════ */
-.albedu-theme-mode-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.albedu-theme-mode-option {
-  cursor: pointer;
-  display: block;
-}
-.albedu-theme-mode-option input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-.albedu-theme-mode-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--color-surface);
-  border: 2px solid var(--color-border);
-  border-radius: 12px;
-  transition: all 180ms cubic-bezier(.4, 0, .2, 1);
-}
-.albedu-theme-mode-card:hover {
-  border-color: var(--color-primary);
-}
-.albedu-theme-mode-option:has(input:checked) .albedu-theme-mode-card {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
-}
-.albedu-theme-mode-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--color-surface-3);
-  color: var(--color-text-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 180ms ease;
-}
-.albedu-theme-mode-option:has(input:checked) .albedu-theme-mode-icon {
-  background: var(--color-primary);
-  color: #fff;
-}
-.albedu-theme-mode-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.albedu-theme-mode-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-.albedu-theme-mode-desc {
-  font-size: 12px;
-  color: var(--color-text-muted);
-}
-.albedu-theme-mode-option:has(input:checked) .albedu-theme-mode-title {
-  color: var(--color-primary);
-}
 @media (max-width: 540px) {
-  .albedu-theme-mode-toggle { grid-template-columns: 1fr; }
 }
 
 /* ═══ CUSTOM MODE ACTIONS (current info + Pengaturan Tema button) ═ */
-.albedu-theme-custom-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 14px 16px;
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  flex-wrap: wrap;
-}
-.albedu-theme-current-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-.albedu-theme-swatch {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #2563eb;
-  border: 2px solid rgba(0, 0, 0, 0.08);
-  flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-}
-.albedu-theme-current-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-.albedu-theme-current-text strong {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-.albedu-theme-current-text span {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 @media (max-width: 540px) {
-  .albedu-theme-custom-actions { flex-direction: column; align-items: stretch; }
-  .albedu-theme-custom-actions .albedu-btn { width: 100%; justify-content: center; }
 }
 
 /* ═══ THEME OVERLAY (full-screen, production-grade) ═════════════ */
-.albedu-theme-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  align-items: stretch;
-  justify-content: stretch;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 220ms ease;
-}
-.albedu-theme-overlay[hidden] { display: none !important; }
-.albedu-theme-overlay.is-visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.albedu-theme-overlay-shell {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface, #FCFBF7);
-  margin: 24px;
-  border-radius: 16px;
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.24);
-  overflow: hidden;
-  transform: translateY(20px) scale(0.98);
-  transition: transform 250ms cubic-bezier(.4, 0, .2, 1);
-}
-.albedu-theme-overlay.is-visible .albedu-theme-overlay-shell {
-  transform: translateY(0) scale(1);
-}
 @media (max-width: 720px) {
-  .albedu-theme-overlay { background: rgba(15, 23, 42, 0.8); }
-  .albedu-theme-overlay-shell { margin: 0; border-radius: 0; }
 }
 
 /* Top bar */
-.albedu-theme-overlay-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 24px;
-  background: var(--color-surface, #FCFBF7);
-  border-bottom: 1px solid var(--color-border, #D6D3C8);
-  flex-shrink: 0;
-}
-.albedu-theme-overlay-title-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.albedu-theme-overlay-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-text, #1F2937);
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-.albedu-theme-overlay-title .albedu-icon {
-  width: 22px;
-  height: 22px;
-  color: var(--color-primary, #1D4ED8);
-}
-.albedu-theme-overlay-subtitle {
-  font-size: 13px;
-  color: var(--color-text-muted, #64748B);
-  margin: 0;
-}
-.albedu-theme-overlay-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
 @media (max-width: 720px) {
-  .albedu-theme-overlay-topbar { flex-direction: column; align-items: stretch; padding: 12px 16px; gap: 10px; }
-  .albedu-theme-overlay-actions { justify-content: flex-end; }
-  .albedu-theme-overlay-subtitle { display: none; }
 }
 
 /* Body: 2-col layout */
-.albedu-theme-overlay-body {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  min-height: 0;
-  overflow: hidden;
-}
 @media (max-width: 1024px) {
-  .albedu-theme-overlay-body { grid-template-columns: 320px minmax(0, 1fr); }
 }
 @media (max-width: 720px) {
-  .albedu-theme-overlay-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
 }
 
 /* LEFT: Controls */
-.albedu-theme-overlay-controls {
-  background: var(--color-surface-2, #EFEEE8);
-  border-right: 1px solid var(--color-border, #D6D3C8);
-  padding: 24px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.albedu-theme-overlay-controls .albedu-theme-control-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 @media (max-width: 720px) {
-  .albedu-theme-overlay-controls {
-    border-right: none;
-    border-bottom: 1px solid var(--color-border, #D6D3C8);
-    padding: 16px;
-    max-height: 50vh;
-  }
-}
-
-.albedu-theme-overlay-hint {
-  display: flex;
-  gap: 10px;
-  padding: 12px 14px;
-  background: var(--color-primary-light, #DBEAFE);
-  border-radius: 10px;
-  font-size: 12px;
-  color: var(--color-primary, #1D4ED8);
-  line-height: 1.5;
-}
-.albedu-theme-overlay-hint .albedu-icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  margin-top: 1px;
 }
 
 /* RIGHT: Preview */
-.albedu-theme-overlay-preview-wrap {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  background: var(--color-surface-3, #E4E2D9);
-  overflow: hidden;
-}
-.albedu-theme-overlay-preview-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  background: var(--color-surface, #FCFBF7);
-  border-bottom: 1px solid var(--color-border, #D6D3C8);
-  flex-shrink: 0;
-}
-.albedu-theme-overlay-preview-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-text-muted, #64748B);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.albedu-theme-overlay-preview-meta {
-  font-size: 12px;
-  color: var(--color-text-muted, #64748B);
-  font-family: 'JetBrains Mono', monospace;
-}
 
 /* Preview root — scoped CSS variables live here.
    Defaults mirror take-assessment.css fallback values so preview
    looks identical to actual peserta page before any change.
    Scroll: overflow-y auto + align-items flex-start (NOT stretch)
    so the .preview-take-shell content can exceed viewport and scroll. */
-.albedu-theme-overlay-preview {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 24px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  /* Scoped theme variables (defaults match take-assessment.css) */
-  --albedu-primary: #2563eb;
-  --albedu-primary-hover: #1d4ed8;
-  --albedu-primary-muted: #eff6ff;
-  --albedu-primary-ring: rgba(37, 99, 235, 0.12);
-  --albedu-text-accent: #2563eb;  /* defaults to primary; admin can override */
-  --albedu-heading: #0f172a;
-  --albedu-body: #64748b;
-  --albedu-surface: #ffffff;
-  --albedu-surface-alt: #f1f5f9;
-  --albedu-border: #e2e8f0;
-  --albedu-font: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --albedu-radius-lg: 8px;
-  --albedu-mode: light;
-}
-.albedu-theme-overlay-preview[data-mode="dark"] {
-  --albedu-heading: #f1f5f9;
-  --albedu-body: #cbd5e1;
-  --albedu-surface: #1e293b;
-  --albedu-surface-alt: #0f172a;
-  --albedu-border: #334155;
-  --albedu-primary-muted: rgba(59, 130, 246, 0.18);
-  --albedu-mode: dark;
-}
 
 /* Preview shell — pixel-accurate replica of take.html exam phase.
    Shell grows naturally with content (no forced height), so when
-   content exceeds viewport the parent .albedu-theme-overlay-preview
-   scrolls. */
-.preview-take-shell {
-  width: 100%;
-  max-width: 720px;
-  min-height: 100%;
-  background: var(--albedu-surface);
-  border: 1px solid var(--albedu-border);
-  border-radius: 12px;
-  overflow: hidden;
-  font-family: var(--albedu-font);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
-  display: flex;
-  flex-direction: column;
-  margin: 0 auto;
-}
+   content exceeds viewport the parent
 
 /* Exam header — sticky inside shell */
 .preview-take-shell .exam-header {
@@ -1140,21 +778,8 @@
 
 /* Dark mode overrides for identity form mockup */
 .preview-take-shell[data-mode="dark"] .identity-card__note,
-.albedu-theme-overlay-preview[data-mode="dark"] .identity-card__note {
-  background: rgba(245, 158, 11, 0.08);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #fbbf24;
-}
-.albedu-theme-overlay-preview[data-mode="dark"] .ifr-field__input {
-  color: var(--albedu-heading);
-  background: var(--albedu-surface-alt);
-  border-color: var(--albedu-border);
-}
 
 /* ── Color Picker ──────────────────────────────────────────────── */
-.albedu-color-quickpicks { display: flex; flex-wrap: wrap; gap: 8px; }
-.albedu-color-picker-wrap { display: flex; align-items: center; gap: 10px; }
-.albedu-color-hex { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--color-text-muted); }
 
 /* ── Radio Cards ───────────────────────────────────────────────── */
 .albedu-radio-cards { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -1362,12 +987,6 @@
 }
 
 /* ── Color Quickpick ───────────────────────────────────────────── */
-.albedu-color-quickpick {
-  width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
-  border: 2px solid var(--color-border); transition: transform 100ms ease;
-}
-.albedu-color-quickpick:hover { transform: scale(1.1); }
-.albedu-color-quickpick.albedu-active { border-color: var(--color-text); box-shadow: 0 0 0 2px var(--color-surface); }
 
 /* ── Assessment Grid ───────────────────────────────────────────── */
 .albedu-assessments-grid {

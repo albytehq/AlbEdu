@@ -141,32 +141,10 @@
     return { allowed: true };
   }
 
-  // Theme application
-  function _applyTheme(themeConfig) {
-    if (!themeConfig || typeof themeConfig !== 'object') return;
-    _internal._waitForThemeSystem().then(() => {
-      try {
-        const cfg = {
-          primary: themeConfig.primary || (themeConfig.TW && themeConfig.TW !== 'default' ? themeConfig.TW : undefined),
-          text_accent: themeConfig.text_accent || null,  // null = follow primary (deriveColors fallback)
-          font: themeConfig.font || 'Plus Jakarta Sans',
-          mode: themeConfig.mode || 'auto',
-          preset: themeConfig.preset || 'default',
-        };
-        if (window.ThemeSystem?.apply) {
-          window.ThemeSystem.apply(cfg);
-        }
-      } catch (err) {
-        console.warn('[take] theme apply failed:', err);
-      }
-    });
-  }
-
   Object.assign(_internal, {
     _fetchAssessment,
     _fetchSession,
     _restoreDraft,
     _checkAccess,
-    _applyTheme,
   });
 })();

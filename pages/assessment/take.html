@@ -60,13 +60,7 @@
   <script src="../../src/auth/errors.js" defer></script>
   <script src="../../src/auth/user-helpers.js" defer></script>
   <script src="../../src/auth/main.js" defer></script>
-  <script src="../../src/auth/byteward.js" defer></script>
-
-<!-- Theme System -->
-  <script type="module">
-    import ThemeSystem from '../../src/theme-system/index.js';
-    window.ThemeSystem = ThemeSystem;
-  </script><!-- bfcache bust — exam state is complex; force fresh init on back/forward -->
+  <script src="../../src/auth/byteward.js" defer></script><!-- bfcache bust — exam state is complex; force fresh init on back/forward -->
   <script>
     window.addEventListener('pageshow', function (e) {
       if (e.persisted) location.reload();

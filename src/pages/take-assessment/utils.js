@@ -116,17 +116,6 @@
       }, { once: true });
     });
   }
-
-  function _waitForThemeSystem(maxMs = 3000) {
-    return new Promise((resolve) => {
-      if (window.ThemeSystem) return resolve();
-      let elapsed = 0;
-      const id = setInterval(() => {
-        elapsed += 100;
-        if (window.ThemeSystem || elapsed >= maxMs) {
-          clearInterval(id);
-          resolve();
-        }
       }, 100);
     });
   }
@@ -238,7 +227,6 @@
     _t,
     _waitForAuth,
     _waitForQNotify,
-    _waitForThemeSystem,
     mulberry32,
     _shuffleFisherYates,
     _computeSeed,

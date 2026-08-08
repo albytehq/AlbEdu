@@ -282,8 +282,6 @@
       }
       state.assessment = assessment;
 
-      TakeAssessment._applyTheme(assessment.theme_config);
-
       _setLoadingStatus(t('assessment.loading_starting', null, 'Memulihkan sesi...'));
       const session = await TakeAssessment._fetchSession(sessionId);
       if (!session) {

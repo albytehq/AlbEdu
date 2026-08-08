@@ -368,51 +368,6 @@
                                 </span>
                             </label>
                         </div>
-
-                        <!-- ═══ THEME EDITOR (Default/Custom toggle + Overlay) ═══ -->
-                        <div class="albedu-theme-section">
-                            <h3 class="albedu-card-title" style="font-size: 15px; margin-bottom: 4px;">Tema Visual</h3>
-                            <p class="albedu-card-desc" style="margin-bottom: 16px;">Pilih "Default" untuk tema AlbEdu standar, atau "Custom" untuk kustomisasi warna, font, dan mode.</p>
-
-                            <!-- Default / Custom toggle -->
-                            <div class="albedu-theme-mode-toggle" role="radiogroup" aria-label="Mode tema">
-                                <label class="albedu-theme-mode-option">
-                                    <input type="radio" name="theme_mode_toggle" value="default" checked>
-                                    <span class="albedu-theme-mode-card">
-                                        <span class="albedu-theme-mode-icon" data-albedu-icon="auto_fix_high"></span>
-                                        <span class="albedu-theme-mode-text">
-                                            <span class="albedu-theme-mode-title">Default</span>
-                                            <span class="albedu-theme-mode-desc">Tema AlbEdu standar</span>
-                                        </span>
-                                    </span>
-                                </label>
-                                <label class="albedu-theme-mode-option">
-                                    <input type="radio" name="theme_mode_toggle" value="custom">
-                                    <span class="albedu-theme-mode-card">
-                                        <span class="albedu-theme-mode-icon" data-albedu-icon="palette"></span>
-                                        <span class="albedu-theme-mode-text">
-                                            <span class="albedu-theme-mode-title">Custom</span>
-                                            <span class="albedu-theme-mode-desc">Atur warna, font &amp; mode</span>
-                                        </span>
-                                    </span>
-                                </label>
-                            </div>
-
-                            <!-- Custom mode: show "Pengaturan Tema" button -->
-                            <div class="albedu-theme-custom-actions" id="theme-custom-actions" hidden>
-                                <div class="albedu-theme-current-info" id="theme-current-info">
-                                    <span class="albedu-theme-swatch" id="theme-current-swatch"></span>
-                                    <span class="albedu-theme-current-text">
-                                        <strong id="theme-current-name">Default</strong>
-                                        <span id="theme-current-detail">Plus Jakarta Sans · Otomatis</span>
-                                    </span>
-                                </div>
-                                <button class="albedu-btn albedu-btn-secondary" id="btn-open-theme-overlay" type="button">
-                                    <span data-albedu-icon="tune"></span>
-                                    <span>Pengaturan Tema</span>
-                                </button>
-                            </div>
-                        </div>
                     </section>
 
                     <!-- Soal -->
@@ -547,111 +502,7 @@
       </div>
     </div>
 
-    <!-- ═══ THEME OVERLAY (full-screen, production-grade) ════════════
-         Big preview (page-size) + scoped theme controls.
-         Changes affect ONLY the preview inside this overlay — never the
-         wizard form or page shell. On Save → commit draft theme to state.
-         On Cancel → discard draft, restore previous theme_config. -->
-    <div class="albedu-theme-overlay" id="theme-overlay" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="theme-overlay-title">
-      <div class="albedu-theme-overlay-shell">
-        <!-- Top bar -->
-        <header class="albedu-theme-overlay-topbar">
-          <div class="albedu-theme-overlay-title-row">
-            <h2 class="albedu-theme-overlay-title" id="theme-overlay-title">
-              <span data-albedu-icon="palette"></span>
-              <span>Pengaturan Tema Visual</span>
-            </h2>
-            <p class="albedu-theme-overlay-subtitle">Perubahan hanya mempengaruhi preview di sebelah kanan. Klik "Terapkan" untuk menyimpan.</p>
-          </div>
-          <div class="albedu-theme-overlay-actions">
-            <button class="albedu-btn albedu-btn-ghost" id="theme-overlay-cancel" type="button">
-              <span data-albedu-icon="close"></span>
-              <span>Batal</span>
-            </button>
-            <button class="albedu-btn albedu-btn-secondary" id="theme-overlay-reset" type="button">
-              <span data-albedu-icon="restart_alt"></span>
-              <span>Reset</span>
-            </button>
-            <button class="albedu-btn albedu-btn-primary" id="theme-overlay-save" type="button">
-              <span data-albedu-icon="check"></span>
-              <span>Terapkan Tema</span>
-            </button>
-          </div>
-        </header>
-
-        <!-- 2-column body: controls (left, scrollable) + preview (right, big) -->
-        <div class="albedu-theme-overlay-body">
-          <!-- ── LEFT: Controls ── -->
-          <aside class="albedu-theme-overlay-controls" aria-label="Pengaturan tema">
-            <!-- Preset chips -->
-            <section class="albedu-theme-control-group">
-              <label class="albedu-theme-control-label">Template</label>
-              <div class="albedu-preset-chips" id="overlay-preset-chips">
-                <button class="albedu-preset-chip albedu-active" data-preset="default" type="button">Default</button>
-                <button class="albedu-preset-chip" data-preset="modern" type="button">Modern</button>
-                <button class="albedu-preset-chip" data-preset="dark" type="button">Dark</button>
-                <button class="albedu-preset-chip" data-preset="focus" type="button">Focus</button>
-                <button class="albedu-preset-chip" data-preset="school" type="button">School</button>
-              </div>
-            </section>
-
-            <!-- Quick-pick colors -->
-            <section class="albedu-theme-control-group">
-              <label class="albedu-theme-control-label">Warna Utama</label>
-              <div class="albedu-color-quickpicks" id="overlay-color-quickpicks"></div>
-              <div class="albedu-color-picker-wrap">
-                <input type="color" id="overlay-color-picker" value="#2563eb">
-                <span class="albedu-color-hex" id="overlay-color-hex">#2563eb</span>
-                <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="overlay-color-reset" type="button" aria-label="Reset warna utama">
-                  <span data-albedu-icon="restart_alt"></span>
-                </button>
-              </div>
-            </section>
-
-            <!-- Custom text accent color (defaults to primary) -->
-            <section class="albedu-theme-control-group">
-              <label class="albedu-theme-control-label">
-                Warna Teks Aksen
-                <span class="albedu-theme-control-hint">opsional · default = warna utama</span>
-              </label>
-              <div class="albedu-color-picker-wrap">
-                <input type="color" id="overlay-text-accent-picker" value="#2563eb">
-                <span class="albedu-color-hex" id="overlay-text-accent-hex">#2563eb</span>
-                <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="overlay-text-accent-reset" type="button" aria-label="Reset ke warna utama">
-                  <span data-albedu-icon="restart_alt"></span>
-                  <span>Ikut Warna Utama</span>
-                </button>
-              </div>
-            </section>
-
-            <!-- Font -->
-            <section class="albedu-theme-control-group">
-              <label class="albedu-theme-control-label">Font</label>
-              <select id="overlay-theme-font" class="albedu-select">
-                <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
-                <option value="Inter">Inter</option>
-                <option value="DM Sans">DM Sans</option>
-                <option value="system-ui">System UI</option>
-              </select>
-            </section>
-
-            <!-- Mode -->
-            <section class="albedu-theme-control-group">
-              <label class="albedu-theme-control-label">Mode</label>
-              <select id="overlay-theme-mode" class="albedu-select">
-                <option value="auto">Otomatis (sistem)</option>
-                <option value="light">Terang</option>
-                <option value="dark">Gelap</option>
-              </select>
-            </section>
-
-            <!-- WCAG status -->
-            <div class="albedu-wcag-status albedu-wcag-pass" id="overlay-wcag-status">
-              <span style="font-size: 14px;" data-albedu-icon="check_circle"></span>
-              <span>Contrast OK (Pass)</span>
-            </div>
-
-            <!-- Hint -->
+<!-- Hint -->
             <div class="albedu-theme-overlay-hint">
               <span data-albedu-icon="info"></span>
               <span>Preview di kanan menggunakan tema yang sedang kamu atur. Halaman wizard di luar overlay tidak terpengaruh.</span>
@@ -927,9 +778,7 @@
         </div>
       </div>
     </div>
-
-    <script type="module" src="../../src/theme-system/index.js"></script>
-<!-- Buat Ujian modules (still working — will be replaced in next iteration) -->
+  <!-- Buat Ujian modules (still working — will be replaced in next iteration) -->
     <script src="../../src/pages/buat-ujian/templates.js" defer></script>
     <script src="../../src/pages/buat-ujian/keyboard-shortcuts.js" defer></script>
     <script src="../../src/pages/buat-ujian/metadata-card.js" defer></script>
