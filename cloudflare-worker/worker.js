@@ -267,7 +267,18 @@ async function refreshSession(refreshToken, env) {
 }
 
 function csrfValid(request, pathname) {
-  if (pathname === '/api/auth/login') return true;
+  // Public routes that don't require CSRF (user has no session yet)
+  const PUBLIC_ROUTES = [
+    '/api/auth/login',
+    '/api/auth/forgot',
+    '/api/auth/register',
+    '/api/auth/recover',
+    '/functions/v1/register-admin',
+    '/functions/v1/user-auth-preflight',
+    '/functions/v1/access-code-attempt',
+    '/functions/v1/health-check',
+  ];
+  if (PUBLIC_ROUTES.includes(pathname)) return true;
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) return true;
   const csrf = parseCookies(request)[CSRF_COOKIE];
   const header = request.headers.get('X-CSRF-Token');
@@ -458,20 +469,39 @@ async function handleLogout(request, env) {
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
 }
 
+// Public EFs that don't require auth session (called before login)
+const PUBLIC_EFS = [
+  '/functions/v1/register-admin',
+  '/functions/v1/user-auth-preflight',
+  '/functions/v1/access-code-attempt',
+  '/functions/v1/health-check',
+];
+
 async function handleSupabaseProxy(request, env, url) {
   if (!csrfValid(request, url.pathname)) return authJson(request, { error: 'CSRF tidak valid.' }, 403);
-  const session = await currentSession(request, env);
-  if (!session.token || !session.payload) return authJson(request, { error: 'Sesi telah berakhir.' }, 401);
+
+  // Public EFs skip session check — they're called before user is authenticated
+  const isPublicEF = PUBLIC_EFS.includes(url.pathname);
+
+  let session = null;
+  let authToken = null;
+  if (!isPublicEF) {
+    session = await currentSession(request, env);
+    if (!session.token || !session.payload) return authJson(request, { error: 'Sesi telah berakhir.' }, 401);
+    authToken = session.token;
+  }
+
   const target = new URL(url.pathname + url.search, env.SUPABASE_URL);
   const headers = new Headers(request.headers);
   headers.delete('Cookie');
-  headers.set('Authorization', `Bearer ${session.token}`);
+  // Set Authorization: if authenticated, use user's JWT; if public, use anon key
+  headers.set('Authorization', `Bearer ${authToken || env.SUPABASE_ANON_KEY}`);
   headers.set('apikey', env.SUPABASE_ANON_KEY);
   headers.delete('Host');
   const response = await fetch(target.toString(), { method: request.method, headers, body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body, redirect: 'manual' });
   const out = new Headers(response.headers);
   Object.entries(authHeaders(request)).forEach(([key, value]) => out.set(key, value));
-  if (session.refreshed) appendSetCookies(out, setAuthCookies(session.refreshed.access_token, session.refreshed.refresh_token));
+  if (session && session.refreshed) appendSetCookies(out, setAuthCookies(session.refreshed.access_token, session.refreshed.refresh_token));
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers: out });
 }
 
