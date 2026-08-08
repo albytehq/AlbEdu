@@ -41,7 +41,10 @@ export function handleError(err: unknown): Response {
   if (err instanceof HTTPError) {
     return errorResponse(err.status, err.code, err.message, err.details);
   }
+  // S8-08 fix: log full error server-side, but DON'T leak to client.
+  // Previously: { trace: message } exposed err.message which could contain
+  // internal details (table names, SQL errors, B2 XML, etc.).
+  // Now: only return generic 'Internal server error' to client.
   console.error('[UNHANDLED_ERROR]', err);
-  const message = err instanceof Error ? err.message : 'Unknown error';
-  return errorResponse(500, 'INTERNAL_ERROR', 'Internal server error', { trace: message });
+  return errorResponse(500, 'INTERNAL_ERROR', 'Internal server error', undefined);
 }

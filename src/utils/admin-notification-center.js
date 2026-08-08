@@ -199,10 +199,29 @@
         refetchTimer = setTimeout(async () => {
           refetchTimer = null;
           try {
-            const snap = await repo.getDocs('violation_events', {
+            // S5-02 fix: apply the SAME assessment_id filter to the refetch
+            // as the realtime subscription. Previously this fetched ALL 300
+            // violation_events across ALL assessments (multi-tenant data leak
+            // — org A admin could see org B violations).
+            const fetchOpts = {
               order: { column: 'created_at', ascending: false },
               limit: 300,
-            });
+            };
+            if (filter) {
+              // Parse the filter string "assessment_id=in.(id1,id2,...)"
+              // and convert to repo.getDocs filter format
+              const match = filter.match(/assessment_id=in\.\(([^)]+)\)/);
+              if (match) {
+                const ids = match[1].split(',');
+                fetchOpts.eq = { assessment_id: ids.length === 1 ? ids[0] : undefined };
+                // For multiple IDs, use the 'in' filter
+                if (ids.length > 1) {
+                  fetchOpts.in = { assessment_id: ids };
+                  delete fetchOpts.eq;
+                }
+              }
+            }
+            const snap = await repo.getDocs('violation_events', fetchOpts);
             _handleSnapshot(snap);
           } catch (err) {
             const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';

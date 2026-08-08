@@ -95,7 +95,10 @@ async function logic(req: Request, env: Env): Promise<Response> {
   try {
     await b2PutObject(b2Path, fileBytes, 'image/jpeg', env);
   } catch (err) {
-    throw new HTTPError(502, 'INTERNAL_ERROR', `B2 upload failed: ${err.message}`);
+    // S8-09 fix: don't leak B2 internal error (XML response, bucket name, etc.)
+    // to client. Log server-side, return generic message.
+    console.error('[asset-upload] B2 upload failed:', err);
+    throw new HTTPError(502, 'INTERNAL_ERROR', 'Upload failed — please try again');
   }
 
   // 8. INSERT manifest
