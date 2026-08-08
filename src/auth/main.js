@@ -145,6 +145,44 @@ let _authStateTimer      = null;
 let _graceTimer          = null;  // 3s grace period before redirect on transient null user
 let _syncingUserId       = null; // Race condition dedup for _syncUserDocument
 let _syncingPromise      = null; // Race condition dedup for _syncUserDocument
+let _authChannel         = null;
+
+function _workerAuthFetch(path, init = {}) {
+    const base = window.AlbEdu?.workerBase || document.querySelector('meta[name="albedu-worker-base"]')?.content || 'https://edu.albyte-inc.workers.dev';
+    const request = window.AlbEdu?.authFetch || fetch;
+    return request(`${base}${path}`, { ...init, credentials: 'include' });
+}
+
+function _broadcastAuth(message) {
+    try {
+        if (_authChannel) _authChannel.postMessage(message);
+        else localStorage.setItem('albedu-auth-event', JSON.stringify({ ...message, ts: Date.now() }));
+    } catch (_) {}
+}
+
+function _receiveAuthBroadcast(message) {
+    if (!message?.type) return;
+    if (message.type === 'login' && !_currentUser) window.location.reload();
+    if (message.type === 'logout') {
+        _currentUser = _userData = _userRole = _profileState = null;
+        if (_isInsideApp()) _redirectToLogin();
+    }
+    if (message.type === 'refresh' && message.user) {
+        _currentUser = message.user;
+        _userData = { ...(_userData || {}), id: message.user.id, email: message.user.email };
+    }
+}
+
+function _setupAuthSync() {
+    if (typeof BroadcastChannel !== 'undefined') {
+        _authChannel = new BroadcastChannel('albedu-auth');
+        _authChannel.onmessage = event => _receiveAuthBroadcast(event.data);
+    }
+    window.addEventListener('storage', event => {
+        if (event.key !== 'albedu-auth-event' || !event.newValue) return;
+        try { _receiveAuthBroadcast(JSON.parse(event.newValue)); } catch (_) {}
+    });
+}
 
 // Re-aliased from user-helpers.js.
 const _buildAvatarUrl    = window.AuthHelpers.buildAvatarUrl;
@@ -418,26 +456,8 @@ async function _createUserDocViaServer(userId) {
     }
 
     // The Edge Function requires a Bearer token to identify the user.
-    // AlbEdu.supabase.auth.getSession() returns the current session from storage.
-    let session;
-    try {
-        const result = await _getSbClient().auth.getSession();
-        session = result?.data?.session;
-    } catch (err) {
-        console.error('[Auth] getSession failed:', err?.message || err);
-        throw new CompletionError('invalid_token');
-    }
-
-    if (!session?.access_token) {
-        throw new CompletionError('invalid_token');
-    }
-
-    // Defensive: ensure the session user ID matches the userId we're provisioning.
-    // Guards against a stale session after signOut but before redirect.
-    if (session.user?.id && session.user.id !== userId) {
-        console.error('[Auth] session user ID mismatch:', session.user.id, 'vs', userId);
-        throw new CompletionError('invalid_token');
-    }
+    // The Worker adds the Authorization header from its HttpOnly cookie.
+    // Do not obtain or construct an access token in browser JavaScript.
 
     // Fix (Agent 7 finding): use resilience layer for retry + timeout instead
     // of raw functions.invoke. The resilience layer provides:
@@ -455,7 +475,7 @@ async function _createUserDocViaServer(userId) {
     const resilience = window.AlbEduResilience;
     if (resilience?.callEF) {
         const result = await resilience.callEF('user-auth-complete', efBody, {
-            headers: { Authorization: `Bearer ${session.access_token}` },
+            headers: {},
         });
         if (!result.ok) {
             // result.error is a string message; wrap so _extractFunctionErrorCode
@@ -472,7 +492,7 @@ async function _createUserDocViaServer(userId) {
         while (attempts < 3) {
             try {
                 const rawResult = await _getSbClient().functions.invoke('user-auth-complete', {
-                    headers: { Authorization: `Bearer ${session.access_token}` },
+                    headers: {},
                     body: efBody,
                 });
                 data = rawResult.data;
@@ -791,6 +811,7 @@ async function authLogout(options = {}) {
 
         try {
             await _getAuth().signOut();
+            _broadcastAuth({ type: 'logout' });
         } catch (signOutErr) {
             // signOut may fail if session is already expired or network is down.
             // Not fatal — client state is already cleaned up above. Log but
@@ -912,6 +933,8 @@ async function _handleAuthStateChange(user, event) {
             }
 
             _currentUser = user;
+            if (event === 'SIGNED_IN') _broadcastAuth({ type: 'login', user });
+            if (event === 'TOKEN_REFRESHED') _broadcastAuth({ type: 'refresh', user });
             // `user.uid` is a Firebase-shaped field name that never existed
             // on the native Supabase AuthService user object (_toUser() in
             // supabase-client.js only sets `.id`). Previously this meant
@@ -1063,6 +1086,7 @@ async function _handleAuthStateChange(user, event) {
 function _initializeSystem() {
     if (_initialized) return;
     _initialized = true;
+    _setupAuthSync();
 
     if (!window.AlbEdu?.supabase?.auth) {
         window.UI?.hideAuthLoading?.();
@@ -1091,24 +1115,11 @@ function _initializeSystem() {
             // Give Supabase SDK a tick to fire its own auto-refresh on refocus.
             setTimeout(async () => {
                 try {
-                    const sb = window.AlbEdu?.supabase?.client;
-                    if (!sb) { _visibilityCheckInProgress = false; return; }
-
-                    const { data } = await sb.auth.getSession();
-                    if (data?.session) {
-                        // Session alive — if currentUser was null due to a race,
-                        // the real session will arrive via onAuthStateChange.
-                        // Cancel any pending grace timer.
+                    const response = await _workerAuthFetch('/api/auth/session');
+                    if (response.ok) {
                         clearTimeout(_graceTimer);
-                        return;
-                    }
-
-                    // No session — try ONE manual refresh before giving up.
-                    const { data: refreshed, error } = await sb.auth.refreshSession();
-                    if (error || !refreshed?.session) {
-                        // Genuine expiry — let SIGNED_OUT flow handle it.
-                        console.warn('[Auth] session expired on tab refocus — refresh failed');
-                    }
+                        await _getAuth().refreshCookieSession('TOKEN_REFRESHED');
+                    } else console.warn('[Auth] session expired on tab refocus');
                 } catch (err) {
                     console.warn('[Auth] visibility revalidation error:', err?.message || err);
                 } finally {
@@ -1125,13 +1136,8 @@ function _initializeSystem() {
             if (_logoutInProgress) return;
             setTimeout(async () => {
                 try {
-                    const sb = window.AlbEdu?.supabase?.client;
-                    if (!sb) return;
-                    const { data } = await sb.auth.getSession();
-                    if (!data?.session) {
-                        // Try manual refresh on reconnect.
-                        await sb.auth.refreshSession();
-                    }
+                    const response = await _workerAuthFetch('/api/auth/session');
+                    if (response.ok) await _getAuth().refreshCookieSession('TOKEN_REFRESHED');
                 } catch (_) { /* silent — onAuthStateChange will handle */ }
             }, 500);
         });
@@ -1148,6 +1154,10 @@ function _initializeSystem() {
                 _redirectForRole(_userRole, LOGIN_NOTICE_REDIRECT_DELAY_MS);
             }
         }, 1_500);
+
+        // Cookie authentication has no SDK storage event. Hydrate the current
+        // user explicitly after listeners are registered.
+        _getAuth().refreshCookieSession('INITIAL_SESSION');
 
     } catch (_err) {
         _authReady = true;
@@ -1188,6 +1198,7 @@ window.Auth = {
     getCurrentPage:           _getCurrentPage,
     navigateTo:               _navigateTo,
     getBasePath:              () => AUTH_CONFIG.BASE_PATH,
+    loginUrl:                 () => AUTH_CONFIG.loginUrl(),
     getLandingPath:           () => AUTH_CONFIG.landingUrl(),
     getRoleRedirectPath:      (role) => AUTH_CONFIG.pathForRole(role),
     checkProfileCompleteness: _isProfileComplete,

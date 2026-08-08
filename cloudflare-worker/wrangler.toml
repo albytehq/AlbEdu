@@ -10,6 +10,13 @@ workers_dev = true
 # managed via Cloudflare Dashboard and are NOT re-deployed here. This deploy
 # only updates the worker.js code (which contains the cache TTL fix).
 # Existing env vars are preserved across deploys.
+#
+# Cookie-auth secrets must be set in Cloudflare Dashboard → Workers → edu →
+# Settings → Variables. Never put their values in this file:
+#   JWT_SECRET                Supabase JWT secret (Settings → API → JWT Secret)
+#   SUPABASE_URL              Supabase project URL
+#   SUPABASE_ANON_KEY         Supabase anonymous key
+#   SUPABASE_SERVICE_ROLE_KEY Service role key for privileged Worker calls
 
 # No build step needed — worker.js is plain JS (no bundler, no TypeScript)
 [build]

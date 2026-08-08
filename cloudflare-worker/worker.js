@@ -56,6 +56,8 @@
 //   • See docs/asset-system/BACKBLAZE-SETUP.md Step 5
 // ============================================================================
 
+import { jwtVerify } from 'jose';
+
 // ── Constants ──────────────────────────────────────────────────────────────
 
 // S7-01/C3-01 fix: 1 year immutable for SHA-256 addressed assets.
@@ -125,10 +127,278 @@ function corsHeaders(origin) {
   const allowed = origin && ALLOWED_ORIGINS.has(origin);
   return {
     'Access-Control-Allow-Origin': allowed ? origin : 'null',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token, X-Exam-Mode, Prefer, X-Client, X-Idempotency-Key',
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
   };
+}
+
+// ── Cookie auth proxy ──────────────────────────────────────────────────────
+// Tokens are deliberately kept out of browser storage. The only readable
+// cookie is the CSRF token used by the double-submit protection below.
+const ACCESS_COOKIE = 'albedu_session';
+const REFRESH_COOKIE = 'albedu_refresh';
+const CSRF_COOKIE = 'albedu_csrf';
+const ACCESS_MAX_AGE = 3600;
+const REFRESH_MAX_AGE = 604800;
+
+function parseCookies(request) {
+  const result = {};
+  for (const pair of (request.headers.get('Cookie') || '').split(';')) {
+    const index = pair.indexOf('=');
+    if (index < 0) continue;
+    const key = pair.slice(0, index).trim();
+    if (!key) continue;
+    try { result[key] = decodeURIComponent(pair.slice(index + 1).trim()); } catch (_) {}
+  }
+  return result;
+}
+
+function randomToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function base64Url(bytes) {
+  let text = '';
+  for (const byte of bytes) text += String.fromCharCode(byte);
+  return btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+async function pkceChallenge(verifier) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  return base64Url(new Uint8Array(digest));
+}
+
+function cookie(name, value, options = {}) {
+  const parts = [`${name}=${encodeURIComponent(value)}`, 'Path=' + (options.path || '/')];
+  if (options.maxAge !== undefined) parts.push(`Max-Age=${options.maxAge}`);
+  if (options.httpOnly) parts.push('HttpOnly');
+  parts.push('Secure', `SameSite=${options.sameSite || 'Lax'}`);
+  return parts.join('; ');
+}
+
+function authHeaders(request, extra = {}) {
+  const origin = request.headers.get('Origin') || '';
+  return {
+    ...corsHeaders(origin),
+    'Cache-Control': 'no-store',
+    ...extra,
+  };
+}
+
+function authJson(request, body, status = 200, headers = {}) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: authHeaders(request, { 'Content-Type': 'application/json', ...headers }),
+  });
+}
+
+function clearAuthCookies() {
+  return [
+    cookie(ACCESS_COOKIE, '', { maxAge: 0, httpOnly: true }),
+    cookie(REFRESH_COOKIE, '', { maxAge: 0, httpOnly: true }),
+    cookie(CSRF_COOKIE, '', { maxAge: 0 }),
+  ];
+}
+
+function setAuthCookies(accessToken, refreshToken, csrfToken = randomToken()) {
+  const values = [cookie(ACCESS_COOKIE, accessToken, { maxAge: ACCESS_MAX_AGE, httpOnly: true })];
+  // The proxy needs this cookie to refresh a request before forwarding it.
+  if (refreshToken) values.push(cookie(REFRESH_COOKIE, refreshToken, { maxAge: REFRESH_MAX_AGE, httpOnly: true }));
+  values.push(cookie(CSRF_COOKIE, csrfToken, { maxAge: ACCESS_MAX_AGE }));
+  return values;
+}
+
+function appendSetCookies(headers, values) {
+  for (const value of values) headers.append('Set-Cookie', value);
+}
+
+function userPayload(user) {
+  if (!user) return null;
+  return { id: user.id, email: user.email || '', user_metadata: user.user_metadata || {} };
+}
+
+async function supabaseAuth(env, path, init = {}) {
+  const headers = new Headers(init.headers || {});
+  headers.set('apikey', env.SUPABASE_ANON_KEY);
+  headers.set('Content-Type', headers.get('Content-Type') || 'application/json');
+  return fetch(`${env.SUPABASE_URL}/auth/v1/${path}`, { ...init, headers });
+}
+
+async function verifyAccessToken(token, env) {
+  if (!token || !env.JWT_SECRET) return null;
+  try {
+    const secret = new TextEncoder().encode(env.JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret, { algorithms: ['HS256'] });
+    return payload;
+  } catch (_) { return null; }
+}
+
+function tokenExpiresSoon(payload, thresholdSeconds) {
+  return !payload?.exp || payload.exp - Math.floor(Date.now() / 1000) <= thresholdSeconds;
+}
+
+async function refreshSession(refreshToken, env) {
+  if (!refreshToken) return null;
+  const response = await supabaseAuth(env, 'token?grant_type=refresh_token', {
+    method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data.access_token ? data : null;
+}
+
+function csrfValid(request, pathname) {
+  if (pathname === '/api/auth/login') return true;
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) return true;
+  const csrf = parseCookies(request)[CSRF_COOKIE];
+  const header = request.headers.get('X-CSRF-Token');
+  return Boolean(csrf && header && csrf === header);
+}
+
+async function currentSession(request, env, { allowRefresh = true } = {}) {
+  const cookies = parseCookies(request);
+  let token = cookies[ACCESS_COOKIE];
+  let payload = await verifyAccessToken(token, env);
+  const threshold = request.headers.get('X-Exam-Mode') === '1' ? 300 : 60;
+  let refreshed = null;
+  if (allowRefresh && (!payload || tokenExpiresSoon(payload, threshold))) {
+    refreshed = await refreshSession(cookies[REFRESH_COOKIE], env);
+    if (refreshed) {
+      token = refreshed.access_token;
+      payload = await verifyAccessToken(token, env);
+    }
+  }
+  // Temporary migration fallback. Remove after every frontend has been deployed.
+  if (!token && request.headers.get('Authorization')?.startsWith('Bearer ')) {
+    token = request.headers.get('Authorization').slice(7);
+    payload = await verifyAccessToken(token, env);
+  }
+  return { token, payload, refreshed };
+}
+
+async function handleLogin(request, env, url) {
+  if (request.method === 'GET' && url.searchParams.get('provider') === 'google') {
+    // The final OAuth callback must be configured in Supabase Auth redirect URLs.
+    const callback = new URL('/api/auth/callback', url.origin);
+    callback.searchParams.set('return_to', url.searchParams.get('return_to') || '/pages/login.html');
+    const authorize = new URL(`${env.SUPABASE_URL}/auth/v1/authorize`);
+    authorize.searchParams.set('provider', 'google');
+    authorize.searchParams.set('redirect_to', callback.toString());
+    const verifier = base64Url(crypto.getRandomValues(new Uint8Array(48)));
+    authorize.searchParams.set('code_challenge', await pkceChallenge(verifier));
+    authorize.searchParams.set('code_challenge_method', 's256');
+    const response = Response.redirect(authorize.toString(), 302);
+    response.headers.append('Set-Cookie', cookie('albedu_oauth_verifier', verifier, { maxAge: 600, httpOnly: true, path: '/api/auth/callback' }));
+    return response;
+  }
+  if (request.method !== 'POST') return authJson(request, { error: 'Method not allowed' }, 405);
+  let body;
+  try { body = await request.json(); } catch (_) { return authJson(request, { error: 'Payload login tidak valid.' }, 400); }
+  const payload = body?.id_token
+    ? { provider: 'google', token: body.id_token }
+    : { email: body?.email, password: body?.password, gotrue_meta_security: body?.captchaToken ? { captcha_token: body.captchaToken } : undefined };
+  if ((!payload.email || !payload.password) && !payload.token) return authJson(request, { error: 'Email dan kata sandi wajib diisi.' }, 400);
+  const endpoint = payload.token ? 'token?grant_type=id_token' : 'token?grant_type=password';
+  const response = await supabaseAuth(env, endpoint, { method: 'POST', body: JSON.stringify(payload) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) return authJson(request, { error: data.msg || data.error_description || 'Login gagal.' }, response.status || 401);
+  const headers = new Headers(authHeaders(request, { 'Content-Type': 'application/json' }));
+  appendSetCookies(headers, setAuthCookies(data.access_token, data.refresh_token));
+  return new Response(JSON.stringify({ user: userPayload(data.user) }), { status: 200, headers });
+}
+
+async function handleOAuthCallback(request, env, url) {
+  const code = url.searchParams.get('code');
+  const verifier = parseCookies(request).albedu_oauth_verifier;
+  const returnTo = url.searchParams.get('return_to') || '/pages/login.html';
+  let safeReturnTo;
+  try {
+    safeReturnTo = new URL(returnTo, url.origin);
+  } catch (_) {
+    return Response.redirect(`${url.origin}/api/auth/login?auth_error=oauth`, 302);
+  }
+  if (!code || !verifier || !ALLOWED_ORIGINS.has(safeReturnTo.origin)) return Response.redirect(`${url.origin}/api/auth/login?auth_error=oauth`, 302);
+  const response = await supabaseAuth(env, 'token?grant_type=pkce', {
+    method: 'POST', body: JSON.stringify({ auth_code: code, code_verifier: verifier }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) return Response.redirect(`${url.origin}/pages/login.html?auth_error=oauth`, 302);
+  const redirect = Response.redirect(safeReturnTo.toString(), 302);
+  appendSetCookies(redirect.headers, setAuthCookies(data.access_token, data.refresh_token));
+  redirect.headers.append('Set-Cookie', cookie('albedu_oauth_verifier', '', { maxAge: 0, httpOnly: true, path: '/api/auth/callback' }));
+  return redirect;
+}
+
+async function handleForgotPassword(request, env) {
+  if (request.method !== 'POST') return authJson(request, { error: 'Method not allowed' }, 405);
+  const body = await request.json().catch(() => ({}));
+  if (!body.email) return authJson(request, { error: 'Email wajib diisi.' }, 400);
+  const response = await supabaseAuth(env, 'recover', {
+    method: 'POST', body: JSON.stringify({ email: body.email, redirect_to: body.redirectTo }),
+  });
+  // Preserve Supabase's non-enumerating recovery behaviour.
+  return authJson(request, { ok: response.ok }, response.ok ? 200 : response.status);
+}
+
+async function handlePublicRegistration(request, env) {
+  if (request.method !== 'POST') return authJson(request, { error: 'Method not allowed' }, 405);
+  const response = await fetch(`${env.SUPABASE_URL}/functions/v1/register-admin`, {
+    method: 'POST', headers: { apikey: env.SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Origin: request.headers.get('Origin') || '' }, body: request.body,
+  });
+  const headers = new Headers(response.headers);
+  Object.entries(authHeaders(request)).forEach(([key, value]) => headers.set(key, value));
+  return new Response(response.body, { status: response.status, headers });
+}
+
+async function handleRefresh(request, env) {
+  if (request.method !== 'POST') return authJson(request, { error: 'Method not allowed' }, 405);
+  if (!csrfValid(request, '/api/auth/refresh')) return authJson(request, { error: 'CSRF tidak valid.' }, 403);
+  const refreshed = await refreshSession(parseCookies(request)[REFRESH_COOKIE], env);
+  if (!refreshed) return authJson(request, { error: 'Sesi telah berakhir.' }, 401, { 'Set-Cookie': clearAuthCookies().join(', ') });
+  const headers = new Headers(authHeaders(request, { 'Content-Type': 'application/json' }));
+  appendSetCookies(headers, setAuthCookies(refreshed.access_token, refreshed.refresh_token));
+  return new Response(JSON.stringify({ ok: true, user: userPayload(refreshed.user) }), { status: 200, headers });
+}
+
+async function handleSession(request, env) {
+  if (request.method !== 'GET') return authJson(request, { error: 'Method not allowed' }, 405);
+  const session = await currentSession(request, env);
+  if (!session.payload) return authJson(request, { error: 'Sesi tidak ditemukan.' }, 401);
+  const userResponse = await supabaseAuth(env, 'user', { headers: { Authorization: `Bearer ${session.token}` } });
+  const user = userResponse.ok ? await userResponse.json() : { id: session.payload.sub, email: session.payload.email, user_metadata: session.payload.user_metadata };
+  const headers = new Headers(authHeaders(request, { 'Content-Type': 'application/json' }));
+  if (session.refreshed) appendSetCookies(headers, setAuthCookies(session.refreshed.access_token, session.refreshed.refresh_token));
+  return new Response(JSON.stringify({ user: userPayload(user) }), { status: 200, headers });
+}
+
+async function handleLogout(request, env) {
+  if (request.method !== 'POST') return authJson(request, { error: 'Method not allowed' }, 405);
+  if (!csrfValid(request, '/api/auth/logout')) return authJson(request, { error: 'CSRF tidak valid.' }, 403);
+  const token = parseCookies(request)[ACCESS_COOKIE];
+  if (token) await supabaseAuth(env, 'logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => null);
+  const headers = new Headers(authHeaders(request, { 'Content-Type': 'application/json' }));
+  appendSetCookies(headers, clearAuthCookies());
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+}
+
+async function handleSupabaseProxy(request, env, url) {
+  if (!csrfValid(request, url.pathname)) return authJson(request, { error: 'CSRF tidak valid.' }, 403);
+  const session = await currentSession(request, env);
+  if (!session.token || !session.payload) return authJson(request, { error: 'Sesi telah berakhir.' }, 401);
+  const target = new URL(url.pathname + url.search, env.SUPABASE_URL);
+  const headers = new Headers(request.headers);
+  headers.delete('Cookie');
+  headers.set('Authorization', `Bearer ${session.token}`);
+  headers.set('apikey', env.SUPABASE_ANON_KEY);
+  headers.delete('Host');
+  const response = await fetch(target.toString(), { method: request.method, headers, body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body, redirect: 'manual' });
+  const out = new Headers(response.headers);
+  Object.entries(authHeaders(request)).forEach(([key, value]) => out.set(key, value));
+  if (session.refreshed) appendSetCookies(out, setAuthCookies(session.refreshed.access_token, session.refreshed.refresh_token));
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers: out });
 }
 
 // ── AWS Signature V4 for B2 S3 API ─────────────────────────────────────────
@@ -598,6 +868,20 @@ export default {
 
       if (request.method === 'GET' && url.pathname === '/api/health') {
         return handleHealth(env);
+      }
+
+      if (url.pathname === '/api/auth/login') return handleLogin(request, env, url);
+      if (url.pathname === '/api/auth/callback') return handleOAuthCallback(request, env, url);
+      if (url.pathname === '/api/auth/refresh') return handleRefresh(request, env);
+      if (url.pathname === '/api/auth/session') return handleSession(request, env);
+      if (url.pathname === '/api/auth/logout') return handleLogout(request, env);
+      if (url.pathname === '/api/auth/forgot') return handleForgotPassword(request, env);
+      if (url.pathname === '/api/auth/register') return handlePublicRegistration(request, env);
+
+      if (url.pathname === '/functions/v1/register-admin') return handlePublicRegistration(request, env);
+
+      if (url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/functions/v1/') || url.pathname.startsWith('/storage/v1/')) {
+        return handleSupabaseProxy(request, env, url);
       }
 
       if (request.method === 'GET' && url.pathname.startsWith('/img/')) {

@@ -66,8 +66,16 @@
       });
     }
 
-    _client = window.supabase.createClient(config.url, config.anonKey, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+    _client = window.supabase.createClient(WORKER_BASE, config.anonKey, {
+      auth: {
+        storage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        fetch: window.AlbEdu?.authFetch || ((input, init) => fetch(input, { ...init, credentials: 'include' })),
+      },
     });
     return _client;
   }

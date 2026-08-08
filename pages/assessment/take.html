@@ -33,6 +33,7 @@
     <script defer src="../../src/shared/head/fonts.js"></script>
     <script defer src="../../src/shared/icons/icons.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script defer src="../../src/shared/csrf.js"></script>
     <script defer src="../../src/platform/supabase-client.js"></script>
     <script defer src="../../src/shared/resilience.js"></script>
     <script defer src="../../src/platform/repository.js"></script>
@@ -249,6 +250,15 @@
   <div id="pause-banner" hidden role="alert" aria-live="assertive">
     <span data-albedu-icon="pause_circle"></span>
     <span id="pause-text">Asesmen dijeda oleh admin. Mohon tunggu.</span>
+  </div>
+
+  <div id="exam-session-expired-modal" class="take-status-screen" hidden role="alertdialog" aria-modal="true" aria-labelledby="exam-session-expired-title">
+    <div class="status-icon"><span data-albedu-icon="warning"></span></div>
+    <h2 class="status-title" id="exam-session-expired-title">Sesi Berakhir</h2>
+    <p class="status-message">Sesi berakhir, jawaban tersimpan lokal. Klik untuk login ulang.</p>
+    <div class="status-actions">
+      <button class="albedu-btn albedu-btn-primary" type="button" onclick="window.location.href=(window.Auth?.loginUrl?.() || '../login.html')">Login Ulang</button>
+    </div>
   </div>
 
     <script>

@@ -235,7 +235,7 @@ async function handleSubmit(event) {
     try {
         await waitForSupabaseReady();
 
-        if (!window.AlbEdu?.supabase?.client?.auth?.resetPasswordForEmail) {
+        if (!window.AlbEdu?.supabase?.auth?.sendPasswordReset) {
             throw new Error('Sistem autentikasi belum siap. Silakan muat ulang halaman.');
         }
 
@@ -247,9 +247,7 @@ async function handleSubmit(event) {
             throw new Error('Konfigurasi redirect tidak valid.');
         }
 
-        const { error } = await window.AlbEdu?.supabase?.client.auth.resetPasswordForEmail(email, {
-            redirectTo,
-        });
+        const { error } = await window.AlbEdu.supabase.auth.sendPasswordReset(email, redirectTo);
 
         if (error) {
             // Two categories:
@@ -360,9 +358,7 @@ async function handleResend() {
             return;
         }
 
-        const { error } = await window.AlbEdu?.supabase?.client.auth.resetPasswordForEmail(email, {
-            redirectTo,
-        });
+        const { error } = await window.AlbEdu.supabase.auth.sendPasswordReset(email, redirectTo);
 
         if (error) {
             const shouldSuppress = shouldSuppressForgotPasswordError(error);
