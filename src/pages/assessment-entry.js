@@ -98,20 +98,43 @@
     _wireEvents() {
       // Input events
       this._inputs.forEach((input, idx) => {
-        // Input — auto-advance
+        // Input — auto-advance + mobile paste detection
         input.addEventListener('input', (e) => {
+          // If the input suddenly has more than 1 char, it might be a mobile paste
+          // that bypassed the paste event (happens on some Android keyboards)
+          if (e.target.value.length > 1) {
+            const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
+            e.target.value = digits[0] || '';
+            if (digits.length > 1) {
+              // Distribute remaining digits to subsequent inputs
+              digits.split('').forEach((d, i) => {
+                if (i === 0) return; // first digit already in current input
+                if (idx + i < this._inputs.length) {
+                  this._inputs[idx + i].value = d;
+                  this._inputs[idx + i].classList.add('filled');
+                }
+              });
+              const lastFilled = Math.min(idx + digits.length - 1, this._inputs.length - 1);
+              if (lastFilled >= 0) {
+                this._inputs[lastFilled].focus();
+                this._inputs[lastFilled].select();
+              }
+              this._updateSubmitState();
+              this._checkComplete();
+              return;
+            }
+          }
+
+          // Normal single-digit input
           const val = e.target.value;
-          // Filter digits only
           const digit = val.replace(/\D/g, '').slice(-1);
           e.target.value = digit;
 
           if (digit) {
             e.target.classList.add('filled');
-            // Auto-advance to next
             if (idx < this._inputs.length - 1) {
               this._inputs[idx + 1].focus();
             } else {
-              // Last digit — check if all filled
               this._checkComplete();
             }
           } else {
@@ -142,31 +165,49 @@
           }
         });
 
-        // Paste — distribute digits
+        // Paste — distribute digits (production-grade mobile + desktop)
+        // Handles: full 6-digit paste, partial paste, paste with spaces/dashes,
+        // iOS Safari clipboard quirks, Android Chrome paste events
         input.addEventListener('paste', (e) => {
           e.preventDefault();
-          const pasted = (e.clipboardData || window.clipboardData).getData('text');
+          // iOS Safari sometimes uses window.clipboardData instead of e.clipboardData
+          const clipboard = e.clipboardData || window.clipboardData;
+          if (!clipboard) return;
+          const pasted = clipboard.getData('text') || '';
+          // Strip ALL non-digits — handles "123 456", "123-456", "123.456", etc.
           const digits = pasted.replace(/\D/g, '').slice(0, 6);
+          if (!digits) return;
 
           // Distribute digits across inputs starting from current
           digits.split('').forEach((d, i) => {
             if (idx + i < this._inputs.length) {
               this._inputs[idx + i].value = d;
               this._inputs[idx + i].classList.add('filled');
+              // Trigger input event for each filled input (mobile keyboard compat)
+              this._inputs[idx + i].dispatchEvent(new Event('input', { bubbles: true }));
             }
           });
 
-          // Focus last filled or next empty
-          const lastFilled = Math.min(idx + digits.length, this._inputs.length - 1);
-          this._inputs[lastFilled]?.focus();
+          // Focus last filled input (not next empty — mobile keyboards behave better)
+          const lastFilled = Math.min(idx + digits.length - 1, this._inputs.length - 1);
+          if (lastFilled >= 0 && lastFilled < this._inputs.length) {
+            this._inputs[lastFilled].focus();
+            this._inputs[lastFilled].select();
+          }
 
           this._updateSubmitState();
           this._checkComplete();
         });
 
-        // Focus — select content
+        // Focus — select content for easy overwrite
         input.addEventListener('focus', (e) => {
-          e.target.select();
+          // Use setTimeout for iOS Safari — it needs a tick to show keyboard
+          setTimeout(() => { e.target.select(); }, 0);
+        });
+
+        // Blur — remove filled class if empty
+        input.addEventListener('blur', (e) => {
+          if (!e.target.value) e.target.classList.remove('filled');
         });
       });
 
