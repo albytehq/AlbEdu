@@ -15,8 +15,9 @@
   <link rel="icon" type="image/svg+xml" href="../../public/images/favicon/favicon.svg">
   <link rel="icon" type="image/png" sizes="96x96" href="../../public/images/favicon/favicon-96x96.png">
   <link rel="apple-touch-icon" sizes="180x180" href="../../public/images/favicon/apple-touch-icon.png">
+  <link rel="manifest" href="../../public/manifest.json">
 
-  <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
+  <!-- ═══ CRITICAL CSS ═══ -->
   <script src="../../src/shared/head/critical-css.js"></script>
 
   <!-- ═══ Design tokens + design system ═══ -->
@@ -24,9 +25,9 @@
   <link rel="stylesheet" href="../../styles/albedu-v1.css">
   <link rel="stylesheet" href="../../styles/albedu-components.css">
   <link rel="stylesheet" href="../../styles/loading.css">
-  <link rel="stylesheet" href="../../styles/peserta-floating-profile.css">
+  <link rel="stylesheet" href="../../styles/pages/peserta-pages.css">
 
-  <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
+  <!-- ═══ Deferred shared modules ═══ -->
   <script defer src="../../src/shared/head/fonts.js"></script>
   <script defer src="../../src/shared/icons/icons.js"></script>
   <script defer src="../../src/platform/supabase-client.js"></script>
@@ -34,186 +35,36 @@
   <script defer src="../../src/platform/repository.js"></script>
   <script defer src="../../src/security/sanitize.js"></script>
   <script defer src="../../src/shared/boot.js"></script>
-
-  <style>
-    /* Page-specific layout + blocked animation. Colors inherit from tokens.css. */
-    body {
-      min-height: 100vh;
-      min-height: 100dvh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      padding-top: max(24px, env(safe-area-inset-top, 24px));
-      padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
-      background:
-        radial-gradient(ellipse at top, rgba(239, 68, 68, 0.10) 0%, transparent 60%),
-        var(--albedu-surface-alt);
-    }
-
-    .blocked-card {
-      max-width: 440px;
-      width: 100%;
-      text-align: center;
-      background: var(--albedu-surface);
-      border: 1px solid var(--albedu-border);
-      border-radius: var(--albedu-radius-lg);
-      padding: 48px 32px 32px;
-      box-shadow: var(--albedu-shadow-md);
-    }
-
-    .blocked-icon {
-      width: 88px;
-      height: 88px;
-      margin: 0 auto 24px;
-      background: linear-gradient(135deg, #f87171 0%, var(--albedu-danger) 100%);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      box-shadow: 0 8px 24px rgba(239, 68, 68, 0.25);
-      animation: blocked-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .blocked-icon .albedu-icon { width: 44px; height: 44px; stroke-width: 2.5; }
-
-    @keyframes blocked-pop {
-      0% { transform: scale(0); opacity: 0; }
-      60% { transform: scale(1.1); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    .blocked-title {
-      font-size: 26px;
-      font-weight: 700;
-      color: var(--albedu-heading);
-      margin: 0 0 8px;
-      letter-spacing: -0.025em;
-    }
-    .blocked-subtitle {
-      font-size: 15px;
-      color: var(--albedu-body);
-      margin: 0 0 20px;
-      line-height: 1.5;
-    }
-    .blocked-reason {
-      background: rgba(239, 68, 68, 0.06);
-      border: 1px solid rgba(239, 68, 68, 0.15);
-      border-radius: var(--albedu-radius-sm);
-      padding: 14px 16px;
-      margin-bottom: 20px;
-      font-size: 14px;
-      color: var(--albedu-body);
-      line-height: 1.5;
-      display: none;
-    }
-    .blocked-reason strong { color: var(--albedu-danger); }
-    .blocked-reason.show { display: block; }
-    .blocked-hint {
-      font-size: 13px;
-      color: #94a3b8;
-      margin: 0 0 24px;
-    }
-
-    .blocked-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      align-items: center;
-    }
-    .blocked-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 13px 24px;
-      font-size: 15px;
-      font-weight: 600;
-      background: var(--albedu-primary);
-      color: #fff;
-      border: none;
-      border-radius: var(--albedu-radius-sm);
-      cursor: pointer;
-      font-family: inherit;
-      letter-spacing: -0.01em;
-      text-decoration: none;
-      box-shadow: 0 4px 12px var(--albedu-primary-ring);
-      transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease, background 200ms ease;
-      width: 100%;
-    }
-    .blocked-btn:hover {
-      transform: translateY(-1px);
-      background: var(--albedu-primary-hover);
-      box-shadow: 0 8px 20px var(--albedu-primary-ring);
-    }
-    .blocked-btn:active { transform: translateY(0) scale(0.98); }
-    .blocked-btn .albedu-icon { width: 18px; height: 18px; }
-
-    .blocked-btn-secondary {
-      background: var(--albedu-surface);
-      color: var(--albedu-primary);
-      border: 1px solid var(--albedu-primary);
-      box-shadow: none;
-    }
-    .blocked-btn-secondary:hover {
-      background: var(--albedu-primary-muted);
-      color: var(--albedu-primary-hover);
-      border-color: var(--albedu-primary-hover);
-      box-shadow: none;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      body {
-        background:
-          radial-gradient(ellipse at top, rgba(239, 68, 68, 0.14) 0%, transparent 60%),
-          #0f172a;
-      }
-      .blocked-card { background: #1e293b; border-color: #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-      .blocked-title { color: #f1f5f9; }
-      .blocked-subtitle { color: #94a3b8; }
-      .blocked-reason {
-        background: rgba(239, 68, 68, 0.08);
-        border-color: rgba(239, 68, 68, 0.2);
-        color: #cbd5e1;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .blocked-icon { animation: none; }
-      .blocked-btn:hover, .blocked-btn:active { transform: none; }
-    }
-  </style>
 </head>
-<body>
+<body class="peserta-page">
   <a class="albedu-skip-link" href="#main-content">Lewati ke konten</a>
 
-  <main id="main-content" class="blocked-card" role="main">
-    <div class="blocked-icon" aria-hidden="true">
-      <span data-albedu-icon="block"><svg class="albedu-icon"><use href="#i-block"/></svg></span>
+  <main id="main-content" class="peserta-card" role="main">
+    <div class="peserta-icon-circle peserta-icon-circle--danger" aria-hidden="true">
+      <span data-albedu-icon="block" class="albedu-icon--24"></span>
     </div>
-    <h1 class="blocked-title">Akses Diblokir</h1>
-    <p class="blocked-subtitle">
+    <h1 class="peserta-title">Akses Diblokir</h1>
+    <p class="peserta-subtitle">
       Sesi Anda telah diblokir oleh admin.
     </p>
-    <div id="reason-box" class="blocked-reason">
+    <div id="reason-box" class="peserta-reason">
       <strong>Alasan:</strong> <span id="reason-text"></span>
     </div>
-    <p class="blocked-hint">
-      Jika Anda merasa ini adalah kesalahan, hubungi admin untuk informasi lebih lanjut.
+    <p class="peserta-hint">
+      Jika Anda merasa ini adalah kesalahan, hubungi guru untuk informasi lebih lanjut.
     </p>
-    <div class="blocked-actions">
-      <a href="#" class="blocked-btn" id="back-btn">
-        <span data-albedu-icon="arrow_back" aria-hidden="true"><svg class="albedu-icon"><use href="#i-arrow_back"/></svg></span>
+    <div class="peserta-actions">
+      <a href="#" class="albedu-btn albedu-btn-primary albedu-btn-lg albedu-btn--block" id="back-btn">
+        <span data-albedu-icon="home" class="albedu-icon--20" aria-hidden="true"></span>
         <span>Kembali ke Beranda</span>
       </a>
-      <a href="mailto:admin@albedu.app" class="blocked-btn blocked-btn-secondary">
-        <span data-albedu-icon="mail" aria-hidden="true"><svg class="albedu-icon"><use href="#i-mail"/></svg></span>
-        <span>Hubungi Admin</span>
+      <a href="mailto:support@albedu.id" class="albedu-btn albedu-btn-secondary albedu-btn-lg albedu-btn--block">
+        <span data-albedu-icon="mail" class="albedu-icon--20" aria-hidden="true"></span>
+        <span>Hubungi Bantuan</span>
       </a>
     </div>
   </main>
 
-  <!-- Floating profile button (logout via OptionProfile) -->
   <script>
     // Show reason if provided in query string
     const reason = new URLSearchParams(window.location.search).get('reason');
@@ -221,7 +72,7 @@
       document.getElementById('reason-box').classList.add('show');
       document.getElementById('reason-text').textContent = reason;
     }
-    // Use inline BASE_PATH detection (Auth.getBasePath not available — main.js not loaded)
+    // Use inline BASE_PATH detection
     document.getElementById('back-btn').addEventListener('click', function (e) {
       e.preventDefault();
       var basePath = '/';

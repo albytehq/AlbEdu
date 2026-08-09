@@ -15,8 +15,9 @@
   <link rel="icon" type="image/svg+xml" href="../../public/images/favicon/favicon.svg">
   <link rel="icon" type="image/png" sizes="96x96" href="../../public/images/favicon/favicon-96x96.png">
   <link rel="apple-touch-icon" sizes="180x180" href="../../public/images/favicon/apple-touch-icon.png">
+  <link rel="manifest" href="../../public/manifest.json">
 
-  <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
+  <!-- ═══ CRITICAL CSS ═══ -->
   <script src="../../src/shared/head/critical-css.js"></script>
 
   <!-- ═══ Design tokens + design system ═══ -->
@@ -24,9 +25,9 @@
   <link rel="stylesheet" href="../../styles/albedu-v1.css">
   <link rel="stylesheet" href="../../styles/albedu-components.css">
   <link rel="stylesheet" href="../../styles/loading.css">
-  <link rel="stylesheet" href="../../styles/peserta-floating-profile.css">
+  <link rel="stylesheet" href="../../styles/pages/peserta-pages.css">
 
-  <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
+  <!-- ═══ Deferred shared modules ═══ -->
   <script defer src="../../src/shared/head/fonts.js"></script>
   <script defer src="../../src/shared/icons/icons.js"></script>
   <script defer src="../../src/platform/supabase-client.js"></script>
@@ -34,132 +35,25 @@
   <script defer src="../../src/platform/repository.js"></script>
   <script defer src="../../src/security/sanitize.js"></script>
   <script defer src="../../src/shared/boot.js"></script>
-
-  <style>
-    /* Page-specific layout + success animation. Colors inherit from tokens.css. */
-    body {
-      min-height: 100vh;
-      min-height: 100dvh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      padding-top: max(24px, env(safe-area-inset-top, 24px));
-      padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
-      background:
-        radial-gradient(ellipse at top, rgba(16, 185, 129, 0.10) 0%, transparent 60%),
-        var(--albedu-surface-alt);
-    }
-
-    .submitted-card {
-      max-width: 440px;
-      width: 100%;
-      text-align: center;
-      background: var(--albedu-surface);
-      border: 1px solid var(--albedu-border);
-      border-radius: var(--albedu-radius-lg);
-      padding: 48px 32px 32px;
-      box-shadow: var(--albedu-shadow-md);
-    }
-
-    .submitted-icon {
-      width: 88px;
-      height: 88px;
-      margin: 0 auto 24px;
-      background: linear-gradient(135deg, #34d399 0%, var(--albedu-success) 100%);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
-      animation: submitted-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .submitted-icon .albedu-icon { width: 44px; height: 44px; stroke-width: 2.5; }
-
-    @keyframes submitted-pop {
-      0% { transform: scale(0); opacity: 0; }
-      60% { transform: scale(1.1); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    .submitted-title {
-      font-size: 26px;
-      font-weight: 700;
-      color: var(--albedu-heading);
-      margin: 0 0 8px;
-      letter-spacing: -0.025em;
-    }
-    .submitted-subtitle {
-      font-size: 15px;
-      color: var(--albedu-body);
-      margin: 0 0 32px;
-      line-height: 1.5;
-    }
-
-    .submitted-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 13px 24px;
-      font-size: 15px;
-      font-weight: 600;
-      background: var(--albedu-primary);
-      color: #fff;
-      border: none;
-      border-radius: var(--albedu-radius-sm);
-      cursor: pointer;
-      font-family: inherit;
-      letter-spacing: -0.01em;
-      text-decoration: none;
-      box-shadow: 0 4px 12px var(--albedu-primary-ring);
-      transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease, background 200ms ease;
-    }
-    .submitted-btn:hover {
-      transform: translateY(-1px);
-      background: var(--albedu-primary-hover);
-      box-shadow: 0 8px 20px var(--albedu-primary-ring);
-    }
-    .submitted-btn:active { transform: translateY(0) scale(0.98); }
-    .submitted-btn .albedu-icon { width: 18px; height: 18px; }
-
-    @media (prefers-color-scheme: dark) {
-      body {
-        background:
-          radial-gradient(ellipse at top, rgba(16, 185, 129, 0.14) 0%, transparent 60%),
-          #0f172a;
-      }
-      .submitted-card { background: #1e293b; border-color: #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-      .submitted-title { color: #f1f5f9; }
-      .submitted-subtitle { color: #94a3b8; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .submitted-icon { animation: none; }
-      .submitted-btn:hover, .submitted-btn:active { transform: none; }
-    }
-  </style>
 </head>
-<body>
+<body class="peserta-page">
   <a class="albedu-skip-link" href="#main-content">Lewati ke konten</a>
 
-  <main id="main-content" class="submitted-card" role="main">
-    <div class="submitted-icon" aria-hidden="true">
-      <span data-albedu-icon="check_circle"><svg class="albedu-icon"><use href="#i-check_circle"/></svg></span>
+  <main id="main-content" class="peserta-card" role="main">
+    <div class="peserta-icon-circle peserta-icon-circle--success" aria-hidden="true">
+      <span data-albedu-icon="check_circle" class="albedu-icon--24"></span>
     </div>
-    <h1 class="submitted-title">Asesmen Terkumpul</h1>
-    <p class="submitted-subtitle">
+    <h1 class="peserta-title">Asesmen Terkumpul</h1>
+    <p class="peserta-subtitle">
       Jawaban Anda sudah tersimpan. Terima kasih telah mengerjakan asesmen ini.
     </p>
-    <a href="#" class="submitted-btn" id="back-btn">
-      <span data-albedu-icon="arrow_back" aria-hidden="true"><svg class="albedu-icon"><use href="#i-arrow_back"/></svg></span>
+    <a href="#" class="albedu-btn albedu-btn-primary albedu-btn-lg albedu-btn--block" id="back-btn">
+      <span data-albedu-icon="home" class="albedu-icon--20" aria-hidden="true"></span>
       <span>Kembali ke Beranda</span>
     </a>
   </main>
 
-  <!-- Floating profile button (logout via OptionProfile) -->
   <script>
-    // Use BASE_PATH-aware landing URL (was ../login.html — 404)
     document.getElementById('back-btn').addEventListener('click', function (e) {
       e.preventDefault();
       var basePath = '/';

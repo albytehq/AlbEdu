@@ -5,33 +5,38 @@
   <link rel="preload" href="../../src/shared/icons/icons.js" as="script">
 
   <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://esm.sh https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://edu.albyte-inc.workers.dev https://esm.sh; worker-src 'self'; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; frame-src https://challenges.cloudflare.com; form-action 'self'">
     <title>Masuk Asesmen — AlbEdu</title>
     <meta name="description" content="AlbEdu - Masukkan kode akses untuk mengerjakan asesmen">
     <meta name="theme-color" content="#2563eb">
-  <!-- F10-07 fix: auth/admin pages should not be indexed -->
   <meta name="robots" content="noindex, nofollow">
 
+    <!-- Favicon set -->
     <link rel="icon" type="image/x-icon" href="../../public/images/favicon/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="../../public/images/favicon/favicon.svg">
     <link rel="icon" type="image/png" sizes="96x96" href="../../public/images/favicon/favicon-96x96.png">
     <link rel="apple-touch-icon" sizes="180x180" href="../../public/images/favicon/apple-touch-icon.png">
+    <link rel="manifest" href="../../public/manifest.json">
 
-        <!-- ═══ CRITICAL CSS (synchronous, tiny — paints shell in first paint) ═══ -->
+    <!-- ═══ CRITICAL CSS ═══ -->
     <script src="../../src/shared/head/critical-css.js"></script>
 
-    <!-- ═══ Design tokens ═══ -->
+    <!-- ═══ Design tokens + design system ═══ -->
     <link rel="stylesheet" href="../../styles/tokens.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/notify.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/dialog.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/label.css">
     <link rel="stylesheet" href="../../public/QNotify/ui/Readnote.css">
-    <!-- ═══ Deferred shared modules (run after parse, in order) ═══ -->
+    <link rel="stylesheet" href="../../styles/albedu-v1.css">
+    <link rel="stylesheet" href="../../styles/albedu-components.css">
+    <link rel="stylesheet" href="../../styles/loading.css">
+    <link rel="stylesheet" href="../../styles/pages/peserta-pages.css">
+
+    <!-- ═══ Deferred shared modules ═══ -->
     <script defer src="../../src/shared/head/fonts.js"></script>
     <script defer src="../../src/shared/icons/icons.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script defer src="../../src/shared/csrf.js"></script>
     <script defer src="../../src/platform/supabase-client.js"></script>
     <script defer src="../../src/shared/resilience.js"></script>
     <script defer src="../../src/platform/repository.js"></script>
@@ -39,57 +44,56 @@
     <script defer src="../../src/shared/boot.js"></script>
     <script defer src="../../src/shared/error-boundary.js"></script>
     <script type="module" src="../../src/shared/qnotify-loader.js"></script>
-    <link rel="stylesheet" href="../../styles/loading.css">
-    <link rel="stylesheet" href="../../styles/albedu-v1.css">
-    <link rel="stylesheet" href="../../styles/albedu-components.css">
-    <link rel="stylesheet" href="../../styles/peserta-floating-profile.css">
 
-    <!-- Supabase SDK --><!-- Auth baseline -->
+    <!-- Auth baseline -->
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
     <script src="../../src/auth/errors.js" defer></script>
     <script src="../../src/auth/user-helpers.js" defer></script>
     <script src="../../src/auth/main.js" defer></script>
-    <script src="../../src/auth/byteward.js" defer></script><link rel="stylesheet" href="../../styles/pages/assessment-entry.css">
+    <script src="../../src/auth/byteward.js" defer></script>
 </head>
-<body>
-        <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
-<div class="token-container" id="main-content" role="main" tabindex="-1">
-        <div class="token-logo">
-            <span data-albedu-icon="quiz"></span>
-        </div>
-        <h1 class="token-title">Masuk Asesmen</h1>
-        <p class="token-subtitle">Masukkan 6-digit kode akses yang diberikan admin</p>
+<body class="peserta-page">
+    <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
 
-        <div class="cooldown-banner" id="cooldown-banner">
-            <span style="font-size: 18px; vertical-align: middle;" data-albedu-icon="schedule"></span>
+    <main id="main-content" class="peserta-card" role="main" tabindex="-1">
+        <!-- Logo -->
+        <div class="peserta-logo">
+            <img src="../../public/images/logo.svg" alt="AlbEdu" width="48" height="48">
+        </div>
+
+        <!-- Title -->
+        <h1 class="peserta-title">Masuk Asesmen</h1>
+        <p class="peserta-subtitle">Masukkan 6-digit kode akses yang diberikan guru</p>
+
+        <!-- Cooldown banner -->
+        <div class="peserta-cooldown" id="cooldown-banner">
+            <span data-albedu-icon="schedule" class="albedu-icon--20" aria-hidden="true"></span>
             <span id="cooldown-text">Terlalu banyak percobaan. Coba lagi dalam 60 detik.</span>
         </div>
 
-        <div class="token-inputs" id="token-inputs">
-            <input type="text" inputmode="numeric" maxlength="1" class="token-input" data-index="0" autocomplete="off" aria-label="Digit 1">
-            <input type="text" inputmode="numeric" maxlength="1" class="token-input" data-index="1" autocomplete="off" aria-label="Digit 2">
-            <input type="text" inputmode="numeric" maxlength="1" class="token-input" data-index="2" autocomplete="off" aria-label="Digit 3">
-            <input type="text" inputmode="numeric" maxlength="1" class="token-input" data-index="3" autocomplete="off" aria-label="Digit 4">
-            <input type="text" inputmode="numeric" maxlength="1" class="token-input" data-index="4" autocomplete="off" aria-label="Digit 5">
-            <input type="text" inputmode="numeric" maxlength="1" class="token-input" data-index="5" autocomplete="off" aria-label="Digit 6">
+        <!-- Token inputs -->
+        <div class="peserta-token-inputs" id="token-inputs">
+            <input type="text" inputmode="numeric" maxlength="1" class="peserta-token-input token-input" data-index="0" autocomplete="off" aria-label="Digit 1">
+            <input type="text" inputmode="numeric" maxlength="1" class="peserta-token-input token-input" data-index="1" autocomplete="off" aria-label="Digit 2">
+            <input type="text" inputmode="numeric" maxlength="1" class="peserta-token-input token-input" data-index="2" autocomplete="off" aria-label="Digit 3">
+            <input type="text" inputmode="numeric" maxlength="1" class="peserta-token-input token-input" data-index="3" autocomplete="off" aria-label="Digit 4">
+            <input type="text" inputmode="numeric" maxlength="1" class="peserta-token-input token-input" data-index="4" autocomplete="off" aria-label="Digit 5">
+            <input type="text" inputmode="numeric" maxlength="1" class="peserta-token-input token-input" data-index="5" autocomplete="off" aria-label="Digit 6">
         </div>
 
-        <!-- Turnstile removed — honeypot + timing + DB rate limiting -->
-
-        <button class="token-submit" id="token-submit" type="button" disabled>
+        <!-- Submit -->
+        <button class="albedu-btn albedu-btn-primary albedu-btn-lg albedu-btn--block" id="token-submit" type="button" disabled>
+            <span data-albedu-icon="arrow_forward" class="albedu-icon--20" aria-hidden="true"></span>
             <span id="submit-text">Masuk Asesmen</span>
         </button>
 
-        <div class="token-back">
-            <a href="../../index.html">← Kembali ke beranda</a>
-        </div>
-    </div>
+        <!-- Back link -->
+        <a href="../../index.html" class="peserta-back-link">← Kembali ke beranda</a>
+    </main>
 
     <!-- Security modules -->
     <script src="../../src/security/consent.js" defer></script>
-  <!-- Floating profile button (triggers OptionProfile — gives peserta logout) -->
-    <script src="../../src/profile/peserta-profile-fab.js" defer></script>
     <!-- Page controller -->
     <script src="../../src/pages/assessment-entry.js" defer></script>
     <script>
