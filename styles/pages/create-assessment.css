@@ -1125,21 +1125,40 @@
   height: 3px;
   background: var(--ca-grad-primary);
 }
+/* CRITICAL: Neutralize legacy .albedu-radio-card-content border/bg/shadow
+   from albedu-v1.css (which puts a border on the inner content element,
+   causing a "double blue border" when our outer card border also turns
+   blue on hover). We move all visual styling to the outer card. */
 .albedu-radio-card-content {
   display: flex;
   align-items: center;
   gap: 14px;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.albedu-radio-card:hover .albedu-radio-card-content,
+.albedu-radio-card input:checked + .albedu-radio-card-content,
+.albedu-radio-card:has(input:checked) .albedu-radio-card-content {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 .albedu-radio-card-content [data-albedu-icon],
-.albedu-radio-card-content svg.albedu-icon {
+.albedu-radio-card-content svg.albedu-icon,
+.albedu-radio-card-content .material-symbols-outlined {
   width: 24px;
   height: 24px;
+  font-size: 24px;
   color: var(--ca-text-muted);
   flex-shrink: 0;
   transition: color 220ms var(--ca-ease);
 }
 .albedu-radio-card:has(input:checked) .albedu-radio-card-content [data-albedu-icon],
-.albedu-radio-card:has(input:checked) .albedu-radio-card-content svg.albedu-icon {
+.albedu-radio-card:has(input:checked) .albedu-radio-card-content svg.albedu-icon,
+.albedu-radio-card input:checked + .albedu-radio-card-content .material-symbols-outlined {
   color: var(--ca-primary);
 }
 .albedu-radio-card-title {
