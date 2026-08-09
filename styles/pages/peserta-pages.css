@@ -157,7 +157,7 @@
 
 .peserta-token-input::placeholder { color: var(--albedu-muted); }
 
-/* ═══ Token Input Animations (spring overshoot) ═══ */
+/* ═══ Token Input Animations (spring overshoot — DIGIT ONLY) ═══ */
 /* Digit masuk: dari bawah ke atas dengan overshoot (spring) */
 @keyframes token-digit-in {
   0% {
@@ -186,19 +186,29 @@
   }
 }
 
-/* Class .filled — trigger spring animation on digit enter */
+/*
+ * CRITICAL: Animation is on the INPUT element, but we ONLY animate the
+ * text (transform + opacity). The border, background, and box-shadow
+ * are controlled by SEPARATE transition properties — they don't animate
+ * with the spring. They transition smoothly on their own (150ms ease).
+ *
+ * .filled  → border/bg change via transition (150ms) + digit spring (350ms)
+ * .clearing → digit exit animation (200ms) only, border/bg revert via transition
+ */
+
+/* .filled — border/bg transition (smooth, NOT spring) + trigger digit spring */
 .peserta-token-input.filled {
   animation: token-digit-in 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
   border-color: var(--albedu-primary);
   background: var(--albedu-primary-light, var(--albedu-primary-muted, #eff6ff));
 }
 
-/* Class .clearing — trigger reverse animation on digit remove */
+/* .clearing — digit exit animation only (border/bg revert via transition) */
 .peserta-token-input.clearing {
   animation: token-digit-out 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
-/* After clearing animation completes, remove the class */
+/* After clearing animation completes, revert border/bg via transition */
 .peserta-token-input.clearing:not(.filled) {
   border-color: var(--albedu-border);
   background: var(--albedu-surface);
