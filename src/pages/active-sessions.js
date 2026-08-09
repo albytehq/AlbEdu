@@ -13,7 +13,7 @@
   'use strict';
 
   const REFRESH_INTERVAL_MS = 30_000; // 30s auto-refresh
-  const STALE_HEARTBEAT_MS = 90_000;  // >90s = stale
+  const STALE_HEARTBEAT_MS = 60_000;  // >60s = stale → auto-remove from UI
 
   // ═══════════════════════════════════════════════════════════════════
   // State
@@ -136,6 +136,9 @@
   // ═══════════════════════════════════════════════════════════════════
   function _applyFiltersAndRender() {
     let out = state.sessions.slice();
+
+    // 0. Auto-remove stale sessions (>60s no heartbeat) from UI
+    out = out.filter(s => !_isStale(s));
 
     // 1. Status filter
     if (state.statusFilter === 'stale') {
