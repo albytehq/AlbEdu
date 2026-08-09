@@ -1,5 +1,5 @@
 name = "edu"
-main = "dist/worker.js"
+main = "worker.js"
 compatibility_date = "2024-09-25"
 account_id = "d0a01513e24f58710cbff7dcb7b7d8ac"
 
@@ -10,16 +10,7 @@ workers_dev = true
 # managed via Cloudflare Dashboard and are NOT re-deployed here. This deploy
 # only updates the worker.js code (which contains the cache TTL fix).
 # Existing env vars are preserved across deploys.
-#
-# Cookie-auth secrets must be set in Cloudflare Dashboard → Workers → edu →
-# Settings → Variables. Never put their values in this file:
-#   JWT_SECRET                Supabase JWT secret (Settings → API → JWT Secret)
-#   SUPABASE_URL              Supabase project URL
-#   SUPABASE_ANON_KEY         Supabase anonymous key
-#   SUPABASE_SERVICE_ROLE_KEY Service role key for privileged Worker calls
 
-# Build step: bundle jose dependency via esbuild (Cloudflare Workers can't
-# resolve bare module imports like 'jose' without a bundler).
-# Run `npm install` in cloudflare-worker/ before `wrangler deploy`.
+# No build step needed — worker.js is plain JS (no bundler, no TypeScript)
 [build]
-command = "npx esbuild worker.js --bundle --format=esm --outfile=dist/worker.js"
+command = ""

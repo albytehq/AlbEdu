@@ -344,11 +344,13 @@ form?.addEventListener('submit', async (event) => {
             throw new Error('Supabase auth belum tersedia.');
         }
 
-        const { error } = await window.AlbEdu.supabase.auth.signInWithEmail(
-            email,
-            passwordInput.value,
-            { captchaToken: captchaToken }
-        );
+        const { error } = await client.auth.signInWithPassword({
+            email: email,
+            password: passwordInput.value,
+            options: {
+                captchaToken: captchaToken,
+            },
+        });
 
         if (error) throw error;
 

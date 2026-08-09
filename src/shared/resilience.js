@@ -57,10 +57,10 @@
   }
 
   async function _getAccessToken() {
-    // Cookie-auth mode: Worker adds Authorization from HttpOnly cookie.
-    // The SDK has no session (persistSession:false), so getSession() returns null.
-    // Return null — the Worker proxy will inject the correct JWT.
-    return null;
+    const supabase = window.AlbEdu?.supabase?.client;
+    if (!supabase) return null;
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token || null;
   }
 
   /**
@@ -72,22 +72,17 @@
 
     const result = await _retryWithTimeout(async (signal) => {
       const token = opts.noAuth ? null : await _getAccessToken();
-      const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
       if (supabase.supabaseKey) headers['apikey'] = supabase.supabaseKey;
 
-      // FIX (R6 finding): use authFetch for credentials:'include' + CSRF token.
-      // Without this, cross-site POST to Worker gets 403 CSRF error.
-      const fetchImpl = window.AlbEdu?.authFetch || ((input, init) => fetch(input, { ...init, credentials: 'include' }));
-
-      const res = await fetchImpl(
+      const res = await fetch(
         `${supabase.supabaseUrl}/functions/v1/${name}`,
         {
           method: 'POST',
           headers,
           body: JSON.stringify(body || {}),
           signal: opts.signal || signal,
-          credentials: 'include',
         }
       );
 

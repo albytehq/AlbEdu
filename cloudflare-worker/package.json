@@ -1,8 +1,0 @@
-{
-  "name": "albedu-worker",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "jose": "^5.10.0"
-  }
-}

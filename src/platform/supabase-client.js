@@ -58,11 +58,6 @@
   const SDK_TIMEOUT_MS = 30_000; // CDN can be slow on first load
   const FETCH_RETRY_COUNT = 3;
   const FETCH_RETRY_BASE_MS = 1500;
-  const NOOP_AUTH_STORAGE = Object.freeze({
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {},
-  });
 
   let _client = null;
   let _ready = false;
@@ -211,28 +206,28 @@
       };
     }
 
-    function _notify(event) {
+    client.auth.onAuthStateChange((_event, session) => {
+      _currentUser = _toUser(session);
       _listeners.forEach(cb => {
-        try { cb(_currentUser, event); } catch (_) {}
+        try { cb(_currentUser, _event); } catch (_) {}
       });
-    }
+    });
 
-    async function _readCookieSession(event = 'INITIAL_SESSION') {
-      try {
-        // FIX (R4 finding): fallback fetch must include credentials for cross-site cookies
-        const fetchImpl = window.AlbEdu?.authFetch || ((input, init) => fetch(input, { ...init, credentials: 'include' }));
-        const response = await fetchImpl(`${WORKER_BASE}/api/auth/session`, { headers: { Accept: 'application/json' } });
-        if (!response.ok) throw new Error('No cookie session');
-        const { user } = await response.json();
-        _currentUser = _toUser({ user });
-        _notify(event);
-        return _currentUser;
-      } catch (_) {
-        _currentUser = null;
-        _notify('INITIAL_SESSION');
-        return null;
+    // Initial sync — getSession() returns the cached session immediately.
+    // Fix 3: We now await this in _bootstrap() before _markReady(), so the
+    // session is guaranteed to be loaded before auth listeners fire.
+    // This eliminates the bootstrap race where INITIALIZE fires with null
+    // user before the cached session is available.
+    client.auth.getSession().then(({ data }) => {
+      if (!_currentUser && data?.session) {
+        _currentUser = _toUser(data.session);
+        // Notify listeners that the real session arrived — this cancels
+        // any grace-period redirect that main.js may have queued.
+        _listeners.forEach(cb => {
+          try { cb(_currentUser, 'INITIAL_SESSION'); } catch (_) {}
+        });
       }
-    }
+    }).catch(() => { /* non-fatal — onAuthStateChange will fire */ });
 
     return {
       /** Returns the current user synchronously (may be null until first auth event). */
@@ -255,21 +250,22 @@
 
       /** Sign in with Google OAuth (redirect mode — Supabase native). */
       async signInWithGoogle(redirectUrl) {
-        const target = redirectUrl || window.location.href;
-        window.location.assign(`${WORKER_BASE}/api/auth/login?provider=google&return_to=${encodeURIComponent(target)}`);
+        const target = redirectUrl || window.location.origin + window.location.pathname;
+        const { error } = await client.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: target,
+            queryParams: { access_type: 'offline', prompt: 'select_account' },
+          },
+        });
+        if (error) throw new Error(error.message || 'Google sign-in failed');
+        // Redirect mode — no return value. onAuthStateChange will fire on return.
         return null;
       },
 
       /** Sign in with email/password. */
-      async signInWithEmail(email, password, options = {}) {
-        const response = await (window.AlbEdu?.authFetch || fetch)(`${WORKER_BASE}/api/auth/login`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, captchaToken: options.captchaToken }), credentials: 'include',
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) return { data: null, error: new Error(data.error || 'Login gagal.') };
-        _currentUser = _toUser({ user: data.user });
-        _notify('SIGNED_IN');
-        return { data: { user: _currentUser }, error: null };
+      async signInWithEmail(email, password) {
+        return client.auth.signInWithPassword({ email, password });
       },
 
       /** Sign up with email/password. */
@@ -278,34 +274,27 @@
       },
 
       /** Send password reset email. */
-      async sendPasswordReset(email, redirectTo) {
-        const response = await (window.AlbEdu?.authFetch || fetch)(`${WORKER_BASE}/api/auth/forgot`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, redirectTo: redirectTo || window.location.origin + window.location.pathname.replace(/[^/]*$/, 'reset-password.html') }),
-          credentials: 'include',
+      async sendPasswordReset(email) {
+        return client.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + window.location.pathname.replace(/[^/]*$/, 'reset-password.html'),
         });
-        return { error: response.ok ? null : new Error('Gagal mengirim tautan reset.') };
       },
 
       /** Sign out — clears local + server session. */
       async signOut() {
-        const response = await (window.AlbEdu?.authFetch || fetch)(`${WORKER_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
-        _currentUser = null;
-        _notify('SIGNED_OUT');
-        return { error: response.ok ? null : new Error('Logout gagal.') };
+        return client.auth.signOut();
       },
 
       /** Get the current access token (for Edge Function Authorization header). */
       async getAccessToken() {
-        return null;
+        const { data } = await client.auth.getSession();
+        return data?.session?.access_token || null;
       },
 
       /** Get the raw session object. */
       async getSession() {
-        const user = await _readCookieSession('INITIAL_SESSION');
-        return { data: { session: user ? { user: user.raw } : null }, error: null };
+        return client.auth.getSession();
       },
-      refreshCookieSession: _readCookieSession,
     };
   }
 
@@ -430,6 +419,12 @@
        */
       async invoke(name, body = {}, opts = {}) {
         const headers = { ...(opts.headers || {}) };
+        if (!opts.noAuth) {
+          const token = await _client.auth.getSession()
+            .then(r => r.data?.session?.access_token)
+            .catch(() => null);
+          if (token) headers.Authorization = `Bearer ${token}`;
+        }
         return client.functions.invoke(name, { body, headers });
       },
     };
@@ -441,19 +436,18 @@
       const config = await _fetchConfig();
       await _waitForSDK();
 
-      _client = window.supabase.createClient(WORKER_BASE, config.anonKey, {
+      _client = window.supabase.createClient(config.url, config.anonKey, {
         auth: {
-          storage: NOOP_AUTH_STORAGE,
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          flowType: 'pkce',
         },
         realtime: {
           params: { eventsPerSecond: 10 },
         },
         global: {
           headers: { 'X-Client': 'AlbEdu-Web/1.0' },
-          fetch: window.AlbEdu?.authFetch || ((input, init) => fetch(input, { ...init, credentials: 'include' })),
         },
       });
 
@@ -481,7 +475,6 @@
         isError: () => _error != null,
         getError: () => _error,
       };
-      window.AlbEdu.workerBase = WORKER_BASE;
 
       // Fix 3: Await getSession() BEFORE marking platform ready.
       // This ensures the cached session is loaded before any auth listener

@@ -28,7 +28,6 @@
   };
 
   const state = {
-    examMode: true,
     phase: 'loading',
     assessment: null,
     session: null,
@@ -65,17 +64,6 @@
   window.TakeAssessment = TakeAssessment;
   if (!TakeAssessment._internal) TakeAssessment._internal = {};
   Object.assign(TakeAssessment._internal, { state, dom, constants, t });
-  window.AlbEdu = window.AlbEdu || {};
-  window.AlbEdu.examMode = true;
-
-  document.addEventListener('albedu:exam-session-expired', () => {
-    if (state.phase !== 'exam') return;
-    const modal = document.getElementById('exam-session-expired-modal');
-    if (modal) {
-      modal.hidden = false;
-      modal.querySelector('button')?.focus();
-    }
-  });
 
   function _cacheDOM() {
     dom.loadingScreen = document.getElementById('loading-screen');
