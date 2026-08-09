@@ -119,8 +119,10 @@
 .logo-icon--reveal {
     opacity: 0;
     transform: scale(0.6);
-    color: #ffffff;
-    background: transparent;
+    /* FIX: was #ffffff (white) — invisible on white sidebar bg.
+       Use primary blue so the open-sidebar icon is visible on hover. */
+    color: var(--color-primary, #2563EB);
+    background: var(--color-primary-light, #DBEAFE);
     font-family: 'Material Symbols Outlined' !important;
     font-size: 24px !important;
     font-weight: normal;
@@ -130,9 +132,24 @@
     text-transform: none;
     display: inline-flex;
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    /* FIX: removed text-shadow (was for dark bg, looks muddy on light bg) */
     -webkit-font-feature-settings: 'liga';
     -webkit-font-smoothing: antialiased;
+    /* SVG icon sizing — AlbEdu icon system uses inline SVG, not Material font */
+}
+.logo-icon--reveal .albedu-icon,
+.logo-icon--reveal svg {
+    width: 20px;
+    height: 20px;
+    color: var(--color-primary, #2563EB);
+}
+[data-theme="dark"] .logo-icon--reveal {
+    color: var(--color-primary, #60A5FA);
+    background: rgba(96, 165, 250, 0.12);
+}
+[data-theme="dark"] .logo-icon--reveal .albedu-icon,
+[data-theme="dark"] .logo-icon--reveal svg {
+    color: var(--color-primary, #60A5FA);
 }
 
 /* When collapsed + hover: AlbEdu icon FULLY FADES OUT (morph penuh)
