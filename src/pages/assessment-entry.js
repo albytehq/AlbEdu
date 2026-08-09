@@ -96,13 +96,6 @@
     },
 
     _wireEvents() {
-      // Helper: re-trigger CSS animation by removing + re-adding class
-      function _retriggerAnim(el, className) {
-        el.classList.remove(className);
-        void el.offsetWidth; // force reflow
-        el.classList.add(className);
-      }
-
       // Input events
       this._inputs.forEach((input, idx) => {
         // Input — auto-advance + mobile paste detection
@@ -118,8 +111,7 @@
                 if (i === 0) return;
                 if (idx + i < this._inputs.length) {
                   this._inputs[idx + i].value = d;
-                  _retriggerAnim(this._inputs[idx + i], 'filled');
-                  this._inputs[idx + i].classList.remove('clearing');
+                  this._inputs[idx + i].classList.add("filled");
                 }
               });
               const lastFilled = Math.min(idx + digits.length - 1, this._inputs.length - 1);
@@ -139,8 +131,7 @@
           e.target.value = digit;
 
           if (digit) {
-            _retriggerAnim(e.target, 'filled');
-            e.target.classList.remove('clearing');
+            e.target.classList.add("filled");
             if (idx < this._inputs.length - 1) {
               this._inputs[idx + 1].focus();
             } else {
@@ -150,8 +141,6 @@
             // Digit removed — play reverse animation
             if (e.target.classList.contains('filled')) {
               e.target.classList.remove('filled');
-              e.target.classList.add('clearing');
-              setTimeout(() => e.target.classList.remove('clearing'), 200);
             }
             clearTimeout(this._autoSubmitTimer);
           }
@@ -167,15 +156,11 @@
             prev.focus();
             prev.value = '';
             prev.classList.remove('filled');
-            prev.classList.add('clearing');
-            setTimeout(() => prev.classList.remove('clearing'), 200);
             this._updateSubmitState();
             e.preventDefault();
           } else if (e.key === 'Backspace' && e.target.value) {
             // Backspace on filled → clear current with animation
             e.target.classList.remove('filled');
-            e.target.classList.add('clearing');
-            setTimeout(() => e.target.classList.remove('clearing'), 200);
           } else if (e.key === 'ArrowLeft' && idx > 0) {
             this._inputs[idx - 1].focus();
             e.preventDefault();
@@ -204,8 +189,7 @@
           digits.split('').forEach((d, i) => {
             if (idx + i < this._inputs.length) {
               this._inputs[idx + i].value = d;
-              _retriggerAnim(this._inputs[idx + i], 'filled');
-              this._inputs[idx + i].classList.remove('clearing');
+              this._inputs[idx + i].classList.add("filled");
             }
           });
 
