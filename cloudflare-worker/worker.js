@@ -318,7 +318,7 @@ async function handleLogin(request, env, url) {
       // code_verifier stored in cookie (Path=/ so callback can read it).
       // Supabase stores code_challenge → Google → callback with code → Worker
       // exchanges code + code_verifier for session.
-      const returnTo = url.searchParams.get('return_to') || '/pages/login.html';
+      const returnTo = url.searchParams.get('return_to') || 'https://albytehq.github.io/AlbEdu/pages/admin/index.html';
       const callback = new URL('/api/auth/callback', url.origin);
       callback.searchParams.set('return_to', returnTo);
       const authorize = new URL(`${env.SUPABASE_URL}/auth/v1/authorize`);
@@ -362,28 +362,34 @@ async function handleOAuthCallback(request, env, url) {
   const returnTo = url.searchParams.get('return_to') || '/pages/login.html';
   const error = url.searchParams.get('error');
 
+  // Frontend base URL (where GitHub Pages lives)
+  const FRONTEND_URL = 'https://albytehq.github.io/AlbEdu';
+
   if (error) {
-    const errHeaders = new Headers({ 'Location': `${url.origin}/pages/login.html?auth_error=${encodeURIComponent(error)}` });
+    const errHeaders = new Headers({ 'Location': `${FRONTEND_URL}/pages/login.html?auth_error=${encodeURIComponent(error)}` });
     return new Response(null, { status: 302, headers: errHeaders });
   }
 
   if (!code || !verifier) {
     console.error('[oauth-callback] Missing code or verifier:', { hasCode: !!code, hasVerifier: !!verifier });
-    const errHeaders = new Headers({ 'Location': `${url.origin}/pages/login.html?auth_error=no_code` });
+    const errHeaders = new Headers({ 'Location': `${FRONTEND_URL}/pages/login.html?auth_error=no_code` });
     return new Response(null, { status: 302, headers: errHeaders });
   }
 
+  // Build safe return URL on the frontend domain
   let safeReturnTo;
   try {
-    safeReturnTo = new URL(returnTo, url.origin);
+    safeReturnTo = new URL(returnTo, FRONTEND_URL);
   } catch (_) {
-    safeReturnTo = new URL('/pages/login.html', url.origin);
+    safeReturnTo = new URL('/pages/login.html', FRONTEND_URL);
   }
   if (!ALLOWED_ORIGINS.has(safeReturnTo.origin)) {
-    safeReturnTo = new URL('/pages/login.html', url.origin);
+    safeReturnTo = new URL('/pages/login.html', FRONTEND_URL);
   }
 
-  // Exchange authorization code + PKCE verifier for session tokens
+  // Exchange authorization code + PKCE verifier for session tokens.
+  // Supabase PKCE endpoint: POST /auth/v1/token?grant_type=pkce
+  // Body: { auth_code: code, code_verifier: verifier }
   const response = await supabaseAuth(env, 'token?grant_type=pkce', {
     method: 'POST',
     body: JSON.stringify({ auth_code: code, code_verifier: verifier }),
@@ -392,11 +398,11 @@ async function handleOAuthCallback(request, env, url) {
 
   if (!response.ok || !data.access_token) {
     console.error('[oauth-callback] Token exchange failed:', response.status, JSON.stringify(data));
-    const errHeaders = new Headers({ 'Location': `${url.origin}/pages/login.html?auth_error=token_exchange` });
+    const errHeaders = new Headers({ 'Location': `${FRONTEND_URL}/pages/login.html?auth_error=token_exchange` });
     return new Response(null, { status: 302, headers: errHeaders });
   }
 
-  // Success — set auth cookies, clear verifier cookie, redirect to return_to
+  // Success — set auth cookies, clear verifier cookie, redirect to frontend
   const redirectHeaders = new Headers({ 'Location': safeReturnTo.toString() });
   appendSetCookies(redirectHeaders, setAuthCookies(data.access_token, data.refresh_token));
   redirectHeaders.append('Set-Cookie', cookie('albedu_oauth_verifier', '', { maxAge: 0, httpOnly: true }));
