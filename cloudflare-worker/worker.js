@@ -179,6 +179,13 @@ async function pkceChallenge(verifier) {
   return base64Url(new Uint8Array(digest));
 }
 
+// Research finding: RFC 7636 requires verifier to be 43-128 chars of [a-zA-Z._~0-9-]
+// Using hex encoding (0-9a-f) is simplest and always valid.
+function generatePkceVerifier() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
 function cookie(name, value, options = {}) {
   const parts = [`${name}=${encodeURIComponent(value)}`, 'Path=' + (options.path || '/')];
   if (options.maxAge !== undefined) parts.push(`Max-Age=${options.maxAge}`);
@@ -239,7 +246,11 @@ function userPayload(user) {
 async function supabaseAuth(env, path, init = {}) {
   const headers = new Headers(init.headers || {});
   headers.set('apikey', env.SUPABASE_ANON_KEY);
-  headers.set('Content-Type', headers.get('Content-Type') || 'application/json');
+  headers.set('Content-Type', headers.get('Content-Type') || 'application/json;charset=UTF-8');
+  // Research finding: Authorization header recommended for /auth/v1/token
+  if (!headers.get('Authorization')) {
+    headers.set('Authorization', `Bearer ${env.SUPABASE_ANON_KEY}`);
+  }
   return fetch(`${env.SUPABASE_URL}/auth/v1/${path}`, { ...init, headers });
 }
 
@@ -324,8 +335,8 @@ async function handleLogin(request, env, url) {
       const authorize = new URL(`${env.SUPABASE_URL}/auth/v1/authorize`);
       authorize.searchParams.set('provider', 'google');
       authorize.searchParams.set('redirect_to', callback.toString());
-      // Generate PKCE verifier + challenge
-      const verifier = base64Url(crypto.getRandomValues(new Uint8Array(48)));
+      // Generate PKCE verifier + challenge (RFC 7636 compliant)
+      const verifier = generatePkceVerifier();
       authorize.searchParams.set('code_challenge', await pkceChallenge(verifier));
       authorize.searchParams.set('code_challenge_method', 's256');
       // Store verifier in cookie — Path=/ so /api/auth/callback can read it
@@ -390,6 +401,7 @@ async function handleOAuthCallback(request, env, url) {
   // Exchange authorization code + PKCE verifier for session tokens.
   // Supabase PKCE endpoint: POST /auth/v1/token?grant_type=pkce
   // Body: { auth_code: code, code_verifier: verifier }
+  // Headers required: apikey, Content-Type, Authorization (Bearer anon_key)
   const response = await supabaseAuth(env, 'token?grant_type=pkce', {
     method: 'POST',
     body: JSON.stringify({ auth_code: code, code_verifier: verifier }),
@@ -397,8 +409,11 @@ async function handleOAuthCallback(request, env, url) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok || !data.access_token) {
+    // FIX: include full error details in redirect URL so we can debug
+    const errorDetail = data.error_description || data.error_code || data.msg || data.message || `HTTP ${response.status}`;
     console.error('[oauth-callback] Token exchange failed:', response.status, JSON.stringify(data));
-    const errHeaders = new Headers({ 'Location': `${FRONTEND_URL}/pages/login.html?auth_error=token_exchange` });
+    console.error('[oauth-callback] Verifier present:', !!verifier, 'Code present:', !!code);
+    const errHeaders = new Headers({ 'Location': `${FRONTEND_URL}/pages/login.html?auth_error=token_exchange&error_detail=${encodeURIComponent(errorDetail)}` });
     return new Response(null, { status: 302, headers: errHeaders });
   }
 
