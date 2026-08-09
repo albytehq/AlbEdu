@@ -98,7 +98,7 @@ class AdminPanel {
         const email = escape(rawEmail);
         const avatarUrl = data.avatar_url || data.foto_profil || data.fotoProfil || '';
         const role = data.peran === 'admin' ? t('nav.role_admin', null, 'Administrator') : t('nav.role_admin_alt', null, 'Admin AlbEdu');
-        const incomplete = data.profile_complete === false || data.profilLengkap === false || data.profil_lengkap === false;
+        const incomplete = false; // FIX: isProfileComplete() always returns true — name + avatar auto-set from Google
 
         const safeAvatarUrl = (avatarUrl && /^https:/.test(avatarUrl) && !avatarUrl.endsWith('.html')) ? avatarUrl : '';
         const incompleteBadge = incomplete

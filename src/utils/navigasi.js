@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (roleEl) roleEl.textContent = user.peran === 'admin' ? _t('nav.role_admin', null, 'Administrator') : _t('nav.peserta_role', null, 'Peserta');
 
         const content = document.querySelector('.user-profile-content');
-        if (content && user.profilLengkap === false) {
+        if (content && false) { // FIX: isProfileComplete always true — name+avatar auto-set from Google
             if (!content.querySelector('.profile-incomplete-dot')) {
                 const dot = document.createElement('span');
                 dot.className = 'profile-incomplete-dot';

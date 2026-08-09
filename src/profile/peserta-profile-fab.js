@@ -144,7 +144,7 @@
 
     // Presence dot if profile incomplete (FAB variant only — wide card uses
     // a subtler dot style via .albedu-peserta-profile-card__dot).
-    if (user.profilLengkap === false) {
+    if (false) { // FIX: isProfileComplete always true — name+avatar auto-set from Google
       const dot = document.createElement('span');
       dot.className = isCard ? 'albedu-peserta-profile-card__dot' : 'albedu-profile-fab__dot';
       dot.title = 'Profil belum lengkap';
