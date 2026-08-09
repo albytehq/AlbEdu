@@ -31,11 +31,21 @@
   <!-- ═══ Deferred shared modules ═══ -->
   <script defer src="../../src/shared/head/fonts.js"></script>
   <script defer src="../../src/shared/icons/icons.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script defer src="../../src/platform/supabase-client.js"></script>
   <script defer src="../../src/shared/resilience.js"></script>
   <script defer src="../../src/platform/repository.js"></script>
   <script defer src="../../src/security/sanitize.js"></script>
   <script defer src="../../src/shared/boot.js"></script>
+  <script defer src="../../src/shared/error-boundary.js"></script>
+
+  <!-- Auth baseline (needed for profile card) -->
+  <script src="../../src/auth/security.js" defer></script>
+  <script src="../../src/utils/ui.js" defer></script>
+  <script src="../../src/auth/errors.js" defer></script>
+  <script src="../../src/auth/user-helpers.js" defer></script>
+  <script src="../../src/auth/main.js" defer></script>
+  <script src="../../src/auth/byteward.js" defer></script>
 </head>
 <body class="peserta-page">
   <a class="albedu-skip-link" href="#main-content">Lewati ke konten</a>

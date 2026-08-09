@@ -227,29 +227,30 @@
     }
   }
 
-  // Wait for Auth
+  // Wait for Auth — 3-tier fallback (same pattern as navigasi.js + profile.html)
   function _waitForAuth() {
     return new Promise((resolve) => {
+      // Tier 1: Fast path — auth already ready with data
       if (window.Auth?.userData) return resolve(window.Auth.userData);
-      if (window.Auth?.authReady) return resolve(window.Auth.userData || null);
 
       let resolved = false;
-      const onReady = (e) => {
+      function _done(data) {
         if (resolved) return;
         resolved = true;
-        resolve(e?.detail?.role != null ? window.Auth?.userData : null);
-      };
-      document.addEventListener('auth-ready', onReady, { once: true });
+        resolve(data);
+      }
 
-      // Poll fallback (in case auth-ready already fired before listener attached)
+      // Tier 2: Event listener (no once:true — guard with resolved flag)
+      document.addEventListener('auth-ready', function (e) {
+        _done(e?.detail?.role != null ? window.Auth?.userData : null);
+      });
+
+      // Tier 3: Polling fallback (catches race where event already fired)
       let polls = 0;
       const poll = setInterval(() => {
         if (window.Auth?.userData || window.Auth?.authReady || ++polls > 30) {
           clearInterval(poll);
-          if (!resolved) {
-            resolved = true;
-            resolve(window.Auth?.userData || null);
-          }
+          _done(window.Auth?.userData || null);
         }
       }, 200);
     });
