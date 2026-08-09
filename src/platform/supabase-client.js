@@ -219,7 +219,9 @@
 
     async function _readCookieSession(event = 'INITIAL_SESSION') {
       try {
-        const response = await (window.AlbEdu?.authFetch || fetch)(`${WORKER_BASE}/api/auth/session`, { headers: { Accept: 'application/json' } });
+        // FIX (R4 finding): fallback fetch must include credentials for cross-site cookies
+        const fetchImpl = window.AlbEdu?.authFetch || ((input, init) => fetch(input, { ...init, credentials: 'include' }));
+        const response = await fetchImpl(`${WORKER_BASE}/api/auth/session`, { headers: { Accept: 'application/json' } });
         if (!response.ok) throw new Error('No cookie session');
         const { user } = await response.json();
         _currentUser = _toUser({ user });
