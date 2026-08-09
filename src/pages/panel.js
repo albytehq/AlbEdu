@@ -24,7 +24,21 @@ class AdminPanel {
             this._renderUserInfo();
             this._loadDashboardData();
         }, { once: true });
-        document.addEventListener('auth-ready', () => this._renderUserInfo());
+
+        // FIX: auth-ready race condition — use 3-tier fallback like navigasi.js
+        if (window.Auth?.userData) {
+            this._renderUserInfo();
+        } else {
+            document.addEventListener('auth-ready', () => this._renderUserInfo());
+            let polls = 0;
+            const pollAuth = setInterval(() => {
+                if (window.Auth?.userData || ++polls > 20) {
+                    clearInterval(pollAuth);
+                    if (window.Auth?.userData) this._renderUserInfo();
+                }
+            }, 300);
+        }
+
         window.addEventListener('pep-saved', (e) => {
             if (e.detail && window.Auth) window.Auth.userData = e.detail;
             this._renderUserInfo();
