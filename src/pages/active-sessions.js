@@ -288,16 +288,16 @@
     const progress = Number(s.progress_pct || 0);
     const violations = s.violation_count || 0;
     const isStale = _isStale(s);
-    const statusBadge = _renderStatusBadge(s.status, isStale);
+    const statusInfo = _getStatusInfo(s.status, isStale);
     const progressClass = progress >= 75 ? 'as-progress-high' : progress >= 40 ? 'as-progress-mid' : 'as-progress-low';
     const violationClass = violations >= 3 ? 'as-badge-danger' : violations >= 1 ? 'as-badge-warn' : 'as-badge-ok';
 
     return `
       <tr class="as-row${isStale ? ' as-row-stale' : ''}" data-session-id="${escapeAttr(s.id)}">
-        <td class="as-col-status">${statusBadge}</td>
+        <td class="as-col-status">${statusInfo.pill}</td>
         <td class="as-col-peserta">
           <div class="as-peserta-cell">
-            <div class="as-peserta-avatar" aria-hidden="true">${_initials(pesertaName)}</div>
+            <div class="as-peserta-avatar as-avatar-status-${statusInfo.key}" aria-hidden="true">${_initials(pesertaName)}</div>
             <div class="as-peserta-info">
               <div class="as-peserta-name">${escapeHtml(pesertaName)}</div>
               ${pesertaSub ? `<div class="as-peserta-sub">${escapeHtml(pesertaSub)}</div>` : ''}
@@ -343,7 +343,7 @@
     const progress = Number(s.progress_pct || 0);
     const violations = s.violation_count || 0;
     const isStale = _isStale(s);
-    const statusBadge = _renderStatusBadge(s.status, isStale);
+    const statusInfo = _getStatusInfo(s.status, isStale);
     const progressClass = progress >= 75 ? 'as-progress-high' : progress >= 40 ? 'as-progress-mid' : 'as-progress-low';
     const violationClass = violations >= 3 ? 'as-badge-danger' : violations >= 1 ? 'as-badge-warn' : 'as-badge-ok';
 
@@ -351,7 +351,7 @@
       <div class="as-card${isStale ? ' as-card-stale' : ''}" data-session-id="${escapeAttr(s.id)}">
         <div class="as-card-header">
           <div class="as-card-peserta">
-            <div class="as-peserta-avatar as-peserta-avatar-lg" aria-hidden="true">${_initials(pesertaName)}</div>
+            <div class="as-peserta-avatar as-peserta-avatar-lg as-avatar-status-${statusInfo.key}" aria-hidden="true">${_initials(pesertaName)}</div>
             <div>
               <div class="as-card-name">${escapeHtml(pesertaName)}</div>
               ${pesertaSub ? `<div class="as-card-sub">${escapeHtml(pesertaSub)}</div>` : ''}
@@ -362,7 +362,7 @@
           </button>
         </div>
         <div class="as-card-meta">
-          ${statusBadge}
+          ${statusInfo.pill}
           <span class="as-card-assessment">${escapeHtml(assessment.title || '—')}</span>
         </div>
         <div class="as-card-progress">
@@ -423,14 +423,41 @@
     return parts.map(p => p.charAt(0).toUpperCase()).join('') || '?';
   }
 
-  function _renderStatusBadge(status, isStale) {
+  // Returns { key, pill } — key is used for avatar ring color, pill is the HTML status badge
+  function _getStatusInfo(status, isStale) {
     if (status === 'active' && isStale) {
-      return '<span class="as-badge as-badge-warn"><span class="as-dot as-dot-warn"></span>Stale</span>';
+      return {
+        key: 'stale',
+        pill: '<span class="as-status-pill as-status-stale"><span class="as-status-dot"></span><span>Stale</span></span>',
+      };
     }
-    if (status === 'active') return '<span class="as-badge as-badge-success"><span class="as-dot as-dot-success"></span>Aktif</span>';
-    if (status === 'paused') return '<span class="as-badge as-badge-warn"><span class="as-dot as-dot-warn"></span>Jeda</span>';
-    if (status === 'disconnected') return '<span class="as-badge as-badge-danger"><span class="as-dot as-dot-danger"></span>Terputus</span>';
-    return `<span class="as-badge">${escapeHtml(status)}</span>`;
+    if (status === 'active') {
+      return {
+        key: 'active',
+        pill: '<span class="as-status-pill as-status-active"><span class="as-status-dot"></span><span>Aktif</span></span>',
+      };
+    }
+    if (status === 'paused') {
+      return {
+        key: 'paused',
+        pill: '<span class="as-status-pill as-status-paused"><span class="as-status-dot"></span><span>Jeda</span></span>',
+      };
+    }
+    if (status === 'disconnected') {
+      return {
+        key: 'disconnected',
+        pill: '<span class="as-status-pill as-status-disconnected"><span class="as-status-dot"></span><span>Terputus</span></span>',
+      };
+    }
+    return {
+      key: 'paused',
+      pill: `<span class="as-status-pill as-status-paused"><span class="as-status-dot"></span><span>${escapeHtml(status)}</span></span>`,
+    };
+  }
+
+  // Back-compat: keep _renderStatusBadge as a thin wrapper (returns the pill HTML)
+  function _renderStatusBadge(status, isStale) {
+    return _getStatusInfo(status, isStale).pill;
   }
 
   function _isStale(s) {
@@ -781,19 +808,23 @@
     const searchInput = document.getElementById('as-search');
     if (searchInput) {
       let debounce;
+      const clearBtn = document.getElementById('as-search-clear');
       searchInput.addEventListener('input', e => {
+        const val = e.target.value;
+        if (clearBtn) clearBtn.hidden = !val;
         clearTimeout(debounce);
         debounce = setTimeout(() => {
-          state.searchQuery = e.target.value;
+          state.searchQuery = val;
           _applyFiltersAndRender();
         }, 200);
       });
       // Clear button
-      const clearBtn = document.getElementById('as-search-clear');
       if (clearBtn) {
         clearBtn.addEventListener('click', () => {
           searchInput.value = '';
           state.searchQuery = '';
+          clearBtn.hidden = true;
+          searchInput.focus();
           _applyFiltersAndRender();
         });
       }
