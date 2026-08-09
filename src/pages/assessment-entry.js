@@ -96,6 +96,13 @@
     },
 
     _wireEvents() {
+      // Helper: re-trigger CSS animation by removing + re-adding class
+      function _retriggerAnim(el, className) {
+        el.classList.remove(className);
+        void el.offsetWidth; // force reflow
+        el.classList.add(className);
+      }
+
       // Input events
       this._inputs.forEach((input, idx) => {
         // Input — auto-advance + mobile paste detection
@@ -108,10 +115,11 @@
             if (digits.length > 1) {
               // Distribute remaining digits to subsequent inputs
               digits.split('').forEach((d, i) => {
-                if (i === 0) return; // first digit already in current input
+                if (i === 0) return;
                 if (idx + i < this._inputs.length) {
                   this._inputs[idx + i].value = d;
-                  this._inputs[idx + i].classList.add('filled');
+                  _retriggerAnim(this._inputs[idx + i], 'filled');
+                  this._inputs[idx + i].classList.remove('clearing');
                 }
               });
               const lastFilled = Math.min(idx + digits.length - 1, this._inputs.length - 1);
@@ -131,14 +139,20 @@
           e.target.value = digit;
 
           if (digit) {
-            e.target.classList.add('filled');
+            _retriggerAnim(e.target, 'filled');
+            e.target.classList.remove('clearing');
             if (idx < this._inputs.length - 1) {
               this._inputs[idx + 1].focus();
             } else {
               this._checkComplete();
             }
           } else {
-            e.target.classList.remove('filled');
+            // Digit removed — play reverse animation
+            if (e.target.classList.contains('filled')) {
+              e.target.classList.remove('filled');
+              e.target.classList.add('clearing');
+              setTimeout(() => e.target.classList.remove('clearing'), 200);
+            }
             clearTimeout(this._autoSubmitTimer);
           }
           this._updateSubmitState();
@@ -147,13 +161,21 @@
         // Keydown — backspace, arrows
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Backspace' && !e.target.value && idx > 0) {
-            // Backspace on empty → focus previous + clear it
+            // Backspace on empty → focus previous + clear it with animation
             clearTimeout(this._autoSubmitTimer);
-            this._inputs[idx - 1].focus();
-            this._inputs[idx - 1].value = '';
-            this._inputs[idx - 1].classList.remove('filled');
+            const prev = this._inputs[idx - 1];
+            prev.focus();
+            prev.value = '';
+            prev.classList.remove('filled');
+            prev.classList.add('clearing');
+            setTimeout(() => prev.classList.remove('clearing'), 200);
             this._updateSubmitState();
             e.preventDefault();
+          } else if (e.key === 'Backspace' && e.target.value) {
+            // Backspace on filled → clear current with animation
+            e.target.classList.remove('filled');
+            e.target.classList.add('clearing');
+            setTimeout(() => e.target.classList.remove('clearing'), 200);
           } else if (e.key === 'ArrowLeft' && idx > 0) {
             this._inputs[idx - 1].focus();
             e.preventDefault();
@@ -182,9 +204,8 @@
           digits.split('').forEach((d, i) => {
             if (idx + i < this._inputs.length) {
               this._inputs[idx + i].value = d;
-              this._inputs[idx + i].classList.add('filled');
-              // Trigger input event for each filled input (mobile keyboard compat)
-              this._inputs[idx + i].dispatchEvent(new Event('input', { bubbles: true }));
+              _retriggerAnim(this._inputs[idx + i], 'filled');
+              this._inputs[idx + i].classList.remove('clearing');
             }
           });
 
@@ -205,9 +226,11 @@
           setTimeout(() => { e.target.select(); }, 0);
         });
 
-        // Blur — remove filled class if empty
+        // Blur — remove filled class if empty + clear animation
         input.addEventListener('blur', (e) => {
-          if (!e.target.value) e.target.classList.remove('filled');
+          if (!e.target.value) {
+            e.target.classList.remove('filled');
+          }
         });
       });
 
