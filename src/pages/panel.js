@@ -83,60 +83,58 @@ class AdminPanel {
 
         const t = (key, vars, fallback) => fallback;
 
-        if (user || data.email || data.nama) {
-            const rawName = data.nama || user?.displayName || user?.email?.split('@')[0] || t('nav.role_admin', null, 'Administrator');
-            const rawEmail = data.email || user?.email || '';
-            const name = escape(rawName);
-            const email = escape(rawEmail);
-            const avatarUrl = data.avatar_url || data.foto_profil || data.fotoProfil || '';
-            const role = data.peran === 'admin' ? t('nav.role_admin', null, 'Administrator') : t('nav.role_admin_alt', null, 'Admin AlbEdu');
-            // DB column is `profile_complete` (renamed from `profil_lengkap`
-            // by migration 20260701_002_alter_users_snake_case.sql).
-            const incomplete = data.profile_complete === false || data.profilLengkap === false || data.profil_lengkap === false;
-
-            const safeAvatarUrl = (avatarUrl && /^https:/.test(avatarUrl) && !avatarUrl.endsWith('.html')) ? avatarUrl : '';
-            const incompleteBadge = incomplete
-                ? `<span class="profile-status-mobile">${escape(t('nav.profile_incomplete', null, 'Profil belum lengkap'))}</span>`
-                : '';
-            const defaultAvatarIcon = '<span data-albedu-icon="manage_accounts"></span>';
-            container.innerHTML = `
-                <div class="user-avatar-mobile" id="admin-index-avatar" aria-hidden="true">
-                    ${safeAvatarUrl
-                        ? `<img src="${escape(safeAvatarUrl)}" alt="" data-avatar-fallback="true" style="width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:0;transition:opacity 300ms ease">`
-                        : defaultAvatarIcon}
-                </div>
-                <div class="user-details-mobile">
-                    <h3>${name}</h3>
-                    <p>${email || role}</p>
-                    ${incompleteBadge}
-                </div>
-            `;
-
-            const avatarImg = container.querySelector('img[data-avatar-fallback]');
-            if (avatarImg) {
-                avatarImg.addEventListener('error', function() {
-                    // Restore default icon on error
-                    this.parentElement.innerHTML = defaultAvatarIcon;
-                });
-                avatarImg.addEventListener('load', function() {
-                    this.style.opacity = '1';
-                });
-            }
-
-            this._attachOptionProfileTrigger(container);
-            this._renderGreeting(rawName);
+        // FIX: only render if we actually have user data.
+        // If userData is null/empty, skip — will be called again by
+        // auth-ready listener or polling fallback.
+        const hasData = user || data.email || data.nama;
+        if (!hasData) {
+            console.info('[panel] _renderUserInfo: no user data yet — skipping (will retry)');
             return;
         }
 
+        const rawName = data.nama || user?.displayName || user?.email?.split('@')[0] || t('nav.role_admin', null, 'Administrator');
+        const rawEmail = data.email || user?.email || '';
+        const name = escape(rawName);
+        const email = escape(rawEmail);
+        const avatarUrl = data.avatar_url || data.foto_profil || data.fotoProfil || '';
+        const role = data.peran === 'admin' ? t('nav.role_admin', null, 'Administrator') : t('nav.role_admin_alt', null, 'Admin AlbEdu');
+        const incomplete = data.profile_complete === false || data.profilLengkap === false || data.profil_lengkap === false;
+
+        const safeAvatarUrl = (avatarUrl && /^https:/.test(avatarUrl) && !avatarUrl.endsWith('.html')) ? avatarUrl : '';
+        const incompleteBadge = incomplete
+            ? `<span class="profile-status-mobile">${escape(t('nav.profile_incomplete', null, 'Profil belum lengkap'))}</span>`
+            : '';
+        const defaultAvatarIcon = '<span data-albedu-icon="manage_accounts"></span>';
         container.innerHTML = `
-            <div class="user-avatar-mobile" aria-hidden="true">
-                <span data-albedu-icon="manage_accounts"></span>
+            <div class="user-avatar-mobile" id="admin-index-avatar" aria-hidden="true">
+                ${safeAvatarUrl
+                    ? `<img src="${escape(safeAvatarUrl)}" alt="" data-avatar-fallback="true" style="width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:0;transition:opacity 300ms ease">`
+                    : defaultAvatarIcon}
             </div>
             <div class="user-details-mobile">
-                <h3>${escape(t('nav.role_admin', null, 'Administrator'))}</h3>
-                <p class="loading-text" aria-label="${escape(t('nav.loading_profile', null, 'Memuat profil...'))}">${escape(t('nav.loading_profile', null, 'Memuat profil...'))}</p>
+                <h3>${name}</h3>
+                <p>${email || role}</p>
+                ${incompleteBadge}
             </div>
         `;
+
+        const avatarImg = container.querySelector('img[data-avatar-fallback]');
+        if (avatarImg) {
+            avatarImg.addEventListener('error', function() {
+                this.parentElement.innerHTML = defaultAvatarIcon;
+            });
+            avatarImg.addEventListener('load', function() {
+                this.style.opacity = '1';
+            });
+        }
+
+        // Re-bind icons for the newly inserted default avatar icon
+        if (!safeAvatarUrl) {
+            window.AlbEdu?.bindIcons?.(container);
+        }
+
+        this._attachOptionProfileTrigger(container);
+        this._renderGreeting(rawName);
     }
 
     _attachOptionProfileTrigger(container) {
