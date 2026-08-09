@@ -85,27 +85,24 @@
       <span class="albedu-peserta-profile-card__chevron" data-albedu-icon="expand_more" aria-hidden="true"></span>
     `;
 
-    // Insert after .token-back inside .token-container. If .token-back isn't
-    // found (page structure changed), fall back to appending inside
-    // .token-container, then to body.
-    const tokenBack = document.querySelector('.token-back');
-    if (tokenBack && tokenBack.parentNode) {
-      tokenBack.insertAdjacentElement('afterend', card);
+    // Insert after .peserta-back-link inside .peserta-card. If not found,
+    // fall back to appending inside .peserta-card, then to body.
+    const backLink = document.querySelector('.peserta-back-link, .peserta-actions');
+    if (backLink && backLink.parentNode) {
+      backLink.insertAdjacentElement('afterend', card);
     } else {
-      const container = document.querySelector('.token-container');
+      const container = document.querySelector('.peserta-card');
       if (container) container.appendChild(card);
       else document.body.appendChild(card);
     }
     return card;
   }
 
-  // Detect entry-page mode: presence of `.token-container` + `.token-back`
-  // means we're on the assessment entry page (assessment/index.html) where the
-  // user wants a wide profile card below "Kembali ke beranda" instead of the
-  // floating FAB.
+  // Detect entry-page mode: presence of .peserta-card means we're on a
+  // peserta-facing page (assessment entry, submitted, blocked) where the
+  // wide profile card should appear below the main content.
   function _useWideCardMode() {
-    return !!document.querySelector('.token-container') &&
-           !!document.querySelector('.token-back');
+    return !!document.querySelector('.peserta-card');
   }
 
   // Populate avatar from Auth.userData. Works for both FAB and wide-card
