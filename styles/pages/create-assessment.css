@@ -589,14 +589,14 @@
 .albedu-theme-section::before {
   content: '';
   position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 4px;
+  left: 0; top: 0; right: 0;
+  height: 4px;
   background: var(--ca-grad-primary);
   z-index: 1;
 }
 .albedu-theme-section > h3.albedu-card-title,
 .albedu-theme-section > .albedu-card-title {
-  padding: 18px 24px 4px 24px;
+  padding: 22px 24px 4px 24px;
   margin: 0;
   font-size: 15px;
   font-weight: 700;
@@ -1086,7 +1086,7 @@
   flex-shrink: 0;
 }
 
-/* ═══ RADIO CARDS — gradient bg on checked + scale hover ══════ */
+/* ═══ RADIO CARDS — clean border + tint on hover/checked ══════ */
 .albedu-radio-cards {
   display: flex;
   gap: 12px;
@@ -1099,27 +1099,30 @@
   border: 1.5px solid var(--ca-border);
   border-radius: var(--ca-radius);
   padding: 18px;
-  transition: all 250ms var(--ca-ease);
+  transition: border-color 200ms var(--ca-ease),
+              background 200ms var(--ca-ease),
+              box-shadow 200ms var(--ca-ease);
   background: var(--ca-surface);
   position: relative;
   overflow: hidden;
 }
+/* Hover: subtle border + soft tint, NO scale/translate (prevents stacking) */
 .albedu-radio-card:hover {
   border-color: var(--ca-primary);
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: var(--ca-shadow-md);
+  background: var(--ca-primary-light);
 }
 .albedu-radio-card input { display: none; }
 .albedu-radio-card:has(input:checked) {
   border-color: var(--ca-primary);
-  background: linear-gradient(135deg, var(--ca-primary-light) 0%, var(--ca-accent-light) 100%);
-  box-shadow: 0 0 0 4px var(--ca-primary-ring), var(--ca-shadow-sm);
+  background: var(--ca-primary-light);
+  box-shadow: 0 0 0 3px var(--ca-primary-ring);
 }
+/* Top accent stripe on checked (matches section card pattern) */
 .albedu-radio-card:has(input:checked)::before {
   content: '';
   position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 4px;
+  left: 0; top: 0; right: 0;
+  height: 3px;
   background: var(--ca-grad-primary);
 }
 .albedu-radio-card-content {
