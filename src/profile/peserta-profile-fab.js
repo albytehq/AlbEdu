@@ -307,8 +307,34 @@
       if (userData) {
         _populateAvatar(trigger, userData);
       } else {
-        // No user — keep loading state (byteward will redirect to login)
-        console.info('[peserta-profile] No user session — waiting for auth redirect');
+        // No userData from _waitForAuth — try direct session check as fallback.
+        // _waitForAuth may have timed out before _syncUserDocument completed.
+        // Listen for a delayed auth-ready with role.
+        console.info('[peserta-profile] No userData yet — waiting for delayed auth-ready');
+        document.addEventListener('auth-ready', function (e) {
+          if (e?.detail?.role != null) {
+            const user = window.Auth?.userData;
+            if (user) {
+              _populateAvatar(trigger, user);
+            }
+          }
+        });
+
+        // Also try directly after 2s — _syncUserDocument may have completed
+        // by then without firing auth-ready again.
+        setTimeout(() => {
+          const user = window.Auth?.userData;
+          if (user) {
+            _populateAvatar(trigger, user);
+          } else {
+            // Still no user — show "Tamu" (guest) instead of "Memuat…"
+            const nameEl = trigger.querySelector('.albedu-peserta-profile-card__name');
+            const roleEl = trigger.querySelector('.albedu-peserta-profile-card__role');
+            if (nameEl) nameEl.textContent = 'Tamu';
+            if (roleEl) roleEl.textContent = 'Belum login';
+            trigger.setAttribute('data-state', 'ready');
+          }
+        }, 2000);
       }
     });
 
