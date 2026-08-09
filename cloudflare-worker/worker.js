@@ -314,20 +314,24 @@ async function currentSession(request, env, { allowRefresh = true } = {}) {
 async function handleLogin(request, env, url) {
   try {
     if (request.method === 'GET' && url.searchParams.get('provider') === 'google') {
-      // The final OAuth callback must be configured in Supabase Auth redirect URLs.
+      // Google OAuth with PKCE — Worker generates code_verifier + code_challenge.
+      // code_verifier stored in cookie (Path=/ so callback can read it).
+      // Supabase stores code_challenge → Google → callback with code → Worker
+      // exchanges code + code_verifier for session.
+      const returnTo = url.searchParams.get('return_to') || '/pages/login.html';
       const callback = new URL('/api/auth/callback', url.origin);
-      callback.searchParams.set('return_to', url.searchParams.get('return_to') || '/pages/login.html');
+      callback.searchParams.set('return_to', returnTo);
       const authorize = new URL(`${env.SUPABASE_URL}/auth/v1/authorize`);
       authorize.searchParams.set('provider', 'google');
       authorize.searchParams.set('redirect_to', callback.toString());
+      // Generate PKCE verifier + challenge
       const verifier = base64Url(crypto.getRandomValues(new Uint8Array(48)));
       authorize.searchParams.set('code_challenge', await pkceChallenge(verifier));
       authorize.searchParams.set('code_challenge_method', 's256');
-      // FIX: Response.redirect() returns an immutable Response — can't append headers.
-      // Must create a new Response with the redirect status + custom headers.
+      // Store verifier in cookie — Path=/ so /api/auth/callback can read it
       const redirectHeaders = new Headers({
         'Location': authorize.toString(),
-        'Set-Cookie': cookie('albedu_oauth_verifier', verifier, { maxAge: 600, httpOnly: true, path: '/api/auth/callback' }),
+        'Set-Cookie': cookie('albedu_oauth_verifier', verifier, { maxAge: 600, httpOnly: true }),
       });
       Object.entries(authHeaders(request)).forEach(([key, value]) => redirectHeaders.set(key, value));
       return new Response(null, { status: 302, headers: redirectHeaders });
@@ -356,28 +360,46 @@ async function handleOAuthCallback(request, env, url) {
   const code = url.searchParams.get('code');
   const verifier = parseCookies(request).albedu_oauth_verifier;
   const returnTo = url.searchParams.get('return_to') || '/pages/login.html';
+  const error = url.searchParams.get('error');
+
+  if (error) {
+    const errHeaders = new Headers({ 'Location': `${url.origin}/pages/login.html?auth_error=${encodeURIComponent(error)}` });
+    return new Response(null, { status: 302, headers: errHeaders });
+  }
+
+  if (!code || !verifier) {
+    console.error('[oauth-callback] Missing code or verifier:', { hasCode: !!code, hasVerifier: !!verifier });
+    const errHeaders = new Headers({ 'Location': `${url.origin}/pages/login.html?auth_error=no_code` });
+    return new Response(null, { status: 302, headers: errHeaders });
+  }
+
   let safeReturnTo;
   try {
     safeReturnTo = new URL(returnTo, url.origin);
   } catch (_) {
-    return Response.redirect(`${url.origin}/api/auth/login?auth_error=oauth`, 302);
+    safeReturnTo = new URL('/pages/login.html', url.origin);
   }
-  if (!code || !verifier || !ALLOWED_ORIGINS.has(safeReturnTo.origin)) {
-    const errHeaders = new Headers({ 'Location': `${url.origin}/api/auth/login?auth_error=oauth` });
-    return new Response(null, { status: 302, headers: errHeaders });
+  if (!ALLOWED_ORIGINS.has(safeReturnTo.origin)) {
+    safeReturnTo = new URL('/pages/login.html', url.origin);
   }
+
+  // Exchange authorization code + PKCE verifier for session tokens
   const response = await supabaseAuth(env, 'token?grant_type=pkce', {
-    method: 'POST', body: JSON.stringify({ auth_code: code, code_verifier: verifier }),
+    method: 'POST',
+    body: JSON.stringify({ auth_code: code, code_verifier: verifier }),
   });
   const data = await response.json().catch(() => ({}));
+
   if (!response.ok || !data.access_token) {
-    const errHeaders = new Headers({ 'Location': `${url.origin}/pages/login.html?auth_error=oauth` });
+    console.error('[oauth-callback] Token exchange failed:', response.status, JSON.stringify(data));
+    const errHeaders = new Headers({ 'Location': `${url.origin}/pages/login.html?auth_error=token_exchange` });
     return new Response(null, { status: 302, headers: errHeaders });
   }
-  // FIX: Response.redirect() is immutable — create new Response with headers
+
+  // Success — set auth cookies, clear verifier cookie, redirect to return_to
   const redirectHeaders = new Headers({ 'Location': safeReturnTo.toString() });
   appendSetCookies(redirectHeaders, setAuthCookies(data.access_token, data.refresh_token));
-  redirectHeaders.append('Set-Cookie', cookie('albedu_oauth_verifier', '', { maxAge: 0, httpOnly: true, path: '/api/auth/callback' }));
+  redirectHeaders.append('Set-Cookie', cookie('albedu_oauth_verifier', '', { maxAge: 0, httpOnly: true }));
   Object.entries(authHeaders(request)).forEach(([key, value]) => redirectHeaders.set(key, value));
   return new Response(null, { status: 302, headers: redirectHeaders });
 }
