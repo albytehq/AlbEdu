@@ -41,16 +41,9 @@ function escapeHTML(str) {
 }
 
 function isProfileComplete(data) {
-    // Enterprise: profile_complete is always true now — name + avatar are
-    // captured automatically from Google (peserta) or derived from email (admin).
-    // The old gate checked for nama + avatar_url, but both are now set at
-    // INSERT time by the Edge Functions. Keeping this as always-true so
-    // legacy callers (byteward, panel.js) don't break.
+    // profile-complete system REMOVED entirely. Always returns true
+    // (kept as thin stub for legacy callers that still import it).
     return true;
-}
-
-function makeProfileState(isComplete) {
-    return { isProfileComplete: isComplete, isLoading: false, hasChanges: false };
 }
 
 function normalizeUserDoc(data, userId) {
@@ -87,7 +80,6 @@ window.AuthHelpers = {
     buildAvatarUrl,
     escapeHTML,
     isProfileComplete,
-    makeProfileState,
     normalizeUserDoc,
     getUserPreflight,
     USER_PREFLIGHT_KEY,

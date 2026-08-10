@@ -667,17 +667,15 @@
     if (!userId) throw new Error('User tidak login.');
 
     // Migration 20260701_002_alter_users_snake_case.sql renamed
-    // foto_profil → avatar_url and profil_lengkap → profile_complete.
-    // `fields` may still come in as { foto_profil } from older callers, so
-    // translate it to the real column name here rather than sending a
-    // nonexistent column to Postgrest (which previously made every profile
-    // save fail).
+    // foto_profil → avatar_url. `fields` may still come in as
+    // { foto_profil } from older callers, so translate it to the real
+    // column name here rather than sending a nonexistent column to
+    // Postgrest (which previously made every profile save fail).
     const { foto_profil, ...restFields } = fields;
     const payload = {
       ...restFields,
       ...(foto_profil !== undefined ? { avatar_url: foto_profil } : {}),
       updated_at:       new Date().toISOString(),
-      profile_complete: true,
     };
 
     // Use Actly resilience for profile update

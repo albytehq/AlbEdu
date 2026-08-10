@@ -185,28 +185,48 @@ serve(async (req) => {
         return specificError("db_insert_failed", headers, 500);
       }
     } else if (existingUser.peran !== "peserta") {
-      // FIX: previously returned early WITHOUT updating nama/avatar from
-      // Google metadata. This caused profile.html to show NULL nama and
-      // NULL avatar_url for admins who registered via email then linked
-      // Google. Google metadata (full_name, picture) is available in
-      // user.user_metadata — we should backfill it if the existing user
-      // row is missing it.
+      // Backfill Google profile data (nama, avatar) for existing admins
+      // who registered via email/password then later linked Google.
+      //
+      // Google metadata fields:
+      //   - user.user_metadata.full_name  (or .name as fallback)
+      //   - user.user_metadata.picture    (or .avatar_url as fallback)
+      //
+      // Backfill triggers when:
+      //   1. nama is empty OR equals the auto-derived email-based name
+      //      (register-admin derives nama from email like "Albi Fahriza")
+      //   2. avatar_url is empty OR is the ui-avatars.com auto-fallback
+      //      (client normalizeUserDoc fills NULL with ui-avatars URL)
       const googleName = user.user_metadata?.full_name || user.user_metadata?.name || "";
       const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
 
-      const needsUpdate =
-        (googleName && !existingUser.nama) ||
-        (googleAvatar && !existingUser.avatar_url);
+      // Detect if current avatar is the auto-generated fallback (not a real photo)
+      const currentAvatar = existingUser.avatar_url || "";
+      const isFallbackAvatar = !currentAvatar ||
+        currentAvatar.includes("ui-avatars.com") ||
+        currentAvatar.includes("dicebear") ||
+        currentAvatar.includes("api.dicebear.com");
+
+      // Detect if current nama is the auto-derived email-based name
+      const currentNama = existingUser.nama || "";
+      const emailPrefix = (user.email || "").split("@")[0].replace(/[._\-]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+      const isDerivedName = !currentNama || currentNama === emailPrefix;
+
+      const needsNameUpdate = !!(googleName && isDerivedName);
+      const needsAvatarUpdate = !!(googleAvatar && isFallbackAvatar);
+      const needsUpdate = needsNameUpdate || needsAvatarUpdate;
 
       if (needsUpdate) {
         const updatePayload: Record<string, string | null> = {};
-        if (googleName && !existingUser.nama) updatePayload.nama = googleName;
-        if (googleAvatar && !existingUser.avatar_url) updatePayload.avatar_url = googleAvatar;
+        if (needsNameUpdate) updatePayload.nama = googleName;
+        if (needsAvatarUpdate) updatePayload.avatar_url = googleAvatar;
 
         console.log("[user-auth-complete] backfilling Google profile data for existing user:", {
           userId: user.id,
-          hasNama: !!existingUser.nama,
-          hasAvatar: !!existingUser.avatar_url,
+          currentNama,
+          currentAvatar: currentAvatar ? "(set)" : "(empty)",
+          isDerivedName,
+          isFallbackAvatar,
           updating: Object.keys(updatePayload),
         });
 

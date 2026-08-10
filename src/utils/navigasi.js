@@ -408,16 +408,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         if (nameEl) nameEl.textContent = user.nama  || _t('nav.default_admin_name', null, 'Admin');
         if (roleEl) roleEl.textContent = user.peran === 'admin' ? _t('nav.role_admin', null, 'Administrator') : _t('nav.peserta_role', null, 'Peserta');
-
-        const content = document.querySelector('.user-profile-content');
-        if (content && false) { // FIX: isProfileComplete always true — name+avatar auto-set from Google
-            if (!content.querySelector('.profile-incomplete-dot')) {
-                const dot = document.createElement('span');
-                dot.className = 'profile-incomplete-dot';
-                dot.title = _t('nav.profile_incomplete_short', null, 'Profil belum lengkap');
-                content.appendChild(dot);
-            }
-        }
     }
 
     // No skeleton in sidebar — user info (default text) shows instantly on page load.

@@ -138,7 +138,6 @@ let _currentUser         = null;
 let _userRole            = null;
 let _userData            = null;
 let _authReady           = false;
-let _profileState        = null;
 let _stopProfileListener = null;
 let _initialized         = false;
 let _authStateTimer      = null;
@@ -150,7 +149,6 @@ let _syncingPromise      = null; // Race condition dedup for _syncUserDocument
 const _buildAvatarUrl    = window.AuthHelpers.buildAvatarUrl;
 const escapeHTML         = window.AuthHelpers.escapeHTML;
 const _isProfileComplete = window.AuthHelpers.isProfileComplete;
-const _makeProfileState  = window.AuthHelpers.makeProfileState;
 const _normalizeUserDoc  = window.AuthHelpers.normalizeUserDoc;
 const _getUserPreflight  = window.AuthHelpers.getUserPreflight;
 
@@ -663,7 +661,6 @@ function _applyUserSnapshot(rawData, userId) {
 
     _userData     = data;
     _userRole     = data.peran;
-    _profileState = _makeProfileState(_isProfileComplete(data));
 }
 
 async function _createUserDoc(userId) {
@@ -786,7 +783,6 @@ async function authLogout(options = {}) {
         _currentUser  = null;
         _userRole     = null;
         _userData     = null;
-        _profileState = null;
         _authReady    = true;
 
         try {
@@ -826,8 +822,6 @@ async function authLogout(options = {}) {
         _currentUser  = null;
         _userRole     = null;
         _userData     = null;
-        _profileState = null;
-
         try { window.UI?.afterLogout?.(); } catch (_) {}
 
         if (!options.skipRedirect) {
@@ -969,7 +963,6 @@ async function _handleAuthStateChange(user, event) {
             _currentUser  = null;
             _userRole     = null;
             _userData     = null;
-            _profileState = null;
             _authReady    = true;
             document.dispatchEvent(new CustomEvent('auth-ready', { detail: { role: null } }));
 
@@ -1047,7 +1040,6 @@ async function _handleAuthStateChange(user, event) {
             _stopProfileListener = null;
             _currentUser  = null;
             _userRole     = null;
-            _profileState = null;
             try { await _getAuth().signOut(); } catch (_) {}
             document.dispatchEvent(new CustomEvent('auth-ready', { detail: { role: null } }));
             if (_isInsideApp()) setTimeout(_redirectToLogin, LOGOUT_REDIRECT_DELAY_MS);
@@ -1168,7 +1160,7 @@ function debugByteWard() {
         'user email':       _currentUser?.email   ?? '—',
         'role':             _userRole             ?? '—',
         'auth ready':       _authReady,
-        'profile complete': _profileState?.isProfileComplete ?? false,
+        'profile complete': true,
         'listener active':  !!_stopProfileListener,
     });
     console.groupEnd();
@@ -1194,7 +1186,7 @@ window.Auth = {
     generateDefaultAvatar:    _buildAvatarUrl,
     setUserData(data) {
         _userData = data;
-        if (_profileState) _profileState.isProfileComplete = _isProfileComplete(data);
+        // profile-complete system removed — no state to update
     },
     fetchUserData:    (uid) => _syncUserDocument(uid),
     createUserData:   _createUserDoc,
@@ -1205,7 +1197,7 @@ Object.defineProperties(window.Auth, {
     currentUser:  { get: () => _currentUser,  set: (v) => { _currentUser = v; }  },
     userRole:     { get: () => _userRole,      set: (v) => { _userRole = v; }     },
     userData:     { get: () => _userData,      set: (v) => { _userData = v; }     },
-    profileState: { get: () => _profileState,  set: (v) => { _profileState = v; } },
+    profileState: { get: () => null,  set: () => {} }, // stub — profile-complete system removed
     authReady:    { get: () => _authReady,     set: (v) => { _authReady = v; }    },
 });
 

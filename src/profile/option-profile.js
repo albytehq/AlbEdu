@@ -214,21 +214,6 @@
         color: #059669;
       }
       .op-role-chip i { font-size: 8px; }
-      .op-incomplete-chip {
-        display: inline-flex; align-items: center; gap: 3px;
-        padding: 2.5px 6.5px;
-        border-radius: 6px;
-        font-size: 9.5px; font-weight: 600;
-        background: rgba(245, 158, 11, 0.12);
-        color: #b45309;
-        animation: op-chip-in 360ms ${ANIM_SPRING} both, op-pulse 2s ${ANIM_EASE} infinite;
-        animation-delay: 120ms, 480ms;
-      }
-      @keyframes op-pulse {
-        0%, 100% { opacity: 1; }
-        50%      { opacity: 0.55; }
-      }
-      .op-incomplete-chip i { font-size: 8px; }
 
       /* Separator */
       .op-sep {
@@ -427,7 +412,6 @@
         .op-arrow,
         .op-avatar,
         .op-role-chip,
-        .op-incomplete-chip,
         .op-item,
         .op-item-icon,
         .op-item-chevron,
@@ -619,11 +603,7 @@
     const avatarUrl  = user.avatar_url || user.foto_profil || user.fotoProfil || '';
     const role       = user.peran || 'peserta';
     const isAdmin    = role === 'admin';
-    // DB column is `profile_complete` (renamed from `profil_lengkap` by
-    // migration 20260701_002_alter_users_snake_case.sql). `profilLengkap` is
-    // never actually set anywhere, so that check was always false — this
-    // banner silently never showed. Kept as fallback for any legacy caller.
-    const incomplete = user.profile_complete === false || user.profilLengkap === false || user.profil_lengkap === false;
+    // profile-complete system REMOVED entirely. No incomplete badge.
     const roleLabel  = isAdmin ? ('Administrator') : ('Peserta');
     const roleClass  = isAdmin ? 'op-role-admin' : 'op-role-peserta';
     const roleIcon   = isAdmin ? 'shield' : 'school';
@@ -693,7 +673,6 @@
             <span class="op-role-chip ${roleClass}">
               <span data-albedu-icon="${roleIcon}"></span> ${_esc(roleLabel)}
             </span>
-            ${incomplete ? `<span class="op-incomplete-chip"><span data-albedu-icon="error"></span> ${_esc('Belum lengkap')}</span>` : ''}
           </div>
         </div>
       </div>

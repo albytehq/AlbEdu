@@ -327,7 +327,6 @@ UI.Profile = {
                 <div class="avatar-section">
                     <img src="${_esc(avatarUrl)}" alt="Avatar" class="view-avatar"
                          onerror="this.onerror=null;this.src='${fallback}'">
-                    ${u.profilLengkap === false ? '<div class="incomplete-badge" aria-label="Profil belum lengkap">!</div>' : ''}
                 </div>
                 <div class="user-info">
                     <h3 class="user-name">${_esc(u.nama || 'Nama belum diisi')}</h3>
@@ -538,16 +537,11 @@ UI.Profile = {
             if (trimName.length === 0) throw new Error('Nama tidak boleh kosong');
             if (trimName !== window.Auth.userData.nama) updates.nama = trimName;
             // Migration 20260701_002_alter_users_snake_case.sql renamed
-            // foto_profil → avatar_url and profil_lengkap → profile_complete.
-            // Writing the old names threw "column does not exist" on every
-            // save — fixed to current schema. window.Auth.userData still
+            // foto_profil → avatar_url. window.Auth.userData still
             // carries foto_profil (normalizeUserDoc keeps both for legacy readers).
             if (state.tempAvatar && state.tempAvatar !== window.Auth.userData.foto_profil) {
                 updates.avatar_url = state.tempAvatar;
             }
-            const finalName   = updates.nama        || window.Auth.userData.nama       || '';
-            const finalAvatar = updates.avatar_url  || window.Auth.userData.foto_profil || '';
-            updates.profile_complete = finalName.trim().length > 0 && finalAvatar.trim().length > 0;
             updates.updated_at = new Date().toISOString();
 
             delete updates.email; delete updates.peran; delete updates.id; delete updates.created_at;
@@ -556,15 +550,12 @@ UI.Profile = {
             const userId = window.Auth.currentUser?.id || window.Auth.currentUser?.uid;
             await window.AlbEdu?.repository?.updateDoc('users', userId, updates);
             // Mirror the DB write into the local camelCase/legacy shape so the
-            // rest of the UI (which still reads foto_profil/fotoProfil/
-            // profilLengkap) reflects the change immediately without a refetch.
+            // rest of the UI (which still reads foto_profil/fotoProfil)
+            // reflects the change immediately without a refetch.
             const localMirror = { ...updates };
             if ('avatar_url' in updates) {
                 localMirror.foto_profil = updates.avatar_url;
                 localMirror.fotoProfil  = updates.avatar_url;
-            }
-            if ('profile_complete' in updates) {
-                localMirror.profilLengkap = updates.profile_complete;
             }
             window.Auth.userData = { ...window.Auth.userData, ...localMirror };
 
@@ -576,7 +567,7 @@ UI.Profile = {
             // Update sidebar avatar
             window.dispatchEvent(new Event('auth-ready'));
 
-            if (updates.profile_complete) setTimeout(() => this.close(), 1500);
+            setTimeout(() => this.close(), 1500);
         } catch (err) {
             state.isLoading = false;
             this._render();

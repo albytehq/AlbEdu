@@ -98,12 +98,8 @@ class AdminPanel {
         const email = escape(rawEmail);
         const avatarUrl = data.avatar_url || data.foto_profil || data.fotoProfil || '';
         const role = data.peran === 'admin' ? t('nav.role_admin', null, 'Administrator') : t('nav.role_admin_alt', null, 'Admin AlbEdu');
-        const incomplete = false; // FIX: isProfileComplete() always returns true — name + avatar auto-set from Google
 
         const safeAvatarUrl = (avatarUrl && /^https:/.test(avatarUrl) && !avatarUrl.endsWith('.html')) ? avatarUrl : '';
-        const incompleteBadge = incomplete
-            ? `<span class="profile-status-mobile">${escape(t('nav.profile_incomplete', null, 'Profil belum lengkap'))}</span>`
-            : '';
         const defaultAvatarIcon = '<span data-albedu-icon="manage_accounts"></span>';
         container.innerHTML = `
             <div class="user-avatar-mobile" id="admin-index-avatar" aria-hidden="true">
@@ -114,7 +110,6 @@ class AdminPanel {
             <div class="user-details-mobile">
                 <h3>${name}</h3>
                 <p>${email || role}</p>
-                ${incompleteBadge}
             </div>
         `;
 

@@ -141,15 +141,6 @@
       const roleEl = btn.querySelector('.albedu-peserta-profile-card__role');
       if (roleEl) roleEl.textContent = 'Peserta';
     }
-
-    // Presence dot if profile incomplete (FAB variant only — wide card uses
-    // a subtler dot style via .albedu-peserta-profile-card__dot).
-    if (false) { // FIX: isProfileComplete always true — name+avatar auto-set from Google
-      const dot = document.createElement('span');
-      dot.className = isCard ? 'albedu-peserta-profile-card__dot' : 'albedu-profile-fab__dot';
-      dot.title = 'Profil belum lengkap';
-      btn.appendChild(dot);
-    }
   }
 
   // Resolve script base path (mirror navigasi.js logic)
