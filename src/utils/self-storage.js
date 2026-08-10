@@ -282,9 +282,10 @@ window.SelfStorage = (() => {
 
   // Safety-net retry loop. The listener catches late events;
   // this loop surfaces a visible failure if auth-ready never fires within 10s.
-  // CRITICAL FIX: If Auth.authReady is true but userRole stays null (Auth
-  // module race — _syncUserDocument failed or hung), proactively resolve
-  // the role from the DB after 3 retries (1.5s).
+  // CRITICAL FIX v2: Don't depend on Auth.authReady flag (it may never be set
+  // even after auth-ready event fires). After 1.5s, proactively resolve role
+  // from DB regardless of authReady state. _resolveRole uses _resolveAdminId
+  // which has supabase.auth.getUser() fallback — doesn't need Auth module.
   let _safetyRetries = 0;
   const _SAFETY_MAX_RETRIES = 20; // 20 × 500ms = 10 seconds
   const _ROLE_RESOLVE_THRESHOLD = 3; // after 3 retries (1.5s), resolve role from DB
@@ -292,40 +293,52 @@ window.SelfStorage = (() => {
   function _safetyNetCheck() {
     if (_state !== 'pending') return;
     _safetyRetries++;
+
+    // Log every 5 ticks (2.5s) for debugging
+    if (_safetyRetries % 5 === 0) {
+      console.log('[SelfStorage] safety net tick', _safetyRetries, '— state:', _state, 'authReady:', !!window.Auth?.authReady, 'userRole:', window.Auth?.userRole || 'null');
+    }
+
     if (_safetyRetries > _SAFETY_MAX_RETRIES) {
-      console.warn('[SelfStorage] Safety net gave up after 10s — auth-ready never fired with real role. Marking as failed.');
-      _lastError = new Error('auth-ready event never fired with real role within 10s');
+      console.warn('[SelfStorage] Safety net gave up after 10s — role never resolved. Marking as failed.');
+      _lastError = new Error('Role tidak bisa di-resolve dalam 10s. Auth module mungkin bermasalah.');
       _resolveReady(null);
       return;
     }
-    if (window.Auth?.authReady) {
-      const role = window.Auth.userRole;
-      if (role) {
-        // Real role is available — proceed normally
-        _handleAuthReady({ detail: { role } });
-      } else if (_safetyRetries >= _ROLE_RESOLVE_THRESHOLD && !_roleResolveAttempted) {
-        // authReady=true but userRole=null for 1.5s — Auth module race.
-        // Proactively resolve role from DB.
-        _roleResolveAttempted = true;
-        console.log('[SelfStorage] authReady=true but userRole=null — resolving role from DB...');
-        _resolveRole().then(resolvedRole => {
-          if (_state !== 'pending') return; // already resolved
-          if (resolvedRole) {
-            console.log('[SelfStorage] Role resolved from DB:', resolvedRole, '— proceeding with provisioning');
-            _handleAuthReady({ detail: { role: resolvedRole } });
-          } else {
-            // Role resolution failed — try again on next safety net tick
-            _roleResolveAttempted = false;
-            setTimeout(_safetyNetCheck, 500);
-          }
-        });
-      } else {
-        // Still waiting for role to be set (under threshold)
-        setTimeout(_safetyNetCheck, 500);
-      }
-    } else {
-      setTimeout(_safetyNetCheck, 500);
+
+    // Tier 1: If Auth.userRole is now set (maybe auth-ready re-fired), use it
+    const cachedRole = window.Auth?.userRole;
+    if (cachedRole) {
+      console.log('[SelfStorage] safety net: role now available via Auth.userRole:', cachedRole);
+      _handleAuthReady({ detail: { role: cachedRole } });
+      return;
     }
+
+    // Tier 2: After 1.5s, proactively resolve role from DB
+    // (regardless of Auth.authReady — it may never be set)
+    if (_safetyRetries >= _ROLE_RESOLVE_THRESHOLD && !_roleResolveAttempted) {
+      _roleResolveAttempted = true;
+      console.log('[SelfStorage] safety net: 1.5s elapsed, resolving role from DB (authReady=' + !!window.Auth?.authReady + ')...');
+      _resolveRole().then(resolvedRole => {
+        if (_state !== 'pending') return; // already resolved
+        if (resolvedRole) {
+          console.log('[SelfStorage] Role resolved from DB:', resolvedRole, '— proceeding with provisioning');
+          _handleAuthReady({ detail: { role: resolvedRole } });
+        } else {
+          console.warn('[SelfStorage] _resolveRole returned null — will retry');
+          _roleResolveAttempted = false;
+          setTimeout(_safetyNetCheck, 500);
+        }
+      }).catch(err => {
+        console.error('[SelfStorage] _resolveRole threw:', err?.message);
+        _roleResolveAttempted = false;
+        setTimeout(_safetyNetCheck, 500);
+      });
+      return;
+    }
+
+    // Still under threshold or role resolution in progress — keep polling
+    setTimeout(_safetyNetCheck, 500);
   }
   setTimeout(_safetyNetCheck, 500);
 
