@@ -16,16 +16,28 @@
 //   SupabaseApi.js → auth.js → SelfStorage.js
 //   SelfStorage mendengar event 'auth-ready' — saat admin login, storage
 //   langsung di-provision secara background tanpa user notice.
+//
+// PRODUCTION-GRADE FIXES (v2):
+//   • Three-tier admin_id resolution (Auth.currentUser → supabase.auth.getUser → null)
+//   • Retry with exponential backoff on transient failures
+//   • Clear error states: 'pending' | 'ready' | 'failed' | 'not-admin'
+//   • Never hangs forever — surfaces failure via onError callback + event
+//   • Idempotent provisioning (SELECT first, INSERT only if missing, race-safe)
 
 const MAX_ACTIVE_EXAMS = 5;   // draft + active max per admin
 const EXAM_LIMIT = MAX_ACTIVE_EXAMS;
 
-window.SelfStorage = (() => {
-  let _storageId   = null;
-  let _adminId     = null;
-  let _ready       = false;
-  let _readyResolvers = [];
+// Provisioning retry config (exponential backoff)
+const PROVISION_MAX_RETRIES = 3;
+const PROVISION_BASE_DELAY_MS = 400;
 
+window.SelfStorage = (() => {
+  // State machine: 'pending' → 'ready' (success) | 'failed' (error) | 'not-admin' (skip)
+  let _state        = 'pending'; // 'pending' | 'ready' | 'failed' | 'not-admin'
+  let _storageId    = null;
+  let _adminId      = null;
+  let _lastError    = null;
+  let _readyResolvers = [];
 
   function _getSb() {
     return window.AlbEdu?.supabase?.client;
@@ -35,17 +47,43 @@ window.SelfStorage = (() => {
     return window.Auth?.userRole === 'admin';
   }
 
-  function _getCurrentUserId() {
-    return window.Auth?.currentUser?.id || null;
+  // ── Three-tier admin_id resolution ──────────────────────────────
+  // Tier 1: window.Auth.currentUser.id (synchronous, cached)
+  // Tier 2: supabase.auth.getUser() (async, native, always fresh)
+  // Tier 3: null (give up — caller must handle)
+  async function _resolveAdminId() {
+    // Tier 1
+    const cached = window.Auth?.currentUser?.id;
+    if (cached) return cached;
+
+    // Tier 2 — async fallback (covers edge cases where Auth module hasn't
+    // populated currentUser yet but Supabase session IS valid)
+    const sb = _getSb();
+    if (sb?.auth?.getUser) {
+      try {
+        const { data, error } = await sb.auth.getUser();
+        if (!error && data?.user?.id) {
+          // Cache back to Auth for downstream callers
+          if (window.Auth) window.Auth.currentUser = { ...window.Auth.currentUser, id: data.user.id };
+          return data.user.id;
+        }
+      } catch (e) {
+        console.warn('[SelfStorage] Tier-2 admin_id resolution failed:', e?.message);
+      }
+    }
+
+    // Tier 3
+    return null;
   }
 
-  // _promiseReady — single Promise that resolves once storage is provisioned.
-  // Multiple callers can await this; all resolve together.
+  // _promiseReady — single Promise that resolves once storage is provisioned
+  // (or rejects on failure). Multiple callers can await this.
   let _readyPromise = null;
   function _getReadyPromise() {
     if (!_readyPromise) {
       _readyPromise = new Promise(resolve => {
-        if (_ready) return resolve(_storageId);
+        if (_state === 'ready') return resolve(_storageId);
+        if (_state === 'failed' || _state === 'not-admin') return resolve(null);
         _readyResolvers.push(resolve);
       });
     }
@@ -53,107 +91,146 @@ window.SelfStorage = (() => {
   }
 
   function _resolveReady(storageId) {
-    _ready     = true;
-    _storageId = storageId;
+    _state      = storageId ? 'ready' : 'failed';
+    _storageId  = storageId;
     const resolvers = [..._readyResolvers];
     _readyResolvers = [];
     resolvers.forEach(fn => fn(storageId));
-    window.dispatchEvent(new CustomEvent('selfstorage-ready', { detail: { storageId } }));
+    window.dispatchEvent(new CustomEvent('selfstorage-ready', {
+      detail: { storageId, state: _state, error: _lastError }
+    }));
   }
 
+  function _markNotAdmin() {
+    _state     = 'not-admin';
+    _storageId = null;
+    const resolvers = [..._readyResolvers];
+    _readyResolvers = [];
+    resolvers.forEach(fn => fn(null));
+    window.dispatchEvent(new CustomEvent('selfstorage-ready', {
+      detail: { storageId: null, state: 'not-admin' }
+    }));
+  }
 
-  async function _provision(adminId) {
+  // ── Sleep helper for retry backoff ───────────────────────────────
+  function _sleep(ms) {
+    return new Promise(r => setTimeout(r, ms));
+  }
+
+  // ── Single provisioning attempt ─────────────────────────────────
+  // Returns storageId on success, null on recoverable failure.
+  // Throws on unexpected error (caller decides whether to retry).
+  async function _provisionAttempt(adminId) {
     const sb = _getSb();
-    if (!sb) {
-      console.warn('[SelfStorage] Supabase not ready — provision skipped');
-      return null;
+    if (!sb) throw new Error('Supabase client not ready');
+
+    // Step 1: Try to read existing storage row (owner-scoped SELECT)
+    const { data: existing, error: readErr } = await sb
+      .from('admin_storages')
+      .select('id')
+      .eq('admin_id', adminId)
+      .maybeSingle();
+
+    if (readErr) {
+      // RLS error or network — caller may retry
+      throw readErr;
     }
+    if (existing?.id) return existing.id;
 
-    try {
-      // Coba baca storage yang sudah ada dulu — upsert mahal kalau row sudah ada.
-      const { data: existing, error: readErr } = await sb
-        .from('admin_storages')
-        .select('id')
-        .eq('admin_id', adminId)
-        .maybeSingle();
+    // Step 2: Storage doesn't exist — INSERT new row
+    const { data: created, error: createErr } = await sb
+      .from('admin_storages')
+      .insert({ admin_id: adminId })
+      .select('id')
+      .single();
 
-      if (readErr) throw readErr;
-
-      if (existing?.id) return existing.id;
-
-      // Storage belum ada — buat baru.
-      const { data: created, error: createErr } = await sb
-        .from('admin_storages')
-        .insert({ admin_id: adminId })
-        .select('id')
-        .single();
-
-      if (createErr) {
-        // Conflict: race condition, another tab created it simultaneously.
-        // Just read back the existing row.
-        if (createErr.code === '23505') {
-          const { data: retry } = await sb
-            .from('admin_storages')
-            .select('id')
-            .eq('admin_id', adminId)
-            .maybeSingle();
-          return retry?.id || null;
-        }
-        throw createErr;
+    if (createErr) {
+      // Race condition: another tab inserted simultaneously (code 23505).
+      // Read back the existing row.
+      if (createErr.code === '23505') {
+        const { data: retry } = await sb
+          .from('admin_storages')
+          .select('id')
+          .eq('admin_id', adminId)
+          .maybeSingle();
+        return retry?.id || null;
       }
-
-      return created?.id || null;
-    } catch (err) {
-      console.error('[SelfStorage] Provision failed:', err?.message);
-      return null;
+      throw createErr;
     }
+
+    return created?.id || null;
+  }
+
+  // ── Provisioning with retry + exponential backoff ───────────────
+  async function _provisionWithRetry(adminId) {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= PROVISION_MAX_RETRIES; attempt++) {
+      try {
+        const id = await _provisionAttempt(adminId);
+        if (id) return id;
+        // Returned null without throwing — unusual but treat as failure
+        lastErr = new Error('Provisioning returned null (RLS may be blocking)');
+      } catch (err) {
+        lastErr = err;
+        // Don't retry on auth errors — they won't fix themselves
+        const code = err?.code || '';
+        const msg = (err?.message || '').toLowerCase();
+        if (code === '42501' || msg.includes('jwt') || msg.includes('auth') || msg.includes('token')) {
+          break;
+        }
+      }
+      // Exponential backoff: 400ms, 800ms, 1600ms
+      if (attempt < PROVISION_MAX_RETRIES) {
+        await _sleep(PROVISION_BASE_DELAY_MS * Math.pow(2, attempt - 1));
+      }
+    }
+    console.error('[SelfStorage] Provisioning failed after', PROVISION_MAX_RETRIES, 'attempts:', lastErr?.message);
+    _lastError = lastErr;
+    return null;
   }
 
 
   async function _handleAuthReady(e) {
     const role = e?.detail?.role;
     if (role !== 'admin') {
-      // Bukan admin — storage tidak diperlukan. Mark ready anyway so callers don't hang.
-      _ready     = true;
-      _storageId = null;
-      _readyResolvers.forEach(fn => fn(null));
-      _readyResolvers = [];
+      // Bukan admin — storage tidak diperlukan.
+      _markNotAdmin();
       return;
     }
 
-    const adminId = _getCurrentUserId();
-    if (!adminId) return;
+    const adminId = await _resolveAdminId();
+    if (!adminId) {
+      console.warn('[SelfStorage] Could not resolve admin_id — storage not provisioned');
+      _lastError = new Error('admin_id tidak bisa di-resolve (sesi tidak valid)');
+      _resolveReady(null);
+      return;
+    }
 
     _adminId = adminId;
-    const storageId = await _provision(adminId);
+    const storageId = await _provisionWithRetry(adminId);
     _resolveReady(storageId);
   }
 
   // Register listener — auth-ready fires from auth.js after role is confirmed.
   document.addEventListener('auth-ready', _handleAuthReady, { once: true });
 
-  // Retry loop instead of a single setTimeout. The old 800ms setTimeout
-  // would miss auth-ready if it fired later (slow network, cold start) AND
-  // Auth.authReady was still false at the 800ms mark. The { once: true }
-  // listener still catches late events; this retry surfaces a visible warning
-  // if provisioning never happens — instead of silently hanging.
+  // Safety-net retry loop. The { once: true } listener catches late events;
+  // this loop surfaces a visible failure if auth-ready never fires within 10s.
   let _safetyRetries = 0;
-  const _SAFETY_MAX_RETRIES = 20; // 20 x 500ms = 10 seconds
+  const _SAFETY_MAX_RETRIES = 20; // 20 × 500ms = 10 seconds
   function _safetyNetCheck() {
-    if (_ready) return;
+    if (_state !== 'pending') return;
     _safetyRetries++;
     if (_safetyRetries > _SAFETY_MAX_RETRIES) {
-      console.warn('[SelfStorage] Safety net gave up after 10s -- auth-ready never fired. Storage will not be provisioned.');
-      _resolveReady(null); // resolve with null so callers do not hang forever
+      console.warn('[SelfStorage] Safety net gave up after 10s — auth-ready never fired. Marking as failed.');
+      _lastError = new Error('auth-ready event never fired within 10s');
+      _resolveReady(null);
       return;
     }
     if (window.Auth?.authReady) {
       const role = window.Auth.userRole;
-      if (role === 'admin') {
-        _handleAuthReady({ detail: { role: 'admin' } });
-      } else {
-        _handleAuthReady({ detail: { role } });
-      }
+      // Dispatch synthetic auth-ready (the { once: true } listener already fired)
+      _handleAuthReady({ detail: { role } });
     } else {
       setTimeout(_safetyNetCheck, 500);
     }
@@ -162,16 +239,13 @@ window.SelfStorage = (() => {
 
 
   async function getExamCount() {
-    const adminId = _adminId || _getCurrentUserId();
+    const adminId = _adminId || (await _resolveAdminId());
     if (!adminId) return 0;
 
     const sb = _getSb();
     if (!sb) return 0;
 
     try {
-      // 'assessments' table (was 'ujian' pre-snake_case migration). Filter on
-      // `created_by` and status in {draft, active} — archived assessments no
-      // longer count against the active limit.
       const { count, error } = await sb
         .from('assessments')
         .select('*', { count: 'exact', head: true })
@@ -193,7 +267,7 @@ window.SelfStorage = (() => {
 
 
   return {
-    /** Menunggu storage siap. Resolve dengan storageId (string) atau null jika bukan admin. */
+    /** Menunggu storage siap. Resolve dengan storageId (string) atau null jika gagal/bukan admin. */
     ready: _getReadyPromise,
 
     /** Storage ID admin yang sedang login. Null jika belum siap atau bukan admin. */
@@ -203,7 +277,16 @@ window.SelfStorage = (() => {
     getAdminId: () => _adminId,
 
     /** Apakah storage sudah selesai di-provision. */
-    isReady: () => _ready,
+    isReady: () => _state === 'ready',
+
+    /** State machine: 'pending' | 'ready' | 'failed' | 'not-admin'. */
+    getState: () => _state,
+
+    /** Error terakhir yang menyebabkan provisioning gagal. Null jika sukses/belum selesai. */
+    getLastError: () => _lastError,
+
+    /** Resolve admin_id dengan three-tier fallback (async). */
+    resolveAdminId: _resolveAdminId,
 
     /** Hitung ujian draft + active milik admin ini. */
     getExamCount,

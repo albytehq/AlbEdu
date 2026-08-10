@@ -25,14 +25,49 @@ window.DaftarNama = (() => {
 
   function _sb() { return window.AlbEdu?.supabase?.client; }
 
+  // ── Production-grade readiness check ────────────────────────────
+  // Returns { ok, reason, storageId, adminId } so callers can show
+  // meaningful error messages instead of cryptic "Storage belum siap."
+  async function _checkReady() {
+    const sb = _sb();
+    if (!sb) {
+      return { ok: false, reason: 'Platform belum siap. Muat ulang halaman lalu coba lagi.', storageId: null, adminId: null };
+    }
+
+    // Wait for storage provisioning to complete
+    await window.SelfStorage.ready();
+
+    const state     = window.SelfStorage.getState();
+    const storageId = window.SelfStorage.getStorageId();
+    const adminId   = await window.SelfStorage.resolveAdminId();
+    const lastErr   = window.SelfStorage.getLastError();
+
+    if (state === 'not-admin') {
+      return { ok: false, reason: 'Akun Anda bukan admin. Fitur daftar nama hanya untuk admin.', storageId: null, adminId: null };
+    }
+    if (state === 'failed' || !storageId) {
+      // Surface the actual error for debugging
+      const detail = lastErr?.message || 'Provisioning storage gagal.';
+      return {
+        ok: false,
+        reason: `Storage admin tidak bisa di-provision: ${detail}. Coba muat ulang halaman. Jika persisten, jalankan migration 20260810_044 di Supabase Studio.`,
+        storageId: null,
+        adminId
+      };
+    }
+    if (!adminId) {
+      return { ok: false, reason: 'Sesi login tidak valid. Silakan login kembali.', storageId, adminId: null };
+    }
+
+    return { ok: true, reason: null, storageId, adminId };
+  }
+
   async function _getStorageId() {
     await window.SelfStorage.ready();
     return window.SelfStorage.getStorageId();
   }
 
   function _getAdminId() {
-    // `.uid` is a Firebase-shaped field that doesn't exist on the native
-    // Supabase user object (which exposes `.id`). Always return that.
     return window.Auth?.currentUser?.id || null;
   }
 
@@ -138,10 +173,12 @@ window.DaftarNama = (() => {
   }
 
   async function create(namaDaftar, tipeDaftar, tipeCustom, initialTabs = null, forceSaveWithDup = false) {
+    const ready = await _checkReady();
+    if (!ready.ok) throw new Error(ready.reason);
+
     const sb        = _sb();
-    const storageId = await _getStorageId();
-    const adminId   = _getAdminId();
-    if (!sb || !storageId || !adminId) throw new Error('Storage belum siap.');
+    const storageId = ready.storageId;
+    const adminId   = ready.adminId;
 
     const all = await getAll();
     if (all.length >= MAX_DAFTAR)
@@ -181,13 +218,23 @@ window.DaftarNama = (() => {
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Surface RLS / network errors with actionable context
+      const msg = error.message || 'Unknown error';
+      if (error.code === '42501' || msg.includes('permission') || msg.toLowerCase().includes('policy')) {
+        throw new Error('Akses ditolak oleh RLS. Jalankan migration 20260810_044 di Supabase Studio untuk mengaktifkan owner-scoped policies.');
+      }
+      throw new Error(`Gagal menyimpan daftar: ${msg}`);
+    }
     return data;
   }
 
   // Full validation runs here. Callers must call checkDuplicateNama first
   // and only re-call save with forceSaveWithDup=true after the user confirms.
   async function save(id, namaDaftar, tipeDaftar, tipeCustom, tabs, forceSaveWithDup = false) {
+    const ready = await _checkReady();
+    if (!ready.ok) throw new Error(ready.reason);
+
     const sb = _sb();
     if (!sb || !id) throw new Error('Parameter tidak lengkap.');
 
@@ -218,18 +265,33 @@ window.DaftarNama = (() => {
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      const msg = error.message || 'Unknown error';
+      if (error.code === '42501' || msg.includes('permission') || msg.toLowerCase().includes('policy')) {
+        throw new Error('Akses ditolak oleh RLS. Jalankan migration 20260810_044 di Supabase Studio.');
+      }
+      throw new Error(`Gagal menyimpan perubahan: ${msg}`);
+    }
     return data;
   }
 
   async function remove(id) {
+    const ready = await _checkReady();
+    if (!ready.ok) throw new Error(ready.reason);
+
     const sb = _sb();
     if (!sb || !id) throw new Error('ID tidak valid.');
     const { error } = await sb
       .from('daftar_nama')
       .delete()
       .eq('id', id);
-    if (error) throw new Error(error.message);
+    if (error) {
+      const msg = error.message || 'Unknown error';
+      if (error.code === '42501' || msg.includes('permission') || msg.toLowerCase().includes('policy')) {
+        throw new Error('Akses ditolak oleh RLS. Jalankan migration 20260810_044 di Supabase Studio.');
+      }
+      throw new Error(`Gagal menghapus daftar: ${msg}`);
+    }
   }
 
   function addTab(tabs) {

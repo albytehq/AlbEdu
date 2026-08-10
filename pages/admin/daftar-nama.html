@@ -257,13 +257,74 @@
     'Custom':  { icon: 'label',   label: 'Custom' },
   };
 
-  // Boot
+  // Boot — production-grade with state machine + button-disable guard
   function _boot() {
     if (!window.SelfStorage || !window.DaftarNama) {
       setTimeout(_boot, 80);
       return;
     }
-    window.SelfStorage.ready().then(() => _load());
+
+    // Disable "Buat Daftar" button until storage is confirmed ready
+    _setButtonEnabled(false, 'Menyiapkan storage...');
+
+    window.SelfStorage.ready().then(() => {
+      const state = window.SelfStorage.getState();
+
+      if (state === 'failed') {
+        // Provisioning failed — surface the error and stop
+        const err = window.SelfStorage.getLastError();
+        console.error('[DaftarNama] Storage provisioning failed:', err);
+        _showStorageError(err?.message || 'Provisioning storage gagal.');
+        _setButtonEnabled(false, 'Storage gagal dimuat');
+        return;
+      }
+
+      if (state === 'not-admin') {
+        _showStorageError('Akun Anda bukan admin. Fitur daftar nama hanya untuk admin.');
+        _setButtonEnabled(false, 'Bukan admin');
+        return;
+      }
+
+      // state === 'ready' — proceed
+      _setButtonEnabled(true, null);
+      _load();
+    });
+  }
+
+  // Toggle button enabled + show reason as tooltip/disabled label
+  function _setButtonEnabled(enabled, disabledReason) {
+    const btn = $btn();
+    if (!btn) return;
+    btn.disabled = !enabled;
+    if (!enabled && disabledReason) {
+      btn.setAttribute('title', disabledReason);
+      btn.style.opacity = '0.6';
+      btn.style.cursor = 'not-allowed';
+    } else {
+      btn.removeAttribute('title');
+      btn.style.opacity = '';
+      btn.style.cursor = '';
+    }
+  }
+
+  // Show storage error inline (replaces list area with error card)
+  function _showStorageError(message) {
+    $load().style.display = 'none';
+    $list().style.display = '';
+    $list().innerHTML = `
+      <div class="dn-empty" style="border-color: var(--color-destructive, #DC2626); background: var(--color-destructive-bg, #FEF2F2);">
+        <span data-albedu-icon="error" style="color: var(--color-destructive, #DC2626);"></span>
+        <h3 style="color: var(--color-destructive, #DC2626);">Storage Tidak Siap</h3>
+        <p style="color: var(--color-text-2, #1E293B);">${_esc(message)}</p>
+        <p style="font-size: 12px; color: var(--color-text-muted, #64748B); margin-top: 12px;">
+          Coba <a href="#" onclick="location.reload(); return false;" style="color: var(--color-primary, #2563EB); font-weight: 600;">muat ulang halaman</a>.
+          Jika error persisten, jalankan <code style="background: var(--color-surface-2, #F1F5F9); padding: 2px 6px; border-radius: 4px; font-size: 11px;">migration 20260810_044</code>
+          di Supabase Studio → SQL Editor.
+        </p>
+      </div>
+    `;
+    window.AlbEdu?.bindIcons?.($list());
+    $notice().style.display = 'none';
   }
 
   if (window.Auth?.authReady) {
