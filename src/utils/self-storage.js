@@ -214,6 +214,15 @@ window.SelfStorage = (() => {
   // Register listener — auth-ready fires from auth.js after role is confirmed.
   document.addEventListener('auth-ready', _handleAuthReady, { once: true });
 
+  // CRITICAL FIX: If auth-ready already fired BEFORE this script loaded
+  // (race condition — auth/main.js defer-loaded earlier, fast cached login),
+  // the { once: true } listener will NEVER fire. Check synchronously + after
+  // a short delay to catch the already-fired case.
+  if (window.Auth?.authReady) {
+    // Already ready — call _handleAuthReady immediately (don't wait for event)
+    Promise.resolve().then(() => _handleAuthReady({ detail: { role: window.Auth.userRole } }));
+  }
+
   // Safety-net retry loop. The { once: true } listener catches late events;
   // this loop surfaces a visible failure if auth-ready never fires within 10s.
   let _safetyRetries = 0;
@@ -229,7 +238,7 @@ window.SelfStorage = (() => {
     }
     if (window.Auth?.authReady) {
       const role = window.Auth.userRole;
-      // Dispatch synthetic auth-ready (the { once: true } listener already fired)
+      // Auth is ready — fire _handleAuthReady directly
       _handleAuthReady({ detail: { role } });
     } else {
       setTimeout(_safetyNetCheck, 500);

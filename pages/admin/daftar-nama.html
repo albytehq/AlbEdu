@@ -196,7 +196,7 @@
 
     <footer class="footer">
       <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
-      <p>v0.821.0</p>
+      <p>v0.822.0</p>
     </footer>
   </main>
 </div>
@@ -267,11 +267,23 @@
     // Disable "Buat Daftar" button until storage is confirmed ready
     _setButtonEnabled(false, 'Menyiapkan storage...');
 
-    window.SelfStorage.ready().then(() => {
+    // Use Promise.race with timeout to prevent infinite hang
+    Promise.race([
+      window.SelfStorage.ready(),
+      new Promise(resolve => setTimeout(() => resolve('__timeout__'), 15000))
+    ]).then((result) => {
+      // If storage is already ready, result is storageId (or null on failure)
+      // If timeout fired, result is '__timeout__'
       const state = window.SelfStorage.getState();
 
+      if (state === 'pending' || result === '__timeout__') {
+        console.error('[DaftarNama] Storage provisioning timed out after 15s');
+        _showStorageError('Provisioning storage timed out. Coba muat ulang halaman.');
+        _setButtonEnabled(false, 'Timeout');
+        return;
+      }
+
       if (state === 'failed') {
-        // Provisioning failed — surface the error and stop
         const err = window.SelfStorage.getLastError();
         console.error('[DaftarNama] Storage provisioning failed:', err);
         _showStorageError(err?.message || 'Provisioning storage gagal.');
