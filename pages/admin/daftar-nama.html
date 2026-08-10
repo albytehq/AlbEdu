@@ -339,11 +339,36 @@
     $notice().style.display = 'none';
   }
 
+  // PRODUCTION FIX: Disable button IMMEDIATELY on page parse (before _boot
+  // runs) to prevent click races during the 500ms-10s pre-auth-ready window.
+  // Old code only disabled inside _boot(), which fires after auth-ready.
+  (function _disableButtonEarly() {
+    const btn = document.getElementById('btnBuatDaftar');
+    if (btn) {
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+      btn.style.cursor = 'not-allowed';
+      btn.setAttribute('title', 'Menyiapkan storage...');
+    }
+  })();
+
   if (window.Auth?.authReady) {
     _boot();
   } else {
     document.addEventListener('auth-ready', _boot, { once: true });
   }
+
+  // Track unsaved changes for beforeunload warning
+  let _hasUnsavedChanges = false;
+  function _markDirty() { _hasUnsavedChanges = true; }
+  function _markClean() { _hasUnsavedChanges = false; }
+  window.addEventListener('beforeunload', (e) => {
+    if (_hasUnsavedChanges) {
+      e.preventDefault();
+      e.returnValue = 'Perubahan belum disimpan akan hilang. Lanjutkan?';
+      return e.returnValue;
+    }
+  });
 
   // Load
   async function _load() {
@@ -353,8 +378,14 @@
     try {
       _daftarList = await window.DaftarNama.getAll();
     } catch (err) {
+      // PRODUCTION FIX: getAll() now throws on error (was silent []).
+      // Show error card instead of misleading "Belum ada data daftar" empty state.
       console.error('[DaftarNama] load error:', err);
       _daftarList = [];
+      $load().style.display = 'none';
+      $list().style.display = '';
+      _showStorageError(err?.message || 'Gagal memuat daftar nama.');
+      return;
     }
 
     $load().style.display = 'none';
@@ -814,6 +845,7 @@
       inp.addEventListener('input', () => {
         try {
           _activeDaftar.tabs = window.DaftarNama.editNama(_activeDaftar.tabs, _activeTabId, i, inp.value);
+          _markDirty();  // PRODUCTION FIX: track unsaved changes
           // Update tab pill count
           const updatedTab = _activeDaftar.tabs.find(t => t.id === _activeTabId);
           if (updatedTab) {
@@ -833,6 +865,7 @@
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.idx);
         _activeDaftar.tabs = window.DaftarNama.removeNama(_activeDaftar.tabs, _activeTabId, idx);
+        _markDirty();  // PRODUCTION FIX: track unsaved changes
         _renderEditor();
       });
     });
@@ -842,6 +875,9 @@
     if (!_activeDaftar) return;
 
     const d = _activeDaftar;
+    // PRODUCTION FIX: Disable save button during in-flight save to prevent double-submit
+    const saveBtn = document.getElementById('dnSaveBtn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.6'; }
     try {
       const saved = await window.DaftarNama.save(
         d.id,
@@ -855,6 +891,7 @@
       const idx = _daftarList.findIndex(x => x.id === d.id);
       if (idx >= 0) _daftarList[idx] = saved;
       _activeDaftar = JSON.parse(JSON.stringify(saved));
+      _markClean();  // PRODUCTION FIX: clear dirty flag after successful save
       _closeEditor();
       _renderList();
       window.notify?.success('', 'Daftar berhasil disimpan');

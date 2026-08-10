@@ -137,25 +137,39 @@ window.DaftarNama = (() => {
     return { hasDup: details.length > 0, details };
   }
 
+  // PRODUCTION FIX: getAll() now THROWS on error instead of returning [].
+  // Silent failure caused UI to show "Belum ada data daftar" empty state
+  // even when user actually had daftars they couldn't read (RLS error, etc).
+  // Callers must catch and show error card.
   async function getAll() {
+    const ready = await _checkReady();
+    if (!ready.ok) throw new Error(ready.reason);
+
     const sb        = _sb();
-    const storageId = await _getStorageId();
-    if (!sb || !storageId) return [];
+    const storageId = ready.storageId;
 
     const { data, error } = await sb
       .from('daftar_nama')
       .select('*')
       .eq('storage_id', storageId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
+      .limit(MAX_DAFTAR);  // defense-in-depth
 
     if (error) {
       console.error('[DaftarNama] getAll:', error.message);
-      return [];
+      const msg = error.message || 'Unknown error';
+      if (error.code === '42501' || msg.includes('permission') || msg.toLowerCase().includes('policy')) {
+        throw new Error('Akses ditolak oleh RLS. Jalankan migration 20260810_044 di Supabase Studio.');
+      }
+      throw new Error(`Gagal memuat daftar: ${msg}`);
     }
     return data || [];
   }
 
   async function getById(id) {
+    const ready = await _checkReady();
+    if (!ready.ok) throw new Error(ready.reason);
+
     const sb = _sb();
     if (!sb || !id) return null;
     const { data, error } = await sb
@@ -163,7 +177,10 @@ window.DaftarNama = (() => {
       .select('*')
       .eq('id', id)
       .maybeSingle();
-    if (error) { console.error('[DaftarNama] getById:', error.message); return null; }
+    if (error) {
+      console.error('[DaftarNama] getById:', error.message);
+      throw new Error(`Gagal memuat daftar: ${error.message}`);
+    }
     return data;
   }
 
@@ -253,6 +270,8 @@ window.DaftarNama = (() => {
       }
     }
 
+    // PRODUCTION FIX: Add admin_id ownership filter to prevent any admin
+    // from updating another admin's daftar (defense-in-depth on top of RLS).
     const { data, error } = await sb
       .from('daftar_nama')
       .update({
@@ -262,6 +281,7 @@ window.DaftarNama = (() => {
         updated_at:  new Date().toISOString(),
       })
       .eq('id', id)
+      .eq('admin_id', ready.adminId)  // ownership filter
       .select()
       .single();
 
@@ -272,6 +292,9 @@ window.DaftarNama = (() => {
       }
       throw new Error(`Gagal menyimpan perubahan: ${msg}`);
     }
+    if (!data) {
+      throw new Error('Daftar tidak ditemukan atau bukan milik Anda.');
+    }
     return data;
   }
 
@@ -281,16 +304,24 @@ window.DaftarNama = (() => {
 
     const sb = _sb();
     if (!sb || !id) throw new Error('ID tidak valid.');
-    const { error } = await sb
+    // PRODUCTION FIX: Add admin_id ownership filter + check affected rows
+    const { data: deleted, error } = await sb
       .from('daftar_nama')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('admin_id', ready.adminId)  // ownership filter
+      .select('id');
     if (error) {
       const msg = error.message || 'Unknown error';
       if (error.code === '42501' || msg.includes('permission') || msg.toLowerCase().includes('policy')) {
         throw new Error('Akses ditolak oleh RLS. Jalankan migration 20260810_044 di Supabase Studio.');
       }
       throw new Error(`Gagal menghapus daftar: ${msg}`);
+    }
+    // PRODUCTION FIX: If 0 rows deleted, either daftar doesn't exist or
+    // doesn't belong to this admin. Old code silently no-op'd.
+    if (!deleted || deleted.length === 0) {
+      throw new Error('Daftar tidak ditemukan atau bukan milik Anda.');
     }
   }
 
@@ -333,6 +364,11 @@ window.DaftarNama = (() => {
     return tabs.map(t => {
       if (t.id !== tabId) return t;
       const anggota = [...(t.anggota || [])];
+      // PRODUCTION FIX: Bounds check — old code accepted OOB index and
+      // created sparse array, causing TypeError in checkDuplicateNama.
+      if (namaIndex < 0 || namaIndex >= anggota.length) {
+        throw new Error(`Index nama tidak valid: ${namaIndex} (rentang 0-${anggota.length - 1}).`);
+      }
       anggota[namaIndex] = trimmed;
       return { ...t, anggota };
     });

@@ -408,14 +408,13 @@ serve(async (req) => {
     }
 
     // Enterprise: derive nama from email (admin can edit later in profile).
-    // Also set profile_complete=true so the profile-complete gate never blocks.
+    // profile_complete column was dropped by migration 20260810_045.
     const derivedName = email.split("@")[0].replace(/[._\-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
     const { error: profileError } = await supabase.from("users").insert({
       id: userId,
       email,
       nama: derivedName,
       peran: "admin",
-      profile_complete: true,
     });
 
     if (profileError) {

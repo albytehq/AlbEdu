@@ -163,18 +163,14 @@ serve(async (req) => {
         );
       }
 
-    // foto_profil / profil_lengkap were renamed to avatar_url / profile_complete
-    // by migration 20260701_002_alter_users_snake_case.sql. Inserting the old
-    // column name causes every new peserta's first Google login to fail with
-    // a Postgres "column does not exist" error (caught below as a generic 500).
-    // Use the current schema.
+    // foto_profil was renamed to avatar_url by migration 20260701_002.
+    // profile_complete column was dropped by migration 20260810_045.
     const { error: insertUserErr } = await supabase.from("users").insert({
         id: user.id,
         email: user.email ?? "",
         nama: user.user_metadata?.full_name || user.user_metadata?.name || "",
         avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
         peran: "peserta",
-        profile_complete: true,
       });
 
       if (insertUserErr) {

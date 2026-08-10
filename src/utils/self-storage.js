@@ -191,7 +191,20 @@ window.SelfStorage = (() => {
 
 
   async function _handleAuthReady(e) {
+    // Idempotency guard — if state already moved past 'pending', skip.
+    // Prevents duplicate provisioning if both the { once: true } listener
+    // AND the safety net fire _handleAuthReady concurrently.
+    if (_state !== 'pending') return;
+
     const role = e?.detail?.role;
+    // FIX: Skip transient role=null events (Supabase INITIALIZE phase emits
+    // auth-ready with role=null before the real role is fetched). The old
+    // { once: true } listener would permanently mark 'not-admin' on the
+    // first null event. Now we skip null and wait for the real role.
+    if (role === null || role === undefined) {
+      console.warn('[SelfStorage] auth-ready fired with role=null — skipping (transient state, will retry)');
+      return;
+    }
     if (role !== 'admin') {
       // Bukan admin — storage tidak diperlukan.
       _markNotAdmin();
@@ -212,7 +225,10 @@ window.SelfStorage = (() => {
   }
 
   // Register listener — auth-ready fires from auth.js after role is confirmed.
-  document.addEventListener('auth-ready', _handleAuthReady, { once: true });
+  // NOT using { once: true } — we need to catch subsequent auth-ready events
+  // that fire with the real role after an initial transient role=null event.
+  // _handleAuthReady has idempotency guard via _state check.
+  document.addEventListener('auth-ready', _handleAuthReady);
 
   // CRITICAL FIX: If auth-ready already fired BEFORE this script loaded
   // (race condition — auth/main.js defer-loaded earlier, fast cached login),
