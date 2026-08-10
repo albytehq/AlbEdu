@@ -63,8 +63,11 @@ window.SelfStorage = (() => {
       try {
         const { data, error } = await sb.auth.getUser();
         if (!error && data?.user?.id) {
-          // Cache back to Auth for downstream callers
-          if (window.Auth) window.Auth.currentUser = { ...window.Auth.currentUser, id: data.user.id };
+          // Cache back to Auth for downstream callers — but only if
+          // currentUser already exists (don't create partial object)
+          if (window.Auth && window.Auth.currentUser) {
+            window.Auth.currentUser = { ...window.Auth.currentUser, id: data.user.id };
+          }
           return data.user.id;
         }
       } catch (e) {
@@ -73,6 +76,44 @@ window.SelfStorage = (() => {
     }
 
     // Tier 3
+    return null;
+  }
+
+  // ── Resolve user role from DB when Auth.userRole is null ───────
+  // This is the fallback when auth-ready fires with role=null and
+  // never re-fires with the real role (Auth module race condition).
+  // Queries the users table directly for the peran column.
+  async function _resolveRole() {
+    // Tier 1: Auth.userRole (might have been set after auth-ready fired)
+    if (window.Auth?.userRole) return window.Auth.userRole;
+
+    // Tier 2: Query users table directly
+    const adminId = await _resolveAdminId();
+    if (!adminId) return null;
+
+    const sb = _getSb();
+    if (!sb) return null;
+
+    try {
+      const { data, error } = await sb
+        .from('users')
+        .select('peran')
+        .eq('id', adminId)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('[SelfStorage] _resolveRole query failed:', error.message);
+        return null;
+      }
+      if (data?.peran) {
+        // Cache back to Auth for downstream callers
+        if (window.Auth) window.Auth.userRole = data.peran;
+        console.log('[SelfStorage] _resolveRole: resolved from DB:', data.peran);
+        return data.peran;
+      }
+    } catch (e) {
+      console.warn('[SelfStorage] _resolveRole exception:', e?.message);
+    }
     return null;
   }
 
@@ -239,23 +280,49 @@ window.SelfStorage = (() => {
     Promise.resolve().then(() => _handleAuthReady({ detail: { role: window.Auth.userRole } }));
   }
 
-  // Safety-net retry loop. The { once: true } listener catches late events;
+  // Safety-net retry loop. The listener catches late events;
   // this loop surfaces a visible failure if auth-ready never fires within 10s.
+  // CRITICAL FIX: If Auth.authReady is true but userRole stays null (Auth
+  // module race — _syncUserDocument failed or hung), proactively resolve
+  // the role from the DB after 3 retries (1.5s).
   let _safetyRetries = 0;
   const _SAFETY_MAX_RETRIES = 20; // 20 × 500ms = 10 seconds
+  const _ROLE_RESOLVE_THRESHOLD = 3; // after 3 retries (1.5s), resolve role from DB
+  let _roleResolveAttempted = false;
   function _safetyNetCheck() {
     if (_state !== 'pending') return;
     _safetyRetries++;
     if (_safetyRetries > _SAFETY_MAX_RETRIES) {
-      console.warn('[SelfStorage] Safety net gave up after 10s — auth-ready never fired. Marking as failed.');
-      _lastError = new Error('auth-ready event never fired within 10s');
+      console.warn('[SelfStorage] Safety net gave up after 10s — auth-ready never fired with real role. Marking as failed.');
+      _lastError = new Error('auth-ready event never fired with real role within 10s');
       _resolveReady(null);
       return;
     }
     if (window.Auth?.authReady) {
       const role = window.Auth.userRole;
-      // Auth is ready — fire _handleAuthReady directly
-      _handleAuthReady({ detail: { role } });
+      if (role) {
+        // Real role is available — proceed normally
+        _handleAuthReady({ detail: { role } });
+      } else if (_safetyRetries >= _ROLE_RESOLVE_THRESHOLD && !_roleResolveAttempted) {
+        // authReady=true but userRole=null for 1.5s — Auth module race.
+        // Proactively resolve role from DB.
+        _roleResolveAttempted = true;
+        console.log('[SelfStorage] authReady=true but userRole=null — resolving role from DB...');
+        _resolveRole().then(resolvedRole => {
+          if (_state !== 'pending') return; // already resolved
+          if (resolvedRole) {
+            console.log('[SelfStorage] Role resolved from DB:', resolvedRole, '— proceeding with provisioning');
+            _handleAuthReady({ detail: { role: resolvedRole } });
+          } else {
+            // Role resolution failed — try again on next safety net tick
+            _roleResolveAttempted = false;
+            setTimeout(_safetyNetCheck, 500);
+          }
+        });
+      } else {
+        // Still waiting for role to be set (under threshold)
+        setTimeout(_safetyNetCheck, 500);
+      }
     } else {
       setTimeout(_safetyNetCheck, 500);
     }
@@ -312,6 +379,9 @@ window.SelfStorage = (() => {
 
     /** Resolve admin_id dengan three-tier fallback (async). */
     resolveAdminId: _resolveAdminId,
+
+    /** Resolve user role dari DB (fallback saat Auth.userRole null). */
+    resolveRole: _resolveRole,
 
     /** Hitung ujian draft + active milik admin ini. */
     getExamCount,
