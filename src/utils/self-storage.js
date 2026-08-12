@@ -254,9 +254,9 @@ window.SelfStorage = (() => {
 
     const adminId = await _resolveAdminId();
     if (!adminId) {
-      console.warn('[SelfStorage] Could not resolve admin_id — storage not provisioned');
-      _lastError = new Error('admin_id tidak bisa di-resolve (sesi tidak valid)');
-      _resolveReady(null);
+      // FIX (F5): Don't permanently fail — supabase client might not be
+      // ready yet (async init). Just log + return; safety net will retry.
+      console.warn('[SelfStorage] Could not resolve admin_id yet (supabase client not ready?) — will retry via safety net');
       return;
     }
 
@@ -310,7 +310,12 @@ window.SelfStorage = (() => {
     const cachedRole = window.Auth?.userRole;
     if (cachedRole) {
       console.log('[SelfStorage] safety net: role now available via Auth.userRole:', cachedRole);
-      _handleAuthReady({ detail: { role: cachedRole } });
+      // CRITICAL FIX (F9): Dispatch auth-ready event so ALL listeners
+      // (ByteWard, navigasi, panel, etc.) learn the real role — not just
+      // SelfStorage. Old code called _handleAuthReady directly, which only
+      // updated SelfStorage's internal state. ByteWard never saw the real
+      // role → 15s timeout → redirect to /login → killed daftar nama.
+      document.dispatchEvent(new CustomEvent('auth-ready', { detail: { role: cachedRole } }));
       return;
     }
 
@@ -322,8 +327,11 @@ window.SelfStorage = (() => {
       _resolveRole().then(resolvedRole => {
         if (_state !== 'pending') return; // already resolved
         if (resolvedRole) {
-          console.log('[SelfStorage] Role resolved from DB:', resolvedRole, '— proceeding with provisioning');
-          _handleAuthReady({ detail: { role: resolvedRole } });
+          console.log('[SelfStorage] Role resolved from DB:', resolvedRole, '— broadcasting auth-ready to all listeners');
+          // CRITICAL FIX (F9): Broadcast via event dispatch, not direct call.
+          // This ensures ByteWard + other listeners learn the real role
+          // and don't timeout/redirect.
+          document.dispatchEvent(new CustomEvent('auth-ready', { detail: { role: resolvedRole } }));
         } else {
           console.warn('[SelfStorage] _resolveRole returned null — will retry');
           _roleResolveAttempted = false;

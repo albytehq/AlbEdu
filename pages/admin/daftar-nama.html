@@ -196,7 +196,7 @@
 
     <footer class="footer">
       <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
-      <p>v0.823.0</p>
+      <p>v0.824.0</p>
     </footer>
   </main>
 </div>
@@ -276,7 +276,10 @@
       // If timeout fired, result is '__timeout__'
       const state = window.SelfStorage.getState();
 
-      if (state === 'pending' || result === '__timeout__') {
+      // FIX (F10): Use && not || — only show timeout if BOTH conditions true.
+      // Old code (||) would show timeout even when state='ready' but
+      // result='__timeout__' (race condition where timeout fired after ready).
+      if (result === '__timeout__' && state === 'pending') {
         console.error('[DaftarNama] Storage provisioning timed out after 15s');
         _showStorageError('Provisioning storage timed out. Coba muat ulang halaman.');
         _setButtonEnabled(false, 'Timeout');
@@ -352,10 +355,25 @@
     }
   })();
 
-  if (window.Auth?.authReady) {
+  // FIX (F3): Don't use { once: true } — transient role=null event would
+  // consume the only boot. Use manual flag + skip role=null.
+  let _booted = false;
+  function _bootWrapper(e) {
+    if (_booted) return;
+    const role = e?.detail?.role;
+    if (role === null || role === undefined) {
+      console.log('[DaftarNama] auth-ready with role=null — skipping boot (waiting for real role)');
+      return;
+    }
+    _booted = true;
     _boot();
+  }
+
+  if (window.Auth?.authReady && window.Auth?.userRole) {
+    _boot();
+    _booted = true;
   } else {
-    document.addEventListener('auth-ready', _boot, { once: true });
+    document.addEventListener('auth-ready', _bootWrapper);
   }
 
   // Track unsaved changes for beforeunload warning
