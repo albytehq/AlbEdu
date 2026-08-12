@@ -242,7 +242,7 @@ Citra</pre>
               </button>
             `).join('')}
           </div>
-          <div class="dn-import-custom-wrap" id="dnImportCustomWrap" hidden>
+          <div class="dn-import-custom-wrap" id="dnImportCustomWrap" style="display:none;">
             <label for="dnImportTipeCustom">Nama Tipe Custom <span class="dn-import-required">*</span></label>
             <input type="text" id="dnImportTipeCustom" class="albedu-input" placeholder="Contoh: Ekskul, Tim Futsal" maxlength="20">
             <div class="dn-import-hint">minimal 2 karakter</div>
@@ -294,7 +294,14 @@ Citra</pre>
         body.querySelectorAll('.dn-import-tipe-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         const customWrap = body.querySelector('#dnImportCustomWrap');
-        customWrap.hidden = _createTipe !== 'Custom';
+        // FIX: use style.display instead of hidden attribute (more reliable)
+        if (_createTipe === 'Custom') {
+          customWrap.style.display = 'flex';
+          // Focus the custom input for better UX
+          setTimeout(() => body.querySelector('#dnImportTipeCustom')?.focus(), 50);
+        } else {
+          customWrap.style.display = 'none';
+        }
         _updateConfirmButton();
       });
     });
@@ -324,6 +331,42 @@ Citra</pre>
       _parseErrors.push(`Ukuran file ${_formatSize(file.size)} melebihi batas 5MB.`);
       _renderPreview();
       return;
+    }
+
+    // FIX: Auto-fill nama daftar from filename if field is empty
+    // Strip extension + common suffixes, title-case the result
+    const namaInput = document.getElementById('dnImportNama');
+    if (namaInput && !namaInput.value.trim()) {
+      const baseName = file.name.replace(/\.(xlsx|xls|docx|csv)$/i, '');
+      // Clean up: replace underscores/dashes with spaces, title-case
+      const cleaned = baseName
+        .replace(/[_\-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, c => c.toUpperCase());
+      // Only fill if it meets min length (5 chars)
+      if (cleaned.length >= MIN_NAMA_DAFTAR) {
+        namaInput.value = cleaned.slice(0, MAX_NAMA_DAFTAR);
+        const namaCount = document.getElementById('dnImportNamaCount');
+        if (namaCount) namaCount.textContent = namaInput.value.length;
+      }
+    }
+
+    // FIX: Smart-guess tipe from filename if no tipe selected yet
+    if (!_createTipe) {
+      const lowerName = file.name.toLowerCase();
+      let guessedTipe = null;
+      if (/kelas|class/i.test(lowerName)) {
+        guessedTipe = 'Kelas';
+      } else if (/sekolah|school/i.test(lowerName)) {
+        guessedTipe = 'Sekolah';
+      } else if (/negara|country|nation/i.test(lowerName)) {
+        guessedTipe = 'Negara';
+      }
+      if (guessedTipe) {
+        const tipeBtn = document.querySelector(`.dn-import-tipe-btn[data-tipe="${guessedTipe}"]`);
+        if (tipeBtn) tipeBtn.click(); // triggers the click handler → sets _createTipe + .selected
+      }
     }
 
     // Show file info
@@ -579,17 +622,29 @@ Citra</pre>
     });
 
     // Auto-fix: duplicate tab names → rename
-    const seenTabNames = new Map();
+    // SMART DETECTION: Catches Excel's auto-rename pattern.
+    // When Excel saves a duplicate sheet name, it appends a number:
+    // "Kelas" + "Kelas" → "Kelas" + "Kelas1"
+    // We normalize by stripping trailing digits to detect the original.
+    // Examples that match as duplicate:
+    //   "Kelas" + "Kelas1" → both normalize to "kelas"
+    //   "Tab A" + "Tab A1" → both normalize to "tab a"
+    //   "Sheet" + "Sheet2" + "Sheet3" → all normalize to "sheet"
+    const seenTabNames = new Map(); // normalized name → count
+    const originalNames = new Map(); // normalized name → first original name
     _parsedTabs.forEach(tab => {
-      const lower = tab.nama_tab.toLowerCase();
-      if (seenTabNames.has(lower)) {
-        const count = seenTabNames.get(lower) + 1;
-        seenTabNames.set(lower, count);
-        const newName = `${tab.nama_tab} (${count})`.slice(0, MAX_TAB_NAME);
+      // Normalize: lowercase + strip trailing digits (Excel auto-rename pattern)
+      const normalized = tab.nama_tab.toLowerCase().replace(/\d+$/, '').trim();
+      if (seenTabNames.has(normalized)) {
+        const count = seenTabNames.get(normalized) + 1;
+        seenTabNames.set(normalized, count);
+        const baseName = originalNames.get(normalized);
+        const newName = `${baseName} (${count})`.slice(0, MAX_TAB_NAME);
         _parseWarnings.push(`Nama tab duplikat "${tab.nama_tab}" → diubah menjadi "${newName}".`);
         tab.nama_tab = newName;
       } else {
-        seenTabNames.set(lower, 1);
+        seenTabNames.set(normalized, 1);
+        originalNames.set(normalized, tab.nama_tab);
       }
     });
 
