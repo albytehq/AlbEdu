@@ -176,12 +176,13 @@
         this._body.querySelectorAll('input[name="jawaban-benar"]').forEach((radio) => {
           radio.addEventListener('change', (e) => {
             this._draft.jawaban_benar = e.target.value;
-            this._renderForm();
+            this._updateOptionStyles();
           });
         });
         this._body.querySelectorAll('.albedu-soal-option-input').forEach((input) => {
           input.addEventListener('input', (e) => {
             this._draft.pilihan[e.target.dataset.letter] = e.target.value;
+            this._checkDuplicateOptions();
           });
         });
       }
@@ -514,6 +515,56 @@
       return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     },
 
+    // Real-time validation: update option styles when correct answer changes
+    _updateOptionStyles() {
+      if (!this._draft.pilihan) return;
+      this._body.querySelectorAll('.albedu-soal-option').forEach((opt) => {
+        const letter = opt.dataset.letter;
+        if (this._draft.jawaban_benar === letter) {
+          opt.classList.add('albedu-option-correct');
+        } else {
+          opt.classList.remove('albedu-option-correct');
+        }
+      });
+    },
+
+    // Real-time validation: detect duplicate option texts
+    _checkDuplicateOptions() {
+      if (!this._draft.pilihan) return;
+      const options = this._body.querySelectorAll('.albedu-soal-option');
+      const values = {};
+      const seen = {};
+      // First pass: collect normalized values
+      ['A', 'B', 'C', 'D'].forEach(letter => {
+        const val = (this._draft.pilihan[letter] || '').trim().toLowerCase();
+        values[letter] = val;
+        if (val) {
+          if (seen[val]) seen[val].push(letter);
+          else seen[val] = [letter];
+        }
+      });
+      // Second pass: mark duplicates
+      options.forEach((opt) => {
+        const letter = opt.dataset.letter;
+        const val = values[letter];
+        const isDup = val && seen[val] && seen[val].length > 1;
+        opt.classList.toggle('albedu-option-duplicate', isDup);
+        // Update hint
+        let hint = opt.querySelector('.albedu-option-hint');
+        if (!hint) {
+          hint = document.createElement('span');
+          hint.className = 'albedu-option-hint';
+          opt.appendChild(hint);
+        }
+        if (isDup) {
+          hint.textContent = 'Duplikat dengan opsi ' + seen[val].filter(l => l !== letter).join(', ');
+          hint.style.display = 'block';
+        } else {
+          hint.style.display = 'none';
+        }
+      });
+    },
+
     _save() {
       if (!this._draft) return;
       if (this._uploading) {
@@ -530,13 +581,20 @@
 
       if (this._draft.pilihan) {
         if (!this._draft.jawaban_benar) {
-          window.notify?.error(t('wizard.validation_failed', null, 'Validasi gagal'), t('wizard.pick_correct_answer', null, 'Pilih jawaban benar'));
+          window.notify?.error(t('wizard.validation_failed', null, 'Validasi gagal'), t('wizard.pick_correct_answer', null, 'Pilih jawaban benar dengan klik radio button di sebelah opsi yang benar.'));
           return;
         }
         const missing = ['A', 'B', 'C', 'D'].find((k) => !this._draft.pilihan[k]?.trim());
         if (missing) {
           window.notify?.error(t('wizard.validation_failed', null, 'Validasi gagal'), t('wizard.option_required', { n: missing }, `Opsi ${missing} harus diisi`));
           return;
+        }
+        // Check duplicate options — warn but allow
+        const vals = ['A', 'B', 'C', 'D'].map(k => this._draft.pilihan[k].trim().toLowerCase());
+        const dups = vals.filter((v, i) => vals.indexOf(v) !== i);
+        if (dups.length > 0) {
+          // Don't block — just warn and proceed. User can fix later.
+          console.warn('[SoalEditorModal] Duplicate options detected:', dups);
         }
       }
 

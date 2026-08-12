@@ -2383,3 +2383,62 @@
 
 /* Dark mode overrides for identity form mockup */
 .preview-take-shell[data-mode="dark"] .identity-card__note,
+
+/* ================================================================
+   SOAL VALIDATION BADGES + IMPORT MODAL STYLES
+   ================================================================ */
+
+/* Question validation badges */
+.albedu-q-badges {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.albedu-q-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.albedu-q-badge-warn {
+  background: var(--color-warning-bg, #FEF3C7);
+  color: #B45309;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.albedu-q-badge-danger {
+  background: var(--color-destructive-bg, #FEF2F2);
+  color: var(--color-destructive, #DC2626);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+/* Warning row highlight */
+.albedu-question-row-warn {
+  border-left: 3px solid var(--color-warning, #F59E0B) !important;
+}
+
+/* Duplicate option indicator in editor */
+.albedu-soal-option.albedu-option-duplicate {
+  border-color: var(--color-warning, #F59E0B) !important;
+  background: var(--color-warning-bg, #FEF3C7) !important;
+}
+.albedu-option-hint {
+  display: block;
+  font-size: 11px;
+  color: #B45309;
+  font-weight: 600;
+  margin-top: 4px;
+  width: 100%;
+}
+
+/* Preview chip with warning */
+.dn-import-name-chip-warn {
+  background: var(--color-warning-bg, #FEF3C7) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+  color: #B45309 !important;
+}

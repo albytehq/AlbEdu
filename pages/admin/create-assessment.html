@@ -31,6 +31,9 @@
     <script defer src="../../src/shared/head/fonts.js"></script>
     <script defer src="../../src/shared/icons/icons.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- Import libraries: SheetJS (xlsx) + mammoth (docx) for soal import -->
+    <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
     <script defer src="../../src/platform/supabase-client.js"></script>
     <script defer src="../../src/shared/resilience.js"></script>
     <script defer src="../../src/platform/repository.js"></script>
@@ -384,7 +387,11 @@
                                     <span data-albedu-icon="add_circle"></span>
                                     <span>Tambah Bagian</span>
                                 </button>
-                                <button class="albedu-btn albedu-btn-primary albedu-btn-sm" id="btn-template" type="button">
+                                <button class="albedu-btn albedu-btn-primary albedu-btn-sm" id="btn-import-soal" type="button" title="Import bagian + soal dari file Excel/Word/CSV">
+                                    <span data-albedu-icon="file_upload"></span>
+                                    <span>Import Soal</span>
+                                </button>
+                                <button class="albedu-btn albedu-btn-ghost albedu-btn-sm" id="btn-template" type="button" hidden>
                                     <span data-albedu-icon="category"></span>
                                     <span>Dari Template</span>
                                 </button>
@@ -458,7 +465,7 @@
 
             <footer class="footer">
                 <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
-                <p>v0.826.0</p>
+                <p>v0.827.0</p>
             </footer>
         </main>
     </div>
@@ -509,6 +516,7 @@
     <script src="../../src/pages/buat-ujian/metadata-card.js" defer></script>
     <script src="../../src/pages/buat-ujian/soal-editor-modal.js" defer></script>
     <script src="../../src/pages/buat-ujian/soal-card.js" defer></script>
+    <script src="../../src/pages/buat-ujian/soal-import.js" defer></script>
     <script src="../../src/pages/buat-ujian/publish-card.js" defer></script>
     <script src="../../src/pages/buat-ujian/peserta-preview.js" defer></script>
     <script src="../../src/pages/buat-ujian/wizard-controller.js" defer></script>

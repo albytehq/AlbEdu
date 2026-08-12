@@ -16,6 +16,7 @@
       this._btnAddSection = document.getElementById('btn-add-section');
       this._btnEmptyAddSection = document.getElementById('btn-empty-add-section');
       this._btnTemplate = document.getElementById('btn-template');
+      this._btnImport = document.getElementById('btn-import-soal');
 
       if (!this._list) {
         console.warn('[SoalCard] required elements missing');
@@ -24,7 +25,14 @@
 
       this._btnAddSection.addEventListener('click', () => this._addSection());
       this._btnEmptyAddSection.addEventListener('click', () => this._addSection());
-      this._btnTemplate.addEventListener('click', () => window.TemplatePicker?.open());
+      // Keep template button wired (hidden but functional as fallback)
+      if (this._btnTemplate) {
+        this._btnTemplate.addEventListener('click', () => window.TemplatePicker?.open());
+      }
+      // Wire new Import button
+      if (this._btnImport) {
+        this._btnImport.addEventListener('click', () => window.SoalImport?.open());
+      }
 
       window.CreateAssessment.subscribe((state) => this._render(state));
     },
@@ -88,18 +96,45 @@
           <div class="albedu-section-questions" data-section-index="${sIdx}">
             ${sec.questions.length === 0
               ? `<div class="albedu-questions-empty"><p>${t('create.no_questions_yet', null, 'Belum ada soal. Klik "Soal" untuk menambah.')}</p></div>`
-              : sec.questions.map((q, qIdx) => `
-                <div class="albedu-question-row" data-section="${sIdx}" data-question="${qIdx}" tabindex="0" role="button">
+              : sec.questions.map((q, qIdx) => {
+                // Validation badges
+                const badges = [];
+                const cleanQ = (q.pertanyaan || '').replace(/<[^>]*>/g, '').trim();
+                if (cleanQ.length < 3) {
+                  badges.push('<span class="albedu-q-badge albedu-q-badge-warn" title="Pertanyaan terlalu pendek">Pertanyaan pendek</span>');
+                }
+                if (sec.type_question === 'PG') {
+                  if (!q.jawaban_benar) {
+                    badges.push('<span class="albedu-q-badge albedu-q-badge-danger" title="Belum ada jawaban benar">Tanpa jawaban benar</span>');
+                  }
+                  // Check duplicate options
+                  if (q.pilihan) {
+                    const vals = ['A', 'B', 'C', 'D'].map(k => (q.pilihan[k] || '').trim().toLowerCase()).filter(v => v);
+                    const dups = vals.filter((v, i) => vals.indexOf(v) !== i);
+                    if (dups.length > 0) {
+                      badges.push('<span class="albedu-q-badge albedu-q-badge-warn" title="Ada opsi jawaban yang sama">Opsi duplikat</span>');
+                    }
+                  }
+                }
+                // Check duplicate question text within section
+                const isDup = sec.questions.some((other, oIdx) => oIdx !== qIdx && (other.pertanyaan || '').replace(/<[^>]*>/g, '').trim().toLowerCase() === cleanQ.toLowerCase() && cleanQ.length > 0);
+                if (isDup) {
+                  badges.push('<span class="albedu-q-badge albedu-q-badge-warn" title="Ada soal dengan pertanyaan yang sama">Soal duplikat</span>');
+                }
+                return `
+                <div class="albedu-question-row${badges.length > 0 ? ' albedu-question-row-warn' : ''}" data-section="${sIdx}" data-question="${qIdx}" tabindex="0" role="button">
                   <span class="albedu-question-num">${qIdx + 1}</span>
                   <span class="albedu-question-type albedu-q-type-${sec.type_question === 'PG' ? 'PG' : 'esai'}">${sec.type_question === 'PG' ? 'PG' : t('wizard.type_essay', null, 'Esai')}</span>
-                  <span class="albedu-question-text">${this._esc((q.pertanyaan || '').replace(/<[^>]*>/g, '').slice(0, 80)) || t('create.empty_question_text', null, 'Soal kosong')}</span>
+                  <span class="albedu-question-text">${this._esc(cleanQ.slice(0, 80)) || t('create.empty_question_text', null, 'Soal kosong')}</span>
+                  ${badges.length > 0 ? `<span class="albedu-q-badges">${badges.join('')}</span>` : ''}
                   <span class="albedu-question-score">${q.skor || 0} ${t('create.points_unit', null, 'poin')}</span>
                   <div class="albedu-question-actions">
                     <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-edit-question" data-section="${sIdx}" data-question="${qIdx}" type="button" aria-label="${t('wizard.edit_question_aria', null, 'Edit soal')}"><span data-albedu-icon="edit"></span></button>
                     <button class="albedu-btn albedu-btn-ghost albedu-btn-sm albedu-btn-delete-question" data-section="${sIdx}" data-question="${qIdx}" type="button" aria-label="${t('wizard.delete_question_aria', null, 'Hapus soal')}"><span data-albedu-icon="delete"></span></button>
                   </div>
                 </div>
-              `).join('')
+                `;
+              }).join('')
             }
           </div>
         </div>
