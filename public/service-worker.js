@@ -1,6 +1,6 @@
 // service-worker.js — AlbEdu PWA service worker (stale-while-revalidate + network-first)
 
-const CACHE_VERSION = 'albedu-v0.828.0';
+const CACHE_VERSION = 'albedu-v0.829.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const MAX_CACHE_ENTRIES = 100;

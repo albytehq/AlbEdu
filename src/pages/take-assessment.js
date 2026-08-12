@@ -310,18 +310,57 @@
       }
 
       if (session.status !== 'active') {
-        // M6: expired / paused / disconnected / unknown — refuse to resume
-        const statusMessages = {
-          expired:    { title: 'Sesi Telah Berakhir',  msg: 'Sesi asesmen ini telah kedaluwarsa. Silakan masuk kembali melalui halaman asesmen.' },
-          paused:     { title: 'Sesi Dijeda',          msg: 'Sesi Anda sedang dijeda. Tunggu admin melanjutkan, lalu muat ulang halaman.' },
-          disconnected: { title: 'Sesi Terputus',      msg: 'Sesi terputus dari server. Silakan masuk kembali melalui halaman asesmen.' },
-        };
-        const info = statusMessages[session.status] || {
-          title: 'Sesi Tidak Aktif',
-          msg: `Status sesi tidak valid (${session.status}). Silakan masuk kembali.`,
-        };
-        _showClosed(info.title, info.msg, 'danger');
-        return;
+        // PRODUCTION FIX: Allow resume of 'paused' and 'disconnected' sessions
+        // when assessment is currently OPEN. This fixes the "sesi terputus" bug
+        // where admin pauses → student kicked out → session goes stale →
+        // admin resumes → student can't re-enter.
+        //
+        // 'expired' and 'submitted' are terminal — always block.
+        // 'blocked' is handled separately above.
+        if (session.status === 'paused' || session.status === 'disconnected') {
+          // Check if assessment is currently open
+          const isAssessmentOpen = assessment.ac_manual_status === 'open' &&
+            (!assessment.ac_end || new Date(assessment.ac_end).getTime() > Date.now());
+
+          if (isAssessmentOpen) {
+            // Re-activate the session!
+            console.log(`[take] Re-activating ${session.status} session — assessment is open`);
+            try {
+              const repo = window.AlbEdu?.repository;
+              if (repo) {
+                await repo.updateDoc('assessment_sessions', session.id, {
+                  status: 'active',
+                  last_heartbeat_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
+                session.status = 'active';
+                session.last_heartbeat_at = new Date().toISOString();
+              }
+            } catch (err) {
+              console.error('[take] Failed to re-activate session:', err);
+              _showClosed('Gagal Memulihkan Sesi', 'Tidak dapat memulihkan sesi. Silakan muat ulang halaman.', 'danger');
+              return;
+            }
+          } else {
+            // Assessment is NOT open — show appropriate message
+            const info = session.status === 'paused'
+              ? { title: 'Sesi Dijeda', msg: 'Sesi Anda sedang dijeda. Tunggu admin melanjutkan, lalu muat ulang halaman.' }
+              : { title: 'Sesi Terputus', msg: 'Sesi terputus dan asesmen belum dibuka. Silakan masuk kembali setelah admin membuka asesmen.' };
+            _showClosed(info.title, info.msg, 'warning');
+            return;
+          }
+        } else {
+          // expired / unknown — refuse to resume
+          const statusMessages = {
+            expired:    { title: 'Sesi Telah Berakhir',  msg: 'Sesi asesmen ini telah kedaluwarsa. Silakan masuk kembali melalui halaman asesmen.' },
+          };
+          const info = statusMessages[session.status] || {
+            title: 'Sesi Tidak Aktif',
+            msg: `Status sesi tidak valid (${session.status}). Silakan masuk kembali.`,
+          };
+          _showClosed(info.title, info.msg, 'danger');
+          return;
+        }
       }
 
       TakeAssessment._restoreDraft(session);

@@ -421,7 +421,14 @@
           this._showError(`Akses diblokir: ${existingSession.blocked_reason || 'Diblokir admin'}`);
           return;
         }
-        // Active or paused session — offer resume
+        if (existingSession.status === 'expired') {
+          this._setLoading(false);
+          this._showError('Sesi sebelumnya telah berakhir. Hubungi admin jika perlu.');
+          return;
+        }
+        // PRODUCTION FIX: 'active', 'paused', or 'disconnected' — offer resume.
+        // take-assessment.js will re-activate paused/disconnected sessions
+        // if the assessment is currently open.
         const resume = await this._confirmResume();
         if (this._isStale(myGen)) return;
         if (resume) {

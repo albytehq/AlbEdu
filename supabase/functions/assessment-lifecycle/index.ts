@@ -194,6 +194,14 @@ async function logic(req: Request, env: Env): Promise<Response> {
     throw new HTTPError(409, 'CONFLICT', 'Assessment state changed. Refresh and try again.');
   }
 
+  // ── Sync session statuses with assessment state ──────────────────
+  // When admin pauses: mark all 'active' sessions as 'paused' so pg_cron
+  // doesn't mark them 'disconnected' (pg_cron only targets 'active').
+  // When admin resumes: mark all 'paused' sessions back to 'active' so
+  // peserta can re-enter and continue.
+  // When admin finishes: mark all non-terminal sessions as 'expired'.
+  await _syncSessionStatuses(env, body.assessment_id, action);
+
   // Audit log.
   logAudit(env, {
     action: auditAction,
@@ -215,4 +223,62 @@ async function logic(req: Request, env: Env): Promise<Response> {
     ac_remaining_time: updateData.ac_remaining_time ?? null,
     timestamp: now.toISOString(),
   });
+}
+
+// ── Sync session statuses when assessment lifecycle changes ──────────
+// This prevents the "sesi terputus" bug where:
+//   1. Admin pauses → student kicked out → heartbeat stops
+//   2. pg_cron marks stale 'active' sessions as 'disconnected' (5 min)
+//   3. Admin resumes → student tries to enter → 'disconnected' → stuck
+//
+// Fix: proactively update session statuses on lifecycle transitions.
+async function _syncSessionStatuses(env: Env, assessmentId: string, action: string): Promise<void> {
+  const url = `${env.SUPABASE_URL}/rest/v1/assessment_sessions?assessment_id=eq.${assessmentId}`;
+  const headers = {
+    'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+    'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=minimal',
+  };
+
+  let filter = '';
+  let newStatus = '';
+
+  switch (action) {
+    case 'pause':
+      // Mark all 'active' sessions as 'paused' (pg_cron won't touch them)
+      filter = '&status=eq.active';
+      newStatus = 'paused';
+      break;
+    case 'resume':
+      // Mark all 'paused' sessions back to 'active' (peserta can re-enter)
+      filter = '&status=eq.paused';
+      newStatus = 'active';
+      break;
+    case 'finish':
+      // Mark all non-terminal sessions as 'expired'
+      filter = '&status=in.(active,paused,disconnected)';
+      newStatus = 'expired';
+      break;
+    case 'start':
+      // Don't touch sessions on start — allow_retake might create new ones
+      return;
+    default:
+      return;
+  }
+
+  try {
+    const res = await fetch(url + filter, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ status: newStatus }),
+    });
+    if (!res.ok) {
+      console.error('[lifecycle] _syncSessionStatuses failed:', res.status, await res.text());
+    } else {
+      console.log(`[lifecycle] Synced sessions for assessment ${assessmentId}: ${action} → ${newStatus}`);
+    }
+  } catch (err) {
+    console.error('[lifecycle] _syncSessionStatuses error:', err?.message);
+  }
 }
