@@ -55,6 +55,10 @@
     <script src="../../src/utils/navigasi.js" defer></script>
     <script src="../../src/utils/self-storage.js" defer></script>
     <script src="../../src/pages/daftar-nama.js" defer></script>
+    <!-- Import libraries: SheetJS (xlsx) + mammoth (docx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js" defer></script>
+    <script src="../../src/pages/daftar-nama-import.js" defer></script>
 </head>
 <body>
 <a href="#main-content" class="albedu-skip-link">Langsung ke konten utama</a>
@@ -166,9 +170,14 @@
             <h2><span style="color:var(--color-primary);margin-right:8px" data-albedu-icon="list"><svg class="albedu-icon" aria-hidden="true"><use href="#i-list"/></svg></span><span>Daftar Nama</span></h2>
             <p>Kelola daftar nama yang digunakan saat pembuatan asesmen. Maksimal 3 daftar.</p>
           </div>
-          <button class="dn-btn primary" id="btnBuatDaftar">
-            <span data-albedu-icon="add"></span> <span>Buat Daftar</span>
-          </button>
+          <div class="dn-header-actions">
+            <button class="dn-btn primary" id="btnBuatDaftar">
+              <span data-albedu-icon="add"></span> <span>Buat Daftar</span>
+            </button>
+            <button class="dn-btn secondary" id="btnImportDaftar" title="Import dari file Excel/Word">
+              <span data-albedu-icon="file_upload"></span> <span>Import</span>
+            </button>
+          </div>
         </div>
 
         <!-- Loading state -->
@@ -196,7 +205,7 @@
 
     <footer class="footer">
       <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
-      <p>v0.824.0</p>
+      <p>v0.825.0</p>
     </footer>
   </main>
 </div>
@@ -309,17 +318,20 @@
   // Toggle button enabled + show reason as tooltip/disabled label
   function _setButtonEnabled(enabled, disabledReason) {
     const btn = $btn();
-    if (!btn) return;
-    btn.disabled = !enabled;
-    if (!enabled && disabledReason) {
-      btn.setAttribute('title', disabledReason);
-      btn.style.opacity = '0.6';
-      btn.style.cursor = 'not-allowed';
-    } else {
-      btn.removeAttribute('title');
-      btn.style.opacity = '';
-      btn.style.cursor = '';
-    }
+    const importBtn = document.getElementById('btnImportDaftar');
+    [btn, importBtn].forEach(b => {
+      if (!b) return;
+      b.disabled = !enabled;
+      if (!enabled && disabledReason) {
+        b.setAttribute('title', disabledReason);
+        b.style.opacity = '0.6';
+        b.style.cursor = 'not-allowed';
+      } else {
+        b.removeAttribute('title');
+        b.style.opacity = '';
+        b.style.cursor = '';
+      }
+    });
   }
 
   // Show storage error inline (replaces list area with error card)
@@ -347,12 +359,15 @@
   // Old code only disabled inside _boot(), which fires after auth-ready.
   (function _disableButtonEarly() {
     const btn = document.getElementById('btnBuatDaftar');
-    if (btn) {
-      btn.disabled = true;
-      btn.style.opacity = '0.6';
-      btn.style.cursor = 'not-allowed';
-      btn.setAttribute('title', 'Menyiapkan storage...');
-    }
+    const importBtn = document.getElementById('btnImportDaftar');
+    [btn, importBtn].forEach(b => {
+      if (b) {
+        b.disabled = true;
+        b.style.opacity = '0.6';
+        b.style.cursor = 'not-allowed';
+        b.setAttribute('title', 'Menyiapkan storage...');
+      }
+    });
   })();
 
   // FIX (F3): Don't use { once: true } — transient role=null event would
@@ -503,10 +518,17 @@
   // Update header state
   function _updateHeaderState() {
     const btn = $btn();
+    const importBtn = document.getElementById('btnImportDaftar');
     if (!btn) return;
     const MAX_DAFTAR = window.DaftarNama.MAX_DAFTAR || 3;
-    btn.disabled = _daftarList.length >= MAX_DAFTAR;
-    btn.style.opacity = _daftarList.length >= MAX_DAFTAR ? '0.5' : '1';
+    const atMax = _daftarList.length >= MAX_DAFTAR;
+    btn.disabled = atMax;
+    btn.style.opacity = atMax ? '0.5' : '1';
+    if (importBtn) {
+      importBtn.disabled = atMax;
+      importBtn.style.opacity = atMax ? '0.5' : '1';
+      importBtn.title = atMax ? `Maksimal ${MAX_DAFTAR} daftar` : 'Import dari file Excel/Word';
+    }
   }
 
   // Create daftar
@@ -517,6 +539,20 @@
     _createTipe = null;
     _createTipeCustom = '';
     _showCreatePanel();
+  });
+
+  // Import daftar (from docx/xlsx/csv)
+  document.getElementById('btnImportDaftar')?.addEventListener('click', () => {
+    const MAX_DAFTAR = window.DaftarNama.MAX_DAFTAR || 3;
+    if (_daftarList.length >= MAX_DAFTAR) {
+      window.notify?.warning('', `Maksimal ${MAX_DAFTAR} daftar per admin. Hapus daftar lama untuk import baru.`);
+      return;
+    }
+    if (!window.DaftarNamaImport) {
+      window.notify?.error('Error', 'Modul import belum siap. Muat ulang halaman.');
+      return;
+    }
+    window.DaftarNamaImport.open();
   });
 
   function _showCreatePanel() {
