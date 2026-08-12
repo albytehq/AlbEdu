@@ -241,6 +241,20 @@ window.DaftarNama = (() => {
       if (error.code === '42501' || msg.includes('permission') || msg.toLowerCase().includes('policy')) {
         throw new Error('Akses ditolak oleh RLS. Jalankan migration 20260810_044 di Supabase Studio untuk mengaktifkan owner-scoped policies.');
       }
+      // Check constraint violation (23514) — nama_daftar 5-30 chars, tipe_daftar non-empty
+      if (error.code === '23514') {
+        if (msg.includes('nama_daftar')) {
+          throw new Error(`Nama daftar harus 5-30 karakter. (sekarang: ${namaDaftar.trim().length} karakter)`);
+        }
+        if (msg.includes('tipe_daftar')) {
+          throw new Error('Tipe daftar tidak boleh kosong.');
+        }
+        throw new Error(`Data tidak valid: ${msg}`);
+      }
+      // Unique constraint violation (23505)
+      if (error.code === '23505') {
+        throw new Error('Daftar dengan nama yang sama sudah ada. Gunakan nama lain.');
+      }
       throw new Error(`Gagal menyimpan daftar: ${msg}`);
     }
     return data;
@@ -289,6 +303,15 @@ window.DaftarNama = (() => {
       const msg = error.message || 'Unknown error';
       if (error.code === '42501' || msg.includes('permission') || msg.toLowerCase().includes('policy')) {
         throw new Error('Akses ditolak oleh RLS. Jalankan migration 20260810_044 di Supabase Studio.');
+      }
+      if (error.code === '23514') {
+        if (msg.includes('nama_daftar')) {
+          throw new Error(`Nama daftar harus 5-30 karakter. (sekarang: ${namaDaftar.trim().length} karakter)`);
+        }
+        if (msg.includes('tipe_daftar')) {
+          throw new Error('Tipe daftar tidak boleh kosong.');
+        }
+        throw new Error(`Data tidak valid: ${msg}`);
       }
       throw new Error(`Gagal menyimpan perubahan: ${msg}`);
     }

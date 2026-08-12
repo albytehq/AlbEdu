@@ -539,8 +539,8 @@
         <div class="dn-panel__body">
           <div class="dn-field">
             <label for="dnCreateNama">Nama Daftar *</label>
-            <input type="text" id="dnCreateNama" class="albedu-input" placeholder="Contoh: Daftar Kelas 7A" maxlength="30">
-            <div class="char-count"><span id="dnCreateNamaCount">0</span>/30</div>
+            <input type="text" id="dnCreateNama" class="albedu-input" placeholder="Contoh: Daftar Kelas 7A" maxlength="30" minlength="5">
+            <div class="char-count"><span id="dnCreateNamaCount">0</span>/30 — minimal 5 karakter</div>
           </div>
           <div class="dn-field">
             <label>Tipe Daftar *</label>
@@ -601,8 +601,19 @@
 
   async function _saveCreate() {
     const nama = document.getElementById('dnCreateNama').value.trim();
+    const MIN_NAMA = window.DaftarNama?.MIN_NAMA_DAFTAR || 5;
+    const MAX_NAMA = window.DaftarNama?.MAX_NAMA_DAFTAR || 30;
     if (!nama) {
       window.notify?.warning('', 'Nama daftar harus diisi');
+      return;
+    }
+    if (nama.length < MIN_NAMA) {
+      window.notify?.warning('', `Nama daftar minimal ${MIN_NAMA} karakter (sekarang: ${nama.length})`);
+      document.getElementById('dnCreateNama')?.focus();
+      return;
+    }
+    if (nama.length > MAX_NAMA) {
+      window.notify?.warning('', `Nama daftar maksimal ${MAX_NAMA} karakter (sekarang: ${nama.length})`);
       return;
     }
     if (!_createTipe) {
