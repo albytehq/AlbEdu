@@ -644,7 +644,7 @@
       window.notify?.success('', 'Daftar berhasil dibuat. Tambahkan nama sekarang.');
     } catch (err) {
       if (err.isDuplicateWarning) {
-        const ok = await window.notify?.confirm({
+        const ok = await window.UI?.confirm({
           title: 'Nama Duplikat Ditemukan',
           message: 'Ada nama yang sama dalam satu tab. Tetap simpan?',
           confirmText: 'Simpan',
@@ -809,7 +809,7 @@
     const delTabBtn = document.getElementById('dnDeleteTab');
     if (delTabBtn) {
       delTabBtn.addEventListener('click', async () => {
-        const ok = await window.notify?.confirm({
+        const ok = await window.UI?.confirm({
           title: 'Hapus Tab?',
           message: `Hapus tab "${activeTab.nama_tab}" beserta semua nama di dalamnya?`,
           confirmText: 'Hapus',
@@ -926,7 +926,7 @@
       window.notify?.success('', 'Daftar berhasil disimpan');
     } catch (err) {
       if (err.isDuplicateWarning) {
-        const ok = await window.notify?.confirm({
+        const ok = await window.UI?.confirm({
           title: 'Nama Duplikat Ditemukan',
           message: 'Ada nama yang sama dalam satu tab. Tetap simpan?',
           confirmText: 'Simpan',
@@ -957,7 +957,7 @@
 
   // Delete daftar
   async function _deleteDaftar(id) {
-    const confirmed = await window.notify?.confirm({
+    const confirmed = await window.UI?.confirm({
       title: 'Hapus Daftar?',
       message: 'Data daftar yang dihapus tidak dapat dikembalikan. Pastikan tidak ada asesmen yang sedang menggunakan daftar ini.',
       confirmText: 'Hapus',
