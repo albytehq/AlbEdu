@@ -769,6 +769,8 @@ ANS: A</pre>
 
       // Add each section + its questions
       let totalAdded = 0;
+      const sectionCount = _parsedSections.length;  // FIX: capture before _closeModal() resets state
+      const warningCount = _parseWarnings.length;   // FIX: same
       for (const secData of _parsedSections) {
         // Add new section
         const newSec = window.CreateAssessment.addSection();
@@ -800,7 +802,7 @@ ANS: A</pre>
 
       window.notify?.success(
         'Import Berhasil',
-        `${_parsedSections.length} bagian dengan ${totalAdded} soal berhasil diimport.${_parseWarnings.length > 0 ? ' Periksa peringatan di daftar soal.' : ''}`,
+        `${sectionCount} bagian dengan ${totalAdded} soal berhasil diimport.${warningCount > 0 ? ' Periksa peringatan di daftar soal.' : ''}`,
         5000
       );
 
