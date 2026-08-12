@@ -603,7 +603,20 @@ function _syncUserDocument(userId) {
                         _applyUserSnapshot(doc, userId);
                         settle(resolve, _userData);
                     } catch (e) {
-                        settle(reject, e);
+                        // FALLBACK: If EF failed (missing_preflight, etc),
+                        // try direct client INSERT with peran='peserta'.
+                        // RLS allows self-INSERT with peran=NULL or 'peserta'.
+                        // This prevents "Peserta access required" 403 on submit
+                        // when user-auth-complete EF fails for any reason.
+                        console.warn('[Auth] _createUserDocViaServer failed, trying client-side fallback INSERT:', e?.message || e);
+                        try {
+                            const fallbackDoc = await _createUserDocClientFallback(userId);
+                            _applyUserSnapshot(fallbackDoc, userId);
+                            settle(resolve, _userData);
+                        } catch (fallbackErr) {
+                            console.error('[Auth] Client fallback INSERT also failed:', fallbackErr?.message);
+                            settle(reject, e);  // return original error
+                        }
                     }
                 } else {
                     // Error from _createUserDoc (called in try block) — reject
@@ -667,6 +680,54 @@ async function _createUserDoc(userId) {
     const doc = await _createUserDocViaServer(userId);
     _applyUserSnapshot(doc, userId);
     return doc;
+}
+
+// FALLBACK: Direct client-side INSERT when user-auth-complete EF fails.
+// RLS policy "Users insert own profile" allows:
+//   id = auth.uid() AND (peran IS NULL OR peran = 'peserta')
+// So we INSERT with peran='peserta' + Google metadata (nama, avatar).
+// This is the safety net that prevents "Peserta access required" 403
+// when the EF fails (missing_preflight, network, etc).
+async function _createUserDocClientFallback(userId) {
+    const sb = _getSbClient();
+    if (!sb) throw new Error('Supabase client not ready for fallback INSERT');
+
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) throw new Error('No authenticated user for fallback INSERT');
+
+    const googleName   = user.user_metadata?.full_name || user.user_metadata?.name || '';
+    const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+    const derivedName  = googleName || (user.email || '').split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+    const { data, error } = await sb
+        .from('users')
+        .insert({
+            id:         user.id,
+            email:      user.email || '',
+            nama:       derivedName,
+            avatar_url: googleAvatar,
+            peran:      'peserta',
+        })
+        .select('*')
+        .single();
+
+    if (error) {
+        // If duplicate (23505), row already exists — fetch it
+        if (error.code === '23505') {
+            console.log('[Auth] Fallback INSERT hit duplicate — fetching existing row');
+            const { data: existing, error: fetchErr } = await sb
+                .from('users')
+                .select('*')
+                .eq('id', user.id)
+                .maybeSingle();
+            if (fetchErr || !existing) throw new Error('Row exists but cannot fetch: ' + (fetchErr?.message || 'not found'));
+            return existing;
+        }
+        throw new Error('Fallback INSERT failed: ' + error.message);
+    }
+
+    console.log('[Auth] Fallback INSERT succeeded — created peserta row for', user.email);
+    return data;
 }
 
 async function authLogin() {
