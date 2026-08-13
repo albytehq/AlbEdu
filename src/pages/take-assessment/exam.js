@@ -993,8 +993,27 @@
     );
   }
 
-  // Wire the edit button
-  document.getElementById('btn-edit-identity')?.addEventListener('click', function() {
-    _openIdentityEdit();
-  });
+  // Wire the edit button (and the user chip itself — both open the same modal)
+  // The edit button stops propagation so clicking it doesn't double-fire the
+  // parent .ex-user chip's click handler.
+  const btnEditIdentity = document.getElementById('btn-edit-identity');
+  if (btnEditIdentity) {
+    btnEditIdentity.addEventListener('click', function(e) {
+      e.stopPropagation();
+      _openIdentityEdit();
+    });
+  }
+  const examUserChip = document.getElementById('exam-user');
+  if (examUserChip) {
+    examUserChip.addEventListener('click', function() {
+      _openIdentityEdit();
+    });
+    // Keyboard support for the chip (role="button" + tabindex="0")
+    examUserChip.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        _openIdentityEdit();
+      }
+    });
+  }
 })();

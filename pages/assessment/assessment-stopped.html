@@ -393,9 +393,10 @@
         if (idx > 0) basePath = p.substring(0, idx) + '/';
       } catch (_) {}
 
-      // Build redirect URL — back to assessment entry with access_code pre-filled
+      // Build redirect URL — back to assessment token-entry with access_code pre-filled
+      // FIX v0.854.0: 'assessment-entry.html' doesn't exist → 404 → logout. Use 'index.html'.
       function getRedirectUrl() {
-        var url = basePath + 'pages/assessment/assessment-entry.html';
+        var url = basePath + 'pages/assessment/index.html';
         var qParams = [];
         if (accessCode) qParams.push('code=' + encodeURIComponent(accessCode));
         if (assessmentTitle) qParams.push('title=' + encodeURIComponent(assessmentTitle));

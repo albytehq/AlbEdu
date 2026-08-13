@@ -1009,3 +1009,92 @@
 [data-theme="dark"] .anc-tab.active {
   border: 2px solid var(--albedu-surface, #1e293b);
 }
+
+/* ═══ v2.0.0 — Connection health indicator + toggle buttons ═════════════ */
+.anc-footer-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  margin-right: 6px;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.anc-footer-status-dot.anc-health-live {
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  animation: anc-pulse-live 2s ease-in-out infinite;
+}
+.anc-footer-status-dot.anc-health-reconnecting {
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+  animation: anc-pulse-reconnecting 1s ease-in-out infinite;
+}
+.anc-footer-status-dot.anc-health-offline {
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+@keyframes anc-pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+@keyframes anc-pulse-reconnecting {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.3); }
+}
+
+.anc-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.anc-footer-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--albedu-border, #e2e8f0);
+  background: var(--albedu-surface, #ffffff);
+  color: var(--albedu-body, #475569);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.anc-footer-toggle-btn:hover {
+  background: var(--albedu-surface-alt, #f1f5f9);
+  border-color: var(--albedu-primary, #2563eb);
+  color: var(--albedu-primary, #2563eb);
+}
+.anc-footer-toggle-btn.anc-toggle-active {
+  background: var(--albedu-primary-light, #dbeafe);
+  border-color: var(--albedu-primary, #2563eb);
+  color: var(--albedu-primary, #2563eb);
+}
+.anc-footer-toggle-btn [data-albedu-icon],
+.anc-footer-toggle-btn .material-symbols-outlined {
+  font-size: 16px;
+}
+.anc-footer-toggle-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Dark mode tweaks for health indicator */
+[data-theme="dark"] .anc-footer-toggle-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+[data-theme="dark"] .anc-footer-toggle-btn:hover {
+  background: #0f172a;
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+[data-theme="dark"] .anc-footer-toggle-btn.anc-toggle-active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}

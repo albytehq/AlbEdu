@@ -45,6 +45,7 @@
   <link rel="stylesheet" href="../../styles/albedu-v1.css" />
   <link rel="stylesheet" href="../../styles/albedu-components.css">
   <link rel="stylesheet" href="../../styles/identity-form.css" />
+  <link rel="stylesheet" href="../../styles/dropdown.css" />
 
 
   <!-- KaTeX — math rendering (async, non-blocking — math renders after shell) -->
@@ -73,11 +74,15 @@
   <script src="../../src/exam/guardian.js" defer></script>
   <!-- DevTools detector — DINONAKTIFKAN sementara untuk debugging -->
   <!-- <script src="../../src/security/devtools-detector.js" defer></script> -->
+  <script src="../../src/security/violation-signaler.js" defer></script>
   <script src="../../src/security/heartbeat.js" defer></script>
   <script src="../../src/security/block-check.js" defer></script>
   <script src="../../src/security/anti-cheat.js" defer></script>
 
   <!-- Identity Provider (renders manual form OR daftar picker) -->
+  <!-- AlbEduDropdown must load BEFORE form-renderer.js and provider.js so the
+       custom dropdown component is available when identity forms render. -->
+  <script src="../../src/shared/dropdown.js" defer></script>
   <script src="../../src/identity/form-renderer.js" defer></script>
   <script src="../../src/identity/provider.js" defer></script>
   <script src="../../src/identity/identity-edit.js" defer></script>

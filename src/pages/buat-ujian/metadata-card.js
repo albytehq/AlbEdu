@@ -129,7 +129,7 @@
         <div class="albedu-identity-field" data-index="${i}">
           <input type="text" class="albedu-input albedu-field-input" data-field="label" value="${this._esc(f.label)}" placeholder="Label (cth: Nama)">
           <div class="albedu-select-wrap">
-            <select class="albedu-select albedu-field-input" data-field="type">
+            <select class="albedu-select albedu-field-input albedu-dropdown" data-field="type">
               <option value="text" ${f.type === 'text' ? 'selected' : ''}>Text</option>
               <option value="select" ${f.type === 'select' ? 'selected' : ''}>Select</option>
             </select>
@@ -142,6 +142,11 @@
           </button>
         </div>
       `).join('');
+
+      // Upgrade newly-inserted <select class="albedu-dropdown"> to AlbEduDropdown
+      try {
+        if (window.AlbEduDropdown) window.AlbEduDropdown.enhance(this._identityFields);
+      } catch (e) { /* fall through to native */ }
 
       // Wire inputs
       this._identityFields.querySelectorAll('.albedu-field-input').forEach((input) => {

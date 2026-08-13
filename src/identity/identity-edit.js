@@ -210,8 +210,11 @@
         html += '<label class="ex-id-label">' + this._escapeHtml(f.label) + reqStar + '</label>';
 
         if (f.type === 'select' && f.options.length > 0) {
-          // E10: select with options
-          html += '<select class="ex-id-input" data-field="' + this._escapeAttr(f.key) + '"' + readonlyAttr + '>';
+          // E10: select with options — upgrade to AlbEduDropdown
+          // (portal-based, escapes any overflow:hidden ancestor)
+          const ddClass = 'ex-id-input albedu-dropdown';
+          const disabledAttr = f.readonly ? ' disabled' : '';
+          html += '<select class="' + ddClass + '" data-field="' + this._escapeAttr(f.key) + '" data-placeholder="— Pilih —"' + disabledAttr + '>';
           html += '<option value="">— Pilih —</option>';
           let valueExists = false;
           f.options.forEach(opt => {
@@ -246,6 +249,16 @@
       });
 
       this._body.innerHTML = html;
+
+      // Upgrade any <select class="albedu-dropdown"> to AlbEduDropdown instances
+      // (portal-based — escapes the modal's overflow:hidden so options render correctly)
+      try {
+        if (window.AlbEduDropdown) {
+          window.AlbEduDropdown.enhance(this._body);
+        }
+      } catch (e) {
+        console.warn('[identity-edit] AlbEduDropdown enhance failed:', e);
+      }
     },
 
     // ═══════════════════════════════════════════════════════════════

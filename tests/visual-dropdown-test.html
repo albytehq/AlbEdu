@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlbEduDropdown Visual Test</title>
+  <link rel="stylesheet" href="../styles/tokens.css">
+  <link rel="stylesheet" href="../styles/albedu-v1.css">
+  <link rel="stylesheet" href="../styles/albedu-components.css">
+  <link rel="stylesheet" href="../styles/dropdown.css">
+  <script src="../src/shared/dropdown.js" defer></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    .test-card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 4px 24px rgba(15,23,42,0.08);
+      margin-bottom: 24px;
+    }
+    .test-card h2 { margin: 0 0 8px; font-size: 20px; color: #0f172a; }
+    .test-card p { margin: 0 0 20px; color: #64748b; font-size: 14px; }
+    /* CRITICAL: This card has overflow:hidden — same as .id-card on take.html */
+    .overflow-card {
+      overflow: hidden;
+      max-height: 320px;
+      border: 2px dashed #ef4444;
+      padding: 24px;
+      background: #fef2f2;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+    .overflow-card h3 { margin: 0 0 8px; color: #b91c1c; font-size: 14px; }
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #dbeafe;
+      color: #1d4ed8;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AlbEduDropdown Visual Test</h1>
+    <p>Verify the dropdown escapes <code>overflow:hidden</code> parents and adapts to option count.</p>
+
+    <div class="test-card">
+      <h2>Test 1: 2 options (small) <span class="badge">no scroll</span></h2>
+      <p>The dropdown should show all options without scrolling.</p>
+      <div class="field">
+        <label>Mode Akses</label>
+        <select class="albedu-dropdown" id="dd-mode">
+          <option value="manual">Manual (admin buka/tutup)</option>
+          <option value="scheduled">Terjadwal (otomatis)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h2>Test 2: 4 options (medium) <span class="badge">no scroll</span></h2>
+      <p>Still no scroll, all options visible.</p>
+      <div class="field">
+        <label>Urutkan</label>
+        <select class="albedu-dropdown" id="dd-sort">
+          <option value="recent">Terbaru</option>
+          <option value="oldest">Terlama</option>
+          <option value="title-asc">Judul (A-Z)</option>
+          <option value="title-desc">Judul (Z-A)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h2>Test 3: 12 options (long) <span class="badge">scroll + search</span></h2>
+      <p>Should auto-show search field and scrollable list (max 280px).</p>
+      <div class="field">
+        <label>Pilih Kota</label>
+        <select class="albedu-dropdown" id="dd-cities">
+          <option value="">— Pilih Kota —</option>
+          <option value="jkt">Jakarta</option>
+          <option value="bdg">Bandung</option>
+          <option value="sby">Surabaya</option>
+          <option value="yog">Yogyakarta</option>
+          <option value="mks">Makassar</option>
+          <option value="med">Medan</option>
+          <option value="plg">Palembang</option>
+          <option value="smg">Semarang</option>
+          <option value="bal">Denpasar</option>
+          <option value="ptk">Pontianak</option>
+          <option value="bnn">Banjarmasin</option>
+          <option value="bjn">Balikpapan</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h2>Test 4: CRITICAL — Inside overflow:hidden card <span class="badge" style="background:#fee2e2;color=#b91c1c">portal escape</span></h2>
+      <p>This card has <code>overflow:hidden + max-height:320px</code>. Without the portal fix, the dropdown would be CLIPPED. With AlbEduDropdown, the options panel is appended to <code>&lt;body&gt;</code> so it renders fully visible.</p>
+      <div class="overflow-card">
+        <h3>⚠️ overflow:hidden parent</h3>
+        <div class="field">
+          <label>Pilih Tab (inside overflow card)</label>
+          <select class="albedu-dropdown" id="dd-overflow">
+            <option value="">— Pilih Tab —</option>
+            <option value="7A">Kelas 7A</option>
+            <option value="7B">Kelas 7B</option>
+            <option value="7C">Kelas 7C</option>
+            <option value="8A">Kelas 8A</option>
+            <option value="8B">Kelas 8B</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Pilih Nama (also inside overflow card)</label>
+          <select class="albedu-dropdown" id="dd-overflow-2">
+            <option value="">— Pilih Nama —</option>
+            <option value="andi">Andi Wijaya</option>
+            <option value="budi">Budi Santoso</option>
+            <option value="citra">Citra Lestari</option>
+            <option value="dewi">Dewi Anggraini</option>
+          </select>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#64748b;margin-top:12px;">↑ If you can see the dropdown options extending OUTSIDE the red dashed box below, the portal fix works.</p>
+    </div>
+
+    <div class="test-card">
+      <h2>Test 5: Programmatic dropdown</h2>
+      <p>Created via JS — verifies the AlbEduDropdown class works without a source <code>&lt;select&gt;</code>.</p>
+      <div class="field">
+        <label>Pilih Buah</label>
+        <div id="dd-prog-mount"></div>
+      </div>
+      <button onclick="window._progDd.setValue('banana')" style="padding:6px 12px;background:#2563eb;color:white;border:0;border-radius:6px;cursor:pointer;font-size:13px;">Set value = Pisang</button>
+      <button onclick="window._progDd.clear()" style="padding:6px 12px;background:#e2e8f0;color:#0f172a;border:0;border-radius:6px;cursor:pointer;font-size:13px;margin-left:6px;">Clear</button>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      // Build programmatic dropdown
+      const mount = document.getElementById('dd-prog-mount');
+      const sourceSelect = document.createElement('select');
+      sourceSelect.className = 'albedu-dropdown';
+      mount.appendChild(sourceSelect);
+      const dd = new window.AlbEduDropdown(sourceSelect, {
+        placeholder: '— Pilih Buah —',
+        options: [
+          { value: 'apple', label: 'Apel' },
+          { value: 'banana', label: 'Pisang' },
+          { value: 'cherry', label: 'Ceri' },
+          { value: 'durian', label: 'Durian' },
+        ],
+        onChange: (v) => console.log('Selected:', v),
+      });
+      window._progDd = dd;
+      console.log('AlbEduDropdown ready');
+    });
+  </script>
+</body>
+</html>

@@ -18,7 +18,8 @@ import type { Env, Assessment } from '../_shared/types.ts';
 
 interface LifecycleBody {
   assessment_id?: string;
-  action?: 'start' | 'pause' | 'resume' | 'finish';
+  action?: 'start' | 'pause' | 'resume' | 'finish' | 'delete';
+  confirm?: boolean; // required for action='delete' (double confirmation)
 }
 
 serve(async (req: Request) => {
@@ -47,8 +48,8 @@ async function logic(req: Request, env: Env): Promise<Response> {
   }
 
   const action = body.action;
-  if (!action || !['start', 'pause', 'resume', 'finish'].includes(action)) {
-    throw new HTTPError(400, 'VALIDATION_ERROR', "action must be 'start', 'pause', 'resume', or 'finish'");
+  if (!action || !['start', 'pause', 'resume', 'finish', 'delete'].includes(action)) {
+    throw new HTTPError(400, 'VALIDATION_ERROR', "action must be 'start', 'pause', 'resume', 'finish', or 'delete'");
   }
 
   // Rate limit
@@ -178,6 +179,58 @@ async function logic(req: Request, env: Env): Promise<Response> {
       auditAction = 'FINISH_ASSESSMENT';
       auditMetadata = {};
       break;
+    }
+
+    case 'delete': {
+      // PERMANENT DELETE — removes the assessment + all related data.
+      // This is a hard delete (not archive). FK ON DELETE CASCADE on
+      // assessment_sessions, submissions, violation_events handles cleanup.
+      // The EF uses service-role key so it bypasses RLS.
+      //
+      // Safety: caller must pass confirm=true (double confirmation on client).
+      if (!body.confirm) {
+        throw new HTTPError(400, 'VALIDATION_ERROR', 'Permanent delete requires confirm=true in the request body');
+      }
+
+      // Release any associated assets first (B2 images) — non-fatal if it fails
+      try {
+        await fetch(`${env.SUPABASE_URL}/functions/v1/asset-release`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({ assessment_id: body.assessment_id }),
+        });
+      } catch (e) {
+        console.warn('[assessment-lifecycle] asset-release failed (non-fatal):', e?.message);
+      }
+
+      // Hard delete — FK CASCADE handles: assessment_sessions, submissions,
+      // violation_events, audit_logs (if FK exists), rate_limit_*, etc.
+      await db.delete('assessments', `id=eq.${body.assessment_id}`);
+
+      // Audit log (fire-and-forget)
+      logAudit(env, {
+        action: 'DELETE_ASSESSMENT_PERMANENT',
+        targetType: 'assessment',
+        targetId: body.assessment_id,
+        metadata: {
+          assessment_title: assessment.title || '(unknown)',
+          access_code: assessment.access_code || '(unknown)',
+        },
+        actorId: admin.id,
+        actorEmail: admin.email,
+        actorRole: 'admin',
+        ipAddress: getClientIP(req),
+        userAgent: getUserAgent(req),
+      });
+
+      return successResponse({
+        assessment_id: body.assessment_id,
+        status: 'deleted_permanently',
+      });
     }
   }
 

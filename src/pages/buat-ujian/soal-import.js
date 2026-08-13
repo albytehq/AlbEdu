@@ -760,30 +760,65 @@ ANS: A</pre>
 
     try {
       const state = window.CreateAssessment.getState();
-      const existingSections = state.examData.sections.length;
+      const allExisting = state.examData.sections;
 
-      // Check if we have room for new sections
-      if (existingSections + _parsedSections.length > MAX_SECTIONS) {
-        throw new Error(`Tidak cukup slot bagian. Ada ${existingSections} bagian existing, file menambah ${_parsedSections.length}. Maksimal ${MAX_SECTIONS} bagian total.`);
+      // FIX v0.854.0: Distinguish empty sections from sections with content.
+      // An "empty" section has no type_question AND no questions — it's just
+      // a skeleton created by the wizard. We auto-remove these to make room
+      // for imported sections. Sections WITH content are preserved.
+      const emptySections = allExisting.filter(s => !s.type_question && s.questions.length === 0);
+      const nonEmptySections = allExisting.filter(s => s.type_question || s.questions.length > 0);
+
+      // If non-empty sections + import would exceed MAX_SECTIONS, ask user
+      // whether to REPLACE everything (destructive) or cancel.
+      if (nonEmptySections.length + _parsedSections.length > MAX_SECTIONS) {
+        const replace = await _confirmReplace(
+          `Anda memiliki ${nonEmptySections.length} bagian berisi soal, tetapi file import menambah ${_parsedSections.length} bagian (melebihi batas ${MAX_SECTIONS}).`,
+          `Pilih "Ya, Ganti Semua" untuk MENGHAPUS semua bagian existing dan menggantinya dengan file import. Pilih "Batal" untuk membatalkan import.`
+        );
+        if (!replace) {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span data-albedu-icon="check"></span> <span>Import</span>';
+            window.AlbEdu?.bindIcons?.(btn);
+          }
+          return;
+        }
+        // Remove ALL existing sections (including non-empty ones — user confirmed)
+        for (let i = allExisting.length - 1; i >= 0; i--) {
+          window.CreateAssessment.removeSection(i);
+        }
+      } else {
+        // Auto-remove truly-empty sections to make room for imports
+        // (iterate in reverse so indices stay valid during removal)
+        for (let i = allExisting.length - 1; i >= 0; i--) {
+          const s = allExisting[i];
+          if (!s.type_question && s.questions.length === 0) {
+            window.CreateAssessment.removeSection(i);
+          }
+        }
+      }
+
+      // Re-check after cleanup
+      const remaining = window.CreateAssessment.getState().examData.sections.length;
+      if (remaining + _parsedSections.length > MAX_SECTIONS) {
+        throw new Error(`Tidak cukup slot bagian setelah pembersihan. Ada ${remaining} bagian berisi soal, file menambah ${_parsedSections.length}. Maksimal ${MAX_SECTIONS} bagian total.`);
       }
 
       // Add each section + its questions
       let totalAdded = 0;
-      const sectionCount = _parsedSections.length;  // FIX: capture before _closeModal() resets state
-      const warningCount = _parseWarnings.length;   // FIX: same
+      const sectionCount = _parsedSections.length;
+      const warningCount = _parseWarnings.length;
       for (const secData of _parsedSections) {
-        // Add new section
         const newSec = window.CreateAssessment.addSection();
         if (!newSec) {
           _parseWarnings.push('Gagal menambah bagian baru (limit tercapai).');
           break;
         }
 
-        // Set section type
         const secIdx = window.CreateAssessment.getState().examData.sections.length - 1;
         window.CreateAssessment.updateSection(secIdx, { type_question: secData.type_question });
 
-        // Add questions
         for (const qData of secData.questions) {
           const added = window.CreateAssessment.addQuestion(secIdx, secData.type_question);
           if (!added) {
@@ -791,7 +826,6 @@ ANS: A</pre>
             break;
           }
           const qIdx = window.CreateAssessment.getState().examData.sections[secIdx].questions.length - 1;
-          // Update with parsed data (preserve idq)
           const updateData = { ...qData, idq: added.idq };
           window.CreateAssessment.updateQuestion(secIdx, qIdx, updateData);
           totalAdded++;
@@ -806,7 +840,6 @@ ANS: A</pre>
         5000
       );
 
-      // Switch to step 2 (Soal) if not already there
       if (window.WizardController?.goToStep) {
         window.WizardController.goToStep(2);
       }
@@ -820,6 +853,32 @@ ANS: A</pre>
         window.AlbEdu?.bindIcons?.(btn);
       }
     }
+  }
+
+  // Helper: confirm-replace dialog (uses notify.confirm if available, else window.confirm)
+  function _confirmReplace(title, message) {
+    return new Promise((resolve) => {
+      if (window.notify?.confirm) {
+        let settled = false;
+        const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+        try {
+          window.notify.confirm({
+            title,
+            message,
+            confirmLabel: 'Ya, Ganti Semua',
+            cancelLabel: 'Batal',
+            danger: true,
+            onConfirm: () => done(true),
+            onCancel: () => done(false),
+            onClose: () => done(false),
+          });
+        } catch (_) {
+          resolve(window.confirm(title + '\n\n' + message));
+        }
+      } else {
+        resolve(window.confirm(title + '\n\n' + message));
+      }
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════

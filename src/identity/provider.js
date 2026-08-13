@@ -548,111 +548,87 @@ window.IdentityProvider = (() => {
   }
 
   // Custom dropdown component (replaces native <select>).
-  // Returns: { element, setOptions, setPlaceholder, clear, show, hide }
+  // v2.0.0: delegates to the unified AlbEduDropdown (src/shared/dropdown.js).
+  //   - Portal-based: options panel is appended to <body>, so it escapes any
+  //     ancestor `overflow:hidden` (e.g. .id-card on take.html). This fixes
+  //     the long-standing "dropdown kepotong card" bug.
+  //   - Smart height: 0-8 options = natural; 9+ = scroll + (auto) search.
+  //   - Auto-flip up when no space below trigger.
+  //   - Keyboard nav (Arrow/Enter/Escape/Home/End).
+  //
+  // Returns a back-compat shim: { element, setOptions, setPlaceholder, clear, show, hide }
+  // so existing callers in _renderDaftar don't need changes.
   function _createCustomDropdown({ placeholder = '-- Pilih --', options = [], onChange = () => {} } = {}) {
-    const wrap = document.createElement('div');
-    wrap.className = 'ip-dropdown';
-    wrap.tabIndex = 0;
+    const AlbEduDropdown = window.AlbEduDropdown;
 
-    const selected = document.createElement('div');
-    selected.className = 'ip-dropdown__selected';
-    selected.innerHTML = `
-      <span class="ip-dropdown__label">${_escapeHtml(placeholder)}</span>
-      <span class="ip-dropdown__arrow" data-albedu-icon="expand_more"></span>
-    `;
-    wrap.appendChild(selected);
-
-    const optionsEl = document.createElement('div');
-    optionsEl.className = 'ip-dropdown__options';
-    wrap.appendChild(optionsEl);
-
-    let currentValue = '';
-    let isDisabled = false;
-
-    function _renderOptions() {
-      optionsEl.innerHTML = '';
-      if (options.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'ip-dropdown__option ip-dropdown__option--empty';
-        empty.textContent = '(Kosong)';
-        optionsEl.appendChild(empty);
-        return;
-      }
+    // Fallback path: AlbEduDropdown not loaded (e.g. script-tag missing on a
+    // legacy page). Build a minimal native <select> so the form still works.
+    if (!AlbEduDropdown) {
+      console.warn('[IdentityProvider] AlbEduDropdown not loaded — falling back to native <select>');
+      const sel = document.createElement('select');
+      sel.className = 'ip-field__input';
+      const ph = document.createElement('option');
+      ph.value = '';
+      ph.textContent = placeholder;
+      ph.disabled = true;
+      ph.selected = true;
+      sel.appendChild(ph);
       options.forEach(opt => {
-        const item = document.createElement('div');
-        item.className = 'ip-dropdown__option';
-        item.dataset.value = opt.value;
-        item.textContent = opt.label;
-        if (opt.value === currentValue) {
-          item.classList.add('ip-dropdown__option--selected');
-        }
-        item.addEventListener('click', (e) => {
-          e.stopPropagation();
-          _select(opt.value, opt.label);
-          _close();
-        });
-        optionsEl.appendChild(item);
+        const o = document.createElement('option');
+        o.value = opt.value;
+        o.textContent = opt.label;
+        sel.appendChild(o);
       });
+      sel.addEventListener('change', () => onChange(sel.value));
+      return {
+        element: sel,
+        setOptions: (newOpts) => {
+          sel.innerHTML = '';
+          sel.appendChild(ph);
+          (newOpts || []).forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt.value;
+            o.textContent = opt.label;
+            sel.appendChild(o);
+          });
+        },
+        setPlaceholder: (text) => { ph.textContent = text; },
+        clear: () => { sel.value = ''; },
+        show: () => { sel.style.display = ''; },
+        hide: () => { sel.style.display = 'none'; },
+      };
     }
 
-    function _select(value, label) {
-      currentValue = value;
-      const labelEl = selected.querySelector('.ip-dropdown__label');
-      if (labelEl) labelEl.textContent = label || placeholder;
-      selected.classList.toggle('ip-dropdown__selected--filled', !!value);
-      onChange(value);
-    }
+    // Build a hidden <select> as the source element (preserves form semantics
+    // + lets us use AlbEduDropdown's auto-enhance pipeline).
+    const sourceSelect = document.createElement('select');
+    sourceSelect.className = 'ip-dropdown albedu-dropdown';
+    sourceSelect.dataset.placeholder = placeholder;
+    sourceSelect.style.display = 'none';
 
-    function _open() {
-      if (isDisabled) return;
-      // Close all other dropdowns
-      document.querySelectorAll('.ip-dropdown.is-open').forEach(d => {
-        if (d !== wrap) d.classList.remove('is-open');
-      });
-      wrap.classList.add('is-open');
-    }
-
-    function _close() {
-      wrap.classList.remove('is-open');
-    }
-
-    function _toggle() {
-      if (wrap.classList.contains('is-open')) _close();
-      else _open();
-    }
-
-    selected.addEventListener('click', (e) => {
-      e.stopPropagation();
-      _toggle();
+    const instance = new AlbEduDropdown(sourceSelect, {
+      placeholder,
+      options,
+      searchable: 'auto',
+      onChange: (value) => onChange(value),
     });
 
-    document.addEventListener('click', () => _close());
-
-    _renderOptions();
-
+    // Back-compat shim — matches the old return shape
     return {
-      element: wrap,
+      element: instance.getElement(),
       setOptions: (newOptions) => {
-        options = newOptions;
-        currentValue = '';
-        const labelEl = selected.querySelector('.ip-dropdown__label');
-        if (labelEl) labelEl.textContent = placeholder;
-        selected.classList.remove('ip-dropdown__selected--filled');
-        _renderOptions();
+        instance.setOptions(newOptions || []);
       },
       setPlaceholder: (text) => {
-        placeholder = text;
-        const labelEl = selected.querySelector('.ip-dropdown__label');
-        if (labelEl && !currentValue) labelEl.textContent = placeholder;
+        instance.setPlaceholder(text);
       },
       clear: () => {
-        currentValue = '';
-        const labelEl = selected.querySelector('.ip-dropdown__label');
-        if (labelEl) labelEl.textContent = placeholder;
-        selected.classList.remove('ip-dropdown__selected--filled');
+        instance.clear();
       },
-      show: () => { wrap.style.display = ''; isDisabled = false; },
-      hide: () => { wrap.style.display = 'none'; isDisabled = true; _close(); },
+      show: () => { instance.show(); instance.enable(); },
+      hide: () => { instance.hide(); },
+      // Expose instance for advanced callers (e.g. focus, open, close)
+      _instance: instance,
     };
   }
 

@@ -48,6 +48,8 @@
     
     <link rel="stylesheet" href="../../styles/albedu-v1.css">
     <link rel="stylesheet" href="../../styles/albedu-components.css">
+    <link rel="stylesheet" href="../../styles/dropdown.css">
+    <script src="../../src/shared/dropdown.js" defer></script>
     <link rel="stylesheet" href="../../styles/identity-form.css">
     <link rel="stylesheet" href="../../styles/pages/create-assessment.css">
     <link rel="stylesheet" href="../../styles/pages/take-assessment.css"><!-- Preview Peserta -->
@@ -295,7 +297,7 @@
                             </div>
                             <div class="albedu-field">
                                 <label for="assessment-access-mode">Mode Akses</label>
-                                <select id="assessment-access-mode" class="albedu-select">
+                                <select id="assessment-access-mode" class="albedu-select albedu-dropdown">
                                     <option value="manual">Manual (admin buka/tutup)</option>
                                     <option value="scheduled">Terjadwal (otomatis)</option>
                                 </select>
@@ -345,7 +347,7 @@
                             <div id="identity-daftar" hidden>
                                 <div class="albedu-field">
                                     <label for="daftar-select">Pilih Daftar Nama</label>
-                                    <select id="daftar-select" class="albedu-select">
+                                    <select id="daftar-select" class="albedu-select albedu-dropdown">
                                         <option value="">— Pilih daftar —</option>
                                     </select>
                                 </div>

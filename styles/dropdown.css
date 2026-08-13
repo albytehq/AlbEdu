@@ -1,0 +1,357 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  AlbEdu Dropdown — Unified styles (v1.0.0)
+ *  --------------------------------------------------------------------------
+ *  Used by AlbEduDropdown (src/shared/dropdown.js).
+ *  The options panel is portaled to <body>, so this stylesheet does NOT rely
+ *  on any parent stacking context — it works regardless of where the trigger
+ *  lives (inside .id-card with overflow:hidden, inside modals, inside tabs,
+ *  inside scroll containers — all safe).
+ *
+ *  Class names:
+ *    .albedu-dropdown              — trigger container (inline-block, full-width)
+ *    .albedu-dropdown__trigger     — the clickable "button" styled like a select
+ *    .albedu-dropdown__label       — text label inside trigger
+ *    .albedu-dropdown__arrow       — chevron icon
+ *    .albedu-dropdown__hidden      — hidden input for form submission
+ *    .albedu-dropdown__portal      — portaled options panel (appended to body)
+ *    .albedu-dropdown__search      — search input (inside portal)
+ *    .albedu-dropdown__list        — scrollable options list (inside portal)
+ *    .albedu-dropdown__option      — single option row
+ *
+ *  Theme tokens: uses --albedu-* (admin theme) AND --take-* (peserta theme)
+ *  via fallbacks, so the same component looks correct on both sides.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/* ── Trigger container ───────────────────────────────────────────────────── */
+.albedu-dropdown {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  font-family: var(--albedu-font, var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif));
+  font-size: 16px; /* 16px min — prevents iOS Safari auto-zoom on focus */
+  line-height: 1.4;
+  color: var(--albedu-heading, var(--color-text, #0f172a));
+  user-select: none;
+  outline: none;
+  vertical-align: middle;
+}
+
+.albedu-dropdown__hidden {
+  display: none !important;
+}
+
+/* ── Trigger (clickable button-like surface) ─────────────────────────────── */
+.albedu-dropdown__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px; /* 44px touch target */
+  padding: 10px 12px;
+  background: var(--albedu-surface, var(--color-surface, #ffffff));
+  border: 1.5px solid var(--albedu-border, var(--color-border-2, #e2e8f0));
+  border-radius: var(--albedu-radius-sm, var(--radius-md, 8px));
+  color: var(--albedu-body, var(--color-text-muted, #64748b)); /* muted when placeholder */
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.albedu-dropdown__trigger:hover:not(.is-disabled) {
+  border-color: var(--albedu-primary, var(--color-primary, #2563eb));
+}
+
+.albedu-dropdown__trigger.is-filled {
+  color: var(--albedu-heading, var(--color-text, #0f172a));
+}
+
+.albedu-dropdown.is-open .albedu-dropdown__trigger {
+  border-color: var(--albedu-primary, var(--color-primary, #2563eb));
+  box-shadow: 0 0 0 3px var(--albedu-primary-ring, var(--color-primary-ring, rgba(37, 99, 235, 0.18)));
+}
+
+/* Keyboard focus ring on the wrap (so Tab focus is visible) */
+.albedu-dropdown:focus-visible {
+  outline: none;
+}
+.albedu-dropdown:focus-visible .albedu-dropdown__trigger {
+  border-color: var(--albedu-primary, var(--color-primary, #2563eb));
+  box-shadow: 0 0 0 3px var(--albedu-primary-ring, var(--color-primary-ring, rgba(37, 99, 235, 0.18)));
+}
+
+/* Disabled state */
+.albedu-dropdown.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.albedu-dropdown.is-disabled .albedu-dropdown__trigger {
+  background: var(--albedu-surface-alt, var(--color-surface-2, #f8fafc));
+  cursor: not-allowed;
+  color: var(--albedu-body, var(--color-text-muted, #94a3b8));
+}
+
+/* ── Label inside trigger ────────────────────────────────────────────────── */
+.albedu-dropdown__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px; /* match trigger */
+  font-weight: 500;
+}
+
+/* ── Arrow (chevron) ─────────────────────────────────────────────────────── */
+.albedu-dropdown__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--albedu-body, var(--color-text-muted, #64748b));
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+.albedu-dropdown__arrow .material-symbols-outlined,
+.albedu-dropdown__arrow [data-albedu-icon] {
+  font-size: 20px;
+  color: inherit;
+  font-variation-settings: 'wght' 400;
+  line-height: 1;
+}
+.albedu-dropdown.is-open .albedu-dropdown__arrow {
+  transform: rotate(180deg);
+}
+
+/* ── Portal (appended to <body>) ─────────────────────────────────────────── */
+.albedu-dropdown__portal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%; /* overridden by JS to match trigger width */
+  background: var(--albedu-surface, var(--color-surface, #ffffff));
+  border: 1px solid var(--albedu-border, var(--color-border-2, #e2e8f0));
+  border-radius: var(--albedu-radius-sm, var(--radius-md, 8px));
+  box-shadow:
+    0 4px 12px rgba(15, 23, 42, 0.08),
+    0 12px 32px rgba(15, 23, 42, 0.12);
+  padding: 4px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.albedu-dropdown__portal.is-open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.albedu-dropdown__portal.is-flipped-up {
+  transform: translateY(4px);
+}
+.albedu-dropdown__portal.is-flipped-up.is-open {
+  transform: translateY(0);
+}
+
+.albedu-dropdown__portal[hidden] {
+  display: none !important;
+}
+
+/* ── Search input ────────────────────────────────────────────────────────── */
+.albedu-dropdown__search {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--albedu-heading, var(--color-text, #0f172a));
+  background: var(--albedu-surface-alt, var(--color-surface-2, #f8fafc));
+  border: 1px solid var(--albedu-border, var(--color-border, #e2e8f0));
+  border-radius: 6px;
+  outline: none;
+  box-sizing: border-box;
+  min-height: 36px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.albedu-dropdown__search:focus {
+  border-color: var(--albedu-primary, var(--color-primary, #2563eb));
+  background: var(--albedu-surface, var(--color-surface, #ffffff));
+  box-shadow: 0 0 0 3px var(--albedu-primary-ring, var(--color-primary-ring, rgba(37, 99, 235, 0.18)));
+}
+.albedu-dropdown__search::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+/* ── Options list ────────────────────────────────────────────────────────── */
+.albedu-dropdown__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* max-height set by JS based on option count */
+  /* overflow-y set by JS based on option count */
+  scrollbar-width: thin;
+  scrollbar-color: var(--albedu-border, var(--color-border-2, #cbd5e1)) transparent;
+}
+.albedu-dropdown__list::-webkit-scrollbar {
+  width: 6px;
+}
+.albedu-dropdown__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.albedu-dropdown__list::-webkit-scrollbar-thumb {
+  background: var(--albedu-border, var(--color-border-2, #cbd5e1));
+  border-radius: 3px;
+}
+.albedu-dropdown__list::-webkit-scrollbar-thumb:hover {
+  background: var(--albedu-body, var(--color-text-muted, #64748b));
+}
+
+/* ── Option row ──────────────────────────────────────────────────────────── */
+.albedu-dropdown__option {
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--albedu-heading, var(--color-text, #0f172a));
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease;
+  user-select: none;
+}
+
+.albedu-dropdown__option:hover {
+  background: var(--albedu-primary-muted, var(--color-primary-light, rgba(37, 99, 235, 0.08)));
+  color: var(--albedu-primary, var(--color-primary, #2563eb));
+}
+
+.albedu-dropdown__option.is-active {
+  background: var(--albedu-primary-muted, var(--color-primary-light, rgba(37, 99, 235, 0.12)));
+  color: var(--albedu-primary, var(--color-primary, #2563eb));
+}
+
+.albedu-dropdown__option.is-selected {
+  background: var(--albedu-primary, var(--color-primary, #2563eb));
+  color: #ffffff;
+  font-weight: 600;
+}
+.albedu-dropdown__option.is-selected:hover {
+  background: var(--albedu-primary-hover, var(--color-primary-hover, #1d4ed8));
+  color: #ffffff;
+}
+
+.albedu-dropdown__option--empty {
+  color: var(--albedu-body, var(--color-text-faint, #94a3b8));
+  font-style: italic;
+  cursor: default;
+  text-align: center;
+  padding: 16px 12px;
+}
+.albedu-dropdown__option--empty:hover {
+  background: transparent;
+  color: var(--albedu-body, var(--color-text-faint, #94a3b8));
+}
+
+/* ── Dark mode (admin panel + system) ────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .albedu-dropdown__trigger {
+    background: var(--albedu-surface, #1e293b);
+    border-color: var(--albedu-border, #334155);
+    color: var(--albedu-body, #94a3b8);
+  }
+  .albedu-dropdown__trigger.is-filled {
+    color: var(--albedu-heading, #f1f5f9);
+  }
+  .albedu-dropdown__portal {
+    background: var(--albedu-surface, #1e293b);
+    border-color: var(--albedu-border, #334155);
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.3),
+      0 12px 32px rgba(0, 0, 0, 0.4);
+  }
+  .albedu-dropdown__search {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: #334155;
+    color: #f1f5f9;
+  }
+  .albedu-dropdown__option {
+    color: var(--albedu-heading, #f1f5f9);
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .albedu-dropdown__trigger,
+  .albedu-dropdown__arrow,
+  .albedu-dropdown__portal,
+  .albedu-dropdown__option {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Mobile / small screens ──────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .albedu-dropdown {
+    font-size: 16px; /* keep 16px to prevent iOS zoom */
+  }
+  .albedu-dropdown__trigger {
+    min-height: 48px;
+    padding: 12px 14px;
+  }
+  .albedu-dropdown__option {
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+  .albedu-dropdown__search {
+    min-height: 40px;
+    font-size: 15px;
+  }
+}
+
+/* ── Back-compat: keep old .ifr-dropdown / .ip-dropdown class hooks working */
+/* Pages that loaded identity-form.css still reference these classes; the new */
+/* component adds them as additional classes when needed. The legacy styles   */
+/* in identity-form.css are now superseded by the rules above.                */
+
+/* ── Override legacy form-input styling applied to the wrap ──────────────── */
+/* form-renderer.js adds .ifr-field__input to the wrap for width:100% + sizing
+ * parity. But that class also adds padding/border/background which would
+ * double up with the trigger's own. Neutralize those on the wrap. */
+.albedu-dropdown.ifr-field__input,
+.albedu-dropdown.ip-field__input,
+.albedu-dropdown.ex-id-input,
+.albedu-dropdown.albedu-select,
+.albedu-dropdown.aa-select,
+.albedu-dropdown.as-select,
+.albedu-dropdown.ra-select {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  /* keep width:100% from the legacy class so the dropdown fills the column */
+}
+
+/* ── Hide legacy chevron `::after` on .albedu-select-wrap when the select ── */
+/* has been upgraded to AlbEduDropdown (the new trigger has its own chevron). */
+.albedu-select-wrap:has(select.albedu-dropdown[data-albedu-dropdown-bound])::after,
+.albedu-select-wrap:has(> .albedu-dropdown)::after {
+  display: none;
+}
+/* For browsers without :has() support, the duplicate chevron is acceptable
+   (rare — :has() is supported in all browsers since 2023). */

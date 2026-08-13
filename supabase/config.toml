@@ -43,6 +43,9 @@ verify_jwt = true
 [functions.health-check]
 verify_jwt = false
 
+[functions.violation-signal]
+verify_jwt = true
+
 [api]
 enabled = true
 # Port to use for the API URL.

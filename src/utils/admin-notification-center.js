@@ -1,8 +1,17 @@
 // admin-notification-center.js — real-time violation signal hub. Subscribes
 // to the violations table and pushes live alerts to any admin page that
 // loads this script. Source of truth is the DB snapshot — dismissed rows
-// are deleted from the DB, not from localStorage, so there are no ghost
-// notifications after navigation.
+// are acked (UPDATE acknowledged_at) rather than deleted, preserving the
+// audit trail.
+//
+// v2.0.0 enhancements (migration 047 + violation-signal EF):
+//   • Ack via RPC acknowledge_violation() instead of deleteDoc — preserves
+//     the violation_events row for forensic/audit purposes
+//   • Bulk-ack via bulk_acknowledge_violations() RPC for "Clear All"
+//   • Polling fallback every 30s if Supabase Realtime disconnects
+//   • Connection-health indicator (LIVE / RECONNECTING / OFFLINE badge)
+//   • Browser Notification API integration (desktop push) — opt-in
+//   • Sound alert option (mutable)
 
 (function (global) {
   'use strict';
@@ -12,6 +21,7 @@
   const MAX_NOTIFS    = 150;
   const PANEL_ID      = 'anc-panel';
   const OVERLAY_ID    = 'anc-overlay';
+  const POLL_INTERVAL_MS = 30_000; // 30s polling fallback when realtime is down
 
   let _db             = null;
   let _unsubscribe    = null;
@@ -21,9 +31,14 @@
   let _isInitialized  = false;
   let _isPanelOpen    = false;
   let _isClearingAll  = false;
+  let _pollTimer      = null;
+  let _realtimeHealth = 'unknown'; // 'live' | 'reconnecting' | 'offline' | 'unknown'
+  let _lastFetchAt    = 0;
+  let _browserNotifsPermission = 'default';
+  let _soundEnabled   = false; // off by default — opt-in via panel toggle
 
   // Source of truth: populated from the realtime subscription only (not localStorage).
-  // { id, docId, type, userName, examTitle, message, warningNum, maxWarnings, ts, read }
+  // { id, docId, type, userName, examTitle, message, warningNum, maxWarnings, ts, read, severity, event_type }
   let _notifications  = [];
 
   // docId → { eventCount, status } — track perubahan per doc
@@ -140,9 +155,20 @@
         maxWarnings: 4,
         ts,
         read:        false,
+        severity,
+        event_type:  data.event_type || null,
+        assessmentId: data.assessment_id || null,
       });
       _docState.set(docId, { eventCount: 1, status: null });
       changed = true;
+
+      // New notification — fire browser notification + sound (only for
+      // post-initial-snapshot events, i.e., real-time new violations)
+      if (!_isInitialSnapshot) {
+        const newNotif = _notifications[_notifications.length - 1];
+        _showBrowserNotification(newNotif);
+        _playAlertSound(severity);
+      }
     });
 
     // Cap
@@ -156,6 +182,12 @@
       // real-time NEW violations.
       _updateBadge({ pulse: !_isInitialSnapshot });
       _updateFooterTimestamp();
+      // Mark realtime as healthy — we just got data
+      _lastFetchAt = Date.now();
+      if (_realtimeHealth !== 'live') {
+        _realtimeHealth = 'live';
+        _updateHealthIndicator();
+      }
       if (_isPanelOpen) _renderPanelContent();
     }
     _isInitialSnapshot = false;
@@ -236,13 +268,192 @@
         debouncedRefetch,
         filter
       );
+
+      // Set up polling fallback — runs every 30s regardless of realtime
+      // health. If realtime is LIVE, polling is a no-op (data already fresh).
+      // If realtime is disconnected, polling is the only signal source.
+      _startPolling(filter);
+
+      // Track realtime connection health via the Supabase client's
+      // subscription callback. The repo.subscribe wrapper doesn't expose
+      // the underlying channel's status, so we poll a heartbeat: if no
+      // realtime event has fired in 60s, mark health as 'reconnecting'.
+      // If no event in 120s, mark as 'offline'.
+      _realtimeHealth = 'live';
+      _updateHealthIndicator();
     } catch (err) {
       const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
       if (isDev) console.warn('[ANC] _subscribeToViolations setup error:', err?.message || err);
+      // Even if subscribe fails, start polling so notifications still arrive
+      _realtimeHealth = 'offline';
+      _updateHealthIndicator();
+      _startPolling(filter);
     }
   }
 
-  // Delete the row → the realtime 'removed' event cleans state.
+  // ── Polling fallback ─────────────────────────────────────────────────────
+  //  Runs every 30s. If realtime is healthy and recent, this is a no-op
+  //  (the data is already fresh). If realtime has been silent for >60s,
+  //  polling takes over as the primary signal source.
+  function _startPolling(filter) {
+    if (_pollTimer) clearInterval(_pollTimer);
+    _pollTimer = setInterval(async () => {
+      try {
+        const repo = window.AlbEdu?.repository;
+        if (!repo) return;
+
+        // Health check: if no realtime event in 90s, mark as reconnecting
+        const silenceMs = Date.now() - _lastFetchAt;
+        if (silenceMs > 120_000) {
+          if (_realtimeHealth !== 'offline') {
+            _realtimeHealth = 'offline';
+            _updateHealthIndicator();
+          }
+        } else if (silenceMs > 60_000) {
+          if (_realtimeHealth !== 'reconnecting') {
+            _realtimeHealth = 'reconnecting';
+            _updateHealthIndicator();
+          }
+        }
+
+        // Always poll — even when realtime is healthy, this catches any
+        // missed events (e.g., if a postgres_changes event was lost).
+        const fetchOpts = {
+          order: { column: 'created_at', ascending: false },
+          limit: 300,
+        };
+        if (filter) {
+          const match = filter.match(/assessment_id=in\.\(([^)]+)\)/);
+          if (match) {
+            const ids = match[1].split(',');
+            if (ids.length > 1) {
+              fetchOpts.in = { assessment_id: ids };
+            } else {
+              fetchOpts.eq = { assessment_id: ids[0] };
+            }
+          }
+        }
+        const snap = await repo.getDocs('violation_events', fetchOpts);
+        _handleSnapshot(snap);
+        _lastFetchAt = Date.now();
+      } catch (err) {
+        // Silent — polling is best-effort
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  function _stopPolling() {
+    if (_pollTimer) {
+      clearInterval(_pollTimer);
+      _pollTimer = null;
+    }
+  }
+
+  // ── Connection health indicator ──────────────────────────────────────────
+  function _updateHealthIndicator() {
+    const dot = document.querySelector('.anc-footer-status-dot');
+    const text = document.querySelector('.anc-footer-status-text');
+    if (!dot || !text) return;
+
+    dot.classList.remove('anc-health-live', 'anc-health-reconnecting', 'anc-health-offline');
+    let label = 'Terhubung';
+    let cls = 'anc-health-live';
+    if (_realtimeHealth === 'reconnecting') {
+      cls = 'anc-health-reconnecting';
+      label = 'Menghubungkan ulang...';
+    } else if (_realtimeHealth === 'offline') {
+      cls = 'anc-health-offline';
+      label = 'Mode polling (30s)';
+    }
+    dot.classList.add(cls);
+    text.textContent = label;
+  }
+
+  // ── Browser Notification API (desktop push) ─────────────────────────────
+  function _requestBrowserNotifPermission() {
+    if (!('Notification' in window)) return Promise.resolve('denied');
+    if (Notification.permission === 'granted') {
+      _browserNotifsPermission = 'granted';
+      return Promise.resolve('granted');
+    }
+    if (Notification.permission === 'denied') {
+      _browserNotifsPermission = 'denied';
+      return Promise.resolve('denied');
+    }
+    return Notification.requestPermission().then(p => {
+      _browserNotifsPermission = p;
+      return p;
+    });
+  }
+
+  function _showBrowserNotification(notif) {
+    if (_browserNotifsPermission !== 'granted') return;
+    if (document.visibilityState === 'visible' && _isPanelOpen) return; // user is already looking
+    try {
+      const title = notif.type === 'max_violation'
+        ? `🚨 PELANGGARAN MAKSIMAL — ${notif.userName}`
+        : notif.type === 'submitted'
+          ? `✓ Selesai — ${notif.userName}`
+          : `⚠️ Pelanggaran — ${notif.userName}`;
+      const body = `${notif.examTitle}\n${notif.message}`;
+      const n = new Notification(title, {
+        body,
+        icon: '/public/images/favicon/favicon-96x96.png',
+        tag: notif.id, // dedup: same tag replaces existing notification
+        requireInteraction: notif.type === 'max_violation', // sticky for critical
+      });
+      n.onclick = () => {
+        window.focus();
+        openPanel();
+        n.close();
+      };
+      // Auto-close non-critical after 8s
+      if (notif.type !== 'max_violation') {
+        setTimeout(() => { try { n.close(); } catch (_) {} }, 8000);
+      }
+    } catch (e) {
+      // Silent — browser notifications are best-effort
+    }
+  }
+
+  // ── Sound alert ──────────────────────────────────────────────────────────
+  let _audioCtx = null;
+  function _playAlertSound(severity) {
+    if (!_soundEnabled) return;
+    try {
+      if (!_audioCtx) {
+        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      // Resume audio context if suspended (browser autoplay policy)
+      if (_audioCtx.state === 'suspended') _audioCtx.resume();
+
+      const osc = _audioCtx.createOscillator();
+      const gain = _audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(_audioCtx.destination);
+
+      if (severity === 'critical') {
+        // Critical: 3 quick high-pitched beeps
+        osc.frequency.setValueAtTime(880, _audioCtx.currentTime);
+        osc.frequency.setValueAtTime(660, _audioCtx.currentTime + 0.12);
+        osc.frequency.setValueAtTime(880, _audioCtx.currentTime + 0.24);
+        gain.gain.setValueAtTime(0.15, _audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.5);
+        osc.start();
+        osc.stop(_audioCtx.currentTime + 0.5);
+      } else {
+        // Warning: single short beep
+        osc.frequency.setValueAtTime(660, _audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, _audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.2);
+        osc.start();
+        osc.stop(_audioCtx.currentTime + 0.2);
+      }
+    } catch (_) {}
+  }
+
+  // Acknowledge a single violation via RPC (preserves the DB row for audit).
+  // Falls back to deleteDoc if the RPC is unavailable (older migration).
   async function _dismissOne(notifId) {
     const notif = _notifications.find(n => n.id === notifId);
     if (!notif || !window.AlbEdu?.repository) return;
@@ -256,18 +467,31 @@
 
     // Drop from local state (keeps UI responsive)
     _notifications = _notifications.filter(n => n.id !== notifId);
-    // No pulse on dismiss — user initiated.
     _updateBadge({ pulse: false });
     if (_isPanelOpen) _renderPanelContent();
 
     try {
-      await window.AlbEdu?.repository?.deleteDoc('violation_events', notif.docId);
+      // Try the RPC first (migration 047+)
+      const repo = window.AlbEdu.repository;
+      if (repo.rpc) {
+        const result = await repo.rpc('acknowledge_violation', { v_violation_id: notif.docId });
+        if (result !== null && result !== undefined) {
+          return; // RPC succeeded
+        }
+      }
+      // Fallback: delete the row (legacy behavior)
+      await repo.deleteDoc('violation_events', notif.docId);
     } catch (err) {
-      console.warn('[ANC] deleteDoc gagal:', err);
+      console.warn('[ANC] ack/deleteDoc gagal:', err);
+      // Try deleteDoc as last resort if RPC threw
+      try {
+        await window.AlbEdu?.repository?.deleteDoc('violation_events', notif.docId);
+      } catch (_) {}
     }
   }
 
-  // Batch-delete every row → realtime 'removed' events empty the state.
+  // Bulk-acknowledge via RPC (preserves DB rows for audit).
+  // Falls back to bulk-delete if the RPC is unavailable.
   async function _clearAll() {
     if (_isClearingAll || _notifications.length === 0) return;
     _isClearingAll = true;
@@ -280,6 +504,10 @@
     items.forEach((el, i) => setTimeout(() => el.classList.add('anc-item-removing'), i * 35));
 
     const docIds = [...new Set(_notifications.map(n => n.docId).filter(Boolean))];
+    // Extract assessment_ids for the bulk-ack RPC (it accepts an array of assessment_ids)
+    const assessmentIds = [...new Set(
+      _notifications.map(n => n.assessmentId).filter(Boolean)
+    )];
 
     await new Promise(r => setTimeout(r, items.length * 35 + 260));
 
@@ -288,16 +516,32 @@
     _updateBadge({ pulse: false });
     if (_isPanelOpen) _renderPanelContent();
 
-    // Bulk delete in chunks of 500 (Supabase batch limit).
-    if (docIds.length > 0) {
+    try {
+      const repo = window.AlbEdu.repository;
+      // Try bulk-ack RPC first (migration 047+)
+      if (repo.rpc && assessmentIds.length > 0) {
+        const acked = await repo.rpc('bulk_acknowledge_violations', {
+          v_assessment_ids: assessmentIds,
+        });
+        if (typeof acked === 'number') {
+          _isClearingAll = false;
+          return; // RPC succeeded
+        }
+      }
+      // Fallback: bulk-delete (legacy)
+      for (let i = 0; i < docIds.length; i += 500) {
+        const chunk = docIds.slice(i, i + 500);
+        await repo.bulkDelete('violation_events', chunk);
+      }
+    } catch (err) {
+      console.warn('[ANC] bulk-ack/delete gagal:', err);
+      // Last resort: try bulk-delete
       try {
         for (let i = 0; i < docIds.length; i += 500) {
           const chunk = docIds.slice(i, i + 500);
           await window.AlbEdu?.repository?.bulkDelete('violation_events', chunk);
         }
-      } catch (err) {
-        console.warn('[ANC] batch delete gagal:', err);
-      }
+      } catch (_) {}
     }
 
     _isClearingAll = false;
@@ -361,10 +605,18 @@
       <div class="anc-panel-body" id="anc-panel-body" role="log" aria-live="polite"></div>
       <div class="anc-panel-footer">
         <span class="anc-footer-status">
-          <span class="anc-footer-status-dot" aria-hidden="true"></span>
-          ${t('notif.connected', null, 'Terhubung')}
+          <span class="anc-footer-status-dot anc-health-live" aria-hidden="true"></span>
+          <span class="anc-footer-status-text">Terhubung</span>
         </span>
-        <span class="anc-footer-note" id="anc-footer-note">${t('notif.auto_update', null, 'Data diperbarui otomatis')}</span>
+        <div class="anc-footer-actions">
+          <button class="anc-footer-toggle-btn" id="anc-sound-toggle" title="Aktifkan/nonaktifkan suara" aria-label="Toggle suara notifikasi" type="button">
+            <span aria-hidden="true" data-albedu-icon="volume_off"></span>
+          </button>
+          <button class="anc-footer-toggle-btn" id="anc-desktop-toggle" title="Aktifkan notifikasi desktop" aria-label="Aktifkan notifikasi desktop" type="button">
+            <span aria-hidden="true" data-albedu-icon="notifications_off"></span>
+          </button>
+          <span class="anc-footer-note" id="anc-footer-note">${t('notif.auto_update', null, 'Data diperbarui otomatis')}</span>
+        </div>
       </div>
     `;
 
@@ -386,6 +638,52 @@
     document.getElementById('anc-mark-all-btn').addEventListener('click', markAllRead);
     document.getElementById('anc-clear-all-btn').addEventListener('click', () => _clearAll());
 
+    // Sound toggle button
+    const soundToggle = document.getElementById('anc-sound-toggle');
+    if (soundToggle) {
+      soundToggle.addEventListener('click', () => {
+        _soundEnabled = !_soundEnabled;
+        const icon = soundToggle.querySelector('[data-albedu-icon]');
+        if (icon) {
+          icon.setAttribute('data-albedu-icon', _soundEnabled ? 'volume_up' : 'volume_off');
+          // Update the inner SVG use href too (icon system)
+          const svg = icon.querySelector('svg use');
+          if (svg) svg.setAttribute('href', _soundEnabled ? '#i-volume_up' : '#i-volume_off');
+        }
+        soundToggle.classList.toggle('anc-toggle-active', _soundEnabled);
+        // Play a test beep if enabling
+        if (_soundEnabled) _playAlertSound('warning');
+      });
+    }
+
+    // Desktop notification toggle button
+    const desktopToggle = document.getElementById('anc-desktop-toggle');
+    if (desktopToggle) {
+      desktopToggle.addEventListener('click', async () => {
+        const perm = await _requestBrowserNotifPermission();
+        const icon = desktopToggle.querySelector('[data-albedu-icon]');
+        const isEnabled = perm === 'granted';
+        if (icon) {
+          icon.setAttribute('data-albedu-icon', isEnabled ? 'notifications_active' : 'notifications_off');
+          const svg = icon.querySelector('svg use');
+          if (svg) svg.setAttribute('href', isEnabled ? '#i-notifications_active' : '#i-notifications_off');
+        }
+        desktopToggle.classList.toggle('anc-toggle-active', isEnabled);
+        if (isEnabled) {
+          // Test notification
+          try {
+            new Notification('Notifikasi AlbEdu Aktif', {
+              body: 'Anda akan menerima pemberitahuan pelanggaran peserta secara real-time.',
+              icon: '/public/images/favicon/favicon-96x96.png',
+            });
+          } catch (_) {}
+        }
+      });
+    }
+
+    // Bind icons in the panel (so data-albedu-icon attributes render as SVGs)
+    window.AlbEdu?.bindIcons?.(_panelEl);
+
     // Named keydown handler so we can remove it on pagehide.
     const _onKeydown = function (e) { if (e.key === 'Escape' && _isPanelOpen) closePanel(); };
     document.addEventListener('keydown', _onKeydown);
@@ -395,6 +693,7 @@
     window.addEventListener('pagehide', function () {
       document.removeEventListener('keydown', _onKeydown);
       if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+      _stopPolling();
       if (_panelEl) { try { _panelEl.remove(); } catch (_) {} _panelEl = null; }
       if (_overlayEl) { try { _overlayEl.remove(); } catch (_) {} _overlayEl = null; }
       _isPanelOpen = false;
@@ -599,6 +898,23 @@
     clearAll: _clearAll,
     getNotifications: () => [..._notifications],
     getUnreadCount:   () => _getUnreadCount(),
+    // v2.0.0 new APIs
+    getHealthStatus:  () => _realtimeHealth,
+    requestDesktopNotifications: _requestBrowserNotifPermission,
+    setSoundEnabled: (enabled) => { _soundEnabled = !!enabled; },
+    getSoundEnabled: () => _soundEnabled,
+    // Manual refresh trigger (e.g., for testing or "refresh" button)
+    refresh: async () => {
+      const repo = window.AlbEdu?.repository;
+      if (!repo) return;
+      try {
+        const snap = await repo.getDocs('violation_events', {
+          order: { column: 'created_at', ascending: false },
+          limit: 300,
+        });
+        _handleSnapshot(snap);
+      } catch (_) {}
+    },
   };
 
 })(window);

@@ -44,6 +44,24 @@
       this._onExpired = callbacks.onExpired;
       this._violationLog = [];
 
+      // Initialize the ViolationSignaler (peserta→admin realtime pipeline).
+      // Even the smallest violation (info severity) gets signaled — the
+      // admin notification panel will show it within ~3s.
+      if (window.ViolationSignaler) {
+        try {
+          const assessment = callbacks.assessment || window.TakeAssessment?._internal?.state?.assessment;
+          window.ViolationSignaler.init(sessionId, {
+            assessmentId: assessment?.id || null,
+            assessmentTitle: assessment?.title || null,
+          });
+          console.info('[anti-cheat] ViolationSignaler initialized');
+        } catch (e) {
+          console.warn('[anti-cheat] ViolationSignaler init failed:', e?.message);
+        }
+      } else {
+        console.warn('[anti-cheat] ViolationSignaler not loaded — violations will NOT be signaled to admin');
+      }
+
       if (window.ExamGuardian) {
         window.ExamGuardian.onViolation((v) => this._handleGuardianViolation(v));
         window.ExamGuardian.onMaxViolation(() => this._handleMaxViolations('guardian'));
@@ -127,6 +145,14 @@
         this._stopBlockChecker();
         this._stopBlockChecker = null;
       }
+      // Destroy the ViolationSignaler (final flush happens inside destroy)
+      if (window.ViolationSignaler) {
+        try {
+          window.ViolationSignaler.destroy();
+        } catch (e) {
+          console.warn('[anti-cheat] ViolationSignaler destroy failed:', e?.message);
+        }
+      }
 
       console.info('[anti-cheat] All modules stopped');
     },
@@ -165,6 +191,24 @@
       this._violationLog.push(violation);
       this._onViolation?.(violation);
 
+      // Signal to admin via ViolationSignaler (realtime pipeline).
+      // Map Guardian's "pesan" to a known event_type. The mapping is heuristic
+      // because Guardian doesn't expose a structured type — we infer from the
+      // message text. This keeps backwards compat with Guardian's existing API.
+      const eventType = this._inferEventType(v.pesan);
+      if (eventType && window.ViolationSignaler) {
+        try {
+          window.ViolationSignaler.signal({
+            event_type: eventType,
+            message: v.pesan,
+            severity: v.ke >= v.maks ? 'critical' : 'warning',
+            metadata: { source: 'ExamGuardian', count: v.ke, max: v.maks },
+          });
+        } catch (e) {
+          console.warn('[anti-cheat] ViolationSignaler.signal failed:', e?.message);
+        }
+      }
+
       if (window.ExamLogic?.addViolation) {
         window.ExamLogic.addViolation();
       }
@@ -183,6 +227,20 @@
       };
       this._violationLog.push(violation);
       this._onViolation?.(violation);
+
+      // Signal to admin via ViolationSignaler
+      if (window.ViolationSignaler) {
+        try {
+          window.ViolationSignaler.signal({
+            event_type: 'devtools_open',
+            message: v.message,
+            severity: v.count >= v.max ? 'critical' : 'warning',
+            metadata: { source: 'DevToolsDetector', count: v.count, max: v.max },
+          });
+        } catch (e) {
+          console.warn('[anti-cheat] ViolationSignaler.signal failed:', e?.message);
+        }
+      }
 
       // DevTools violations count toward the combined max (4 total, either
       // source).
@@ -204,12 +262,41 @@
       console.error(`[anti-cheat] MAX VIOLATIONS reached (source: ${source})`);
       this._onMaxViolations?.();
 
-      this._logViolationEvent('max_violations_reached', `Max violations from ${source}`);
+      // Send a critical-severity signal immediately (bypasses the 3s debounce)
+      // so the admin sees the max-violations alert in real-time.
+      if (window.ViolationSignaler) {
+        try {
+          window.ViolationSignaler.signal({
+            event_type: 'max_violations_reached',
+            message: `Max violations reached (source: ${source}) — exam answers reset, questions reshuffled`,
+            severity: 'critical',
+            metadata: { source, total_violations: this.getTotalViolations() },
+          });
+          // Force an immediate flush — don't wait for the 3s timer
+          window.ViolationSignaler.flush().catch(() => {});
+        } catch (e) {
+          console.warn('[anti-cheat] ViolationSignaler.signal(max) failed:', e?.message);
+        }
+      }
     },
 
     _handleBlocked(reason) {
       if (!this._isActive) return;
       console.warn(`[anti-cheat] BLOCKED: ${reason}`);
+
+      // Signal the block event to admin (for audit trail)
+      if (window.ViolationSignaler) {
+        try {
+          window.ViolationSignaler.signal({
+            event_type: 'session_blocked',
+            message: `Session blocked: ${reason}`,
+            severity: 'critical',
+            metadata: { reason },
+          });
+          window.ViolationSignaler.flush().catch(() => {});
+        } catch (_) {}
+      }
+
       this.stop();
       this._onBlocked?.(reason);
     },
@@ -217,6 +304,15 @@
     _handleSubmitted() {
       if (!this._isActive) return;
       console.info('[anti-cheat] SUBMITTED signal');
+
+      // Final flush — make sure all pending violations reach the admin
+      // before the page transitions.
+      if (window.ViolationSignaler) {
+        try {
+          window.ViolationSignaler.flush().catch(() => {});
+        } catch (_) {}
+      }
+
       this.stop();
       this._onSubmitted?.();
     },
@@ -224,44 +320,41 @@
     _handleExpired() {
       if (!this._isActive) return;
       console.warn('[anti-cheat] EXPIRED signal');
+
+      if (window.ViolationSignaler) {
+        try {
+          window.ViolationSignaler.signal({
+            event_type: 'session_expired',
+            message: 'Session expired (time limit reached)',
+            severity: 'critical',
+          });
+          window.ViolationSignaler.flush().catch(() => {});
+        } catch (_) {}
+      }
+
       this.stop();
       this._onExpired?.();
     },
 
-    // Log violation to server (via heartbeat, not direct DB).
-    //
-    // Violations are logged via heartbeat's violation_count field — the
-    // heartbeat Edge Function updates assessment_sessions.violation_count.
-    // We could insert to violation_events directly, but that requires auth
-    // + an Edge Function call per violation — too expensive. Rely on
-    // heartbeat sync + server-side audit.
-    _logViolationEvent(eventType, message) {
-      // Best-effort: insert violation event directly (fire-and-forget)
-      const user = window.AlbEdu?.supabase?.auth?.currentUser;
-      const repo = window.AlbEdu?.repository;
-      if (!user || !repo || !this._sessionId) return;
-
-      repo.getDoc('assessment_sessions', this._sessionId).then((doc) => {
-        if (!doc?.exists) return;
-        const session = doc.data();
-
-        repo.addDoc('violation_events', {
-          assessment_id: session.assessment_id,
-          session_id: this._sessionId,
-          user_id: user.id,
-          user_email: user.email,
-          user_name: session.identity_snapshot?.nama || 'Unknown',
-          exam_title: null,
-          event_type: eventType,
-          message: message,
-          severity: eventType === 'max_violations_reached' ? 'critical' : 'warning',
-          ip_address: null, // server fills via Edge Function
-          user_agent: navigator.userAgent,
-          device_id: localStorage.getItem('albedu_exam_device_id'),
-        }).catch((err) => {
-          console.warn('[anti-cheat] violation_events insert failed (non-blocking):', err);
-        });
-      }).catch(() => {});
+    // Map Guardian's human-readable "pesan" to a structured event_type.
+    // Guardian doesn't expose a structured type — we infer from message text.
+    // Returns null if no match (signal will be skipped).
+    _inferEventType(pesan) {
+      if (!pesan) return null;
+      const p = String(pesan).toLowerCase();
+      if (p.includes('devtools') || p.includes('inspect') || p.includes('f12')) return 'devtools_shortcut';
+      if (p.includes('tab') || p.includes('visibility') || p.includes('hidden') || p.includes('pindah')) return 'tab_switch';
+      // FIX v0.854.0: 'jendela' is Indonesian for 'window' — Guardian uses
+      // Indonesian messages. Without this, blur violations were misclassified
+      // as 'keyboard_violation' (the default fallback), breaking dedup.
+      if (p.includes('blur') || p.includes('window') || p.includes('jendela') || p.includes('alt+tab') || p.includes('meninggalkan jendela')) return 'window_blur';
+      if (p.includes('copy') || p.includes('salin')) return 'copy_attempt';
+      if (p.includes('paste') || p.includes('tempel')) return 'paste_attempt';
+      if (p.includes('context') || p.includes('right-click') || p.includes('klik kanan')) return 'context_menu';
+      if (p.includes('select') || p.includes('seleksi')) return 'select_text';
+      if (p.includes('keyboard') || p.includes('shortcut') || p.includes('ctrl')) return 'keyboard_violation';
+      // Default: keyboard_violation is the closest catch-all
+      return 'keyboard_violation';
     },
 
     getViolationLog() {

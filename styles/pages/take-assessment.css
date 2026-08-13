@@ -470,13 +470,14 @@
    }
 
    .ex-user {
+     position: relative; /* anchor for absolutely-positioned edit button */
      display: flex;
      align-items: center;
      gap: 6px;
      color: var(--take-text-muted);
      font-size: 13px;
      white-space: nowrap;
-     padding: 6px 10px 6px 12px;
+     padding: 6px 28px 6px 12px; /* right padding leaves room for the edit button */
      border-radius: 10px;
      background: var(--take-surface-2, #F1F5F9);
      border: 1px solid var(--take-border);
@@ -492,30 +493,54 @@
      font-size: 16px;
      color: var(--take-primary);
    }
+   /* Identity-edit pencil — anchored to the right edge of .ex-user.
+      Absolute positioning keeps it stable regardless of the user-name
+      length (previously it sat inline and got squeezed off the chip on
+      long names). 24×24 touch target meets WCAG 2.2 AAA. */
    .ex-user-edit {
+     position: absolute;
+     right: 4px;
+     top: 50%;
+     transform: translateY(-50%);
      display: inline-flex;
      align-items: center;
      justify-content: center;
-     width: 22px;
-     height: 22px;
+     width: 24px;
+     height: 24px;
      border: none;
-     border-radius: 5px;
+     border-radius: 6px;
      background: transparent;
      color: var(--take-text-muted, #94A3B8);
      cursor: pointer;
-     transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+     transition: background 200ms ease, color 200ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
      padding: 0;
    }
    .ex-user-edit [data-albedu-icon],
    .ex-user-edit svg {
-     width: 12px;
-     height: 12px;
+     width: 14px;
+     height: 14px;
+     font-size: 14px;
+     /* FIX v0.854.0: SVG icons inside the button were pushed ~5px down by
+        the inline-flow line-box (22.4px tall, taller than the 14px span)
+        + global `.albedu-icon { vertical-align: -0.15em }`. `display:block`
+        removes the SVG from inline flow, neutralizing both effects and
+        centering it properly within the flex-aligned span. */
+     display: block;
+     line-height: 0;
    }
    .ex-user-edit:hover {
      background: var(--take-primary-light, #DBEAFE);
      color: var(--take-primary, #2563EB);
-     transform: scale(1.1);
+     transform: translateY(-50%) scale(1.1);
    }
+   .ex-user-edit:focus-visible {
+     outline: 2px solid var(--take-primary, #2563EB);
+     outline-offset: 1px;
+   }
+   /* Stop click on edit button from bubbling to the parent .ex-user chip
+      (which has its own click handler to open the same modal — clicking
+      the pencil should not double-fire). */
+   .ex-user-edit { isolation: isolate; }
 
    .ex-timer {
      display: flex;
@@ -1398,32 +1423,11 @@
 }
 
 
-/* ═══ 8.5  Identity Edit Button + Modal ═════════════════════════ */
-.ex-user-edit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--take-text-muted, #94A3B8);
-  cursor: pointer;
-  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
-  padding: 0;
-  margin-left: 1px;
-}
-.ex-user-edit [data-albedu-icon],
-.ex-user-edit svg {
-  width: 12px;
-  height: 12px;
-}
-.ex-user-edit:hover {
-  background: var(--take-primary-light, #DBEAFE);
-  color: var(--take-primary, #2563EB);
-  transform: scale(1.1);
-}
+/* ═══ 8.5  Identity Edit Modal (button styles live in Zone 3 above) ════ */
+/* The .ex-user-edit button rules were consolidated into Zone 3 (lines ~495)
+   to avoid the duplicate-definition bug that previously caused the second
+   block to silently override the first. Only the modal-related rules
+   remain in this section. */
 
 /* Identity Edit Modal */
 .ex-identity-edit-overlay {

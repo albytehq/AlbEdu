@@ -91,10 +91,11 @@
       if (idx > 0) basePath = p.substring(0, idx) + '/';
     } catch (_) {}
 
-    // "Kembali" button → redirect to assessment entry page (token input)
+    // "Kembali" button → redirect to assessment token-entry page (index.html)
+    // FIX v0.854.0: 'assessment-entry.html' doesn't exist → 404 → logout.
     document.getElementById('back-btn').addEventListener('click', function (e) {
       e.preventDefault();
-      window.location.href = basePath + 'pages/assessment/assessment-entry.html';
+      window.location.href = basePath + 'pages/assessment/index.html';
     });
   </script>
   <script>

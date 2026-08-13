@@ -41,6 +41,8 @@
     <link rel="stylesheet" href="../../styles/notification-panel.css">
     <link rel="stylesheet" href="../../styles/albedu-v1.css">
     <link rel="stylesheet" href="../../styles/albedu-components.css">
+    <link rel="stylesheet" href="../../styles/dropdown.css">
+    <script src="../../src/shared/dropdown.js" defer></script>
     <link rel="stylesheet" href="../../styles/pages/active-assessments.css">
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
@@ -192,7 +194,7 @@
                     <div class="aa-toolbar-right">
                         <div class="aa-select-wrap">
                             <label for="aa-sort" class="aa-select-label">Urutkan</label>
-                            <select id="aa-sort" class="aa-select" aria-label="Urutkan asesmen">
+                            <select id="aa-sort" class="aa-select albedu-dropdown" aria-label="Urutkan asesmen">
                                 <option value="recent">Terbaru</option>
                                 <option value="oldest">Terlama</option>
                                 <option value="title-asc">Judul (A-Z)</option>

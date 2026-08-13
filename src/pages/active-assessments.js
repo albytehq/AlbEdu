@@ -1069,31 +1069,79 @@
     },
 
     async _delete(item) {
-      // PRODUCTION FIX v2: Replace hard delete with archive.
-      // Submissions now survive via FK SET NULL + forensic snapshot.
-      // But we still archive instead of delete to preserve the assessment
-      // row itself (questions, settings, etc.) for future reference.
-      // Hard delete can only be done via direct SQL by the database admin.
+      // PERMANENT DELETE v0.854.0 — calls assessment-lifecycle EF with action='delete'.
+      // This HARD-DELETES the assessment + cascades to sessions, submissions,
+      // violation_events (via FK ON DELETE CASCADE / SET NULL).
+      // The previous code was a copy-paste of _archive() — it only flipped
+      // status='archived' despite the button label saying "Hapus Permanen".
+      //
+      // Safety: 2-step confirmation. Step 1: confirm dialog. Step 2: require
+      // user to type the assessment title (or a fixed phrase) to proceed.
+      const title = item.title || 'Tanpa Judul';
+
+      // Step 1: warning dialog
       const confirmed = await this._confirm(
-        'Arsipkan Asesmen',
-        `Arsipkan "${item.title || 'Tanpa Judul'}"? Asesmen tidak akan muncul di daftar aktif lagi. Data hasil peserta TETAP AMAN dan bisa dilihat di halaman Hasil.`,
-        false
+        'Hapus Permanen',
+        `PERINGATAN: Tindakan ini TIDAK DAPAT DIBATALKAN. Asesmen "${title}" beserta SEMUA data terkait (sesi peserta, jawaban, hasil, pelanggaran) akan dihapus permanen dari server.\n\nJika Anda hanya ingin menyembunyikan asesmen dari daftar aktif, gunakan "Arsipkan" sebagai gantinya.`,
+        true  // danger styling
       );
       if (!confirmed) return;
+
+      // Step 2: type-to-confirm (use notify.prompt if available, else simple confirm)
+      let typedConfirm = title;
       try {
+        if (window.notify?.prompt) {
+          typedConfirm = await window.notify.prompt({
+            title: 'Konfirmasi Penghapusan',
+            message: `Ketik judul asesmen "${title}" untuk mengonfirmasi penghapusan permanen:`,
+            placeholder: title,
+            confirmLabel: 'Hapus Permanen',
+            danger: true,
+          });
+          if (typedConfirm === null) return; // user cancelled
+        }
+      } catch (_) {
+        // notify.prompt not available — proceed with single confirmation
+      }
+
+      // Verify typed text matches (only if prompt was used and returned a string)
+      if (typeof typedConfirm === 'string' && typedConfirm.trim() !== title.trim()) {
+        window.notify?.error?.('Konfirmasi Gagal', `Teks yang diketik tidak cocok dengan judul asesmen. Penghapusan dibatalkan.`, 4000);
+        return;
+      }
+
+      try {
+        // Call the EF with action='delete' + confirm=true
         const sb = window.AlbEdu.supabase.client;
-        const { error } = await sb
-          .from('assessments')
-          .update({ status: 'archived', updated_at: new Date().toISOString() })
-          .eq('id', item.id);
+        const { data, error } = await sb.functions.invoke('assessment-lifecycle', {
+          body: {
+            assessment_id: item.id,
+            action: 'delete',
+            confirm: true,
+          },
+        });
+
         if (error) throw error;
-        item.status = 'archived';
-        window.notify?.success?.('Diarsipkan', 'Asesmen dipindahkan ke arsip. Data hasil tetap aman.', 3000);
+        if (data?.error) throw new Error(data.error.message || 'EF returned error');
+
+        // Remove from local state
+        const idx = this._allItems.indexOf(item);
+        if (idx >= 0) this._allItems.splice(idx, 1);
+
+        window.notify?.success?.(
+          'Dihapus Permanen',
+          `Asesmen "${title}" dan semua data terkait telah dihapus permanen dari server.`,
+          4000
+        );
         this._updateKPIs();
         this._applyFilters();
       } catch (err) {
-        console.error('[archive-as-delete]', err);
-        window.notify?.error?.('Gagal mengarsipkan', err?.message || 'Unknown error', 3000);
+        console.error('[permanent-delete]', err);
+        window.notify?.error?.(
+          'Gagal Menghapus',
+          err?.message || 'Terjadi kesalahan saat menghapus asesmen. Coba lagi atau gunakan "Arsipkan" sebagai alternatif.',
+          5000
+        );
       }
     },
 

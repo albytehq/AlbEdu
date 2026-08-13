@@ -181,13 +181,37 @@ const ExamGuardian = (() => {
   // Catches Alt+Tab, clicking another app, etc. that visibilitychange
   // might miss (especially on multi-monitor setups where the tab stays
   // "visible" but the user is clearly not looking at it).
+  //
+  // DOUBLE-TRIGGER FIX v0.854.0: When a peserta switches tabs, the browser
+  // fires BOTH `visibilitychange` (hidden) AND `window.blur`. Without
+  // cross-coordination, both debounce timers mature (~800ms + ~1000ms)
+  // producing TWO violations for ONE user action. Now:
+  //   1. `_focusLossJustFired` flag — set when EITHER timer fires, cleared
+  //      on `window.focus` / visibility=visible. Prevents the second timer
+  //      from firing for the same focus-loss event.
+  //   2. `_handleWindowBlur` checks if a visibility violation is pending
+  //      and skips starting its own timer (visibility fires faster at 800ms).
+  //   3. `_handleVisibilityChange` (hidden) cancels any pending blur timer.
   let _blurTimer = null;
+  let _focusLossJustFired = false;
+  const FOCUS_LOSS_GRACE_MS = 1500; // grace window after a focus-loss violation
   const BLUR_DEBOUNCE_MS = 1000; // 1s — brief focus losses (autocomplete) don't trigger
 
   function _handleWindowBlur() {
     if (!_isActive) return;
+    // If visibility already fired OR is pending, skip — same user action
+    if (_focusLossJustFired) return;
+    if (_visibilityTimer) {
+      // Visibility debounce is pending (will fire at 800ms before our 1000ms) —
+      // don't start a competing blur timer.
+      return;
+    }
     _blurTimer = setTimeout(() => {
+      _blurTimer = null;
+      if (_focusLossJustFired) return; // visibility fired while we were waiting
+      _focusLossJustFired = true;
       _triggerViolation('Anda meninggalkan jendela asesmen!');
+      setTimeout(() => { _focusLossJustFired = false; }, FOCUS_LOSS_GRACE_MS);
     }, BLUR_DEBOUNCE_MS);
   }
 
@@ -196,6 +220,9 @@ const ExamGuardian = (() => {
       clearTimeout(_blurTimer);
       _blurTimer = null;
     }
+    // Clear the "just fired" flag on focus return — allows the NEXT focus
+    // loss (a separate user action) to be detected.
+    _focusLossJustFired = false;
   }
 
   // --- 9. DevTools size detection (passive) ---------------------------
@@ -266,15 +293,28 @@ const ExamGuardian = (() => {
   // multi-monitor focus loss. Now we require the page to be hidden for
   // at least 800ms before counting it as a violation. Brief focus losses
   // (notifications, etc.) cancel the timer and do not penalize the user.
+  //
+  // DOUBLE-TRIGGER FIX v0.854.0: visibilitychange and window.blur both
+  // fire on tab switch. We cancel the blur timer when visibility goes
+  // hidden, and set _focusLossJustFired so the blur timer (if it already
+  // started) won't fire its own violation.
   let _visibilityTimer = null;
   const VISIBILITY_DEBOUNCE_MS = 800;
 
   function _handleVisibilityChange() {
     if (document.visibilityState === 'hidden') {
+      // Cancel any pending blur violation — visibility will handle this event
+      if (_blurTimer) {
+        clearTimeout(_blurTimer);
+        _blurTimer = null;
+      }
       // Start debounce timer -- only fire violation if page stays hidden
       _visibilityTimer = setTimeout(() => {
         _visibilityTimer = null;
+        if (_focusLossJustFired) return; // blur already fired (shouldn't happen, but defensive)
+        _focusLossJustFired = true;
         _triggerViolation('Kamu berpindah tab atau meninggalkan halaman asesmen!');
+        setTimeout(() => { _focusLossJustFired = false; }, FOCUS_LOSS_GRACE_MS);
       }, VISIBILITY_DEBOUNCE_MS);
     } else {
       // Page became visible again -- cancel the pending violation
@@ -282,6 +322,8 @@ const ExamGuardian = (() => {
         clearTimeout(_visibilityTimer);
         _visibilityTimer = null;
       }
+      // Clear the "just fired" flag — next focus loss is a new event
+      _focusLossJustFired = false;
     }
   }
 

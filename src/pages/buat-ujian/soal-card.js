@@ -81,7 +81,7 @@
             </div>
             <div class="albedu-section-actions">
               <div class="albedu-select-wrap">
-                <select class="albedu-select albedu-section-type" data-index="${sIdx}" ${sec.questions.length > 0 ? 'disabled' : ''}>
+                <select class="albedu-select albedu-section-type albedu-dropdown" data-index="${sIdx}" ${sec.questions.length > 0 ? 'disabled' : ''}>
                   <option value="">${t('create.select_type_placeholder', null, '— Pilih tipe —')}</option>
                   <option value="PG" ${sec.type_question === 'PG' ? 'selected' : ''}>${t('wizard.type_pg', null, 'Pilihan Ganda')}</option>
                   <option value="esai" ${sec.type_question === 'esai' ? 'selected' : ''}>${t('wizard.type_essay', null, 'Esai')}</option>
@@ -141,12 +141,26 @@
       `).join('');
 
       // Wire section-type select
+      // NOTE: After AlbEduDropdown.enhance(), the original <select> is hidden
+      // but kept in the DOM and its `change` event still fires when the user
+      // picks an option via the custom dropdown (the component dispatches a
+      // native change event on the source select). So this listener works
+      // unchanged.
       this._list.querySelectorAll('.albedu-section-type').forEach((sel) => {
         sel.addEventListener('change', (e) => {
           const idx = parseInt(e.target.dataset.index, 10);
           window.CreateAssessment.updateSection(idx, { type_question: e.target.value });
         });
       });
+
+      // Upgrade new <select class="albedu-dropdown"> to AlbEduDropdown instances.
+      // Each render rebuilds the innerHTML, so previously-enhanced selects are
+      // gone and new ones need fresh enhancement. The MutationObserver in
+      // dropdown.js would eventually catch this, but we enhance manually for
+      // instant availability (the observer is async via microtask).
+      try {
+        if (window.AlbEduDropdown) window.AlbEduDropdown.enhance(this._list);
+      } catch (e) { /* fall through to native select */ }
 
       // FIX: Render KaTeX + apply language classes on question list
       if (window.renderMathIn) window.renderMathIn(this._list);

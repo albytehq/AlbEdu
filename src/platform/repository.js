@@ -216,6 +216,50 @@
     raw() {
       return _requireClient();
     },
+
+    /**
+     * Call a Postgres RPC (stored procedure). Used for SECURITY DEFINER
+     * functions like acknowledge_violation() and bulk_acknowledge_violations()
+     * — these bypass RLS so admins can ack violations without needing direct
+     * UPDATE permission on the violation_events table.
+     *
+     * @param {string} fnName — RPC function name (e.g., 'acknowledge_violation')
+     * @param {Object} params — named parameters (e.g., { v_violation_id: '...' })
+     * @returns {Promise<any>} — the RPC's return value
+     */
+    async rpc(fnName, params = {}) {
+      const client = _requireClient();
+      const { data, error } = await client.rpc(fnName, params);
+      if (error) throw error;
+      return data;
+    },
+
+    /**
+     * Invoke a Supabase Edge Function by name. Used for fire-and-forget
+     * client→server calls like violation-signal that don't fit the table-access
+     * pattern (batched INSERTs with server-side validation).
+     *
+     * @param {string} fnName — EF name (e.g., 'violation-signal')
+     * @param {Object} body — request body (will be JSON.stringified)
+     * @param {Object} [opts] — { method?: 'POST' (default), headers?: {} }
+     * @returns {Promise<{ok: boolean, status: number, data: any}>}
+     */
+    async invokeFunction(fnName, body = {}, opts = {}) {
+      const sb = window.AlbEdu?.supabase;
+      if (!sb?.client) {
+        throw new Error('[platform] supabase client not ready');
+      }
+      // Use the SDK's functions.invoke — it auto-attaches the JWT
+      const { data, error } = await sb.client.functions.invoke(fnName, {
+        body,
+        headers: opts.headers || {},
+        method: opts.method || 'POST',
+      });
+      if (error) {
+        return { ok: false, status: error?.context?.status || 0, data: null, error };
+      }
+      return { ok: true, status: 200, data };
+    },
   };
 
   // Expose

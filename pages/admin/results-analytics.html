@@ -45,6 +45,8 @@
     
     <link rel="stylesheet" href="../../styles/albedu-v1.css"><!-- Fonts --><!-- Supabase SDK --><!-- Auth baseline -->
     <link rel="stylesheet" href="../../styles/albedu-components.css">
+    <link rel="stylesheet" href="../../styles/dropdown.css">
+    <script src="../../src/shared/dropdown.js" defer></script>
     <link rel="stylesheet" href="../../styles/pages/create-assessment.css">
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
@@ -158,7 +160,7 @@
                     <div class="ra-picker">
                         <label for="ra-assessment-select">Pilih Asesmen</label>
                         <div class="albedu-select-wrap">
-                            <select id="ra-assessment-select" class="albedu-select ra-select" aria-label="Pilih asesmen">
+                            <select id="ra-assessment-select" class="albedu-select ra-select albedu-dropdown" aria-label="Pilih asesmen">
                                 <option value="">— Pilih asesmen —</option>
                             </select>
                         </div>

@@ -174,24 +174,53 @@ window.IdentityFormRenderer = (() => {
     // Input by type
     let input;
     if (f.type === 'select') {
-      // Custom dropdown (replaces native <select>)
-      const dd = _createCustomDropdown({
-        placeholder: '-- Pilih --',
-        options: (f.options || []).map(opt => ({ value: opt, label: opt })),
-        onChange: (value) => {
-          _values[f.id] = value;
-          _clearFieldError(f.id);
-        },
+      // Build a hidden <select> first, then upgrade it to AlbEduDropdown.
+      // This keeps the form input-shaped (so .ifr-field__input selectors
+      // still apply) and lets the dropdown component own the visual layer.
+      const hiddenSelect = document.createElement('select');
+      hiddenSelect.className = 'ifr-field__input albedu-dropdown';
+      hiddenSelect.id = _id(`ifr_${f.id}`);
+      hiddenSelect.name = f.id;
+      hiddenSelect.dataset.placeholder = '-- Pilih --';
+      hiddenSelect.style.display = 'none';
+      (f.options || []).forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        hiddenSelect.appendChild(o);
       });
-      // Pre-fill if value exists
-      if (_values[f.id]) {
-        dd.setValue(_values[f.id]);
+
+      // Build the AlbEduDropdown instance
+      const AlbEduDropdown = window.AlbEduDropdown;
+      let dd;
+      if (AlbEduDropdown) {
+        dd = new AlbEduDropdown(hiddenSelect, {
+          placeholder: '-- Pilih --',
+          options: (f.options || []).map(opt => ({ value: opt, label: opt })),
+          searchable: 'auto',
+          onChange: (value) => {
+            _values[f.id] = value;
+            _clearFieldError(f.id);
+          },
+        });
+        input = dd.getElement();
+        input.id = _id(`ifr_${f.id}`);
+        input.classList.add('ifr-field__input');
+        // Stash instance on the wrap element so reset() can call .clear()
+        input._albeduDropdownInstance = dd;
+        // Pre-fill if value exists
+        if (_values[f.id]) dd.setValue(_values[f.id]);
+      } else {
+        // Fallback: native <select> (if AlbEduDropdown failed to load)
+        console.warn('[IdentityFormRenderer] AlbEduDropdown not loaded — using native <select>');
+        hiddenSelect.style.display = '';
+        hiddenSelect.onchange = (e) => {
+          _values[f.id] = e.target.value;
+          _clearFieldError(f.id);
+        };
+        if (_values[f.id]) hiddenSelect.value = _values[f.id];
+        input = hiddenSelect;
       }
-      input = dd.element;
-      input.id = _id(`ifr_${f.id}`);
-      input.classList.add('ifr-field__input');
-      // Store reference for validation
-      input._customDropdown = dd;
     } else if (f.type === 'textarea') {
       input = document.createElement('textarea');
       input.rows = 3;
@@ -253,207 +282,11 @@ window.IdentityFormRenderer = (() => {
     wrap?.classList.add('ifr-field--error');
   }
 
-  // Custom dropdown component (replaces native <select>).
-  // Returns: { element, setOptions, setValue, clear }
-  function _createCustomDropdown({ placeholder = '-- Pilih --', options = [], onChange = () => {} } = {}) {
-    const wrap = document.createElement('div');
-    wrap.className = 'ifr-dropdown';
-    wrap.tabIndex = 0;
-    wrap.dataset.placeholder = placeholder; // M3: store original placeholder for reset()
-    // M9 + M10 fixes: WAI-ARIA combobox roles + keyboard navigation
-    wrap.setAttribute('role', 'combobox');
-    wrap.setAttribute('aria-haspopup', 'listbox');
-    wrap.setAttribute('aria-expanded', 'false');
-    wrap.setAttribute('aria-label', placeholder);
-
-    const selected = document.createElement('div');
-    selected.className = 'ifr-dropdown__selected';
-    selected.setAttribute('role', 'button');
-    selected.setAttribute('aria-label', placeholder);
-    selected.innerHTML = `
-      <span class="ifr-dropdown__label">${_escapeHtml(placeholder)}</span>
-      <span class="ifr-dropdown__arrow" data-albedu-icon="expand_more"></span>
-    `;
-    wrap.appendChild(selected);
-
-    const optionsEl = document.createElement('div');
-    optionsEl.className = 'ifr-dropdown__options';
-    optionsEl.setAttribute('role', 'listbox');
-    optionsEl.setAttribute('aria-label', placeholder);
-    wrap.appendChild(optionsEl);
-
-    let currentValue = '';
-    let activeIdx = -1; // M9: keyboard nav — currently highlighted option
-
-    function _renderOptions() {
-      optionsEl.innerHTML = '';
-      if (options.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'ifr-dropdown__option ifr-dropdown__option--empty';
-        empty.textContent = '(Kosong)';
-        optionsEl.appendChild(empty);
-        return;
-      }
-      options.forEach((opt, i) => {
-        const item = document.createElement('div');
-        item.className = 'ifr-dropdown__option';
-        item.dataset.value = opt.value;
-        item.dataset.idx = String(i);
-        item.setAttribute('role', 'option');
-        item.setAttribute('aria-selected', String(opt.value === currentValue));
-        item.textContent = opt.label;
-        if (opt.value === currentValue) {
-          item.classList.add('ifr-dropdown__option--selected');
-        }
-        item.addEventListener('click', (e) => {
-          e.stopPropagation();
-          _select(opt.value, opt.label);
-          _close();
-        });
-        optionsEl.appendChild(item);
-      });
-    }
-
-    function _select(value, label) {
-      currentValue = value;
-      const labelEl = selected.querySelector('.ifr-dropdown__label');
-      if (labelEl) labelEl.textContent = label || placeholder;
-      selected.classList.toggle('ifr-dropdown__selected--filled', !!value);
-      // M9: update aria-selected on all options
-      optionsEl.querySelectorAll('.ifr-dropdown__option').forEach(o => {
-        o.setAttribute('aria-selected', String(o.dataset.value === value));
-      });
-      onChange(value);
-    }
-
-    function _open() {
-      document.querySelectorAll('.ifr-dropdown.is-open').forEach(d => {
-        if (d !== wrap) d.classList.remove('is-open');
-      });
-      wrap.classList.add('is-open');
-      wrap.setAttribute('aria-expanded', 'true');
-      // M9: highlight currently selected option (or first)
-      activeIdx = options.findIndex(o => o.value === currentValue);
-      if (activeIdx < 0 && options.length > 0) activeIdx = 0;
-      _highlightActive();
-    }
-
-    function _close() {
-      wrap.classList.remove('is-open');
-      wrap.setAttribute('aria-expanded', 'false');
-    }
-
-    // M9: highlight option at activeIdx (keyboard nav)
-    function _highlightActive() {
-      const items = optionsEl.querySelectorAll('.ifr-dropdown__option');
-      items.forEach((it, i) => {
-        const isActive = i === activeIdx;
-        it.classList.toggle('ifr-dropdown__option--active', isActive);
-        if (isActive) {
-          it.setAttribute('aria-activedescendant', '');
-          // scroll into view if needed
-          try { it.scrollIntoView({ block: 'nearest' }); } catch (_) {}
-        }
-      });
-      if (activeIdx >= 0 && items[activeIdx]) {
-        wrap.setAttribute('aria-activedescendant', items[activeIdx].dataset.idx);
-      } else {
-        wrap.removeAttribute('aria-activedescendant');
-      }
-    }
-
-    function _toggle() {
-      if (wrap.classList.contains('is-open')) _close();
-      else _open();
-    }
-
-    selected.addEventListener('click', (e) => {
-      e.stopPropagation();
-      _toggle();
-    });
-
-    // M9: keyboard navigation (ArrowDown/Up, Enter, Escape, Home/End)
-    wrap.addEventListener('keydown', (e) => {
-      const isOpen = wrap.classList.contains('is-open');
-      const items = optionsEl.querySelectorAll('.ifr-dropdown__option');
-
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault();
-          if (!isOpen) { _open(); return; }
-          if (items.length === 0) return;
-          activeIdx = Math.min(activeIdx + 1, items.length - 1);
-          _highlightActive();
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          if (!isOpen) { _open(); return; }
-          if (items.length === 0) return;
-          activeIdx = Math.max(activeIdx - 1, 0);
-          _highlightActive();
-          break;
-        case 'Home':
-          if (isOpen && items.length > 0) {
-            e.preventDefault();
-            activeIdx = 0;
-            _highlightActive();
-          }
-          break;
-        case 'End':
-          if (isOpen && items.length > 0) {
-            e.preventDefault();
-            activeIdx = items.length - 1;
-            _highlightActive();
-          }
-          break;
-        case 'Enter':
-          if (isOpen && activeIdx >= 0 && items[activeIdx]) {
-            e.preventDefault();
-            const opt = options[activeIdx];
-            if (opt) {
-              _select(opt.value, opt.label);
-              _close();
-            }
-          }
-          break;
-        case 'Escape':
-          if (isOpen) {
-            e.preventDefault();
-            _close();
-          }
-          break;
-        case 'Tab':
-          if (isOpen) _close();
-          break;
-      }
-    });
-
-    document.addEventListener('click', () => _close());
-
-    _renderOptions();
-
-    return {
-      element: wrap,
-      setOptions: (newOptions) => {
-        options = newOptions;
-        currentValue = '';
-        const labelEl = selected.querySelector('.ifr-dropdown__label');
-        if (labelEl) labelEl.textContent = placeholder;
-        selected.classList.remove('ifr-dropdown__selected--filled');
-        _renderOptions();
-      },
-      setValue: (value) => {
-        const opt = options.find(o => o.value === value);
-        if (opt) _select(opt.value, opt.label);
-      },
-      clear: () => {
-        currentValue = '';
-        const labelEl = selected.querySelector('.ifr-dropdown__label');
-        if (labelEl) labelEl.textContent = placeholder;
-        selected.classList.remove('ifr-dropdown__selected--filled');
-      },
-    };
-  }
+  // NOTE: The legacy _createCustomDropdown() implementation has been removed.
+  // Select-type fields now use AlbEduDropdown (src/shared/dropdown.js) which
+  // is portal-based (escapes any overflow:hidden parent — fixes the
+  // "dropdown kepotong card" bug on take.html's .id-card) and has smart
+  // height adaptation + auto-flip-up + search for long lists.
 
   function showErrors(errors) {
     // Clear all first
@@ -502,7 +335,7 @@ window.IdentityFormRenderer = (() => {
         );
         if (errWrap) {
           errWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          const input = errWrap.querySelector('input, textarea, .ifr-dropdown');
+          const input = errWrap.querySelector('input, textarea, .albedu-dropdown, .ifr-dropdown');
           if (input && typeof input.focus === 'function') {
             // Defer focus to let scroll happen first
             setTimeout(() => { try { input.focus({ preventScroll: true }); } catch (_) {} }, 100);
@@ -533,16 +366,20 @@ window.IdentityFormRenderer = (() => {
       _container.querySelectorAll('input, textarea').forEach(el => {
         el.value = '';
       });
-      // Reset custom dropdowns — preserve original placeholder (M3 minor: was hardcoded)
-      _container.querySelectorAll('.ifr-dropdown').forEach(dd => {
-        const labelEl = dd.querySelector('.ifr-dropdown__label');
-        const selected = dd.querySelector('.ifr-dropdown__selected');
-        const origPlaceholder = dd.dataset.placeholder || '-- Pilih --';
-        if (labelEl) labelEl.textContent = origPlaceholder;
-        selected?.classList.remove('ifr-dropdown__selected--filled');
-        dd.querySelectorAll('.ifr-dropdown__option--selected').forEach(o =>
-          o.classList.remove('ifr-dropdown__option--selected')
-        );
+      // Reset AlbEduDropdown instances (new path) — use their public API
+      _container.querySelectorAll('.albedu-dropdown').forEach(ddWrap => {
+        // Walk up to find the .ifr-field wrapper, then look for the trigger
+        const instance = ddWrap._albeduDropdownInstance;
+        if (instance && typeof instance.clear === 'function') {
+          instance.clear();
+          return;
+        }
+        // Legacy fallback: manually reset label
+        const labelEl = ddWrap.querySelector('.albedu-dropdown__label');
+        const trigger = ddWrap.querySelector('.albedu-dropdown__trigger');
+        const placeholder = (ddWrap.dataset && ddWrap.dataset.placeholder) || '-- Pilih --';
+        if (labelEl) labelEl.textContent = placeholder;
+        if (trigger) trigger.classList.remove('is-filled');
       });
       _container.querySelectorAll('.ifr-field--error').forEach(el => {
         el.classList.remove('ifr-field--error');

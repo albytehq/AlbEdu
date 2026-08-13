@@ -68,10 +68,9 @@
   <script src="../../src/profile/peserta-profile-fab.js" defer></script>
 
   <script>
-    // FIX: Redirect to assessment entry page (token input), NOT home page.
-    // Old code redirected to basePath ('/') which triggered byteward.js
-    // access check → detected no active session → triggered logout.
-    // Now redirects to assessment-entry.html (same as blocked.html).
+    // FIX v0.854.0: Redirect to assessment token-entry page (index.html),
+    // NOT 'assessment-entry.html' (which doesn't exist → 404 → triggers
+    // byteward.js → logout). The token-entry page is pages/assessment/index.html.
     document.getElementById('back-btn').addEventListener('click', function (e) {
       e.preventDefault();
       var basePath = '/';
@@ -80,7 +79,7 @@
         var idx = p.indexOf('/pages/');
         if (idx > 0) basePath = p.substring(0, idx) + '/';
       } catch (_) {}
-      window.location.href = basePath + 'pages/assessment/assessment-entry.html';
+      window.location.href = basePath + 'pages/assessment/index.html';
     });
   </script>
   <script>

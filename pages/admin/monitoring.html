@@ -45,6 +45,8 @@
     
     <link rel="stylesheet" href="../../styles/albedu-v1.css"><!-- Fonts --><!-- Supabase SDK --><!-- Auth baseline -->
     <link rel="stylesheet" href="../../styles/albedu-components.css">
+    <link rel="stylesheet" href="../../styles/dropdown.css">
+    <script src="../../src/shared/dropdown.js" defer></script>
     <script src="../../src/auth/security.js" defer></script>
     <script src="../../src/utils/ui.js" defer></script>
     <script src="../../src/auth/errors.js" defer></script>
@@ -181,10 +183,10 @@
                             <span data-albedu-icon="close"></span>
                         </button>
                     </div>
-                    <select class="as-select" id="filter-assessment" aria-label="Filter asesmen" title="Filter berdasarkan asesmen">
+                    <select class="as-select albedu-dropdown" id="filter-assessment" aria-label="Filter asesmen" title="Filter berdasarkan asesmen">
                         <option value="all">Semua Asesmen</option>
                     </select>
-                    <select class="as-select" id="filter-sort" aria-label="Urutkan" title="Urutkan sesi">
+                    <select class="as-select albedu-dropdown" id="filter-sort" aria-label="Urutkan" title="Urutkan sesi">
                         <option value="recent">Terbaru</option>
                         <option value="oldest">Terlama</option>
                         <option value="name">Nama (A-Z)</option>
