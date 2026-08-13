@@ -79,13 +79,18 @@
         // Phase 3: replaces BlockListener (Realtime subscription).
         // 10s SELECT poll, pure read, no DB trigger fires.
         // Block delivery: <15s (budget confirmed in ZERO-COST.md §3.1).
+        // CRITICAL FIX: onAssessmentClosed callback MUST be wired — without it,
+        // when admin closes the assessment mid-exam, BlockChecker detects the
+        // closure but the callback is undefined → silent no-op → peserta
+        // continues exam indefinitely.
         this._stopBlockChecker = window.BlockChecker.start(sessionId, {
           onBlocked: (reason) => this._handleBlocked(reason),
           onSubmitted: () => this._handleSubmitted(),
           onExpired: () => this._handleExpired(),
+          onAssessmentClosed: (reason) => this._handleBlocked(reason),
           onError: (err) => console.warn('[anti-cheat] BlockChecker transient error:', err?.message),
         });
-        console.info('[anti-cheat] BlockChecker started (10s poll)');
+        console.info('[anti-cheat] BlockChecker started (10s poll, with onAssessmentClosed)');
       } else {
         console.warn('[anti-cheat] BlockChecker not available — block delivery will fall back to heartbeat (60s)');
       }

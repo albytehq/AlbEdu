@@ -155,30 +155,30 @@
     </div>
   </main>
 
-  <!-- ═══ PHASE 3: EXAM (Google Form-like — sticky top + single column + sticky bottom) ═══ -->
+  <!-- ═══ PHASE 3: EXAM — unified single header (no double navbar) ═══ -->
   <main id="exam-phase" hidden aria-labelledby="exam-title">
-    <!-- Sticky Top Bar: subject + title + timer -->
+    <!-- Unified Sticky Header: timer + title + identity + section tabs in ONE bar -->
     <header class="ex-topbar">
-      <div class="ex-topbar__left">
-        <div class="ex-subject" id="exam-subject">Asesmen</div>
-        <h1 class="ex-title" id="exam-title">Asesmen</h1>
-      </div>
-      <div class="ex-topbar__right">
-        <div class="ex-user" id="exam-user">
-          <span data-albedu-icon="account_circle"></span>
-          <span id="exam-user-text">Peserta</span>
-        </div>
+      <!-- Row 1: Timer | Subject+Title | Identity -->
+      <div class="ex-topbar__main">
         <div class="ex-timer" id="exam-timer" role="timer" aria-live="off" aria-atomic="true">
           <span data-albedu-icon="timer"></span>
           <span id="timer-display">--:--</span>
         </div>
+        <div class="ex-topbar__center">
+          <div class="ex-subject" id="exam-subject">Asesmen</div>
+          <h1 class="ex-title" id="exam-title">Asesmen</h1>
+        </div>
+        <div class="ex-user" id="exam-user">
+          <span data-albedu-icon="account_circle"></span>
+          <span id="exam-user-text">Peserta</span>
+        </div>
+      </div>
+      <!-- Row 2: Section tabs (hidden if only 1 section) -->
+      <div class="ex-sections-wrap" id="exam-sections-wrap">
+        <div class="ex-sections" id="page-tabs" role="tablist" aria-label="Bagian Soal"></div>
       </div>
     </header>
-
-    <!-- Section tabs (collapsible) -->
-    <div class="ex-sectionbar">
-      <div class="ex-sections" id="page-tabs" role="tablist" aria-label="Bagian Soal"></div>
-    </div>
 
     <!-- Main content: single column, max-width 800px, centered -->
     <div class="ex-main">
@@ -245,20 +245,10 @@
     </div>
   </main>
 
-  <!-- PAUSE BANNER (overlay saat assessment di-pause admin) -->
-  <div id="pause-banner" hidden role="alert" aria-live="assertive">
-    <span data-albedu-icon="pause_circle"></span>
-    <span id="pause-text">Asesmen dijeda oleh admin. Mohon tunggu.</span>
-  </div>
-
-  <div id="exam-session-expired-modal" class="take-status-screen" hidden role="alertdialog" aria-modal="true" aria-labelledby="exam-session-expired-title">
-    <div class="status-icon"><span data-albedu-icon="warning"></span></div>
-    <h2 class="status-title" id="exam-session-expired-title">Sesi Berakhir</h2>
-    <p class="status-message">Sesi berakhir, jawaban tersimpan lokal. Klik untuk login ulang.</p>
-    <div class="status-actions">
-      <button class="albedu-btn albedu-btn-primary" type="button" onclick="window.location.href=(window.Auth?.loginUrl?.() || '../login.html')">Login Ulang</button>
-    </div>
-  </div>
+  <!-- Dead overlays removed (AUDIT-CYCLE-3):
+       #pause-banner and #exam-session-expired-modal were never unhidden
+       by any JS. The unified #closed-screen + _showClosed() handles all
+       status displays. Removed to avoid confusion. -->
 
     <script>
       if ('serviceWorker' in navigator) {

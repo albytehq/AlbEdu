@@ -944,58 +944,38 @@
       try {
         const sb = window.AlbEdu.supabase.client;
 
-        // On open: set ac_end = now + duration (server-trusted timer)
-        // On close (pause): save remaining time, null ac_end
-        const update = {
-          ac_manual_status: isOpening ? 'open' : 'closed',
-          updated_at: new Date().toISOString(),
-        };
+        // PRODUCTION FIX: Route through assessment-lifecycle Edge Function
+        // instead of direct DB UPDATE. The EF:
+        //   1. Verifies admin ownership
+        //   2. Atomic conditional update (prevents race conditions)
+        //   3. Calls _syncSessionStatuses() to mark peserta sessions as
+        //      'paused' (so block-check detects it within 10s)
+        //   4. Audit logs the action
+        //
+        // Old code did direct UPDATE on assessments table, which:
+        //   - Didn't update assessment_sessions → sessions stayed 'active'
+        //   - Peserta's block-check never detected the closure
+        //   - Peserta continued exam indefinitely
 
-        if (isOpening) {
-          // Resume from paused state if remaining_time exists, else fresh start.
-          // BUGFIX: previously always used duration_minutes — re-opening a paused
-          // assessment restarted the timer from full duration instead of resuming.
-          const hasRemaining = item.ac_remaining_time && item.ac_remaining_time > 0;
-          const secondsToAdd = hasRemaining
-            ? item.ac_remaining_time
-            : (item.duration_minutes || 60) * 60;
-          update.ac_end = new Date(Date.now() + secondsToAdd * 1000).toISOString();
-          update.ac_remaining_time = null;
-        } else {
-          // Pause: save remaining seconds from ac_end
-          if (item.ac_end) {
-            const remaining = Math.max(0, Math.floor((new Date(item.ac_end).getTime() - Date.now()) / 1000));
-            update.ac_remaining_time = remaining;
-          }
-          update.ac_end = null;
+        const hasRemaining = item.ac_remaining_time && item.ac_remaining_time > 0;
+        const action = isOpening
+          ? (hasRemaining ? 'resume' : 'start')
+          : 'pause';
+
+        const { data: efResult, error: efError } = await sb.functions.invoke('assessment-lifecycle', {
+          body: { assessment_id: item.id, action },
+        });
+
+        if (efError) throw efError;
+        if (!efResult?.success) {
+          throw new Error(efResult?.error?.message || `Lifecycle EF returned error: ${efResult?.error || 'unknown'}`);
         }
 
-        const { data, error } = await sb
-          .from('assessments')
-          .update(update)
-          .eq('id', item.id)
-          .select('id, ac_manual_status, ac_end, ac_remaining_time')
-          .maybeSingle();
-
-        if (error) throw error;
-
-        // CRITICAL: If data is null, the UPDATE affected 0 rows.
-        // This means RLS denied the update (admin doesn't own this row,
-        // or peran_user() didn't return 'admin'). Without this check,
-        // the code silently proceeds with stale local data.
-        if (!data) {
-          throw new Error(
-            'Update gagal — 0 rows affected. ' +
-            'Kemungkinan: RLS policy menolak akses (created_by tidak cocok dengan user login), ' +
-            'atau asesmen sudah dihapus. ' +
-            `Assessment ID: ${item.id}, Created by: ${item.created_by || 'unknown'}`
-          );
-        }
-
-        // Update local item with fresh DB data
+        // Update local item with fresh DB data from EF response
+        const data = efResult.data || efResult;
         item.ac_manual_status = data.ac_manual_status;
         item.ac_end = data.ac_end;
-        item.ac_remaining_time = data.ac_remaining_time;
+        item.ac_remaining_time = data.ac_remaining_time ?? null;
 
         // Remove from togglingIds BEFORE re-render
         this._togglingIds.delete(item.id);
@@ -1004,7 +984,7 @@
           isOpening ? 'Asesmen Dibuka' : 'Akses Ditutup',
           isOpening
             ? `Peserta dapat mengerjakan "${item.title || 'Tanpa Judul'}". Timer: ${item.duration_minutes || 60} menit.`
-            : `Akses ditutup. Sisa waktu disimpan.`,
+            : `Akses ditutup. Sesi peserta dihentikan.`,
           2500
         );
 

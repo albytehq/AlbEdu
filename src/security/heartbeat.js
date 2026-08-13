@@ -157,7 +157,7 @@
             .from('assessment_sessions')
             .update(patch)
             .eq('id', this._sessionId)
-            .in('status', ['active', 'paused', 'disconnected'])
+            .in('status', ['active'])  // FIX: only 'active' — don't sync drafts when paused/disconnected
             .select('id, status, blocked_reason');
           if (error) throw error;
           result = { ok: true, rowsUpdated: data?.length || 0, data: data || [] };

@@ -410,36 +410,38 @@
      top: 0;
      z-index: 50;
      display: flex;
-     justify-content: space-between;
-     align-items: center;
-     gap: 16px;
-     padding: 12px 24px;
-     padding-top: max(12px, env(safe-area-inset-top));
-     background: rgba(255, 255, 255, 0.95);
-     backdrop-filter: blur(8px);
-     -webkit-backdrop-filter: blur(8px);
-     border-bottom: 1px solid var(--take-border);
-   }
-
-   .ex-topbar__left {
-     display: flex;
      flex-direction: column;
-     min-width: 0;
-     flex: 1;
+     padding: 0;
+     padding-top: env(safe-area-inset-top);
+     background: rgba(255, 255, 255, 0.95);
+     backdrop-filter: blur(12px);
+     -webkit-backdrop-filter: blur(12px);
+     border-bottom: 1px solid var(--take-border);
+     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
    }
-
+   .ex-topbar__main {
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+     gap: 12px;
+     padding: 10px 20px;
+   }
+   .ex-topbar__center {
+     flex: 1;
+     min-width: 0;
+     text-align: center;
+   }
    .ex-subject {
-     font-size: 12px;
+     font-size: 11px;
      font-weight: 600;
      text-transform: uppercase;
-     letter-spacing: 0.04em;
+     letter-spacing: 0.06em;
      color: var(--take-primary);
      line-height: 1.3;
    }
-
    .ex-title {
      font-family: var(--take-font-serif);
-     font-size: 20px;
+     font-size: 16px;
      font-weight: 700;
      color: var(--take-text);
      margin: 0;
@@ -448,22 +450,20 @@
      overflow: hidden;
      text-overflow: ellipsis;
    }
-
-   .ex-topbar__right {
-     display: flex;
-     align-items: center;
-     gap: 10px;
-     flex-shrink: 0;
-   }
-
    .ex-user {
      display: flex;
      align-items: center;
      gap: 6px;
      color: var(--take-text-muted);
-     font-size: 14px;
+     font-size: 13px;
      white-space: nowrap;
+     flex-shrink: 0;
    }
+   .ex-sections-wrap {
+     padding: 0 20px 8px;
+     border-top: 1px solid var(--take-border);
+   }
+   .ex-sections-wrap:empty { display: none; }
    .ex-user .material-symbols-outlined,
    .ex-user [data-albedu-icon] {
      font-size: 18px;
@@ -502,14 +502,8 @@
 
 
    /* ── 7.2  Section bar (tab strip) ── */
-   .ex-sectionbar {
-     position: sticky;
-     top: var(--take-topbar-h);
-     z-index: 40;
-     border-bottom: 1px solid var(--take-border);
-     padding: 8px 24px;
-     background: var(--take-surface);
-   }
+   /* .ex-sectionbar removed — section tabs now inside .ex-topbar */
+   .ex-sectionbar { display: none; }
 
    .ex-sections {
      display: flex;
@@ -603,9 +597,7 @@
    .ex-question:hover {
      box-shadow: var(--take-shadow-hover);
    }
-   .ex-question.answered {
-     border-left: 4px solid var(--take-success);
-   }
+   /* Green left line removed per user request — only radio indicates selection */
 
    .ex-question__num {
      display: inline-flex;
@@ -663,20 +655,24 @@
      align-items: flex-start;
      gap: 12px;
      padding: 14px 16px;
-     border: 2px solid var(--take-border);
-     border-radius: 10px;
+     border: 1px solid var(--take-border);
+     border-radius: 12px;
      cursor: pointer;
-     transition: border-color 150ms ease, background 150ms ease;
+     transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
      background: var(--take-surface);
      user-select: none;
+     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
    }
-   .ex-option:hover {
-     border-color: var(--take-primary);
-     background: var(--take-surface-2);
+   /* Hover only on non-selected — no re-outline on selected */
+   .ex-option:not(.selected):hover {
+     border-color: var(--take-border-dark, #CBD5E1);
+     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+     transform: translateY(-1px);
    }
+   /* Selected: NO blue tint, NO border-color change — only radio fills */
    .ex-option.selected {
-     border-color: var(--take-primary);
-     background: var(--take-primary-light);
+     border-color: var(--take-border-dark, #CBD5E1);
+     background: var(--take-surface);
    }
    .ex-option:focus-visible {
      outline: 2px solid var(--take-primary);

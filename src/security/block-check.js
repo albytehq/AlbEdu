@@ -119,25 +119,35 @@
         }
 
         // Check for terminal states
+        // CRITICAL FIX: fire callback BEFORE stop() — if callback throws,
+        // stop() would prevent any future polling from detecting the state.
         if (data.status === 'blocked') {
           console.warn(`[block-check] BLOCKED detected: ${data.blocked_reason}`);
           const cb = this._callbacks;
-          this.stop();
           cb?.onBlocked?.(data.blocked_reason || 'Blocked by admin');
+          this.stop();
           return;
         }
         if (data.status === 'submitted') {
           console.info('[block-check] SUBMITTED detected');
           const cb = this._callbacks;
-          this.stop();
           cb?.onSubmitted?.();
+          this.stop();
           return;
         }
         if (data.status === 'expired') {
           console.info('[block-check] EXPIRED detected');
           const cb = this._callbacks;
-          this.stop();
           cb?.onExpired?.();
+          this.stop();
+          return;
+        }
+        // PRODUCTION FIX: 'paused' session = admin closed assessment → fire onAssessmentClosed
+        if (data.status === 'paused') {
+          console.warn('[block-check] PAUSED detected (admin closed assessment)');
+          const cb = this._callbacks;
+          cb?.onAssessmentClosed?.('Asesmen ditutup oleh admin. Sesi Anda telah dihentikan.');
+          this.stop();
           return;
         }
 
