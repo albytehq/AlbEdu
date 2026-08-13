@@ -492,6 +492,10 @@
 
       // Re-bind icons
       window.AlbEdu?.bindIcons?.(qContainer);
+
+      // FIX: Render KaTeX + apply language classes in preview (match take.html)
+      if (window.renderMathIn) window.renderMathIn(qContainer);
+      if (window.applyLangClass) window.applyLangClass(qContainer);
     },
 
     _esc(s) {

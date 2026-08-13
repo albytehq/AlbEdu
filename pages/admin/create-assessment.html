@@ -63,11 +63,23 @@
     <!-- KaTeX -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="window.__katexReady = true; window.dispatchEvent(new Event('katex-ready'))"></script><style>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="window.__katexReady = true; window.dispatchEvent(new Event('katex-ready'))"></script>
+    <!-- Math renderer + language class helpers (KaTeX + RTL/CJK detection) -->
+    <script defer src="../../src/utils/math-renderer.js"></script>
+    <style>
       /* RTL/CJK support */
       .albedu-question-text,.albedu-textarea{unicode-bidi:plaintext;overflow-wrap:break-word;word-break:break-word}
       .lang-ar{font-family:'Amiri','Scheherazade New','Times New Roman',serif;direction:rtl;text-align:right;font-size:1.15em;line-height:2.2;letter-spacing:0}
       .lang-cjk{font-family:'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif;word-break:break-all}
+      /* KaTeX in soal editor + preview */
+      .albedu-soal-textarea .katex,.albedu-input .katex{font-size:1em}
+      .albedu-question-text .katex{font-size:1.05em}
+      .albedu-soal-option-input .katex{font-size:0.95em}
+      /* Arabic in question text + options */
+      .albedu-question-text.lang-ar,.albedu-soal-option-input.lang-ar{direction:rtl;text-align:right;font-family:'Amiri','Scheherazade New',serif;font-size:1.15em;line-height:2.2}
+      /* Preview question text + options */
+      .preview-take-shell .question-text.lang-ar{direction:rtl;text-align:right;font-family:'Amiri','Scheherazade New',serif;font-size:1.15em;line-height:2.2}
+      .preview-take-shell .option-label.lang-ar{direction:rtl;text-align:right;font-family:'Amiri','Scheherazade New',serif}
     </style>
 </head>
 <body>
@@ -465,7 +477,7 @@
 
             <footer class="footer">
                 <p><span>© 2026 AlbEdu. Semua hak dilindungi.</span></p>
-                <p>v0.841.0</p>
+                <p>v0.842.0</p>
             </footer>
         </main>
     </div>

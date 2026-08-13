@@ -148,6 +148,10 @@
         });
       });
 
+      // FIX: Render KaTeX + apply language classes on question list
+      if (window.renderMathIn) window.renderMathIn(this._list);
+      if (window.applyLangClass) window.applyLangClass(this._list);
+
       // Wire add-question buttons
       this._list.querySelectorAll('.albedu-btn-add-question').forEach((btn) => {
         btn.addEventListener('click', (e) => {

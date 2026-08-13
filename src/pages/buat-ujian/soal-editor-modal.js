@@ -81,7 +81,10 @@
       this._renderForm();
       this._overlay.hidden = false;
       requestAnimationFrame(() => this._overlay.classList.add('albedu-modal-visible'));
+      // FIX: Render KaTeX + apply language classes after form is in the DOM
       setTimeout(() => {
+        if (window.renderMathIn) window.renderMathIn(this._body);
+        if (window.applyLangClass) window.applyLangClass(this._body);
         const firstInput = this._body.querySelector('textarea, input, select');
         if (firstInput) firstInput.focus();
       }, 100);
@@ -170,6 +173,12 @@
       // Wire pertanyaan
       document.getElementById('q-pertanyaan').addEventListener('input', (e) => {
         this._draft.pertanyaan = e.target.value;
+        // FIX: Real-time KaTeX render on question text edit (debounced)
+        clearTimeout(this._mathTimer);
+        this._mathTimer = setTimeout(() => {
+          if (window.renderMathIn) window.renderMathIn(this._body);
+          if (window.applyLangClass) window.applyLangClass(this._body);
+        }, 300);
       });
 
       if (isPG) {

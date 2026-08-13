@@ -63,12 +63,20 @@ window.applyLangClass = function(el) {
   const TARGETS_SELECTOR = [
     '.question-text',
     '.option-value',
+    '.option-label',
     '.soal-card-body',
     '.detail-pertanyaan',
     '.catatan-text',
     '.modal-body p',
     '.preview-soal-text',
     '.hj-chip',
+    // FIX: create-assessment selectors (soal editor + question list + preview)
+    '.albedu-question-text',
+    '.albedu-soal-option-input',
+    '.albedu-soal-textarea',
+    '.ex-question-text',
+    '.ex-option-label',
+    '.pp-question-text',
   ].join(', ');
 
   // Unicode ranges for script detection
