@@ -478,9 +478,54 @@
   //   announce every second tick — that would be noise). We use a separate
   //   visually-hidden aria-live="assertive" region that we only update when
   //   a meaningful threshold is crossed (5 min, 1 min, time up).
+  // FIX: Start timer during identity phase — peserta sees timer counting
+  // down even while filling identity form. Timer continues seamlessly
+  // into exam phase (no reset — _startTimer uses same _timerEndMs).
+  function _startIdentityTimer(assessment) {
+    const state = I.state;
+    state._timerEndMs = _computeEndMs(assessment, state);
+
+    const idTimerDisplay = document.getElementById('identity-timer-display');
+    const idTimerEl = document.getElementById('identity-timer');
+
+    if (!idTimerDisplay || !state._timerEndMs) return;
+
+    const tick = () => {
+      const sisa = Math.max(0, Math.floor((state._timerEndMs - Date.now()) / 1000));
+      const m = Math.floor(sisa / 60);
+      const s = sisa % 60;
+      idTimerDisplay.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+
+      // Visual states
+      if (idTimerEl) {
+        idTimerEl.classList.remove('warning', 'critical');
+        if (sisa <= 60) idTimerEl.classList.add('critical');
+        else if (sisa <= 300) idTimerEl.classList.add('warning');
+      }
+
+      // If time expires during identity phase → auto-redirect to stopped page
+      if (sisa <= 0 && state.phase === 'identity') {
+        clearInterval(state._identityTimerInterval);
+        window.notify?.error('Waktu Habis', 'Waktu asesmen telah berakhir sebelum Anda memulai.', 5000);
+        setTimeout(() => {
+          window.location.replace('assessment-stopped.html?reason=' + encodeURIComponent('Waktu habis saat mengisi identitas'));
+        }, 2000);
+      }
+    };
+
+    tick();
+    state._identityTimerInterval = setInterval(tick, 1000);
+  }
+
   function _startTimer(assessment) {
     _stopTimer();
+    // FIX: Clear identity phase timer (it used the same _timerEndMs,
+    // so the exam timer continues seamlessly from where identity left off)
     const state = I.state;
+    if (state._identityTimerInterval) {
+      clearInterval(state._identityTimerInterval);
+      state._identityTimerInterval = null;
+    }
 
     state._timerEndMs = _computeEndMs(assessment, state);
     // F4-03 fix: track which thresholds we've already announced so we don't
@@ -904,6 +949,7 @@
     _updateNavButtons,
     _updateProgress,
     _startTimer,
+    _startIdentityTimer,
     _stopTimer,
     _updateTimerDisplay,
     _updateSubmitLockState,

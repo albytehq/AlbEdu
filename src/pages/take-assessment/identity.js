@@ -19,6 +19,11 @@
     I.dom.identitySubj && (I.dom.identitySubj.textContent = assessment.subject || 'Asesmen');
     I.dom.identityTitle && (I.dom.identityTitle.textContent = assessment.title || 'Asesmen');
 
+    // FIX: Start timer immediately during identity phase — peserta sees
+    // the timer counting down even while filling in their identity.
+    // This creates urgency and prevents "free time" exploitation.
+    _internal._startIdentityTimer(assessment);
+
     // Chips
     const chips = [];
     chips.push(`<span class="id-chip"><span data-albedu-icon="schedule"></span> ${_internal._escAttr(assessment.duration_minutes || 0)} menit</span>`);

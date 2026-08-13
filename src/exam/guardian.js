@@ -165,15 +165,99 @@ const ExamGuardian = (() => {
     const devCombos = [
       key === 'f12',
       key === 'f11',
-      ctrl && e.shiftKey && key === 'i',
-      ctrl && e.shiftKey && key === 'j',
-      ctrl && key === 'u',
+      ctrl && e.shiftKey && key === 'i',  // Chrome DevTools
+      ctrl && e.shiftKey && key === 'j',  // Chrome Console
+      ctrl && e.shiftKey && key === 'c',  // Chrome Inspect Element
+      ctrl && key === 'u',               // View Source
     ];
 
     if (devCombos.some(Boolean)) {
       e.preventDefault();
       _triggerViolation('Shortcut keyboard ini tidak diizinkan saat asesmen.');
     }
+  }
+
+  // --- 8. Window blur detection -> VIOLATION (debounced) --------------
+  // Catches Alt+Tab, clicking another app, etc. that visibilitychange
+  // might miss (especially on multi-monitor setups where the tab stays
+  // "visible" but the user is clearly not looking at it).
+  let _blurTimer = null;
+  const BLUR_DEBOUNCE_MS = 1000; // 1s — brief focus losses (autocomplete) don't trigger
+
+  function _handleWindowBlur() {
+    if (!_isActive) return;
+    _blurTimer = setTimeout(() => {
+      _triggerViolation('Anda meninggalkan jendela asesmen!');
+    }, BLUR_DEBOUNCE_MS);
+  }
+
+  function _handleWindowFocus() {
+    if (_blurTimer) {
+      clearTimeout(_blurTimer);
+      _blurTimer = null;
+    }
+  }
+
+  // --- 9. DevTools size detection (passive) ---------------------------
+  // Detects when DevTools is opened by checking if the window's outer
+  // dimensions are significantly smaller than the inner dimensions
+  // (DevTools takes up space). Also detects very small windows
+  // (potential screen sharing or split-screen cheating).
+  let _devToolsCheckInterval = null;
+  const DEVTOOLS_THRESHOLD = 160; // px difference threshold
+  let _lastInnerWidth = window.innerWidth;
+  let _lastInnerHeight = window.innerHeight;
+
+  function _checkDevTools() {
+    if (!_isActive) return;
+    const wDiff = window.outerWidth - window.innerWidth;
+    const hDiff = window.outerHeight - window.innerHeight;
+
+    // DevTools open (side panel or bottom panel)
+    if (wDiff > DEVTOOLS_THRESHOLD || hDiff > DEVTOOLS_THRESHOLD) {
+      _triggerViolation('Developer Tools terdeteksi! Tutup segera.');
+      return;
+    }
+
+    // Window resized very small (potential cheating — screen share, split)
+    if (window.innerWidth < 400 || window.innerHeight < 300) {
+      _triggerViolation('Ukuran jendela terlalu kecil. Perbesar jendela browser.');
+      return;
+    }
+
+    // Detect orientation change / resize that might indicate screen splitting
+    const resizeDelta = Math.abs(window.innerWidth - _lastInnerWidth) +
+                        Math.abs(window.innerHeight - _lastInnerHeight);
+    if (resizeDelta > 200) {
+      // Large resize — could be splitting screen to cheat
+      // Don't trigger violation (too many false positives), just log
+      console.warn('[ExamGuardian] Large window resize detected:', resizeDelta + 'px');
+    }
+    _lastInnerWidth = window.innerWidth;
+    _lastInnerHeight = window.innerHeight;
+  }
+
+  // --- 10. PrintScreen block (silent) --------------------------------
+  function _handleKeyUp(e) {
+    // PrintScreen key
+    if (e.key === 'PrintScreen') {
+      // Clear clipboard to prevent screenshot paste
+      try {
+        navigator.clipboard?.writeText?.('');
+      } catch (_) {}
+      _triggerViolation('PrintScreen tidak diizinkan saat asesmen!');
+    }
+  }
+
+  // --- 11. Drag and drop block ---------------------------------------
+  function _blockDragStart(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function _blockDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
   }
 
   // --- Pindah tab / minimize -> violation (DEBOUNCED) ----------------------
@@ -238,7 +322,16 @@ const ExamGuardian = (() => {
 
     // Violation triggers
     document.addEventListener('keydown',          _blockKeyboard,          { capture: true });
+    document.addEventListener('keyup',            _handleKeyUp,            { capture: true });
     document.addEventListener('visibilitychange', _handleVisibilityChange);
+    window.addEventListener('blur',               _handleWindowBlur);
+    window.addEventListener('focus',              _handleWindowFocus);
+    document.addEventListener('dragstart',        _blockDragStart,         { capture: true });
+    document.addEventListener('drop',             _blockDrop,              { capture: true });
+    document.addEventListener('dragover',         _blockDrop,              { capture: true });
+
+    // DevTools size detection — check every 2s
+    _devToolsCheckInterval = setInterval(_checkDevTools, 2000);
   }
 
   // --- deactivate -----------------------------------------------------------
@@ -266,7 +359,22 @@ const ExamGuardian = (() => {
     _restoreClipboardAPI();
 
     document.removeEventListener('keydown',          _blockKeyboard,          { capture: true });
+    document.removeEventListener('keyup',            _handleKeyUp,            { capture: true });
     document.removeEventListener('visibilitychange', _handleVisibilityChange);
+    window.removeEventListener('blur',               _handleWindowBlur);
+    window.removeEventListener('focus',              _handleWindowFocus);
+    document.removeEventListener('dragstart',        _blockDragStart,         { capture: true });
+    document.removeEventListener('drop',             _blockDrop,              { capture: true });
+    document.removeEventListener('dragover',         _blockDrop,              { capture: true });
+
+    if (_devToolsCheckInterval) {
+      clearInterval(_devToolsCheckInterval);
+      _devToolsCheckInterval = null;
+    }
+    if (_blurTimer) {
+      clearTimeout(_blurTimer);
+      _blurTimer = null;
+    }
   }
 
   // --- Public API -----------------------------------------------------------
