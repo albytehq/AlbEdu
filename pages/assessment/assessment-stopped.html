@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta name="albedu-worker-base" content="https://edu.albyte-inc.workers.dev">
+  <link rel="preload" href="../../src/shared/icons/icons.js" as="script">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://esm.sh https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://edu.albyte-inc.workers.dev https://esm.sh; worker-src 'self'; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; frame-src https://challenges.cloudflare.com; form-action 'self'">
+  <title>Asesmen Dihentikan — AlbEdu</title>
+  <meta name="description" content="Asesmen telah dihentikan oleh admin. Anda akan diarahkan kembali.">
+  <meta name="theme-color" content="#f59e0b">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/x-icon" href="../../public/images/favicon/favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="../../public/images/favicon/favicon.svg">
+  <link rel="icon" type="image/png" sizes="96x96" href="../../public/images/favicon/favicon-96x96.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../public/images/favicon/apple-touch-icon.png">
+  <link rel="manifest" href="../../public/manifest.json">
+
+  <!-- Design System -->
+  <script src="../../src/shared/head/critical-css.js"></script>
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/albedu-v1.css">
+  <link rel="stylesheet" href="../../styles/albedu-components.css">
+  <link rel="stylesheet" href="../../styles/loading.css">
+  <link rel="stylesheet" href="../../styles/pages/peserta-pages.css">
+  <link rel="stylesheet" href="../../styles/peserta-floating-profile.css">
+
+  <!-- Deferred shared modules -->
+  <script defer src="../../src/shared/head/fonts.js"></script>
+  <script defer src="../../src/shared/icons/icons.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script defer src="../../src/platform/supabase-client.js"></script>
+  <script defer src="../../src/shared/resilience.js"></script>
+  <script defer src="../../src/platform/repository.js"></script>
+  <script defer src="../../src/security/sanitize.js"></script>
+  <script defer src="../../src/shared/boot.js"></script>
+  <script defer src="../../src/shared/error-boundary.js"></script>
+
+  <!-- Auth baseline -->
+  <script src="../../src/auth/security.js" defer></script>
+  <script src="../../src/utils/ui.js" defer></script>
+  <script src="../../src/auth/errors.js" defer></script>
+  <script src="../../src/auth/user-helpers.js" defer></script>
+  <script src="../../src/auth/main.js" defer></script>
+  <script src="../../src/auth/byteward.js" defer></script>
+
+  <style>
+    /* ═══ Assessment Stopped Page — Production Grade ═══ */
+    body.stopped-page {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      padding-top: max(24px, env(safe-area-inset-top));
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+      background:
+        radial-gradient(ellipse 70% 50% at 50% 0%, rgba(245, 158, 11, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 100% 100%, rgba(239, 68, 68, 0.05) 0%, transparent 55%),
+        var(--color-bg, #F8FAFC);
+      font-family: var(--font-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+    }
+
+    .stopped-card {
+      max-width: 480px;
+      width: 100%;
+      background: var(--color-surface, #FFFFFF);
+      border: 1px solid var(--color-border, #E2E8F0);
+      border-radius: 20px;
+      padding: 40px 32px 32px;
+      text-align: center;
+      box-shadow:
+        0 12px 28px rgba(15, 23, 42, 0.10),
+        0 4px 8px rgba(15, 23, 42, 0.04);
+      position: relative;
+      overflow: hidden;
+      animation: stopped-card-enter 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes stopped-card-enter {
+      from { opacity: 0; transform: translateY(16px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Top accent stripe */
+    .stopped-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #F59E0B 0%, #EF4444 100%);
+    }
+
+    /* Icon */
+    .stopped-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+      border: 2px solid rgba(245, 158, 11, 0.2);
+      animation: stopped-icon-pulse 2s ease-in-out infinite;
+    }
+    @keyframes stopped-icon-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.2); }
+      50%      { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+    }
+    .stopped-icon svg,
+    .stopped-icon [data-albedu-icon] {
+      width: 36px;
+      height: 36px;
+      color: #D97706;
+    }
+
+    /* Title + subtitle */
+    .stopped-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--color-text, #0F172A);
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .stopped-subtitle {
+      font-size: 14px;
+      color: var(--color-text-muted, #64748B);
+      margin: 0 0 24px;
+      line-height: 1.55;
+    }
+
+    /* Reason box */
+    .stopped-reason {
+      display: none;
+      padding: 12px 16px;
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 12px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #92400E;
+      line-height: 1.5;
+    }
+    .stopped-reason.show { display: block; }
+    .stopped-reason strong { font-weight: 700; }
+
+    /* Countdown */
+    .stopped-countdown {
+      margin-bottom: 24px;
+    }
+    .stopped-countdown-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted, #64748B);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .stopped-countdown-ring {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto;
+    }
+    .stopped-countdown-ring svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+    .stopped-countdown-ring circle {
+      fill: none;
+      stroke-width: 4;
+      stroke-linecap: round;
+    }
+    .stopped-countdown-ring .ring-bg {
+      stroke: var(--color-surface-2, #F1F5F9);
+    }
+    .stopped-countdown-ring .ring-fg {
+      stroke: #F59E0B;
+      stroke-dasharray: 226.19;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 1s linear;
+    }
+    .stopped-countdown-number {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--color-text, #0F172A);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+
+    /* Actions */
+    .stopped-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .stopped-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 46px;
+      padding: 0 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      letter-spacing: -0.005em;
+    }
+    .stopped-btn svg,
+    .stopped-btn [data-albedu-icon] {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+    .stopped-btn-primary {
+      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+      color: #fff;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    .stopped-btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
+    }
+    .stopped-btn-secondary {
+      background: var(--color-surface, #FFFFFF);
+      color: var(--color-text-2, #1E293B);
+      border: 1px solid var(--color-border, #E2E8F0);
+    }
+    .stopped-btn-secondary:hover {
+      border-color: var(--color-border-2, #CBD5E1);
+      background: var(--color-surface-2, #F1F5F9);
+    }
+
+    /* Hint */
+    .stopped-hint {
+      font-size: 12px;
+      color: var(--color-text-faint, #94A3B8);
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+
+    /* Progress bar (alternative to ring) */
+    .stopped-progress-bar {
+      width: 100%;
+      height: 4px;
+      background: var(--color-surface-2, #F1F5F9);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 16px;
+    }
+    .stopped-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #F59E0B 0%, #EF4444 100%);
+      border-radius: 999px;
+      width: 100%;
+      transition: width 1s linear;
+    }
+
+    /* Dark mode */
+    [data-theme="dark"] .stopped-card {
+      background: rgba(15, 23, 42, 0.95);
+      border-color: var(--slate-800, #1E293B);
+    }
+    [data-theme="dark"] .stopped-icon {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+    [data-theme="dark"] .stopped-reason {
+      background: rgba(245, 158, 11, 0.12);
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .stopped-card,
+      .stopped-icon,
+      .stopped-countdown-ring .ring-fg {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+
+    /* Mobile */
+    @media (max-width: 480px) {
+      .stopped-card {
+        padding: 32px 20px 24px;
+        border-radius: 16px;
+      }
+      .stopped-title { font-size: 19px; }
+      .stopped-subtitle { font-size: 13px; }
+      .stopped-countdown-ring { width: 64px; height: 64px; }
+      .stopped-countdown-number { font-size: 22px; }
+    }
+  </style>
+</head>
+<body class="stopped-page">
+  <a class="albedu-skip-link" href="#main-content">Lewati ke konten</a>
+
+  <main id="main-content" class="stopped-card" role="main">
+    <div class="stopped-icon" aria-hidden="true">
+      <span data-albedu-icon="pause_circle"></span>
+    </div>
+    <h1 class="stopped-title">Asesmen Dihentikan</h1>
+    <p class="stopped-subtitle">
+      Admin telah menghentikan asesmen ini. Jawaban Anda yang sudah tersimpan akan tetap aman.
+      Anda akan diarahkan kembali ke halaman masuk asesmen.
+    </p>
+
+    <div id="reason-box" class="stopped-reason">
+      <strong>Alasan:</strong> <span id="reason-text"></span>
+    </div>
+
+    <div class="stopped-countdown">
+      <div class="stopped-countdown-label">Mengalihkan dalam</div>
+      <div class="stopped-countdown-ring">
+        <svg viewBox="0 0 80 80">
+          <circle class="ring-bg" cx="40" cy="40" r="36"></circle>
+          <circle class="ring-fg" id="ring-fg" cx="40" cy="40" r="36"></circle>
+        </svg>
+        <div class="stopped-countdown-number" id="countdown-number">30</div>
+      </div>
+      <div class="stopped-progress-bar">
+        <div class="stopped-progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="stopped-actions">
+      <button class="stopped-btn stopped-btn-primary" id="redirect-now-btn" type="button">
+        <span data-albedu-icon="login"></span>
+        <span>Masuk Kembali Sekarang</span>
+      </button>
+      <a href="#" class="stopped-btn stopped-btn-secondary" id="home-btn">
+        <span data-albedu-icon="home"></span>
+        <span>Kembali ke Beranda</span>
+      </a>
+    </div>
+
+    <p class="stopped-hint">
+      Jika asesmen dibuka kembali oleh admin, Anda dapat melanjutkan dari tempat Anda berhenti.
+    </p>
+  </main>
+
+  <!-- Profile card (peserta) -->
+  <script src="../../src/profile/peserta-profile-fab.js" defer></script>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var COUNTDOWN_SECONDS = 30;
+      var remaining = COUNTDOWN_SECONDS;
+      var ringFg = document.getElementById('ring-fg');
+      var countdownNum = document.getElementById('countdown-number');
+      var progressFill = document.getElementById('progress-fill');
+      var redirectBtn = document.getElementById('redirect-now-btn');
+      var homeBtn = document.getElementById('home-btn');
+
+      // Ring circumference: 2 * PI * r = 2 * 3.14159 * 36 ≈ 226.19
+      var CIRCUMFERENCE = 226.19;
+      ringFg.style.strokeDasharray = CIRCUMFERENCE;
+
+      // Parse reason from URL
+      var params = new URLSearchParams(window.location.search);
+      var reason = params.get('reason');
+      if (reason) {
+        var reasonBox = document.getElementById('reason-box');
+        reasonBox.classList.add('show');
+        document.getElementById('reason-text').textContent = decodeURIComponent(reason);
+      }
+
+      // Parse access_code from URL (if provided for redirect back)
+      var accessCode = params.get('code') || '';
+      var assessmentTitle = params.get('title') || '';
+
+      // Detect base path
+      var basePath = '/';
+      try {
+        var p = window.location.pathname;
+        var idx = p.indexOf('/pages/');
+        if (idx > 0) basePath = p.substring(0, idx) + '/';
+      } catch (_) {}
+
+      // Build redirect URL — back to assessment entry with access_code pre-filled
+      function getRedirectUrl() {
+        var url = basePath + 'pages/assessment/assessment-entry.html';
+        var qParams = [];
+        if (accessCode) qParams.push('code=' + encodeURIComponent(accessCode));
+        if (assessmentTitle) qParams.push('title=' + encodeURIComponent(assessmentTitle));
+        if (qParams.length > 0) url += '?' + qParams.join('&');
+        return url;
+      }
+
+      // Countdown logic
+      function updateCountdown() {
+        countdownNum.textContent = remaining;
+        var offset = CIRCUMFERENCE * (1 - remaining / COUNTDOWN_SECONDS);
+        ringFg.style.strokeDashoffset = offset;
+        progressFill.style.width = (remaining / COUNTDOWN_SECONDS * 100) + '%';
+
+        if (remaining <= 0) {
+          clearInterval(timer);
+          redirectToEntry();
+        }
+        remaining--;
+      }
+
+      function redirectToEntry() {
+        window.location.replace(getRedirectUrl());
+      }
+
+      // Start countdown
+      updateCountdown();
+      var timer = setInterval(updateCountdown, 1000);
+
+      // Manual redirect button
+      redirectBtn.addEventListener('click', function () {
+        clearInterval(timer);
+        redirectToEntry();
+      });
+
+      // Home button
+      homeBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        clearInterval(timer);
+        window.location.href = basePath;
+      });
+
+      // Keyboard: Enter to redirect now
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          clearInterval(timer);
+          redirectToEntry();
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('../../public/service-worker.js').catch(function () {});
+      });
+    }
+  </script>
+</body>
+</html>

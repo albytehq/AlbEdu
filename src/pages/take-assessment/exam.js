@@ -762,8 +762,31 @@
     I.state._redirected = true;
     I.state.phase = 'blocked';
     _teardownExam();
-    const reasonEnc = encodeURIComponent(reason || 'Diblokir oleh admin');
-    window.location.replace(`blocked.html?reason=${reasonEnc}`);
+
+    // PRODUCTION FIX: If the reason indicates assessment closure (not a
+    // peserta violation), redirect to the new assessment-stopped.html
+    // page which has a 30s countdown + auto-redirect back to entry.
+    var isAssessmentClosed = reason && (
+      reason.toLowerCase().includes('ditutup oleh admin') ||
+      reason.toLowerCase().includes('dihentikan') ||
+      reason.toLowerCase().includes('closed by admin')
+    );
+
+    if (isAssessmentClosed) {
+      var reasonEnc = encodeURIComponent(reason);
+      // Pass access_code + title so the stopped page can redirect back
+      // to the entry page with the code pre-filled.
+      var code = I.state.assessment?.access_code || '';
+      var title = I.state.assessment?.title || '';
+      var params = 'reason=' + reasonEnc;
+      if (code) params += '&code=' + encodeURIComponent(code);
+      if (title) params += '&title=' + encodeURIComponent(title);
+      window.location.replace('assessment-stopped.html?' + params);
+    } else {
+      // Violation-based block → go to blocked.html (permanent, no auto-redirect)
+      var reasonEnc2 = encodeURIComponent(reason || 'Diblokir oleh admin');
+      window.location.replace('blocked.html?reason=' + reasonEnc2);
+    }
   }
 
   function _handleSubmitted() {
