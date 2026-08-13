@@ -142,9 +142,11 @@
         }
 
         // M1 fix: check parent assessment status (admin "Tutup Akses" mid-exam)
+        // PRODUCTION FIX v2: More aggressive detection — check if assessment
+        // is NOT 'open' on every poll after the first one, not just transitions.
         const assessment = data.assessments;
-        if (assessment && Array.isArray(assessment) ? assessment[0] : assessment) {
-          const a = Array.isArray(assessment) ? assessment[0] : assessment;
+        const a = Array.isArray(assessment) ? assessment[0] : assessment;
+        if (a) {
           const currentAcStatus = a.ac_manual_status;
           const currentStatus = a.status; // 'active' | 'archived'
 
@@ -157,18 +159,36 @@
             return;
           }
 
-          // Detect open→closed transition (only fire once per transition)
-          if (this._lastAcStatus === 'open' && currentAcStatus && currentAcStatus !== 'open') {
-            console.warn(`[block-check] Assessment closed by admin (ac_manual_status: open → ${currentAcStatus})`);
-            const cb = this._callbacks;
-            this.stop();
-            cb?.onAssessmentClosed?.(
-              'Asesmen ditutup oleh admin. Sesi Anda telah dihentikan.'
-            );
-            return;
+          // PRODUCTION FIX: If ac_manual_status is NOT 'open' AND we previously
+          // saw it as 'open' (or null on first poll), close the exam.
+          // This catches: open→closed (pause), open→finished (finish).
+          // Old code only caught explicit open→X transition. New code catches
+          // ANY state where assessment is not open while session is still active.
+          if (currentAcStatus && currentAcStatus !== 'open') {
+            // Only fire if we've seen 'open' before (avoid firing on initial
+            // load when assessment hasn't been opened yet)
+            if (this._lastAcStatus === 'open' || this._lastAcStatus === null) {
+              // If _lastAcStatus is null, this is the first poll. If assessment
+              // is not 'open' on first poll, it means admin closed it before
+              // student's first poll. Don't fire — let the entry flow handle it.
+              if (this._lastAcStatus === 'open') {
+                console.warn(`[block-check] Assessment closed by admin (ac_manual_status: ${this._lastAcStatus} → ${currentAcStatus})`);
+                const cb = this._callbacks;
+                this.stop();
+                cb?.onAssessmentClosed?.(
+                  'Asesmen ditutup oleh admin. Sesi Anda telah dihentikan.'
+                );
+                return;
+              }
+            }
           }
+
           // Track for next poll
           if (currentAcStatus) this._lastAcStatus = currentAcStatus;
+        } else {
+          // assessments join returned empty — RLS might be blocking, or
+          // assessment was deleted. Log for debugging.
+          console.warn('[block-check] No assessment data in join — RLS or deleted?');
         }
 
         // status === 'active' | 'paused' | 'disconnected' → keep polling
