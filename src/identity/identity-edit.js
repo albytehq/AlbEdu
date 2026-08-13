@@ -160,7 +160,15 @@
         }
 
         // Ensure _display_name is always editable (E4)
-        const hasName = fields.some(f => f.key === '_display_name' || f.key === 'nama' || f.key === 'field_nama');
+        // FIX: Check by LABEL (case-insensitive) too, not just key names.
+        // Admin might configure field with custom id like 'nama_lengkap'
+        // but label 'Nama' — old check missed it → duplicate field added.
+        const hasName = fields.some(f =>
+          f.key === '_display_name' ||
+          f.key === 'nama' ||
+          f.key === 'field_nama' ||
+          (f.label && /^nama\b/i.test(f.label.trim()))
+        );
         if (!hasName) {
           fields.unshift(this._defaultNameField(identity));
         }
