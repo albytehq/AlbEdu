@@ -18,7 +18,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { handleOptions, withCors } from '../_shared/cors.ts';
 import { HTTPError, handleError, successResponse } from '../_shared/error.ts';
-import { requirePeserta } from '../_shared/auth.ts';
+import { requirePeserta, requireAnyRole } from '../_shared/auth.ts';
 import { SupabaseDB } from '../_shared/db.ts';
 import { logAudit, getClientIP, getUserAgent } from '../_shared/audit.ts';
 import { checkSubmitRate, checkSubmitRateDB } from '../_shared/rate-limit.ts';
@@ -49,7 +49,10 @@ serve(async (req: Request) => {
 });
 
 async function logic(req: Request, env: Env): Promise<Response> {
-  const user = await requirePeserta(req, env);
+  // PRODUCTION FIX: Use requireAnyRole instead of requirePeserta.
+  // This allows admins to test assessments (submit as if they were peserta).
+  // Session ownership is verified later by checking session.user_id === user.id.
+  const user = await requireAnyRole(req, env);
 
   // Parse + validate body.
   let body: SubmitBody;
