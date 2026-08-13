@@ -17,12 +17,13 @@ import { getClientIP } from '../_shared/audit.ts';
 import { SupabaseDB } from '../_shared/db.ts';
 import type { Env } from '../_shared/types.ts';
 
-const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 // Exponential backoff: after N attempts, the next attempt must wait this many
-// seconds. Curve: 0 / 5 / 30 / 300 / 3600.
-const BACKOFF_SECONDS = [0, 5, 30, 300, 3600];
+// seconds. FIX: Reduced curve — old [0, 5, 30, 300, 3600] was too aggressive.
+// Legit users who typo 3x got 300s (5 min) wait. New curve is gentler.
+const BACKOFF_SECONDS = [0, 0, 5, 10, 30, 60, 120, 300, 600, 3600];
 
 interface AttemptBody {
   device_id?: string;

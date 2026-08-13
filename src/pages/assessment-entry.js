@@ -16,6 +16,11 @@
     _turnstileWidget: null,
     _turnstileToken: null,
     _isValidating: false,
+    _submitLocked: false,       // FIX: hard lock after error — prevents re-submit until user edits
+    _cooldownActive: false,     // FIX: track cooldown state
+    _cooldownTimer: null,       // FIX: cooldown countdown timer reference
+    _attemptCount: 0,           // FIX: client-side attempt counter
+    _MAX_CLIENT_ATTEMPTS: 10,   // FIX: client-side limit (server is 5/hour)
     _deviceId: null,
     _formOpenTime: 0,
     _honeypotFilled: false,
@@ -100,6 +105,11 @@
       this._inputs.forEach((input, idx) => {
         // Input — auto-advance + mobile paste detection
         input.addEventListener('input', (e) => {
+          // FIX: Clear submit lock when user edits — they're trying again manually
+          if (this._submitLocked && !this._cooldownActive) {
+            this._submitLocked = false;
+          }
+
           // If the input suddenly has more than 1 char, it might be a mobile paste
           // that bypassed the paste event (happens on some Android keyboards)
           if (e.target.value.length > 1) {
@@ -255,15 +265,14 @@
     },
 
     _autoSubmit() {
-      // Small debounce so the last digit's UI state settles and so rapid
-      // fill/backspace/re-fill sequences don't queue up multiple submits.
       clearTimeout(this._autoSubmitTimer);
       this._autoSubmitTimer = setTimeout(() => {
+        // FIX: Check submitLocked + cooldownActive before auto-submitting
         const stillFilled = this._inputs.every((i) => i.value);
-        if (stillFilled && !this._isValidating) {
+        if (stillFilled && !this._isValidating && !this._submitLocked && !this._cooldownActive) {
           this._submit();
         }
-      }, 150);
+      }, 200); // FIX: increased from 150ms to 200ms for more debounce
     },
 
     _getToken() {
@@ -273,6 +282,7 @@
     _setLoading(loading) {
       this._isValidating = loading;
       this._submitBtn.disabled = loading;
+      if (!loading) this._submitLocked = false; // FIX: clear lock on successful loading=false
       const submittingText = 'Memvalidasi...';
       const submitText = 'Masuk Asesmen';
       this._submitText.textContent = loading ? submittingText : submitText;
@@ -280,9 +290,11 @@
     },
 
     _showError(message) {
-      // Cancel any pending auto-submit so it can't fire again right after
-      // the inputs are cleared below.
+      // FIX: Cancel ALL pending timers
       clearTimeout(this._autoSubmitTimer);
+
+      // FIX: Hard-lock submit so auto-submit can't re-trigger while inputs are being cleared
+      this._submitLocked = true;
 
       // Shake animation on inputs
       this._inputs.forEach((i) => {
@@ -296,28 +308,64 @@
       this._inputs.forEach((i) => {
         i.value = '';
         i.classList.remove('filled');
+        i.disabled = false; // FIX: re-enable inputs
       });
-      this._inputs[0].focus();
+
+      // FIX: Unlock after 500ms (let shake animation finish + prevent instant re-submit)
+      setTimeout(() => {
+        this._submitLocked = false;
+        this._isValidating = false;
+        this._submitBtn.disabled = false;
+        this._submitText.textContent = 'Masuk Asesmen';
+        this._inputs[0]?.focus();
+      }, 500);
+
       this._updateSubmitState();
     },
 
     _showCooldown(seconds) {
+      // FIX: Prevent stacking — clear any existing cooldown timer
+      if (this._cooldownTimer) clearTimeout(this._cooldownTimer);
+      this._cooldownActive = true;
+      this._submitLocked = true;
+      this._isValidating = false;
+      this._submitBtn.disabled = true;
+      this._inputs.forEach((i) => (i.disabled = true));
       this._cooldownBanner.classList.add('show');
+
       const update = () => {
         if (seconds <= 0) {
           this._cooldownBanner.classList.remove('show');
+          this._cooldownActive = false;
+          this._submitLocked = false;
+          this._submitBtn.disabled = false;
+          this._inputs.forEach((i) => (i.disabled = false));
+          this._submitText.textContent = 'Masuk Asesmen';
+          this._inputs[0]?.focus();
+          this._cooldownTimer = null;
           return;
         }
-        const tmpl = 'Terlalu banyak percobaan. Coba lagi dalam {{seconds}} detik.';
-        this._cooldownText.textContent = tmpl.replace('{{seconds}}', seconds);
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        const timeStr = m > 0 ? m + 'm ' + s + 'd' : s + 'd';
+        const tmpl = 'Terlalu banyak percobaan. Coba lagi dalam {{seconds}}.';
+        this._cooldownText.textContent = tmpl.replace('{{seconds}}', timeStr);
         seconds--;
-        setTimeout(update, 1000);
+        this._cooldownTimer = setTimeout(update, 1000);
       };
       update();
     },
 
     async _submit() {
-      if (this._isValidating) return;
+      // FIX: Hard lock — if submitLocked, don't allow re-submit until user edits a digit
+      if (this._isValidating || this._submitLocked) return;
+
+      // FIX: Client-side attempt counter
+      if (this._attemptCount >= this._MAX_CLIENT_ATTEMPTS) {
+        this._showCooldown(300); // 5 min cooldown
+        return;
+      }
+      this._attemptCount++;
 
       let token = this._getToken();
       if (token.length !== 6) {
