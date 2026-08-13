@@ -7,7 +7,7 @@
   <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://esm.sh https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://edu.albyte-inc.workers.dev https://esm.sh; worker-src 'self'; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; frame-src https://challenges.cloudflare.com; form-action 'self'">
-    <title>Hasil & Analitik — AlbEdu</title>
+    <title>Hasil — AlbEdu</title>
     <meta name="description" content="AlbEdu - Hasil asesmen dan analitik statistik">
     <meta name="theme-color" content="#2563eb">
 
@@ -106,7 +106,7 @@
                     <li class="menu-item sidebar-item active" data-tab="results">
                         <a href="results-analytics.html" class="menu-item-content" aria-current="page">
                             <span class="sidebar-icon" data-albedu-icon="bar_chart"><svg class="albedu-icon" aria-hidden="true"><use href="#i-bar_chart"/></svg></span>
-                            <span class="sidebar-text">Hasil & Analitik</span>
+                            <span class="sidebar-text">Hasil</span>
                         </a>
                     </li>
                     <li class="menu-item sidebar-item" data-tab="daftar-nama">
@@ -141,7 +141,7 @@
                     <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka menu">
                         <span data-albedu-icon="menu"><svg class="albedu-icon" aria-hidden="true"><use href="#i-menu"/></svg></span>
                     </button>
-                    <h1 id="page-title">Hasil & Analitik</h1>
+                    <h1 id="page-title">Hasil</h1>
                 </div>
                 <div class="header-right">
                     <!-- Language Switcher -->                    <button class="notification-btn" id="notification-btn" type="button" aria-label="Notifikasi">
@@ -153,21 +153,17 @@
 
             <!-- Content Area -->
             <div class="content-area">
-                <!-- Controls: Assessment picker + Export buttons -->
+                <!-- Assessment Picker + Summary Stats -->
                 <div class="ra-controls">
-                    <div>
+                    <div class="ra-picker">
                         <label for="ra-assessment-select">Pilih Asesmen</label>
                         <div class="albedu-select-wrap">
-                            <select id="ra-assessment-select" class="albedu-select ra-select" aria-label="Pilih asesmen untuk analitik">
+                            <select id="ra-assessment-select" class="albedu-select ra-select" aria-label="Pilih asesmen">
                                 <option value="">— Pilih asesmen —</option>
                             </select>
                         </div>
                     </div>
-                    <div class="ra-export-actions" role="group" aria-label="Export data">
-                        <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-ra-export-pdf" type="button" disabled>
-                            <span data-albedu-icon="picture_as_pdf"></span>
-                            <span>PDF</span>
-                        </button>
+                    <div class="ra-export-actions" role="group" aria-label="Export">
                         <button class="albedu-btn albedu-btn-secondary albedu-btn-sm" id="btn-ra-export-excel" type="button" disabled>
                             <span data-albedu-icon="table_view"></span>
                             <span>Excel</span>
@@ -179,103 +175,47 @@
                     </div>
                 </div>
 
-                <!-- ═══ Stats Cards ═══ -->
-                <div class="ra-stats-grid" id="ra-stats" hidden aria-live="polite">
-                    <div class="ra-stat-card">
-                        <span class="ra-stat-label">Mean</span>
-                        <span class="ra-stat-value" id="ra-stat-mean">—</span>
-                        <span class="ra-stat-sub">Rata-rata</span>
+                <!-- Summary Bar (shows when assessment selected) -->
+                <div class="ra-summary-bar" id="ra-summary" hidden>
+                    <div class="ra-summary-stat">
+                        <span class="ra-summary-value" id="ra-summary-count">0</span>
+                        <span class="ra-summary-label">Peserta</span>
                     </div>
-                    <div class="ra-stat-card">
-                        <span class="ra-stat-label">Median</span>
-                        <span class="ra-stat-value" id="ra-stat-median">—</span>
-                        <span class="ra-stat-sub">Nilai tengah</span>
+                    <div class="ra-summary-stat">
+                        <span class="ra-summary-value" id="ra-summary-mean">—</span>
+                        <span class="ra-summary-label">Rata-rata</span>
                     </div>
-                    <div class="ra-stat-card">
-                        <span class="ra-stat-label">Min</span>
-                        <span class="ra-stat-value" id="ra-stat-min">—</span>
-                        <span class="ra-stat-sub">Terendah</span>
+                    <div class="ra-summary-stat">
+                        <span class="ra-summary-value" id="ra-summary-highest">—</span>
+                        <span class="ra-summary-label">Tertinggi</span>
                     </div>
-                    <div class="ra-stat-card">
-                        <span class="ra-stat-label">Max</span>
-                        <span class="ra-stat-value" id="ra-stat-max">—</span>
-                        <span class="ra-stat-sub">Tertinggi</span>
-                    </div>
-                    <div class="ra-stat-card">
-                        <span class="ra-stat-label">Std Dev</span>
-                        <span class="ra-stat-value" id="ra-stat-std">—</span>
-                        <span class="ra-stat-sub">Standar deviasi</span>
-                    </div>
-                    <div class="ra-stat-card">
-                        <span class="ra-stat-label">Submissions</span>
-                        <span class="ra-stat-value" id="ra-stat-count">0</span>
-                        <span class="ra-stat-sub">Total peserta</span>
+                    <div class="ra-summary-stat">
+                        <span class="ra-summary-value" id="ra-summary-lowest">—</span>
+                        <span class="ra-summary-label">Terendah</span>
                     </div>
                 </div>
 
-                <!-- ═══ Score Distribution Histogram ═══ -->
-                <section class="ra-section" id="ra-histogram-section" hidden aria-label="Distribusi nilai">
-                    <h2 class="ra-section-title">Distribusi Nilai</h2>
-                    <p class="ra-section-desc">Histogram nilai peserta dalam rentang 0–100</p>
-                    <div class="ra-histogram" id="ra-histogram" role="img" aria-label="Histogram distribusi nilai"></div>
-                    <div class="ra-histo-labels" id="ra-histo-labels">
-                        <span>0</span><span>10</span><span>20</span><span>30</span><span>40</span>
-                        <span>50</span><span>60</span><span>70</span><span>80</span><span>90</span><span>100</span>
-                    </div>
-                </section>
-
-                <!-- ═══ Item Difficulty Table ═══ -->
-                <section class="ra-section" id="ra-item-section" hidden aria-label="Tingkat kesulitan soal">
-                    <h2 class="ra-section-title">Tingkat Kesulitan Soal</h2>
-                    <p class="ra-section-desc">Persentase jawaban benar per soal + distribusi pilihan</p>
-                    <div class="ra-table-wrap">
-                        <table class="ra-table">
-                            <thead>
-                                <tr>
-                                    <th scope="col">No</th>
-                                    <th scope="col">Soal</th>
-                                    <th scope="col">% Benar</th>
-                                    <th scope="col">Distraktor</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ra-item-tbody"></tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <!-- ═══ Per-class Breakdown Table ═══ -->
-                <section class="ra-section" id="ra-class-section" hidden aria-label="Rincian per kelas">
-                    <h2 class="ra-section-title">Rincian per Kelas</h2>
-                    <p class="ra-section-desc">Tersedia jika mode identitas = Daftar Nama</p>
-                    <div class="ra-table-wrap">
-                        <table class="ra-table">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Kelas</th>
-                                    <th scope="col">Peserta</th>
-                                    <th scope="col">Mean</th>
-                                    <th scope="col">Median</th>
-                                    <th scope="col">Min</th>
-                                    <th scope="col">Max</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ra-class-tbody"></tbody>
-                        </table>
-                    </div>
-                </section>
+                <!-- Submission List (cards) -->
+                <div class="ra-submissions" id="ra-submissions" hidden></div>
 
                 <!-- Empty state: no assessment selected -->
-                <div class="albedu-empty-state" id="ra-empty-select" hidden>
+                <div class="albedu-empty-state" id="ra-empty-select">
                     <span data-albedu-icon="bar_chart"><svg class="albedu-icon" aria-hidden="true"><use href="#i-bar_chart"/></svg></span>
                     <h3>Pilih Asesmen</h3>
-                    <p>Pilih asesmen dari dropdown di atas untuk melihat hasil & analitik.</p>
+                    <p>Pilih asesmen dari dropdown di atas untuk melihat hasil peserta.</p>
                 </div>
 
-                <!-- Empty state: no data -->
+                <!-- Empty state: no submissions -->
                 <div class="albedu-empty-state" id="ra-empty" hidden>
                     <span data-albedu-icon="inbox"></span>
-                    <h3>Belum Ada Data</h3>
+                    <h3>Belum Ada Pengumpulan</h3>
                     <p>Belum ada peserta yang menyelesaikan asesmen ini.</p>
+                </div>
+
+                <!-- Loading state -->
+                <div class="ra-loading" id="ra-loading" hidden>
+                    <div class="spinner spinner-md"></div>
+                    <p>Memuat hasil...</p>
                 </div>
             </div>
 
