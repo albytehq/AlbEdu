@@ -895,5 +895,191 @@
     _wireGlobalEvents,
     _beforeUnloadGuard,
     _popstateTrap,
+    _openIdentityEdit,
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // Identity Edit System — production grade
+  // Allows peserta to correct their identity mid-exam if they made
+  // a mistake (wrong name, wrong class, etc).
+  // Timer keeps running. Changes saved to identity_snapshot + audit.
+  // ═══════════════════════════════════════════════════════════════
+
+  function _openIdentityEdit() {
+    var overlay = document.getElementById('identity-edit-overlay');
+    var body = document.getElementById('identity-edit-body');
+    if (!overlay || !body) return;
+
+    var identity = I.state.identity || {};
+    var assessment = I.state.assessment || {};
+
+    // Build form fields based on identity mode
+    var fields = [];
+    var identityFields = assessment.identity_config?.fields || [];
+
+    if (assessment.identity_mode === 'daftar') {
+      // Daftar mode — just show the display name
+      fields.push({
+        key: '_display_name',
+        label: 'Nama',
+        value: identity._display_name || identity.nama || '',
+        type: 'text',
+        readonly: false,
+      });
+    } else if (identityFields.length > 0) {
+      // Manual mode with configured fields
+      identityFields.forEach(function(f) {
+        var key = f.key || f.field || f.name;
+        if (!key) return;
+        fields.push({
+          key: key,
+          label: f.label || key,
+          value: identity[key] || '',
+          type: f.type === 'select' ? 'select' : 'text',
+          options: f.options || [],
+        });
+      });
+    } else {
+      // Fallback — show all non-internal fields
+      Object.keys(identity).forEach(function(key) {
+        if (key.startsWith('_')) return;
+        fields.push({
+          key: key,
+          label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
+          value: identity[key] || '',
+          type: 'text',
+        });
+      });
+    }
+
+    // Render form
+    var html = '';
+    fields.forEach(function(f) {
+      var val = String(f.value || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      if (f.type === 'select' && f.options.length > 0) {
+        html += '<div class="albedu-field">';
+        html += '<label>' + f.label + '</label>';
+        html += '<select class="albedu-input" data-field="' + f.key + '">';
+        html += '<option value="">— Pilih —</option>';
+        f.options.forEach(function(opt) {
+          var optVal = typeof opt === 'string' ? opt : (opt.value || opt.label || '');
+          var optLabel = typeof opt === 'string' ? opt : (opt.label || opt.value || '');
+          var selected = optVal === f.value ? ' selected' : '';
+          html += '<option value="' + optVal + '"' + selected + '>' + optLabel + '</option>';
+        });
+        html += '</select>';
+        html += '</div>';
+      } else {
+        html += '<div class="albedu-field">';
+        html += '<label>' + f.label + '</label>';
+        html += '<input type="text" class="albedu-input" data-field="' + f.key + '" value="' + val + '" maxlength="80" />';
+        html += '</div>';
+      }
+    });
+
+    if (fields.length === 0) {
+      html = '<p style="text-align:center;color:var(--take-text-muted);padding:20px;">Tidak ada field identitas yang bisa diubah.</p>';
+    }
+
+    body.innerHTML = html;
+    window.AlbEdu?.bindIcons?.(body);
+
+    // Show modal
+    overlay.hidden = false;
+
+    // Wire close/cancel
+    var closeBtn = document.getElementById('identity-edit-close');
+    var cancelBtn = document.getElementById('identity-edit-cancel');
+    var saveBtn = document.getElementById('identity-edit-save');
+
+    function _closeIdentityEdit() {
+      overlay.hidden = true;
+      body.innerHTML = '';
+    }
+
+    // Remove old listeners (clone to avoid stacking)
+    var newClose = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newClose, closeBtn);
+    newClose.addEventListener('click', _closeIdentityEdit);
+
+    var newCancel = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+    newCancel.addEventListener('click', _closeIdentityEdit);
+
+    // Click outside to close
+    overlay.onclick = function(e) {
+      if (e.target === overlay) _closeIdentityEdit();
+    };
+
+    // Escape to close
+    function _escHandler(e) {
+      if (e.key === 'Escape') {
+        _closeIdentityEdit();
+        document.removeEventListener('keydown', _escHandler);
+      }
+    }
+    document.addEventListener('keydown', _escHandler);
+
+    // Save handler
+    var newSave = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSave, saveBtn);
+    newSave.addEventListener('click', async function() {
+      newSave.disabled = true;
+      newSave.innerHTML = '<span class="ex-id-spinner"></span> <span>Menyimpan...</span>';
+
+      try {
+        // Collect updated values
+        var updated = { ...I.state.identity };
+        body.querySelectorAll('[data-field]').forEach(function(input) {
+          var key = input.dataset.field;
+          var val = input.value.trim();
+          if (val) updated[key] = val;
+        });
+
+        // Update _display_name if nama changed
+        if (updated.nama && updated.nama !== I.state.identity.nama) {
+          updated._display_name = updated.nama;
+        }
+
+        // Save to DB
+        var repo = window.AlbEdu?.repository;
+        var sessionId = I.state?.session?.id;
+        if (repo && sessionId) {
+          await repo.updateDoc('assessment_sessions', sessionId, {
+            identity_snapshot: updated,
+            updated_at: new Date().toISOString(),
+          });
+        }
+
+        // Update local state
+        I.state.identity = updated;
+
+        // Update topbar display
+        var userText = document.getElementById('exam-user-text');
+        if (userText) {
+          userText.textContent = updated._display_name || updated.nama || 'Peserta';
+        }
+
+        _closeIdentityEdit();
+
+        window.notify?.success(
+          'Identitas Diperbarui',
+          'Identitas Anda telah disimpan. Timer tetap berjalan.',
+          3000
+        );
+      } catch (err) {
+        console.error('[take] Identity edit save failed:', err);
+        window.notify?.error('Gagal', 'Tidak dapat menyimpan perubahan. Coba lagi.');
+        newSave.disabled = false;
+        newSave.innerHTML = '<span data-albedu-icon="check"></span> <span>Simpan Perubahan</span>';
+        window.AlbEdu?.bindIcons?.(newSave);
+      }
+    });
+    window.AlbEdu?.bindIcons?.(newSave);
+  }
+
+  // Wire the edit button
+  document.getElementById('btn-edit-identity')?.addEventListener('click', function() {
+    _openIdentityEdit();
   });
 })();

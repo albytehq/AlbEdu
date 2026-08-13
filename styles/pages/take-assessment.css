@@ -413,11 +413,11 @@
      flex-direction: column;
      padding: 0;
      padding-top: env(safe-area-inset-top);
-     background: rgba(255, 255, 255, 0.95);
-     backdrop-filter: blur(12px);
-     -webkit-backdrop-filter: blur(12px);
+     background: rgba(255, 255, 255, 0.92);
+     backdrop-filter: blur(16px) saturate(180%);
+     -webkit-backdrop-filter: blur(16px) saturate(180%);
      border-bottom: 1px solid var(--take-border);
-     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.03);
    }
    .ex-topbar__main {
      display: flex;
@@ -475,13 +475,14 @@
      align-items: center;
      padding: 5px 12px;
      border-radius: 8px;
-     background: var(--take-primary-light);
+     background: linear-gradient(135deg, var(--take-primary-light, #DBEAFE) 0%, rgba(219, 234, 254, 0.6) 100%);
      color: var(--take-primary);
      font-weight: 700;
      font-variant-numeric: tabular-nums;
      font-size: 14px;
      transition: background 200ms ease, color 200ms ease;
      min-width: 80px;
+     border: 1px solid rgba(37, 99, 235, 0.12);
      justify-content: center;
    }
    .ex-timer .material-symbols-outlined,
@@ -1338,3 +1339,225 @@
   .pp-modal { width: 100%; height: 100vh; border-radius: 0; }
   .pp-bar__hint { display: none; }
 }
+
+
+/* ═══ 8.5  Identity Edit Button + Modal ═════════════════════════ */
+.ex-user-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--take-text-muted, #64748B);
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease;
+  padding: 0;
+  margin-left: 2px;
+}
+.ex-user-edit [data-albedu-icon],
+.ex-user-edit svg {
+  width: 14px;
+  height: 14px;
+}
+.ex-user-edit:hover {
+  background: var(--take-primary-light, #DBEAFE);
+  color: var(--take-primary, #2563EB);
+}
+
+/* Identity Edit Modal */
+.ex-identity-edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+  opacity: 0;
+  animation: ex-id-fade-in 200ms ease-out forwards;
+}
+@keyframes ex-id-fade-in { to { opacity: 1; } }
+
+.ex-identity-edit-overlay[hidden] { display: none; }
+
+.ex-identity-edit-modal {
+  background: var(--take-surface, #FFFFFF);
+  border: 1px solid var(--take-border, #E2E8F0);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18), 0 8px 16px rgba(15, 23, 42, 0.08);
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(20px) scale(0.97);
+  animation: ex-id-pop 300ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes ex-id-pop { to { transform: translateY(0) scale(1); } }
+
+.ex-identity-edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--take-border, #E2E8F0);
+}
+.ex-identity-edit-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--take-text, #0F172A);
+  letter-spacing: -0.01em;
+}
+.ex-identity-edit-close {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--take-text-muted, #64748B);
+  cursor: pointer;
+  transition: background 180ms ease;
+}
+.ex-identity-edit-close:hover {
+  background: var(--take-surface-2, #F1F5F9);
+}
+.ex-identity-edit-close [data-albedu-icon],
+.ex-identity-edit-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ex-identity-edit-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+.ex-identity-edit-body .albedu-field {
+  margin-bottom: 12px;
+}
+.ex-identity-edit-body .albedu-field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--take-text-2, #1E293B);
+  margin-bottom: 4px;
+  display: block;
+}
+.ex-identity-edit-body .albedu-input {
+  width: 100%;
+  height: 38px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--take-border, #E2E8F0);
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: var(--take-text, #0F172A);
+  background: var(--take-surface, #FFFFFF);
+  box-sizing: border-box;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.ex-identity-edit-body .albedu-input:focus {
+  outline: none;
+  border-color: var(--take-primary, #2563EB);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.ex-identity-edit-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--take-border, #E2E8F0);
+  background: var(--take-surface-2, #F8FAFC);
+}
+.ex-identity-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+.ex-identity-edit-btn [data-albedu-icon],
+.ex-identity-edit-btn svg {
+  width: 15px;
+  height: 15px;
+}
+.ex-identity-edit-btn-cancel {
+  background: transparent;
+  color: var(--take-text-muted, #64748B);
+  border: 1px solid var(--take-border, #E2E8F0);
+}
+.ex-identity-edit-btn-cancel:hover {
+  background: var(--take-surface, #FFFFFF);
+  color: var(--take-text, #0F172A);
+}
+.ex-identity-edit-btn-save {
+  background: var(--take-primary, #2563EB);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+}
+.ex-identity-edit-btn-save:hover {
+  background: var(--take-primary-hover, #1D4ED8);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+.ex-identity-edit-btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ex-identity-edit-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 20px 14px;
+  font-size: 11.5px;
+  color: var(--take-text-muted, #64748B);
+  line-height: 1.5;
+}
+.ex-identity-edit-warn [data-albedu-icon],
+.ex-identity-edit-warn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Dark mode */
+[data-theme="dark"] .ex-identity-edit-modal {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: var(--slate-800, #1E293B);
+}
+[data-theme="dark"] .ex-identity-edit-footer {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+/* Identity edit spinner */
+.ex-id-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: ex-id-spin 0.8s linear infinite;
+}
+@keyframes ex-id-spin { to { transform: rotate(360deg); } }
