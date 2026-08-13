@@ -806,7 +806,32 @@
       t('assessment.time_up_msg', null, 'Waktu asesmen telah berakhir. Jawaban akan dikumpulkan otomatis.'),
       3000
     );
-    _internal._submitExam({ skipConfirm: true, isAuto: true });
+    // PRODUCTION FIX: Force submit with retry. If submit fails after all
+    // retries, redirect to submitted.html anyway — jawaban tersimpan di
+    // localStorage + heartbeat draft. Admin can recover from DB draft.
+    _internal._submitExam({ skipConfirm: true, isAuto: true }).then(function() {
+      // Submit succeeded — _renderResult will handle redirect
+    }).catch(function(err) {
+      console.error('[take] Auto-submit failed after retries, force-redirecting:', err);
+      // Save draft to localStorage as backup
+      try { _internal._saveLocalDraft?.(); } catch(_) {}
+      // Force redirect to submitted.html after 3s
+      setTimeout(function() {
+        if (!I.state._redirected) {
+          I.state._redirected = true;
+          window.location.replace('submitted.html?auto=1&error=' + encodeURIComponent(err?.message || 'timeout'));
+        }
+      }, 3000);
+    });
+    // Safety net: if _submitExam hangs forever (network stall), redirect after 30s
+    setTimeout(function() {
+      if (!I.state._redirected && I.state.phase === 'exam') {
+        console.warn('[take] Auto-submit timeout — force redirect to submitted.html');
+        try { _internal._saveLocalDraft?.(); } catch(_) {}
+        I.state._redirected = true;
+        window.location.replace('submitted.html?auto=1&error=timeout');
+      }
+    }, 30000);
   }
 
   // Global event handlers (online/offline + alt+arrow nav)

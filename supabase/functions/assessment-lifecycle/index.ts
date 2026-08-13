@@ -90,7 +90,7 @@ async function logic(req: Request, env: Env): Promise<Response> {
         throw new HTTPError(409, 'CONFLICT', 'Assessment is already running');
       }
       if (assessment.ac_manual_status === 'finished') {
-        throw new HTTPError(409, 'CONFLICT', 'Assessment is already finished');
+        throw new HTTPError(409, 'CONFLICT', 'Assessment is already finished — cannot re-open. Create a new assessment instead.');
       }
       if (assessment.ac_remaining_time !== null && assessment.ac_remaining_time > 0) {
         throw new HTTPError(409, 'CONFLICT', 'Assessment is paused. Use resume instead.');

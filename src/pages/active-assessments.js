@@ -98,18 +98,27 @@
   // Simplified to 2 active states + archived:
   //   open    = admin has opened the assessment (peserta can access)
   //   closed  = admin has closed it (peserta sees "belum dibuka" or "selesai")
+  //   expired = time ran out (ac_end in the past, or ac_manual_status='finished')
   //   archived = moved to archive (hidden from active list)
   function _statusOf(a) {
     if (a.status === 'archived') return 'archived';
-    if (a.ac_manual_status === 'open') return 'open';
-    // 'closed', 'finished', null, or anything else → closed
+    if (a.ac_manual_status === 'finished') return 'expired';
+    // Check if ac_end is in the past → expired
+    if (a.ac_end && new Date(a.ac_end).getTime() < Date.now()) return 'expired';
+    if (a.ac_manual_status === 'open') {
+      // Open but ac_end passed → should be expired
+      if (a.ac_end && new Date(a.ac_end).getTime() < Date.now()) return 'expired';
+      return 'open';
+    }
+    // 'closed', null, or anything else → closed
     return 'closed';
   }
 
   const STATUS_META = {
-    open:     { label: 'Buka',   cls: 'aa-status-running'  },
-    closed:   { label: 'Tutup',  cls: 'aa-status-paused'   },
-    archived: { label: 'Arsip',  cls: 'aa-status-archived' },
+    open:     { label: 'Buka',      cls: 'aa-status-running'  },
+    closed:   { label: 'Tutup',     cls: 'aa-status-paused'   },
+    expired:  { label: 'Kadaluarsa', cls: 'aa-status-archived' },
+    archived: { label: 'Arsip',     cls: 'aa-status-archived' },
   };
 
   // Helper: bind icons in a root element (defensive — in case MutationObserver is slow)
@@ -933,12 +942,23 @@
     async _toggleStatus(item, btn) {
       // Prevent double-toggle
       if (this._togglingIds.has(item.id)) return;
+
+      // PRODUCTION FIX: Block re-opening expired assessments
+      var currentStatus = _statusOf(item);
+      if (currentStatus === 'expired') {
+        window.notify?.warning(
+          'Tidak Bisa Dibuka',
+          'Asesmen ini sudah kadaluarsa (waktu habis). Buat asesmen baru atau hubungi developer untuk reset.',
+          5000
+        );
+        return;
+      }
+
       this._togglingIds.add(item.id);
 
       // Optimistic UI update — show loading button
       this._applyFilters();
 
-      const currentStatus = _statusOf(item);
       const isOpening = currentStatus !== 'open';
 
       try {
