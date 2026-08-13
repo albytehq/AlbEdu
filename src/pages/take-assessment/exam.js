@@ -912,20 +912,27 @@
 
     var identity = I.state.identity || {};
     var assessment = I.state.assessment || {};
-
-    // Build form fields based on identity mode
     var fields = [];
-    var identityFields = assessment.identity_config?.fields || [];
+
+    // Also check assessment.identity_config from the session row (which may
+    // have the identity_snapshot stored differently than assessment config)
+    var identityFields = [];
+    if (assessment.identity_config && assessment.identity_config.fields) {
+      identityFields = assessment.identity_config.fields;
+    }
+
+    // Always allow editing _display_name (nama) — it's the most common mistake
+    var hasDisplayName = false;
 
     if (assessment.identity_mode === 'daftar') {
-      // Daftar mode — just show the display name
+      // Daftar mode — show display name (the name selected from the list)
       fields.push({
         key: '_display_name',
         label: 'Nama',
         value: identity._display_name || identity.nama || '',
         type: 'text',
-        readonly: false,
       });
+      hasDisplayName = true;
     } else if (identityFields.length > 0) {
       // Manual mode with configured fields
       identityFields.forEach(function(f) {
@@ -938,25 +945,40 @@
           type: f.type === 'select' ? 'select' : 'text',
           options: f.options || [],
         });
+        if (key === '_display_name' || key === 'nama') hasDisplayName = true;
       });
-    } else {
-      // Fallback — show all non-internal fields
+    }
+
+    // Fallback: collect all non-internal fields from identity object
+    if (fields.length === 0) {
       Object.keys(identity).forEach(function(key) {
-        if (key.startsWith('_')) return;
+        if (key.startsWith('_') && key !== '_display_name') return;
+        if (key === '_mode') return;
         fields.push({
           key: key,
-          label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
+          label: key === '_display_name' ? 'Nama' : (key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')),
           value: identity[key] || '',
           type: 'text',
         });
+        if (key === '_display_name' || key === 'nama') hasDisplayName = true;
+      });
+    }
+
+    // If still no fields, add nama as default (peserta always has a name)
+    if (fields.length === 0 || !hasDisplayName) {
+      fields.unshift({
+        key: '_display_name',
+        label: 'Nama',
+        value: identity._display_name || identity.nama || '',
+        type: 'text',
       });
     }
 
     // Render form
     var html = '';
     fields.forEach(function(f) {
-      var val = String(f.value || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-      if (f.type === 'select' && f.options.length > 0) {
+      var val = String(f.value || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      if (f.type === 'select' && f.options && f.options.length > 0) {
         html += '<div class="albedu-field">';
         html += '<label>' + f.label + '</label>';
         html += '<select class="albedu-input" data-field="' + f.key + '">';
@@ -972,14 +994,10 @@
       } else {
         html += '<div class="albedu-field">';
         html += '<label>' + f.label + '</label>';
-        html += '<input type="text" class="albedu-input" data-field="' + f.key + '" value="' + val + '" maxlength="80" />';
+        html += '<input type="text" class="albedu-input" data-field="' + f.key + '" value="' + val + '" maxlength="80" placeholder="Masukkan ' + f.label.toLowerCase() + '" />';
         html += '</div>';
       }
     });
-
-    if (fields.length === 0) {
-      html = '<p style="text-align:center;color:var(--take-text-muted);padding:20px;">Tidak ada field identitas yang bisa diubah.</p>';
-    }
 
     body.innerHTML = html;
     window.AlbEdu?.bindIcons?.(body);
@@ -997,7 +1015,7 @@
       body.innerHTML = '';
     }
 
-    // Remove old listeners (clone to avoid stacking)
+    // Clone to avoid stacking
     var newClose = closeBtn.cloneNode(true);
     closeBtn.parentNode.replaceChild(newClose, closeBtn);
     newClose.addEventListener('click', _closeIdentityEdit);
@@ -1006,12 +1024,10 @@
     cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
     newCancel.addEventListener('click', _closeIdentityEdit);
 
-    // Click outside to close
     overlay.onclick = function(e) {
       if (e.target === overlay) _closeIdentityEdit();
     };
 
-    // Escape to close
     function _escHandler(e) {
       if (e.key === 'Escape') {
         _closeIdentityEdit();
@@ -1028,18 +1044,16 @@
       newSave.innerHTML = '<span class="ex-id-spinner"></span> <span>Menyimpan...</span>';
 
       try {
-        // Collect updated values
-        var updated = { ...I.state.identity };
+        var updated = Object.assign({}, I.state.identity);
         body.querySelectorAll('[data-field]').forEach(function(input) {
           var key = input.dataset.field;
           var val = input.value.trim();
-          if (val) updated[key] = val;
+          updated[key] = val;
         });
 
-        // Update _display_name if nama changed
-        if (updated.nama && updated.nama !== I.state.identity.nama) {
-          updated._display_name = updated.nama;
-        }
+        // Sync nama ↔ _display_name
+        if (updated.nama && !updated._display_name) updated._display_name = updated.nama;
+        if (updated._display_name && !updated.nama) updated.nama = updated._display_name;
 
         // Save to DB
         var repo = window.AlbEdu?.repository;
@@ -1051,10 +1065,8 @@
           });
         }
 
-        // Update local state
         I.state.identity = updated;
 
-        // Update topbar display
         var userText = document.getElementById('exam-user-text');
         if (userText) {
           userText.textContent = updated._display_name || updated.nama || 'Peserta';
