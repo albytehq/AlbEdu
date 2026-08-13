@@ -156,31 +156,32 @@
     </div>
   </main>
 
-  <!-- ═══ PHASE 3: EXAM — optimized topbar v4 ═══ -->
+  <!-- ═══ PHASE 3: EXAM — topbar v5 (symmetric, balanced) ═══ -->
   <main id="exam-phase" hidden aria-labelledby="exam-title">
     <header class="ex-topbar">
-      <!-- Left: Subject + Title (stacked) -->
-      <div class="ex-topbar__left">
-        <div class="ex-subject" id="exam-subject">Asesmen</div>
-        <h1 class="ex-title" id="exam-title">Asesmen</h1>
-        <!-- Section tabs inline under title -->
-        <div class="ex-sections-wrap" id="exam-sections-wrap">
-          <div class="ex-sections" id="page-tabs" role="tablist" aria-label="Bagian Soal"></div>
+      <!-- Row 1: Left=title block | Right=timer+user (vertically centered) -->
+      <div class="ex-topbar__row">
+        <div class="ex-topbar__left">
+          <div class="ex-subject" id="exam-subject">Asesmen</div>
+          <h1 class="ex-title" id="exam-title">Asesmen</h1>
+        </div>
+        <div class="ex-topbar__right">
+          <div class="ex-user" id="exam-user" role="button" tabindex="0" title="Klik untuk ubah identitas">
+            <span data-albedu-icon="account_circle"></span>
+            <span id="exam-user-text">Peserta</span>
+            <button class="ex-user-edit" id="btn-edit-identity" type="button" title="Ubah identitas" aria-label="Ubah identitas">
+              <span data-albedu-icon="edit"></span>
+            </button>
+          </div>
+          <div class="ex-timer" id="exam-timer" role="timer" aria-live="off" aria-atomic="true">
+            <span data-albedu-icon="timer"></span>
+            <span id="timer-display">--:--</span>
+          </div>
         </div>
       </div>
-      <!-- Right: Timer + Identity -->
-      <div class="ex-topbar__right">
-        <div class="ex-user" id="exam-user" role="button" tabindex="0" title="Klik untuk ubah identitas">
-          <span data-albedu-icon="account_circle"></span>
-          <span id="exam-user-text">Peserta</span>
-          <button class="ex-user-edit" id="btn-edit-identity" type="button" title="Ubah identitas" aria-label="Ubah identitas">
-            <span data-albedu-icon="edit"></span>
-          </button>
-        </div>
-        <div class="ex-timer" id="exam-timer" role="timer" aria-live="off" aria-atomic="true">
-          <span data-albedu-icon="timer"></span>
-          <span id="timer-display">--:--</span>
-        </div>
+      <!-- Row 2: Section tabs (full width, centered, only if >1 section) -->
+      <div class="ex-sections-wrap" id="exam-sections-wrap">
+        <div class="ex-sections" id="page-tabs" role="tablist" aria-label="Bagian Soal"></div>
       </div>
     </header>
 

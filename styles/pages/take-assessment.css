@@ -404,17 +404,16 @@
 
    #exam-phase { background: var(--take-bg); }
 
-   /* ── 7.1  Optimized Topbar v4 — left=title, right=timer+user ── */
+   /* ── 7.1  Topbar v5 — symmetric, balanced composition ── */
    .ex-topbar {
      position: sticky;
      top: 0;
      z-index: 50;
      display: flex;
-     align-items: flex-start;
-     justify-content: space-between;
-     gap: 12px;
-     padding: 10px 18px;
-     padding-top: max(10px, env(safe-area-inset-top));
+     flex-direction: column;
+     gap: 0;
+     padding: 0;
+     padding-top: env(safe-area-inset-top);
      background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.94) 100%);
      backdrop-filter: blur(20px) saturate(200%);
      -webkit-backdrop-filter: blur(20px) saturate(200%);
@@ -422,15 +421,25 @@
      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 8px rgba(15, 23, 42, 0.03);
    }
 
-   /* Left side: subject + title + section tabs (stacked) */
+   /* Row 1: title block (left) + timer/user (right) — vertically centered */
+   .ex-topbar__row {
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+     gap: 16px;
+     padding: 8px 20px;
+     min-height: 48px;
+   }
+
+   /* Left: subject + title stacked, left-aligned */
    .ex-topbar__left {
      display: flex;
      flex-direction: column;
-     gap: 2px;
+     gap: 1px;
      min-width: 0;
      flex: 1;
    }
-   .ex-topbar__center { display: none; } /* legacy — unused in v4 */
+   .ex-topbar__center { display: none; }
 
    .ex-subject {
      font-size: 11px;
@@ -454,29 +463,22 @@
      letter-spacing: -0.02em;
    }
 
-   /* Section tabs — inline under title, not a separate bar */
-   .ex-sections-wrap {
-     padding: 0;
-     margin-top: 4px;
-   }
-   .ex-sections-wrap:empty { display: none; }
-
-   /* Right side: user + timer */
+   /* Right: user + timer side by side, vertically centered with title */
    .ex-topbar__right {
      display: flex;
      align-items: center;
-     gap: 8px;
+     gap: 10px;
      flex-shrink: 0;
    }
 
    .ex-user {
      display: flex;
      align-items: center;
-     gap: 5px;
+     gap: 6px;
      color: var(--take-text-muted);
      font-size: 13px;
      white-space: nowrap;
-     padding: 5px 8px 5px 10px;
+     padding: 6px 10px 6px 12px;
      border-radius: 10px;
      background: var(--take-surface-2, #F1F5F9);
      border: 1px solid var(--take-border);
@@ -492,7 +494,6 @@
      font-size: 16px;
      color: var(--take-primary);
    }
-
    .ex-user-edit {
      display: inline-flex;
      align-items: center;
@@ -520,9 +521,9 @@
 
    .ex-timer {
      display: flex;
-     gap: 5px;
+     gap: 6px;
      align-items: center;
-     padding: 6px 14px;
+     padding: 6px 16px;
      border-radius: 10px;
      background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
      color: var(--take-primary);
@@ -530,7 +531,7 @@
      font-variant-numeric: tabular-nums;
      font-size: 16px;
      transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
-     min-width: 80px;
+     min-width: 84px;
      justify-content: center;
      border: 1px solid rgba(37, 99, 235, 0.12);
      letter-spacing: -0.02em;
@@ -551,6 +552,12 @@
      border-color: rgba(239, 68, 68, 0.2);
      animation: take-pulse 1s ease-in-out infinite;
    }
+
+   /* Row 2: Section tabs — full width, centered, separated by subtle border */
+   .ex-sections-wrap {
+     padding: 0 20px 6px;
+   }
+   .ex-sections-wrap:empty { display: none; }
 
 
    /* ── 7.2  Section bar (tab strip) ── */
