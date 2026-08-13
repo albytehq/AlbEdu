@@ -1069,14 +1069,38 @@
     },
 
     async _delete(item) {
-      const confirmed = await this._confirm(
-        'Hapus Permanen',
-        `Yakin hapus "${item.title || 'Tanpa Judul'}"? Tindakan ini tidak dapat dibatalkan.`,
-        true
-      );
-      if (!confirmed) return;
+      // PRODUCTION FIX: Check if assessment has submissions before allowing delete.
+      // If submissions exist → block hard delete, suggest archive instead.
+      // This prevents catastrophic data loss (50 peserta's scores deleted permanently).
       try {
         const sb = window.AlbEdu.supabase.client;
+
+        // Check for submissions
+        const { count: submissionCount, error: countErr } = await sb
+          .from('submissions')
+          .select('id', { count: 'exact', head: true })
+          .eq('assessment_id', item.id);
+
+        if (countErr) throw countErr;
+
+        if (submissionCount > 0) {
+          // BLOCK: Has submissions → cannot delete
+          window.notify?.warning(
+            'Tidak Bisa Dihapus',
+            `Asesmen ini memiliki ${submissionCount} hasil peserta. Hapus akan menghapus semua data nilai permanen. Gunakan "Arsipkan" sebagai gantinya — data hasil tetap aman dan bisa dilihat di halaman Hasil.`,
+            8000
+          );
+          return;
+        }
+
+        // No submissions → safe to delete, but still confirm
+        const confirmed = await this._confirm(
+          'Hapus Permanen',
+          `Yakin hapus "${item.title || 'Tanpa Judul'}"? Asesmen ini tidak memiliki data peserta. Tindakan ini tidak dapat dibatalkan.`,
+          true
+        );
+        if (!confirmed) return;
+
         const { error } = await sb.from('assessments').delete().eq('id', item.id);
         if (error) throw error;
         this._allData = this._allData.filter((x) => x.id !== item.id);

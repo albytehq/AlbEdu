@@ -123,6 +123,7 @@
         .from('assessments')
         .select('id, title, subject, access_code, status, sections')
         .eq('created_by', session.user.id)
+        .in('status', ['active', 'archived'])  // FIX: show archived too — results still accessible
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -141,7 +142,8 @@
 
     const options = ['<option value="">— Pilih asesmen —</option>']
       .concat(_state.assessments.map(a => {
-        const label = `${a.title || 'Tanpa Judul'}${a.subject ? ' · ' + a.subject : ''}${a.access_code ? ' · ' + a.access_code : ''}`;
+        const archived = a.status === 'archived' ? ' (Arsip)' : '';
+        const label = `${a.title || 'Tanpa Judul'}${a.subject ? ' · ' + a.subject : ''}${a.access_code ? ' · ' + a.access_code : ''}${archived}`;
         return `<option value="${a.id}">${_esc(label)}</option>`;
       }))
       .join('');
