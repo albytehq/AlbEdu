@@ -59,8 +59,8 @@
       Jawaban Anda sudah tersimpan. Terima kasih telah mengerjakan asesmen ini.
     </p>
     <a href="#" class="albedu-btn albedu-btn-primary albedu-btn-lg albedu-btn--block" id="back-btn">
-      <span data-albedu-icon="home" class="albedu-icon--20" aria-hidden="true"></span>
-      <span>Kembali ke Beranda</span>
+      <span data-albedu-icon="arrow_back" class="albedu-icon--20" aria-hidden="true"></span>
+      <span>Kembali</span>
     </a>
   </main>
 
@@ -68,6 +68,10 @@
   <script src="../../src/profile/peserta-profile-fab.js" defer></script>
 
   <script>
+    // FIX: Redirect to assessment entry page (token input), NOT home page.
+    // Old code redirected to basePath ('/') which triggered byteward.js
+    // access check → detected no active session → triggered logout.
+    // Now redirects to assessment-entry.html (same as blocked.html).
     document.getElementById('back-btn').addEventListener('click', function (e) {
       e.preventDefault();
       var basePath = '/';
@@ -76,7 +80,7 @@
         var idx = p.indexOf('/pages/');
         if (idx > 0) basePath = p.substring(0, idx) + '/';
       } catch (_) {}
-      window.location.href = basePath;
+      window.location.href = basePath + 'pages/assessment/assessment-entry.html';
     });
   </script>
   <script>
