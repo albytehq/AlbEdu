@@ -66,12 +66,8 @@
     </p>
     <div class="peserta-actions">
       <a href="#" class="albedu-btn albedu-btn-primary albedu-btn-lg albedu-btn--block" id="back-btn">
-        <span data-albedu-icon="home" class="albedu-icon--20" aria-hidden="true"></span>
-        <span>Kembali ke Beranda</span>
-      </a>
-      <a href="mailto:support@albedu.id" class="albedu-btn albedu-btn-secondary albedu-btn-lg albedu-btn--block">
-        <span data-albedu-icon="mail" class="albedu-icon--20" aria-hidden="true"></span>
-        <span>Hubungi Bantuan</span>
+        <span data-albedu-icon="arrow_back" class="albedu-icon--20" aria-hidden="true"></span>
+        <span>Kembali</span>
       </a>
     </div>
   </main>
@@ -81,21 +77,24 @@
 
   <script>
     // Show reason if provided in query string
-    const reason = new URLSearchParams(window.location.search).get('reason');
+    var reason = new URLSearchParams(window.location.search).get('reason');
     if (reason) {
       document.getElementById('reason-box').classList.add('show');
       document.getElementById('reason-text').textContent = reason;
     }
-    // Use inline BASE_PATH detection
+
+    // Detect base path
+    var basePath = '/';
+    try {
+      var p = window.location.pathname;
+      var idx = p.indexOf('/pages/');
+      if (idx > 0) basePath = p.substring(0, idx) + '/';
+    } catch (_) {}
+
+    // "Kembali" button → redirect to assessment entry page (token input)
     document.getElementById('back-btn').addEventListener('click', function (e) {
       e.preventDefault();
-      var basePath = '/';
-      try {
-        var p = window.location.pathname;
-        var idx = p.indexOf('/pages/');
-        if (idx > 0) basePath = p.substring(0, idx) + '/';
-      } catch (_) {}
-      window.location.href = basePath;
+      window.location.href = basePath + 'pages/assessment/assessment-entry.html';
     });
   </script>
   <script>
