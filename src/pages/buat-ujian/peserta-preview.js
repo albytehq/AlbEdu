@@ -168,25 +168,24 @@
         <!-- EXAM PHASE PREVIEW — mirrors take.html <main id="exam-phase"> -->
         <main class="ex-phase-preview" id="pp-exam" hidden aria-labelledby="pp-exam-title">
           <header class="ex-topbar">
-            <div class="ex-topbar__left">
-              <div class="ex-subject">${this._esc(subject || 'Asesmen')}</div>
-              <h1 class="ex-title" id="pp-exam-title">${this._esc(title)}</h1>
-            </div>
-            <div class="ex-topbar__right">
-              <div class="ex-user">
-                <span data-albedu-icon="account_circle"></span>
-                <span>Nama Peserta</span>
-              </div>
+            <div class="ex-topbar__main">
               <div class="ex-timer" role="timer" aria-live="off" aria-atomic="true">
                 <span data-albedu-icon="timer"></span>
                 <span>${String(duration).padStart(2, '0')}:00</span>
               </div>
+              <div class="ex-topbar__center">
+                <div class="ex-subject">${this._esc(subject || 'Asesmen')}</div>
+                <h1 class="ex-title" id="pp-exam-title">${this._esc(title)}</h1>
+              </div>
+              <div class="ex-user">
+                <span data-albedu-icon="account_circle"></span>
+                <span>Nama Peserta</span>
+              </div>
+            </div>
+            <div class="ex-sections-wrap" id="pp-sections-wrap">
+              <div class="ex-sections" id="pp-tabs" role="tablist" aria-label="Bagian Soal">${tabsHTML}</div>
             </div>
           </header>
-
-          <div class="ex-sectionbar">
-            <div class="ex-sections" id="pp-tabs" role="tablist" aria-label="Bagian Soal">${tabsHTML}</div>
-          </div>
 
           <div class="ex-main">
             <div class="ex-content">
@@ -246,11 +245,7 @@
           </div>
         </main>
 
-        <!-- PAUSE BANNER — mirrors take.html <div id="pause-banner"> -->
-        <div class="pp-pause-banner" id="pp-pause-banner" hidden role="alert" aria-live="assertive">
-          <span data-albedu-icon="pause_circle"></span>
-          <span>Asesmen dijeda oleh admin. Mohon tunggu.</span>
-        </div>
+        <!-- Dead pause banner removed — matches take.html cleanup -->
       `;
 
       // Wire interactions (UI only — no save/submit)
@@ -258,6 +253,12 @@
 
       // Bind icons
       window.AlbEdu?.bindIcons?.(content);
+
+      // FIX: Render KaTeX + apply language classes on initial render
+      setTimeout(() => {
+        if (window.renderMathIn) window.renderMathIn(content);
+        if (window.applyLangClass) window.applyLangClass(content);
+      }, 150);
     },
 
     _renderQuestion(q, idx, section) {
