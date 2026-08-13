@@ -924,195 +924,27 @@
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // Identity Edit System — production grade
-  // Allows peserta to correct their identity mid-exam if they made
-  // a mistake (wrong name, wrong class, etc).
-  // Timer keeps running. Changes saved to identity_snapshot + audit.
+  // Identity Edit — delegated to IdentityEditor module
+  // (src/identity/identity-edit.js — production grade, 25 edge cases)
   // ═══════════════════════════════════════════════════════════════
 
   function _openIdentityEdit() {
-    var overlay = document.getElementById('identity-edit-overlay');
-    var body = document.getElementById('identity-edit-body');
-    if (!overlay || !body) return;
-
-    var identity = I.state.identity || {};
-    var assessment = I.state.assessment || {};
-    var fields = [];
-
-    // Also check assessment.identity_config from the session row (which may
-    // have the identity_snapshot stored differently than assessment config)
-    var identityFields = [];
-    if (assessment.identity_config && assessment.identity_config.fields) {
-      identityFields = assessment.identity_config.fields;
+    if (!window.IdentityEditor) {
+      console.error('[take] IdentityEditor module not loaded');
+      window.notify?.error('Error', 'Modul edit identitas belum siap. Muat ulang halaman.');
+      return;
     }
-
-    // Always allow editing _display_name (nama) — it's the most common mistake
-    var hasDisplayName = false;
-
-    if (assessment.identity_mode === 'daftar') {
-      // Daftar mode — show display name (the name selected from the list)
-      fields.push({
-        key: '_display_name',
-        label: 'Nama',
-        value: identity._display_name || identity.nama || '',
-        type: 'text',
-      });
-      hasDisplayName = true;
-    } else if (identityFields.length > 0) {
-      // Manual mode with configured fields
-      identityFields.forEach(function(f) {
-        var key = f.key || f.field || f.name;
-        if (!key) return;
-        fields.push({
-          key: key,
-          label: f.label || key,
-          value: identity[key] || '',
-          type: f.type === 'select' ? 'select' : 'text',
-          options: f.options || [],
-        });
-        if (key === '_display_name' || key === 'nama') hasDisplayName = true;
-      });
-    }
-
-    // Fallback: collect all non-internal fields from identity object
-    if (fields.length === 0) {
-      Object.keys(identity).forEach(function(key) {
-        if (key.startsWith('_') && key !== '_display_name') return;
-        if (key === '_mode') return;
-        fields.push({
-          key: key,
-          label: key === '_display_name' ? 'Nama' : (key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')),
-          value: identity[key] || '',
-          type: 'text',
-        });
-        if (key === '_display_name' || key === 'nama') hasDisplayName = true;
-      });
-    }
-
-    // If still no fields, add nama as default (peserta always has a name)
-    if (fields.length === 0 || !hasDisplayName) {
-      fields.unshift({
-        key: '_display_name',
-        label: 'Nama',
-        value: identity._display_name || identity.nama || '',
-        type: 'text',
-      });
-    }
-
-    // Render form
-    var html = '';
-    fields.forEach(function(f) {
-      var val = String(f.value || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      if (f.type === 'select' && f.options && f.options.length > 0) {
-        html += '<div class="albedu-field">';
-        html += '<label>' + f.label + '</label>';
-        html += '<select class="albedu-input" data-field="' + f.key + '">';
-        html += '<option value="">— Pilih —</option>';
-        f.options.forEach(function(opt) {
-          var optVal = typeof opt === 'string' ? opt : (opt.value || opt.label || '');
-          var optLabel = typeof opt === 'string' ? opt : (opt.label || opt.value || '');
-          var selected = optVal === f.value ? ' selected' : '';
-          html += '<option value="' + optVal + '"' + selected + '>' + optLabel + '</option>';
-        });
-        html += '</select>';
-        html += '</div>';
-      } else {
-        html += '<div class="albedu-field">';
-        html += '<label>' + f.label + '</label>';
-        html += '<input type="text" class="albedu-input" data-field="' + f.key + '" value="' + val + '" maxlength="80" placeholder="Masukkan ' + f.label.toLowerCase() + '" />';
-        html += '</div>';
+    window.IdentityEditor.open(
+      {
+        identity: I.state.identity,
+        assessment: I.state.assessment,
+        session: I.state.session,
+      },
+      function(updatedIdentity) {
+        // Callback: update local state
+        I.state.identity = updatedIdentity;
       }
-    });
-
-    body.innerHTML = html;
-    window.AlbEdu?.bindIcons?.(body);
-
-    // Show modal
-    overlay.hidden = false;
-
-    // Wire close/cancel
-    var closeBtn = document.getElementById('identity-edit-close');
-    var cancelBtn = document.getElementById('identity-edit-cancel');
-    var saveBtn = document.getElementById('identity-edit-save');
-
-    function _closeIdentityEdit() {
-      overlay.hidden = true;
-      body.innerHTML = '';
-    }
-
-    // Clone to avoid stacking
-    var newClose = closeBtn.cloneNode(true);
-    closeBtn.parentNode.replaceChild(newClose, closeBtn);
-    newClose.addEventListener('click', _closeIdentityEdit);
-
-    var newCancel = cancelBtn.cloneNode(true);
-    cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-    newCancel.addEventListener('click', _closeIdentityEdit);
-
-    overlay.onclick = function(e) {
-      if (e.target === overlay) _closeIdentityEdit();
-    };
-
-    function _escHandler(e) {
-      if (e.key === 'Escape') {
-        _closeIdentityEdit();
-        document.removeEventListener('keydown', _escHandler);
-      }
-    }
-    document.addEventListener('keydown', _escHandler);
-
-    // Save handler
-    var newSave = saveBtn.cloneNode(true);
-    saveBtn.parentNode.replaceChild(newSave, saveBtn);
-    newSave.addEventListener('click', async function() {
-      newSave.disabled = true;
-      newSave.innerHTML = '<span class="ex-id-spinner"></span> <span>Menyimpan...</span>';
-
-      try {
-        var updated = Object.assign({}, I.state.identity);
-        body.querySelectorAll('[data-field]').forEach(function(input) {
-          var key = input.dataset.field;
-          var val = input.value.trim();
-          updated[key] = val;
-        });
-
-        // Sync nama ↔ _display_name
-        if (updated.nama && !updated._display_name) updated._display_name = updated.nama;
-        if (updated._display_name && !updated.nama) updated.nama = updated._display_name;
-
-        // Save to DB
-        var repo = window.AlbEdu?.repository;
-        var sessionId = I.state?.session?.id;
-        if (repo && sessionId) {
-          await repo.updateDoc('assessment_sessions', sessionId, {
-            identity_snapshot: updated,
-            updated_at: new Date().toISOString(),
-          });
-        }
-
-        I.state.identity = updated;
-
-        var userText = document.getElementById('exam-user-text');
-        if (userText) {
-          userText.textContent = updated._display_name || updated.nama || 'Peserta';
-        }
-
-        _closeIdentityEdit();
-
-        window.notify?.success(
-          'Identitas Diperbarui',
-          'Identitas Anda telah disimpan. Timer tetap berjalan.',
-          3000
-        );
-      } catch (err) {
-        console.error('[take] Identity edit save failed:', err);
-        window.notify?.error('Gagal', 'Tidak dapat menyimpan perubahan. Coba lagi.');
-        newSave.disabled = false;
-        newSave.innerHTML = '<span data-albedu-icon="check"></span> <span>Simpan Perubahan</span>';
-        window.AlbEdu?.bindIcons?.(newSave);
-      }
-    });
-    window.AlbEdu?.bindIcons?.(newSave);
+    );
   }
 
   // Wire the edit button
