@@ -1069,47 +1069,31 @@
     },
 
     async _delete(item) {
-      // PRODUCTION FIX: Check if assessment has submissions before allowing delete.
-      // If submissions exist → block hard delete, suggest archive instead.
-      // This prevents catastrophic data loss (50 peserta's scores deleted permanently).
+      // PRODUCTION FIX v2: Replace hard delete with archive.
+      // Submissions now survive via FK SET NULL + forensic snapshot.
+      // But we still archive instead of delete to preserve the assessment
+      // row itself (questions, settings, etc.) for future reference.
+      // Hard delete can only be done via direct SQL by the database admin.
+      const confirmed = await this._confirm(
+        'Arsipkan Asesmen',
+        `Arsipkan "${item.title || 'Tanpa Judul'}"? Asesmen tidak akan muncul di daftar aktif lagi. Data hasil peserta TETAP AMAN dan bisa dilihat di halaman Hasil.`,
+        false
+      );
+      if (!confirmed) return;
       try {
         const sb = window.AlbEdu.supabase.client;
-
-        // Check for submissions
-        const { count: submissionCount, error: countErr } = await sb
-          .from('submissions')
-          .select('id', { count: 'exact', head: true })
-          .eq('assessment_id', item.id);
-
-        if (countErr) throw countErr;
-
-        if (submissionCount > 0) {
-          // BLOCK: Has submissions → cannot delete
-          window.notify?.warning(
-            'Tidak Bisa Dihapus',
-            `Asesmen ini memiliki ${submissionCount} hasil peserta. Hapus akan menghapus semua data nilai permanen. Gunakan "Arsipkan" sebagai gantinya — data hasil tetap aman dan bisa dilihat di halaman Hasil.`,
-            8000
-          );
-          return;
-        }
-
-        // No submissions → safe to delete, but still confirm
-        const confirmed = await this._confirm(
-          'Hapus Permanen',
-          `Yakin hapus "${item.title || 'Tanpa Judul'}"? Asesmen ini tidak memiliki data peserta. Tindakan ini tidak dapat dibatalkan.`,
-          true
-        );
-        if (!confirmed) return;
-
-        const { error } = await sb.from('assessments').delete().eq('id', item.id);
+        const { error } = await sb
+          .from('assessments')
+          .update({ status: 'archived', updated_at: new Date().toISOString() })
+          .eq('id', item.id);
         if (error) throw error;
-        this._allData = this._allData.filter((x) => x.id !== item.id);
-        window.notify?.success?.('Dihapus', 'Asesmen telah dihapus permanen', 2500);
+        item.status = 'archived';
+        window.notify?.success?.('Diarsipkan', 'Asesmen dipindahkan ke arsip. Data hasil tetap aman.', 3000);
         this._updateKPIs();
         this._applyFilters();
       } catch (err) {
-        console.error('[delete]', err);
-        window.notify?.error?.('Gagal menghapus', err?.message || 'Unknown error', 3000);
+        console.error('[archive-as-delete]', err);
+        window.notify?.error?.('Gagal mengarsipkan', err?.message || 'Unknown error', 3000);
       }
     },
 

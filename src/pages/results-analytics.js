@@ -293,14 +293,21 @@
   // Render detail (per-question breakdown)
   // ═══════════════════════════════════════════════════════════════
   function _renderDetail(sub) {
+    // FORENSIC SNAPSHOT: Prefer submission's snapshot over live assessment data.
+    // This fixes 2 bugs:
+    // 1. If assessment is deleted (SET NULL), snapshot still has sections
+    // 2. If assessment sections are edited after submit, snapshot has ORIGINAL
     const assessment = _state.selectedAssessment;
-    if (!assessment?.sections) {
+    const sections = sub.assessment_sections_snapshot
+      || (assessment && assessment.sections)
+      || null;
+
+    if (!sections || !Array.isArray(sections)) {
       return '<div class="ra-detail__empty">Data soal tidak tersedia.</div>';
     }
 
     const answers = sub.answers || {};
     const gradingDetail = sub.grading_detail || {};
-    const sections = Array.isArray(assessment.sections) ? assessment.sections : [];
 
     let html = '';
 

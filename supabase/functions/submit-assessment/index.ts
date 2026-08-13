@@ -227,6 +227,13 @@ async function logic(req: Request, env: Env): Promise<Response> {
       submitted_at: new Date().toISOString(),
       duration_seconds: durationSeconds,
       attempt_number: session.attempt_number,
+      // FORENSIC SNAPSHOT: Denormalized assessment metadata at submit time.
+      // If assessment is later deleted (SET NULL), submission retains
+      // all context needed for Hasil page rendering.
+      assessment_title: assessment.title || null,
+      assessment_subject: assessment.subject || null,
+      assessment_access_code: assessment.access_code || null,
+      assessment_sections_snapshot: assessment.sections || null,
     });
   } catch (err: any) {
     if (err instanceof HTTPError && err.code === 'CONFLICT') {
