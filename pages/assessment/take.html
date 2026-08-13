@@ -156,20 +156,20 @@
     </div>
   </main>
 
-  <!-- ═══ PHASE 3: EXAM — unified single header (no double navbar) ═══ -->
+  <!-- ═══ PHASE 3: EXAM — optimized topbar v4 ═══ -->
   <main id="exam-phase" hidden aria-labelledby="exam-title">
-    <!-- Unified Sticky Header: timer + title + identity + section tabs in ONE bar -->
     <header class="ex-topbar">
-      <!-- Row 1: Timer | Subject+Title | Identity -->
-      <div class="ex-topbar__main">
-        <div class="ex-timer" id="exam-timer" role="timer" aria-live="off" aria-atomic="true">
-          <span data-albedu-icon="timer"></span>
-          <span id="timer-display">--:--</span>
+      <!-- Left: Subject + Title (stacked) -->
+      <div class="ex-topbar__left">
+        <div class="ex-subject" id="exam-subject">Asesmen</div>
+        <h1 class="ex-title" id="exam-title">Asesmen</h1>
+        <!-- Section tabs inline under title -->
+        <div class="ex-sections-wrap" id="exam-sections-wrap">
+          <div class="ex-sections" id="page-tabs" role="tablist" aria-label="Bagian Soal"></div>
         </div>
-        <div class="ex-topbar__center">
-          <div class="ex-subject" id="exam-subject">Asesmen</div>
-          <h1 class="ex-title" id="exam-title">Asesmen</h1>
-        </div>
+      </div>
+      <!-- Right: Timer + Identity -->
+      <div class="ex-topbar__right">
         <div class="ex-user" id="exam-user" role="button" tabindex="0" title="Klik untuk ubah identitas">
           <span data-albedu-icon="account_circle"></span>
           <span id="exam-user-text">Peserta</span>
@@ -177,10 +177,10 @@
             <span data-albedu-icon="edit"></span>
           </button>
         </div>
-      </div>
-      <!-- Row 2: Section tabs (hidden if only 1 section) -->
-      <div class="ex-sections-wrap" id="exam-sections-wrap">
-        <div class="ex-sections" id="page-tabs" role="tablist" aria-label="Bagian Soal"></div>
+        <div class="ex-timer" id="exam-timer" role="timer" aria-live="off" aria-atomic="true">
+          <span data-albedu-icon="timer"></span>
+          <span id="timer-display">--:--</span>
+        </div>
       </div>
     </header>
 

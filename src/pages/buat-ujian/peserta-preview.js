@@ -168,22 +168,22 @@
         <!-- EXAM PHASE PREVIEW — mirrors take.html <main id="exam-phase"> -->
         <main class="ex-phase-preview" id="pp-exam" hidden aria-labelledby="pp-exam-title">
           <header class="ex-topbar">
-            <div class="ex-topbar__main">
-              <div class="ex-timer" role="timer" aria-live="off" aria-atomic="true">
-                <span data-albedu-icon="timer"></span>
-                <span>${String(duration).padStart(2, '0')}:00</span>
+            <div class="ex-topbar__left">
+              <div class="ex-subject">${this._esc(subject || 'Asesmen')}</div>
+              <h1 class="ex-title" id="pp-exam-title">${this._esc(title)}</h1>
+              <div class="ex-sections-wrap" id="pp-sections-wrap">
+                <div class="ex-sections" id="pp-tabs" role="tablist" aria-label="Bagian Soal">${tabsHTML}</div>
               </div>
-              <div class="ex-topbar__center">
-                <div class="ex-subject">${this._esc(subject || 'Asesmen')}</div>
-                <h1 class="ex-title" id="pp-exam-title">${this._esc(title)}</h1>
-              </div>
+            </div>
+            <div class="ex-topbar__right">
               <div class="ex-user">
                 <span data-albedu-icon="account_circle"></span>
                 <span>Nama Peserta</span>
               </div>
-            </div>
-            <div class="ex-sections-wrap" id="pp-sections-wrap">
-              <div class="ex-sections" id="pp-tabs" role="tablist" aria-label="Bagian Soal">${tabsHTML}</div>
+              <div class="ex-timer" role="timer" aria-live="off" aria-atomic="true">
+                <span data-albedu-icon="timer"></span>
+                <span>${String(duration).padStart(2, '0')}:00</span>
+              </div>
             </div>
           </header>
 
