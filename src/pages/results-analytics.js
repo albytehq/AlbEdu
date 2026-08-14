@@ -92,16 +92,27 @@
   }
 
   function _waitForAuth() {
+    // FIX v0.855.0: Wait for an actual authenticated session, not just the
+    // client object. The client can exist long before getSession() returns
+    // a valid user. We now poll for a real session with a user.id.
     return new Promise((resolve) => {
       let attempts = 0;
-      const check = () => {
+      const check = async () => {
         attempts++;
-        if (window.AlbEdu?.supabase?.client) {
-          resolve();
-        } else if (attempts < 100) {
+        const sb = window.AlbEdu?.supabase?.client;
+        if (sb) {
+          try {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session?.user?.id) {
+              resolve();
+              return;
+            }
+          } catch (_) { /* session not ready yet */ }
+        }
+        if (attempts < 100) {
           setTimeout(check, 100);
         } else {
-          resolve(); // give up, let downstream handle error
+          resolve(); // give up after 10s, let downstream handle error
         }
       };
       check();
@@ -113,11 +124,19 @@
   // ═══════════════════════════════════════════════════════════════
   async function _loadAssessments() {
     const sb = window.AlbEdu?.supabase?.client;
-    if (!sb) return;
+    if (!sb) {
+      console.warn('[results] Supabase client not ready');
+      _showAssessmentError('Sistem belum siap. Muat ulang halaman.');
+      return;
+    }
 
     try {
       const { data: { session } } = await sb.auth.getSession();
-      if (!session?.user?.id) return;
+      if (!session?.user?.id) {
+        console.warn('[results] No authenticated session');
+        _showAssessmentError('Sesi tidak ditemukan. Silakan login ulang.');
+        return;
+      }
 
       const { data, error } = await sb
         .from('assessments')
@@ -129,10 +148,32 @@
       if (error) throw error;
 
       _state.assessments = data || [];
-      _populateAssessmentSelect();
+      if (_state.assessments.length === 0) {
+        _showAssessmentEmpty();
+      } else {
+        _populateAssessmentSelect();
+      }
     } catch (err) {
       console.error('[results] loadAssessments:', err);
-      window.notify?.error('Gagal', 'Tidak dapat memuat daftar asesmen.');
+      _showAssessmentError('Gagal memuat daftar asesmen: ' + (err?.message || 'Unknown error'));
+    }
+  }
+
+  // Show error state in the assessment select (distinguish from empty/loading)
+  function _showAssessmentError(msg) {
+    const sel = document.getElementById('ra-assessment-select');
+    if (sel) {
+      sel.innerHTML = `<option value="">— Gagal memuat —</option>`;
+      sel.disabled = false;
+    }
+    window.notify?.error?.('Gagal Memuat Asesmen', msg, 5000);
+  }
+
+  // Show empty state (admin has no assessments yet)
+  function _showAssessmentEmpty() {
+    const sel = document.getElementById('ra-assessment-select');
+    if (sel) {
+      sel.innerHTML = `<option value="">— Belum ada asesmen —</option>`;
     }
   }
 
@@ -157,7 +198,10 @@
     _showLoading();
 
     const sb = window.AlbEdu?.supabase?.client;
-    if (!sb) return;
+    if (!sb) {
+      _showSubmissionsError('Sistem belum siap. Muat ulang halaman.');
+      return;
+    }
 
     try {
       // Find the assessment (for sections data — needed to render question details)
@@ -183,9 +227,25 @@
       _enableExportButtons();
     } catch (err) {
       console.error('[results] loadSubmissions:', err);
-      window.notify?.error('Gagal', 'Tidak dapat memuat hasil.');
-      _showEmptySelect();
+      _showSubmissionsError('Gagal memuat hasil: ' + (err?.message || 'Unknown error'));
     }
+  }
+
+  // Show error state for submissions (don't mask as empty select)
+  function _showSubmissionsError(msg) {
+    const list = document.getElementById('ra-submissions-list');
+    if (list) {
+      list.innerHTML = `
+        <div class="ra-empty" role="alert">
+          <span data-albedu-icon="error" style="font-size:48px;color:var(--albedu-danger,#EF4444);"></span>
+          <h3>Gagal Memuat Hasil</h3>
+          <p>${msg}</p>
+          <button class="albedu-btn albedu-btn-secondary" onclick="window.ResultsAnalytics._retry()">Coba Lagi</button>
+        </div>
+      `;
+      window.AlbEdu?.bindIcons?.(list);
+    }
+    window.notify?.error?.('Gagal Memuat Hasil', msg, 5000);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -463,11 +523,38 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // Public API (exposed for retry button + debugging)
+  // ═══════════════════════════════════════════════════════════════
+  window.ResultsAnalytics = {
+    _retry: () => {
+      if (_state.selectedAssessmentId) {
+        _loadSubmissions();
+      } else {
+        _loadAssessments();
+      }
+    },
+    reload: () => _loadAssessments(),
+  };
+
+  // ═══════════════════════════════════════════════════════════════
   // Boot
   // ═══════════════════════════════════════════════════════════════
-  if (window.Auth?.authReady) {
+  // FIX v0.855.0: Drop `{ once: true }` — it fires on the FIRST auth-ready
+  // event which has role=null (before role is resolved). Gate on role==='admin'
+  // instead, matching the pattern used by byteward.js, navigasi.js, and
+  // self-storage.js. This was the root cause of "no assessments showing" —
+  // _init() ran with no session, _loadAssessments() silently returned empty.
+  function _tryInit(e) {
+    const role = e?.detail?.role || window.Auth?.userRole;
+    if (role === 'admin') {
+      document.removeEventListener('auth-ready', _tryInit);
+      _init();
+    }
+  }
+
+  if (window.Auth?.authReady && window.Auth?.userRole === 'admin') {
     _init();
   } else {
-    document.addEventListener('auth-ready', _init, { once: true });
+    document.addEventListener('auth-ready', _tryInit);
   }
 })();
