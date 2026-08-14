@@ -123,6 +123,7 @@
   // Load assessments
   // ═══════════════════════════════════════════════════════════════
   async function _loadAssessments() {
+    console.log('[results] _loadAssessments() starting...');
     const sb = window.AlbEdu?.supabase?.client;
     if (!sb) {
       console.warn('[results] Supabase client not ready');
@@ -132,29 +133,39 @@
 
     try {
       const { data: { session } } = await sb.auth.getSession();
+      console.log('[results] session:', session ? `user=${session.user?.id?.substring(0,8)}...` : 'null');
       if (!session?.user?.id) {
         console.warn('[results] No authenticated session');
         _showAssessmentError('Sesi tidak ditemukan. Silakan login ulang.');
         return;
       }
 
-      const { data, error } = await sb
+      console.log('[results] querying assessments (all active+archived)...');
+      const { data, error, count } = await sb
         .from('assessments')
-        .select('id, title, subject, access_code, status, sections')
-        .eq('created_by', session.user.id)
-        .in('status', ['active', 'archived'])  // FIX: show archived too — results still accessible
+        .select('id, title, subject, access_code, status, sections', { count: 'exact' })
+        // FIX v0.857.0: Don't filter by created_by — the RLS policy
+        // assessments_admin_read_all allows admins to read ALL assessments
+        // (collaborative model). Filtering by created_by meant an admin
+        // could only see results for assessments THEY created, not those
+        // created by other admins in the same org.
+        .in('status', ['active', 'archived'])  // show active + archived (results still accessible)
         .order('created_at', { ascending: false });
+
+      console.log('[results] query result:', { count, error: error?.message, dataLength: data?.length });
 
       if (error) throw error;
 
       _state.assessments = data || [];
       if (_state.assessments.length === 0) {
+        console.warn('[results] No assessments found in DB (admin can read all, but table is empty)');
         _showAssessmentEmpty();
       } else {
+        console.log('[results] Populating dropdown with', _state.assessments.length, 'assessments');
         _populateAssessmentSelect();
       }
     } catch (err) {
-      console.error('[results] loadAssessments:', err);
+      console.error('[results] loadAssessments failed:', err);
       _showAssessmentError('Gagal memuat daftar asesmen: ' + (err?.message || 'Unknown error'));
     }
   }
@@ -539,22 +550,85 @@
   // ═══════════════════════════════════════════════════════════════
   // Boot
   // ═══════════════════════════════════════════════════════════════
-  // FIX v0.855.0: Drop `{ once: true }` — it fires on the FIRST auth-ready
-  // event which has role=null (before role is resolved). Gate on role==='admin'
-  // instead, matching the pattern used by byteward.js, navigasi.js, and
-  // self-storage.js. This was the root cause of "no assessments showing" —
-  // _init() ran with no session, _loadAssessments() silently returned empty.
+  // FIX v0.857.0: Multi-strategy boot — the previous { once: true } approach
+  // failed because 'auth-ready' may have ALREADY fired before this script's
+  // listener was attached (both are defer-loaded, race condition).
+  //
+  // Strategy (in order):
+  //   1. If auth already ready + role is admin → _init() immediately
+  //   2. Else listen for 'auth-ready' event (no { once: true }) — gate on admin
+  //   3. ALSO subscribe to onAuthStateChange (the reliable Supabase signal)
+  //      — this fires on SIGNED_IN / TOKEN_REFRESHED even if we missed auth-ready
+  //   4. As a final fallback, poll for session every 500ms for 15s
+  let _initStarted = false;
   function _tryInit(e) {
+    if (_initStarted) return;
     const role = e?.detail?.role || window.Auth?.userRole;
     if (role === 'admin') {
+      _initStarted = true;
       document.removeEventListener('auth-ready', _tryInit);
       _init();
     }
   }
 
+  // Strategy 1: already ready
   if (window.Auth?.authReady && window.Auth?.userRole === 'admin') {
+    _initStarted = true;
     _init();
   } else {
+    // Strategy 2: listen for auth-ready event
     document.addEventListener('auth-ready', _tryInit);
+
+    // Strategy 3: subscribe to Supabase onAuthStateChange (reliable signal)
+    // This fires after the session is hydrated, even if we missed auth-ready
+    const _checkAndInit = async () => {
+      if (_initStarted) return;
+      const sb = window.AlbEdu?.supabase;
+      if (!sb?.auth?.onAuthStateChange) return;
+      // Subscribe — the callback fires immediately with current state
+      sb.auth.onAuthStateChange((user, event) => {
+        if (_initStarted) return;
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
+          // Check role — may not be resolved yet, but try
+          if (window.Auth?.userRole === 'admin') {
+            _initStarted = true;
+            _init();
+          } else {
+            // Role not ready — wait a tick, then check again
+            setTimeout(() => {
+              if (!_initStarted && window.Auth?.userRole === 'admin') {
+                _initStarted = true;
+                _init();
+              }
+            }, 500);
+          }
+        }
+      });
+    };
+    _checkAndInit();
+
+    // Strategy 4: poll fallback (in case all events fail)
+    let pollAttempts = 0;
+    const pollInterval = setInterval(() => {
+      pollAttempts++;
+      if (_initStarted) {
+        clearInterval(pollInterval);
+        return;
+      }
+      if (window.Auth?.authReady && window.Auth?.userRole === 'admin') {
+        _initStarted = true;
+        clearInterval(pollInterval);
+        document.removeEventListener('auth-ready', _tryInit);
+        _init();
+      } else if (pollAttempts > 30) { // 15s (30 × 500ms)
+        clearInterval(pollInterval);
+        // Last resort: try _init() anyway — _waitForAuth() will handle the no-session case
+        if (!_initStarted) {
+          _initStarted = true;
+          console.warn('[results] Falling back to _init() without confirmed admin role');
+          _init();
+        }
+      }
+    }, 500);
   }
 })();
