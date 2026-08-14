@@ -187,12 +187,22 @@
         return () => {};
       }
       return sb.realtime.subscribe(name, table, '*', (payload) => {
-        callback({
-          event: payload.eventType,
-          new: payload.new,
-          old: payload.old,
-          _raw: payload,
-        });
+        // FIX v0.854.0: Wrap callback in try/catch to prevent SDK internal
+        // Realtime errors (e.g. "Cannot read properties of undefined (reading 'M_ID')")
+        // from propagating as unhandled promise rejections. The Supabase SDK's
+        // Phoenix protocol parser sometimes crashes on malformed messages from
+        // the Free plan Realtime server. We swallow these errors gracefully —
+        // the polling fallback (30s) will catch any missed events.
+        try {
+          callback({
+            event: payload?.eventType,
+            new: payload?.new,
+            old: payload?.old,
+            _raw: payload,
+          });
+        } catch (err) {
+          console.warn('[platform] realtime callback error (non-fatal — polling will catch up):', err?.message || err);
+        }
       }, filter);
     },
 

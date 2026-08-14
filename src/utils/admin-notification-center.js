@@ -107,8 +107,17 @@
   //   warning_num → warningNum
   //   created_at  → ts (ISO string)
   function _handleSnapshot(snapshot) {
+    // FIX v0.854.0: Wrap in try/catch to prevent malformed snapshot data
+    // from crashing the notification center. If snapshot.docChanges() throws
+    // (e.g. undefined snapshot from a failed fetch), we log + return gracefully.
+    if (!snapshot || typeof snapshot.docChanges !== 'function') {
+      console.warn('[ANC] _handleSnapshot: invalid snapshot (non-fatal — will retry on next poll)');
+      return;
+    }
+
     let changed = false;
 
+    try {
     snapshot.docChanges().forEach(change => {
       const docSnap = change.doc;
       const data    = docSnap.data() || {};
@@ -190,6 +199,9 @@
       }
       if (_isPanelOpen) _renderPanelContent();
     }
+    } catch (err) {
+      console.warn('[ANC] _handleSnapshot error (non-fatal):', err?.message || err);
+    }
     _isInitialSnapshot = false;
   }
 
@@ -265,8 +277,8 @@
       _unsubscribe = repo.subscribe(
         channelName,
         'violation_events',
-        debouncedRefetch,
-        filter
+        debouncedRefetch,  // callback
+        filter             // filter (e.g. 'assessment_id=in.(id1,id2,...)')
       );
 
       // Set up polling fallback — runs every 30s regardless of realtime
