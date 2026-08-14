@@ -247,9 +247,14 @@
             // as the realtime subscription. Previously this fetched ALL 300
             // violation_events across ALL assessments (multi-tenant data leak
             // — org A admin could see org B violations).
+            //
+            // FIX v0.859.0: Only fetch UNREAD notifications (acknowledged_at
+            // IS NULL) + recently acked (within 24h) so the panel doesn't
+            // show old dummy/test notifications forever.
             const fetchOpts = {
               order: { column: 'created_at', ascending: false },
-              limit: 300,
+              limit: 50,  // reduced from 300 — we only show unread + recent
+              or: ['acknowledged_at.is.null', `acknowledged_at.gte.${new Date(Date.now() - 24*60*60*1000).toISOString()}`],
             };
             if (filter) {
               // Parse the filter string "assessment_id=in.(id1,id2,...)"
@@ -257,11 +262,10 @@
               const match = filter.match(/assessment_id=in\.\(([^)]+)\)/);
               if (match) {
                 const ids = match[1].split(',');
-                fetchOpts.eq = { assessment_id: ids.length === 1 ? ids[0] : undefined };
-                // For multiple IDs, use the 'in' filter
                 if (ids.length > 1) {
                   fetchOpts.in = { assessment_id: ids };
-                  delete fetchOpts.eq;
+                } else {
+                  fetchOpts.eq = { assessment_id: ids[0] };
                 }
               }
             }
@@ -330,9 +334,12 @@
 
         // Always poll — even when realtime is healthy, this catches any
         // missed events (e.g., if a postgres_changes event was lost).
+        // FIX v0.859.0: Same filter as debouncedRefetch — only unread +
+        // recently acked (within 24h), limit 50.
         const fetchOpts = {
           order: { column: 'created_at', ascending: false },
-          limit: 300,
+          limit: 50,
+          or: ['acknowledged_at.is.null', `acknowledged_at.gte.${new Date(Date.now() - 24*60*60*1000).toISOString()}`],
         };
         if (filter) {
           const match = filter.match(/assessment_id=in\.\(([^)]+)\)/);
