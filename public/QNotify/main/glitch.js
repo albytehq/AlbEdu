@@ -163,22 +163,24 @@ export function loadFonts() {
     injectCriticalCSS();
 
     _fontLoadPromise = new Promise(resolve => {
-        _addPreconnect('https://fonts.googleapis.com');
-        _addPreconnect('https://fonts.gstatic.com', true);
-
-        if (!document.querySelector('link[href*="material-icons"]')) {
-            const link = document.createElement('link');
-            link.rel  = 'stylesheet';
-            // display=block: icons always visible, zero FOIT.
-            link.href = 'https://fonts.googleapis.com/icon?family=Material+Icons+Round&display=block';
-            document.head.appendChild(link);
-        }
+        // FIX v0.854.0: Self-host Material Icons Round font instead of loading
+        // from Google Fonts CDN. Google periodically rotates their font file
+        // hashes, causing 404 errors on cached CSS that references old hashes.
+        // Self-hosting eliminates this instability entirely.
+        //
+        // Font file: /public/fonts/material-icons-round.woff2 (174KB)
+        // Source: https://cdn.jsdelivr.net/npm/material-icons (MIT License)
+        _injectMaterialIconsFontFace();
 
         if (!document.querySelector('link[href*="Inter"]')) {
             const link = document.createElement('link');
             link.rel  = 'stylesheet';
             // display=swap: text visible with fallback font, no FOIT.
+            // Inter is used for QNotify text only (not icons) — Google CDN
+            // is acceptable here because Inter font hashes are more stable.
+            // If it 404s, text falls back to system font gracefully.
             link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
+            link.onerror = () => { /* graceful fallback — system font */ };
             document.head.appendChild(link);
         }
 
@@ -187,6 +189,52 @@ export function loadFonts() {
     });
 
     return _fontLoadPromise;
+}
+
+// Inject @font-face for self-hosted Material Icons Round.
+// Resolves the base path dynamically (works on both / and /AlbEdu/ on Pages).
+function _injectMaterialIconsFontFace() {
+    if (document.querySelector('style[data-material-icons-round]')) return;
+
+    // Resolve base path — works for /pages/*, /pages/admin/*, /pages/assessment/* etc.
+    let basePath = '/';
+    try {
+        const p = window.location.pathname;
+        const idx = p.indexOf('/pages/');
+        if (idx > 0) basePath = p.substring(0, idx) + '/';
+        // Also handle /AlbEdu/ prefix (GitHub Pages project site)
+        else if (p.includes('/AlbEdu/')) basePath = p.substring(0, p.indexOf('/AlbEdu/') + '/AlbEdu/'.length);
+    } catch (_) {}
+
+    const fontUrl = basePath + 'public/fonts/material-icons-round.woff2';
+
+    const style = document.createElement('style');
+    style.setAttribute('data-material-icons-round', 'true');
+    style.textContent = `
+@font-face {
+  font-family: 'Material Icons Round';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('${fontUrl}') format('woff2');
+}
+.material-icons-round {
+  font-family: 'Material Icons Round';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+`;
+    document.head.appendChild(style);
 }
 
 function _addPreconnect(href, crossorigin = false) {
