@@ -51,6 +51,7 @@ jobs:
             submit-assessment
             block-participant
             assessment-lifecycle
+            violation-signal
             health-check
             asset-upload
             asset-release
