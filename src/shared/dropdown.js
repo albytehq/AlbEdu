@@ -245,6 +245,12 @@
         sourceEl.style.display = 'none';
         sourceEl.setAttribute('data-albedu-dropdown-bound', this._id);
         this._sourceSelect = sourceEl;
+        // Store the instance on the source select element so callers that
+        // dynamically update options (e.g. results-analytics.js populating
+        // assessments) can call instance.setOptions() instead of setting
+        // innerHTML on the hidden select (which wouldn't update the custom
+        // dropdown's trigger label or options panel).
+        sourceEl._albeduDropdownInstance = this;
         // If source select is NOT in the DOM (e.g. caller created it via
         // document.createElement but hasn't appended yet), attach it inside
         // the wrap so it gets inserted when the wrap is mounted. This keeps

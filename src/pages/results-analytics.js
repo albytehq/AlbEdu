@@ -174,7 +174,13 @@
   function _showAssessmentError(msg) {
     const sel = document.getElementById('ra-assessment-select');
     if (sel) {
-      sel.innerHTML = `<option value="">— Gagal memuat —</option>`;
+      // Use AlbEduDropdown API if bound, else native
+      const instance = sel._albeduDropdownInstance;
+      if (instance && typeof instance.setOptions === 'function') {
+        instance.setOptions([{ value: '', label: '— Gagal memuat —' }]);
+      } else {
+        sel.innerHTML = `<option value="">— Gagal memuat —</option>`;
+      }
       sel.disabled = false;
     }
     window.notify?.error?.('Gagal Memuat Asesmen', msg, 5000);
@@ -184,7 +190,12 @@
   function _showAssessmentEmpty() {
     const sel = document.getElementById('ra-assessment-select');
     if (sel) {
-      sel.innerHTML = `<option value="">— Belum ada asesmen —</option>`;
+      const instance = sel._albeduDropdownInstance;
+      if (instance && typeof instance.setOptions === 'function') {
+        instance.setOptions([{ value: '', label: '— Belum ada asesmen —' }]);
+      } else {
+        sel.innerHTML = `<option value="">— Belum ada asesmen —</option>`;
+      }
     }
   }
 
@@ -192,14 +203,31 @@
     const sel = document.getElementById('ra-assessment-select');
     if (!sel) return;
 
-    const options = ['<option value="">— Pilih asesmen —</option>']
-      .concat(_state.assessments.map(a => {
+    // Build options array for AlbEduDropdown.setOptions()
+    const assessmentOptions = [
+      { value: '', label: '— Pilih asesmen —' },
+      ..._state.assessments.map(a => {
         const archived = a.status === 'archived' ? ' (Arsip)' : '';
         const label = `${a.title || 'Tanpa Judul'}${a.subject ? ' · ' + a.subject : ''}${a.access_code ? ' · ' + a.access_code : ''}${archived}`;
-        return `<option value="${a.id}">${_esc(label)}</option>`;
-      }))
-      .join('');
-    sel.innerHTML = options;
+        return { value: a.id, label };
+      }),
+    ];
+
+    // FIX v0.858.0: Use AlbEduDropdown.setOptions() API if the select was
+    // enhanced by AlbEduDropdown. Setting innerHTML on the hidden source
+    // <select> doesn't update the custom dropdown's trigger label or
+    // options panel — the dropdown would stay stuck on "-- Pilih --".
+    const instance = sel._albeduDropdownInstance;
+    if (instance && typeof instance.setOptions === 'function') {
+      console.log('[results] Using AlbEduDropdown.setOptions() to populate', assessmentOptions.length - 1, 'assessments');
+      instance.setOptions(assessmentOptions);
+    } else {
+      // Fallback: native select (AlbEduDropdown not loaded yet or not enhanced)
+      console.log('[results] Using native innerHTML (AlbEduDropdown not bound)');
+      sel.innerHTML = assessmentOptions.map(o =>
+        `<option value="${o.value}">${o.label}</option>`
+      ).join('');
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
